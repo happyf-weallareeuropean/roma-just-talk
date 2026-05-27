@@ -10,12 +10,11 @@ class RecorderUIManager: ObservableObject {
         didSet {
             if isMiniRecorderVisible {
                 destroyWindow(for: oldValue)
-                if recorderType != "none" {
-                    Task { @MainActor in
-                        try? await Task.sleep(nanoseconds: 50_000_000)
-                        showRecorderPanel()
-                    }
-                }
+                isMiniRecorderVisible = false
+            }
+
+            if isRecorderSessionActive, recorderType != "none" {
+                isMiniRecorderVisible = true
             }
             UserDefaults.standard.set(recorderType, forKey: "RecorderType")
         }
@@ -30,6 +29,7 @@ class RecorderUIManager: ObservableObject {
             }
         }
     }
+    @Published private(set) var isRecorderSessionActive = false
 
     var notchWindowManager: NotchWindowManager?
     var miniWindowManager: MiniWindowManager?
@@ -96,11 +96,20 @@ class RecorderUIManager: ObservableObject {
 
     // MARK: - Mini Recorder Management
 
+    func beginRecorderSession() {
+        isRecorderSessionActive = true
+        if recorderType == "none" {
+            isMiniRecorderVisible = false
+        } else {
+            isMiniRecorderVisible = true
+        }
+    }
+
     func toggleMiniRecorder(powerModeId: UUID? = nil) async {
         guard let engine = engine else { return }
-        logger.notice("toggleMiniRecorder called – visible=\(self.isMiniRecorderVisible, privacy: .public), state=\(String(describing: engine.recordingState), privacy: .public)")
+        logger.notice("toggleMiniRecorder called – sessionActive=\(self.isRecorderSessionActive, privacy: .public), visible=\(self.isMiniRecorderVisible, privacy: .public), state=\(String(describing: engine.recordingState), privacy: .public)")
 
-        if isMiniRecorderVisible {
+        if isRecorderSessionActive {
             switch engine.recordingState {
             case .recording:
                 logger.notice("toggleMiniRecorder: stopping recording (was recording)")
@@ -114,7 +123,7 @@ class RecorderUIManager: ObservableObject {
             }
         } else {
             SoundManager.shared.playStartSound()
-            isMiniRecorderVisible = true
+            beginRecorderSession()
             await engine.toggleRecord(powerModeId: powerModeId)
         }
     }
@@ -125,6 +134,7 @@ class RecorderUIManager: ObservableObject {
 
         hideRecorderPanel()
         isMiniRecorderVisible = false
+        isRecorderSessionActive = false
 
         logger.notice("dismissMiniRecorder completed")
     }
@@ -135,6 +145,7 @@ class RecorderUIManager: ObservableObject {
         await engine.resetRecordingSession()
         hideRecorderPanel()
         isMiniRecorderVisible = false
+        isRecorderSessionActive = false
         miniRecorderError = nil
     }
 

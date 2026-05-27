@@ -122,7 +122,7 @@ class RecordingShortcutManager: ObservableObject {
                 Self.canHandleShortcutAction(for: engine.recordingState)
             },
             isRecorderVisible: {
-                recorderUIManager.isMiniRecorderVisible
+                recorderUIManager.isRecorderSessionActive
             },
             recordingState: {
                 engine.recordingState
