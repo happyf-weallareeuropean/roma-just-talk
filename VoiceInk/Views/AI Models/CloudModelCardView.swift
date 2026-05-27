@@ -274,8 +274,11 @@ struct CloudModelCardView: View {
     }
 
     private func loadSavedAPIKey() {
-        if let savedKey = APIKeyManager.shared.getAPIKey(forProvider: providerKey) {
+        if let savedKey = APIKeyManager.shared.getStoredAPIKey(forProvider: providerKey) {
             apiKey = savedKey
+        }
+
+        if APIKeyManager.shared.hasAPIKey(forProvider: providerKey) {
             verificationStatus = .success
         }
     }
@@ -286,6 +289,12 @@ struct CloudModelCardView: View {
         isVerifying = true
         verificationStatus = .verifying
         let key = apiKey
+        guard let resolvedKey = APIKeyManager.resolveAPIKeyReference(key) else {
+            isVerifying = false
+            verificationStatus = .failure
+            verificationError = "Environment variable is missing or empty"
+            return
+        }
 
         guard let cloudProvider = CloudProviderRegistry.provider(for: model.provider) else {
             isVerifying = false
@@ -295,7 +304,7 @@ struct CloudModelCardView: View {
         }
 
         Task {
-            let result = await cloudProvider.verifyAPIKey(key)
+            let result = await cloudProvider.verifyAPIKey(resolvedKey)
 
             await MainActor.run {
                 isVerifying = false

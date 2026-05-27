@@ -6,19 +6,15 @@ import os
 class RecorderUIManager: ObservableObject {
     @Published var miniRecorderError: String?
 
-    @Published var recorderType: String = UserDefaults.standard.string(forKey: "RecorderType") ?? "mini" {
+    @Published var recorderType: String = UserDefaults.standard.string(forKey: "RecorderType") ?? "none" {
         didSet {
             if isMiniRecorderVisible {
-                if oldValue == "notch" {
-                    notchWindowManager?.destroyWindow()
-                    notchWindowManager = nil
-                } else {
-                    miniWindowManager?.destroyWindow()
-                    miniWindowManager = nil
-                }
-                Task { @MainActor in
-                    try? await Task.sleep(nanoseconds: 50_000_000)
-                    showRecorderPanel()
+                destroyWindow(for: oldValue)
+                if recorderType != "none" {
+                    Task { @MainActor in
+                        try? await Task.sleep(nanoseconds: 50_000_000)
+                        showRecorderPanel()
+                    }
                 }
             }
             UserDefaults.standard.set(recorderType, forKey: "RecorderType")
@@ -58,12 +54,15 @@ class RecorderUIManager: ObservableObject {
         guard let engine = engine, let recorder = recorder else { return }
         logger.notice("Showing \(self.recorderType, privacy: .public) recorder")
 
-        if recorderType == "notch" {
+        switch recorderType {
+        case "none":
+            return
+        case "notch":
             if notchWindowManager == nil {
                 notchWindowManager = NotchWindowManager(engine: engine, recorder: recorder)
             }
             notchWindowManager?.show()
-        } else {
+        default:
             if miniWindowManager == nil {
                 miniWindowManager = MiniWindowManager(engine: engine, recorder: recorder)
             }
@@ -72,10 +71,26 @@ class RecorderUIManager: ObservableObject {
     }
 
     func hideRecorderPanel() {
-        if recorderType == "notch" {
+        switch recorderType {
+        case "notch":
             notchWindowManager?.hide()
-        } else {
+        case "mini":
             miniWindowManager?.hide()
+        default:
+            break
+        }
+    }
+
+    private func destroyWindow(for recorderType: String) {
+        switch recorderType {
+        case "notch":
+            notchWindowManager?.destroyWindow()
+            notchWindowManager = nil
+        case "mini":
+            miniWindowManager?.destroyWindow()
+            miniWindowManager = nil
+        default:
+            break
         }
     }
 

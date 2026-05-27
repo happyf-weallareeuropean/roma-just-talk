@@ -5,10 +5,11 @@ import os
 
 @MainActor
 class Recorder: NSObject, ObservableObject {
-    private var recorder: CoreAudioRecorder?
+    private var recorder: CoreAudioRecorder? = CoreAudioRecorder()
     private let logger = Logger(subsystem: "com.prakashjoshipax.voiceink", category: "Recorder")
     private let deviceManager = AudioDeviceManager.shared
     private var deviceSwitchObserver: NSObjectProtocol?
+    private var audioDeviceChangeObserver: NSObjectProtocol?
     private var isReconfiguring = false
     private let mediaController = MediaController.shared
     private let playbackController = PlaybackController.shared
@@ -48,6 +49,17 @@ class Recorder: NSObject, ObservableObject {
                 await self?.handleDeviceSwitchRequired(notification)
             }
         }
+
+        audioDeviceChangeObserver = AudioDeviceConfiguration.createDeviceChangeObserver { [weak self] in
+            Task { @MainActor in
+                await self?.handleAudioDeviceChanged()
+            }
+        }
+    }
+
+    private func handleAudioDeviceChanged() async {
+        guard !deviceManager.isRecordingActive else { return }
+        await startPreRollBuffering()
     }
 
     private func handleDeviceSwitchRequired(_ notification: Notification) async {
@@ -96,12 +108,42 @@ class Recorder: NSObject, ObservableObject {
         }
     }
 
-    func scheduleSystemMute(afterDelayNanoseconds delay: UInt64 = 250_000_000) {
+    func scheduleSystemMute(forInputDevice deviceID: AudioDeviceID, afterDelayNanoseconds delay: UInt64 = 250_000_000) {
         audioMuteTask?.cancel()
         audioMuteTask = Task { [weak self] in
             try? await Task.sleep(nanoseconds: delay)
             guard !Task.isCancelled, let self else { return }
-            _ = await self.mediaController.muteSystemAudio()
+            _ = await self.mediaController.muteSystemAudio(forInputDevice: deviceID)
+        }
+    }
+
+    func startPreRollBuffering() async {
+        guard !deviceManager.isRecordingActive else { return }
+
+        let deviceID = deviceManager.getCurrentDevice()
+        guard deviceID != 0 else {
+            logger.error("startPreRollBuffering: no available input device")
+            return
+        }
+
+        let coreAudioRecorder = recorder ?? CoreAudioRecorder()
+        recorder = coreAudioRecorder
+        coreAudioRecorder.onAudioChunk = nil
+
+        do {
+            try await withCheckedThrowingContinuation { (continuation: CheckedContinuation<Void, Error>) in
+                audioSetupQueue.async {
+                    do {
+                        try coreAudioRecorder.startPreBuffering(deviceID: deviceID)
+                        continuation.resume()
+                    } catch {
+                        continuation.resume(throwing: error)
+                    }
+                }
+            }
+            logger.notice("startPreRollBuffering: active on deviceID=\(deviceID, privacy: .public)")
+        } catch {
+            logger.error("startPreRollBuffering failed: \(error.localizedDescription, privacy: .public)")
         }
     }
 
@@ -123,8 +165,9 @@ class Recorder: NSObject, ObservableObject {
         audioRestorationTask?.cancel()
         audioRestorationTask = nil
         audioMeterUpdateTimer?.cancel()
+        scheduleSystemMute(forInputDevice: deviceID)
 
-        let coreAudioRecorder = CoreAudioRecorder()
+        let coreAudioRecorder = recorder ?? CoreAudioRecorder()
         coreAudioRecorder.onAudioChunk = onAudioChunk
         recorder = coreAudioRecorder
 
@@ -161,17 +204,16 @@ class Recorder: NSObject, ObservableObject {
         audioMeterUpdateTimer?.cancel()
         audioMeterUpdateTimer = nil
 
-        // Capture current recorder to stop it on the serial hardware queue
         let currentRecorder = self.recorder
-        recorder = nil
-        onAudioChunk = nil
 
         await withCheckedContinuation { continuation in
             audioSetupQueue.async {
-                currentRecorder?.stopRecording()
+                currentRecorder?.finishRecording()
+                currentRecorder?.onAudioChunk = nil
                 continuation.resume()
             }
         }
+        onAudioChunk = nil
 
         smoothedValuesLock.lock()
         smoothedAverage = 0
@@ -263,6 +305,10 @@ class Recorder: NSObject, ObservableObject {
         if let observer = deviceSwitchObserver {
             NotificationCenter.default.removeObserver(observer)
         }
+        if let observer = audioDeviceChangeObserver {
+            NotificationCenter.default.removeObserver(observer)
+        }
+        recorder?.stopRecording()
     }
 }
 

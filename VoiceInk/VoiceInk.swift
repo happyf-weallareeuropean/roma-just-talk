@@ -169,6 +169,7 @@ struct VoiceInkApp: App {
         // Ensure no lingering recording state from previous runs
         Task {
             await recorderUIManager.resetOnLaunch()
+            await engine.recorder.startPreRollBuffering()
         }
 
         AppShortcuts.updateAppShortcutParameters()

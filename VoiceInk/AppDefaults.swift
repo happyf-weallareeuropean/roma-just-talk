@@ -13,6 +13,7 @@ enum AppDefaults {
             "useAppleScriptPaste": false,
 
             // Audio & Media
+            "systemMuteMode": SystemMuteMode.automatic.rawValue,
             "isSystemMuteEnabled": true,
             "audioResumptionDelay": 0.0,
             "isPauseMediaEnabled": false,
@@ -29,7 +30,7 @@ enum AppDefaults {
             "SelectedLanguage": "en",
             "AppendTrailingSpace": true,
             "showLiveTextPreview": false,
-            "RecorderType": "mini",
+            "RecorderType": "none",
 
             // Cleanup
             "IsTranscriptionCleanupEnabled": false,

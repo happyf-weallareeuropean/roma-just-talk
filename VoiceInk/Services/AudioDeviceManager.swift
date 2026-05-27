@@ -33,7 +33,7 @@ class AudioDeviceManager: ObservableObject {
            let mode = AudioInputMode(rawValue: savedMode) {
             inputMode = mode
         } else {
-            inputMode = .systemDefault
+            inputMode = .custom
         }
 
         loadAvailableDevices { [weak self] in
@@ -115,21 +115,15 @@ class AudioDeviceManager: ObservableObject {
     }
 
     func findBestAvailableDevice() -> AudioDeviceID? {
-        if let device = availableDevices.first(where: { isBuiltInDevice($0.id) }) {
-            return device.id
-        }
-        if let device = availableDevices.first {
-            logger.warning("🎙️ No built-in device found, using: \(device.name, privacy: .public)")
-            return device.id
-        }
-        return nil
+        safeAutomaticDevice()
     }
 
-    private func isBuiltInDevice(_ deviceID: AudioDeviceID) -> Bool {
-        guard let uid = getDeviceUID(deviceID: deviceID) else {
-            return false
+    func isBuiltInDevice(_ deviceID: AudioDeviceID) -> Bool {
+        if getTransportType(deviceID: deviceID) == kAudioDeviceTransportTypeBuiltIn {
+            return true
         }
-        return uid.contains("BuiltIn")
+
+        return getDeviceUID(deviceID: deviceID)?.localizedCaseInsensitiveContains("BuiltIn") == true
     }
     
     func loadAvailableDevices(completion: (() -> Void)? = nil) {
@@ -279,8 +273,8 @@ class AudioDeviceManager: ObservableObject {
             break
         case .custom:
             if selectedDeviceID == nil {
-                if let firstDevice = availableDevices.first {
-                    selectDevice(id: firstDevice.id)
+                if let deviceID = findBestAvailableDevice() {
+                    selectDevice(id: deviceID)
                 }
             }
         case .prioritized:
@@ -295,7 +289,7 @@ class AudioDeviceManager: ObservableObject {
     func getCurrentDevice() -> AudioDeviceID {
         switch inputMode {
         case .systemDefault:
-            return getSystemDefaultDevice() ?? findBestAvailableDevice() ?? 0
+            return safeAutomaticDevice(preferred: getSystemDefaultDevice()) ?? 0
         case .custom:
             if let id = selectedDeviceID, isDeviceAvailable(id) {
                 return id
@@ -373,6 +367,46 @@ class AudioDeviceManager: ObservableObject {
         }
 
         fallbackToDefaultDevice()
+    }
+
+    private func safeAutomaticDevice(preferred preferredDeviceID: AudioDeviceID? = nil) -> AudioDeviceID? {
+        if let preferredDeviceID,
+           isDeviceAvailable(preferredDeviceID),
+           isSafeAutomaticDevice(preferredDeviceID) {
+            return preferredDeviceID
+        }
+
+        if let builtIn = availableDevices.first(where: { isBuiltInDevice($0.id) }) {
+            return builtIn.id
+        }
+
+        if let safeDevice = availableDevices.first(where: { isSafeAutomaticDevice($0.id) }) {
+            logger.warning("🎙️ No built-in input found, auto-selecting safe non-Bluetooth device: \(safeDevice.name, privacy: .public)")
+            return safeDevice.id
+        }
+
+        if let firstDevice = availableDevices.first {
+            logger.warning("🎙️ No safe automatic input found; refusing to auto-select \(firstDevice.name, privacy: .public)")
+        }
+        return nil
+    }
+
+    private func isSafeAutomaticDevice(_ deviceID: AudioDeviceID) -> Bool {
+        if isBuiltInDevice(deviceID) {
+            return true
+        }
+
+        let name = availableDevices.first(where: { $0.id == deviceID })?.name
+            ?? getDeviceName(deviceID: deviceID)
+            ?? ""
+
+        return !isBluetoothDevice(deviceID) && !name.localizedCaseInsensitiveContains("airpods")
+    }
+
+    private func isBluetoothDevice(_ deviceID: AudioDeviceID) -> Bool {
+        let transportType = getTransportType(deviceID: deviceID)
+        return transportType == kAudioDeviceTransportTypeBluetooth ||
+            transportType == kAudioDeviceTransportTypeBluetoothLE
     }
     
     private func setupDeviceChangeNotifications() {
@@ -518,6 +552,28 @@ class AudioDeviceManager: ObservableObject {
         }
         
         return property
+    }
+
+    private func getTransportType(deviceID: AudioDeviceID) -> UInt32? {
+        var address = createPropertyAddress(selector: kAudioDevicePropertyTransportType)
+        var propertySize = UInt32(MemoryLayout<UInt32>.size)
+        var transportType: UInt32 = 0
+
+        let status = AudioObjectGetPropertyData(
+            deviceID,
+            &address,
+            0,
+            nil,
+            &propertySize,
+            &transportType
+        )
+
+        if status != noErr {
+            logger.error("Failed to get transport type for device \(deviceID, privacy: .public): \(status, privacy: .public)")
+            return nil
+        }
+
+        return transportType
     }
     
     private func notifyDeviceChange() {

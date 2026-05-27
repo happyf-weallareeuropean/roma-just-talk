@@ -26,6 +26,10 @@ final class APIKeyManager {
         "openrouter": "openRouterAPIKey"
     ]
 
+    private static let providerToEnvironmentKey: [String: String] = [
+        "elevenlabs": "ELEVENLABS_API_KEY"
+    ]
+
     private init() {}
 
     // MARK: - Standard Provider API Keys
@@ -43,6 +47,24 @@ final class APIKeyManager {
 
     /// Retrieves an API key for a provider.
     func getAPIKey(forProvider provider: String) -> String? {
+        let keyIdentifier = keychainIdentifier(forProvider: provider)
+        if let storedKey = keychain.getString(forKey: keyIdentifier),
+           let resolvedKey = Self.resolveAPIKeyReference(storedKey) {
+            return resolvedKey
+        }
+
+        let lowercased = provider.lowercased()
+        if let environmentKey = Self.providerToEnvironmentKey[lowercased],
+           let value = ProcessInfo.processInfo.environment[environmentKey],
+           !value.isEmpty {
+            return value
+        }
+
+        return nil
+    }
+
+    /// Retrieves the literal stored API key, preserving references like "$ELEVENLABS_API_KEY" for the UI.
+    func getStoredAPIKey(forProvider provider: String) -> String? {
         let keyIdentifier = keychainIdentifier(forProvider: provider)
         return keychain.getString(forKey: keyIdentifier)
     }
@@ -63,6 +85,29 @@ final class APIKeyManager {
         return getAPIKey(forProvider: provider) != nil
     }
 
+    static func resolveAPIKeyReference(_ key: String, environment: [String: String] = ProcessInfo.processInfo.environment) -> String? {
+        let trimmed = key.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !trimmed.isEmpty else { return nil }
+
+        let variableName: String
+        if trimmed.hasPrefix("${"), trimmed.hasSuffix("}") {
+            variableName = String(trimmed.dropFirst(2).dropLast())
+        } else if trimmed.hasPrefix("$") {
+            variableName = String(trimmed.dropFirst())
+        } else {
+            return trimmed
+        }
+
+        guard !variableName.isEmpty,
+              variableName.range(of: #"^[A-Za-z_][A-Za-z0-9_]*$"#, options: .regularExpression) != nil,
+              let value = environment[variableName],
+              !value.isEmpty else {
+            return nil
+        }
+
+        return value
+    }
+
     // MARK: - Custom Model API Keys
 
     /// Saves an API key for a custom model.
@@ -79,7 +124,8 @@ final class APIKeyManager {
     /// Retrieves an API key for a custom model.
     func getCustomModelAPIKey(forModelId modelId: UUID) -> String? {
         let keyIdentifier = customModelKeyIdentifier(for: modelId)
-        return keychain.getString(forKey: keyIdentifier)
+        guard let storedKey = keychain.getString(forKey: keyIdentifier) else { return nil }
+        return Self.resolveAPIKeyReference(storedKey)
     }
 
     /// Deletes an API key for a custom model.

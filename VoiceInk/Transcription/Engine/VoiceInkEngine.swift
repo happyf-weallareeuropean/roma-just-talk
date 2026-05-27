@@ -148,7 +148,6 @@ class VoiceInkEngine: NSObject, ObservableObject {
 
                             self.recordingState = .starting
                             self.logger.notice("toggleRecord: state=starting, starting audio hardware")
-                            self.recorder.scheduleSystemMute()
 
                             try await self.recorder.startRecording(toOutputFile: permanentURL)
 

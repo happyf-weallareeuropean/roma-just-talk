@@ -28,7 +28,6 @@ struct SettingsView: View {
     // Expansion states - all collapsed by default
     @State private var isMiddleClickExpanded = false
     @State private var isSoundFeedbackExpanded = false
-    @State private var isMuteSystemExpanded = false
     @State private var isRestoreClipboardExpanded = false
 
     var body: some View {
@@ -160,13 +159,14 @@ struct SettingsView: View {
                     CustomSoundSettingsView()
                 }
 
-                // Mute System Audio
-                ExpandableSettingsRow(
-                    isExpanded: $isMuteSystemExpanded,
-                    isEnabled: $mediaController.isSystemMuteEnabled,
-                    label: "Mute Audio While Recording"
-                ) {
-                    Picker("Resume Delay", selection: $mediaController.audioResumptionDelay) {
+                Picker("Mute Audio While Recording", selection: $mediaController.systemMuteMode) {
+                    ForEach(SystemMuteMode.allCases) { mode in
+                        Text(mode.displayName).tag(mode)
+                    }
+                }
+
+                if mediaController.systemMuteMode != .never {
+                    Picker("Audio Resume Delay", selection: $mediaController.audioResumptionDelay) {
                         Text("0s").tag(0.0)
                         Text("1s").tag(1.0)
                         Text("2s").tag(2.0)
@@ -221,6 +221,7 @@ struct SettingsView: View {
             // MARK: - Interface
             Section("Interface") {
                 Picker("Recorder Style", selection: $recorderUIManager.recorderType) {
+                    Text("None").tag("none")
                     Text("Notch").tag("notch")
                     Text("Mini").tag("mini")
                 }

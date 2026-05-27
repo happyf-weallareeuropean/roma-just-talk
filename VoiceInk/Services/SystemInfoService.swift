@@ -46,12 +46,12 @@ class SystemInfoService {
 
         UI SETTINGS:
         Hide Dock Icon: \(UserDefaults.standard.bool(forKey: "IsMenuBarOnly"))
-        Recorder Style: \(UserDefaults.standard.string(forKey: "RecorderType") ?? "mini")
+        Recorder Style: \(UserDefaults.standard.string(forKey: "RecorderType") ?? "none")
 
         RECORDING FEEDBACK:
         Sound Feedback: \(UserDefaults.standard.bool(forKey: "isSoundFeedbackEnabled"))
         Pause Media While Recording: \(UserDefaults.standard.bool(forKey: "isPauseMediaEnabled"))
-        Mute Audio While Recording: \(UserDefaults.standard.bool(forKey: "isSystemMuteEnabled"))
+        Mute Audio While Recording: \(UserDefaults.standard.string(forKey: "systemMuteMode") ?? SystemMuteMode.automatic.rawValue)
         Audio Resumption Delay: \(UserDefaults.standard.double(forKey: "audioResumptionDelay"))s
 
         CLIPBOARD & PASTE SETTINGS:
@@ -123,7 +123,7 @@ class SystemInfoService {
            let audioMode = AudioInputMode(rawValue: mode) {
             return audioMode.rawValue
         }
-        return "System Default"
+        return "Custom Device"
     }
 
     private func getCurrentAudioDevice() -> String {

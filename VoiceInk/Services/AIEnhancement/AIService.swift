@@ -69,7 +69,7 @@ enum AIProvider: String, CaseIterable {
         case .mistral:
             return "mistral-large-latest"
         case .elevenLabs:
-            return "scribe_v1"
+            return "scribe_v2"
         case .deepgram:
             return "whisper-1"
         case .soniox:
@@ -328,11 +328,16 @@ class AIService: ObservableObject {
             return
         }
 
+        guard let resolvedKey = APIKeyManager.resolveAPIKeyReference(key) else {
+            completion(false, "Environment variable is missing or empty")
+            return
+        }
+
         verifyAPIKey(key) { [weak self] isValid, errorMessage in
             guard let self = self else { return }
             DispatchQueue.main.async {
                 if isValid {
-                    self.apiKey = key
+                    self.apiKey = resolvedKey
                     self.isAPIKeyValid = true
                     APIKeyManager.shared.saveAPIKey(key, forProvider: self.selectedProvider.rawValue)
                     NotificationCenter.default.post(name: .aiProviderKeyChanged, object: nil)
@@ -350,27 +355,32 @@ class AIService: ObservableObject {
             return
         }
 
+        guard let resolvedKey = APIKeyManager.resolveAPIKeyReference(key) else {
+            completion(false, "Environment variable is missing or empty")
+            return
+        }
+
         Task {
             let result: (isValid: Bool, errorMessage: String?)
             switch selectedProvider {
             case .anthropic:
-                result = await AnthropicLLMClient.verifyAPIKey(key)
+                result = await AnthropicLLMClient.verifyAPIKey(resolvedKey)
             case .elevenLabs:
-                result = await ElevenLabsClient.verifyAPIKey(key)
+                result = await ElevenLabsClient.verifyAPIKey(resolvedKey)
             case .deepgram:
-                result = await DeepgramClient.verifyAPIKey(key)
+                result = await DeepgramClient.verifyAPIKey(resolvedKey)
             case .mistral:
-                result = await MistralTranscriptionClient.verifyAPIKey(key)
+                result = await MistralTranscriptionClient.verifyAPIKey(resolvedKey)
             case .soniox:
-                result = await SonioxClient.verifyAPIKey(key)
+                result = await SonioxClient.verifyAPIKey(resolvedKey)
             case .speechmatics:
-                result = await SpeechmaticsClient.verifyAPIKey(key)
+                result = await SpeechmaticsClient.verifyAPIKey(resolvedKey)
             case .assemblyAI:
-                result = await AssemblyAIClient.verifyAPIKey(key)
+                result = await AssemblyAIClient.verifyAPIKey(resolvedKey)
             case .openRouter:
-                result = await OpenRouterClient.verifyAPIKey(key, model: currentModel)
+                result = await OpenRouterClient.verifyAPIKey(resolvedKey, model: currentModel)
             case .gemini:
-                result = await GeminiTranscriptionClient.verifyAPIKey(key)
+                result = await GeminiTranscriptionClient.verifyAPIKey(resolvedKey)
             default:
                 guard let baseURL = URL(string: selectedProvider.baseURL) else {
                     DispatchQueue.main.async {
@@ -380,7 +390,7 @@ class AIService: ObservableObject {
                 }
                 result = await OpenAILLMClient.verifyAPIKey(
                     baseURL: baseURL,
-                    apiKey: key,
+                    apiKey: resolvedKey,
                     model: currentModel
                 )
             }

@@ -4,6 +4,89 @@ import AudioToolbox
 import AVFoundation
 import os
 
+private final class PCMPreRollBuffer: @unchecked Sendable {
+    private let lock = NSLock()
+    private let samples: UnsafeMutablePointer<Int16>
+    private let capacity: Int
+    private var writeIndex = 0
+    private var availableSamples = 0
+
+    init(sampleRate: Int, seconds: Int) {
+        capacity = max(sampleRate * seconds, 1)
+        samples = UnsafeMutablePointer<Int16>.allocate(capacity: capacity)
+        samples.initialize(repeating: 0, count: capacity)
+    }
+
+    deinit {
+        samples.deallocate()
+    }
+
+    func append(_ input: UnsafePointer<Int16>, sampleCount: Int) {
+        guard sampleCount > 0 else { return }
+
+        lock.lock()
+        defer { lock.unlock() }
+
+        if sampleCount >= capacity {
+            input.advanced(by: sampleCount - capacity).withMemoryRebound(to: Int16.self, capacity: capacity) { source in
+                samples.update(from: source, count: capacity)
+            }
+            writeIndex = 0
+            availableSamples = capacity
+            return
+        }
+
+        let firstCopyCount = min(sampleCount, capacity - writeIndex)
+        samples.advanced(by: writeIndex).update(from: input, count: firstCopyCount)
+
+        let remaining = sampleCount - firstCopyCount
+        if remaining > 0 {
+            samples.update(from: input.advanced(by: firstCopyCount), count: remaining)
+        }
+
+        writeIndex = (writeIndex + sampleCount) % capacity
+        availableSamples = min(capacity, availableSamples + sampleCount)
+    }
+
+    func snapshotData() -> Data {
+        lock.lock()
+        defer { lock.unlock() }
+
+        guard availableSamples > 0 else { return Data() }
+
+        let byteCount = availableSamples * MemoryLayout<Int16>.size
+        let start = (writeIndex - availableSamples + capacity) % capacity
+        let firstSampleCount = min(availableSamples, capacity - start)
+        let secondSampleCount = availableSamples - firstSampleCount
+
+        var data = Data(count: byteCount)
+        data.withUnsafeMutableBytes { rawBuffer in
+            guard let destination = rawBuffer.baseAddress else { return }
+
+            let firstByteCount = firstSampleCount * MemoryLayout<Int16>.size
+            destination.copyMemory(
+                from: UnsafeRawPointer(samples.advanced(by: start)),
+                byteCount: firstByteCount
+            )
+
+            if secondSampleCount > 0 {
+                destination.advanced(by: firstByteCount).copyMemory(
+                    from: UnsafeRawPointer(samples),
+                    byteCount: secondSampleCount * MemoryLayout<Int16>.size
+                )
+            }
+        }
+        return data
+    }
+
+    func clear() {
+        lock.lock()
+        writeIndex = 0
+        availableSamples = 0
+        lock.unlock()
+    }
+}
+
 // MARK: - Core Audio Recorder (AUHAL-based, does not change system default device)
 final class CoreAudioRecorder: @unchecked Sendable {
 
@@ -14,9 +97,12 @@ final class CoreAudioRecorder: @unchecked Sendable {
     private var audioUnit: AudioUnit?
     private var audioFile: ExtAudioFileRef?
 
+    private var isCapturing = false
     private var isRecording = false
     private var currentDeviceID: AudioDeviceID = 0
     private var recordingURL: URL?
+    private let preRollBuffer = PCMPreRollBuffer(sampleRate: 16_000, seconds: 3)
+    private let preRollStreamingChunkBytes = 3_200
 
     // Device format (what the hardware provides)
     private var deviceFormat = AudioStreamBasicDescription()
@@ -61,11 +147,45 @@ final class CoreAudioRecorder: @unchecked Sendable {
 
     // MARK: - Public Interface
 
-    /// Starts recording from the specified device to the given URL (WAV format)
-    func startRecording(toOutputFile url: URL, deviceID: AudioDeviceID) throws {
-        // Stop any existing recording
+    /// Opens the input device and keeps a small PCM ring buffer warm without writing to disk.
+    func startPreBuffering(deviceID: AudioDeviceID) throws {
+        if isRecording {
+            return
+        }
+
+        if isCapturing, currentDeviceID == deviceID {
+            return
+        }
+
         stopRecording()
 
+        if deviceID == 0 {
+            logger.error("Cannot start pre-roll buffering - no valid audio device (deviceID is 0)")
+            throw CoreAudioRecorderError.failedToSetDevice(status: 0)
+        }
+
+        guard isDeviceAvailable(deviceID) else {
+            logger.error("Cannot start pre-roll buffering - device \(deviceID, privacy: .public) is no longer available")
+            throw CoreAudioRecorderError.deviceNotAvailable
+        }
+
+        currentDeviceID = deviceID
+        preRollBuffer.clear()
+
+        logger.notice("🎙️ Starting pre-roll buffering from device \(deviceID, privacy: .public)")
+        logDeviceDetails(deviceID: deviceID)
+
+        try createAudioUnit()
+        try setInputDevice(deviceID)
+        try configureFormats()
+        try setupInputCallback()
+        try startAudioUnit()
+
+        isCapturing = true
+    }
+
+    /// Starts recording from the specified device to the given URL (WAV format)
+    func startRecording(toOutputFile url: URL, deviceID: AudioDeviceID) throws {
         if deviceID == 0 {
             logger.error("Cannot start recording - no valid audio device (deviceID is 0)")
             throw CoreAudioRecorderError.failedToSetDevice(status: 0)
@@ -77,40 +197,66 @@ final class CoreAudioRecorder: @unchecked Sendable {
             throw CoreAudioRecorderError.deviceNotAvailable
         }
 
-        currentDeviceID = deviceID
-        recordingURL = url
+        if isRecording {
+            finishRecording()
+        }
+
+        if !isCapturing || currentDeviceID != deviceID {
+            try startPreBuffering(deviceID: deviceID)
+        }
 
         logger.notice("🎙️ Starting recording from device \(deviceID, privacy: .public)")
-        logDeviceDetails(deviceID: deviceID)
 
-        // Step 1: Create and configure the AudioUnit (AUHAL)
-        try createAudioUnit()
-
-        // Step 2: Set the input device (does NOT change system default)
-        try setInputDevice(deviceID)
-
-        // Step 3: Configure formats
-        try configureFormats()
-
-        // Step 4: Set up the input callback
-        try setupInputCallback()
-
-        // Step 5: Create the output file
+        recordingURL = url
         try createOutputFile(at: url)
 
-        // Step 6: Initialize and start the AudioUnit
-        try startAudioUnit()
+        let preRollData = preRollBuffer.snapshotData()
+        if !preRollData.isEmpty {
+            try writePCMDataToFile(preRollData)
+            emitPreRollDataToStreaming(preRollData)
+            logger.notice("🎙️ Wrote pre-roll buffer bytes=\(preRollData.count, privacy: .public)")
+        }
 
         isRecording = true
     }
 
+    /// Finishes the WAV file while leaving the AudioUnit open so the next hotkey has pre-roll.
+    func finishRecording(keepCapturing: Bool = true) {
+        guard isRecording || audioFile != nil else { return }
+
+        let shouldRestartCapture = keepCapturing && isCapturing
+        if shouldRestartCapture, let unit = audioUnit {
+            AudioOutputUnitStop(unit)
+        }
+
+        isRecording = false
+
+        if let file = audioFile {
+            ExtAudioFileDispose(file)
+            audioFile = nil
+        }
+
+        recordingURL = nil
+        preRollBuffer.clear()
+
+        if shouldRestartCapture, let unit = audioUnit {
+            let status = AudioOutputUnitStart(unit)
+            if status != noErr {
+                logger.error("🎙️ Failed to restart pre-roll capture after finishing recording: \(status, privacy: .public)")
+                stopRecording()
+            }
+        }
+    }
+
     /// Stops the current recording
     func stopRecording() {
-        guard isRecording || audioUnit != nil else {
+        guard isRecording || isCapturing || audioUnit != nil else {
             logger.notice("stopRecording: skipped, not recording and no audio unit")
             return
         }
         logger.notice("stopRecording: stopping core audio recorder")
+
+        finishRecording(keepCapturing: false)
 
         // Stop and dispose AudioUnit
         if let unit = audioUnit {
@@ -140,8 +286,10 @@ final class CoreAudioRecorder: @unchecked Sendable {
         }
 
         isRecording = false
+        isCapturing = false
         currentDeviceID = 0
         recordingURL = nil
+        preRollBuffer.clear()
 
         // Reset meters
         meterLock.lock()
@@ -151,12 +299,13 @@ final class CoreAudioRecorder: @unchecked Sendable {
     }
 
     var isCurrentlyRecording: Bool { isRecording }
+    var isPreBuffering: Bool { isCapturing && !isRecording }
     var currentRecordingURL: URL? { recordingURL }
     var currentDevice: AudioDeviceID { currentDeviceID }
 
     /// Switches to a new input device mid-recording without stopping the file write
     func switchDevice(to newDeviceID: AudioDeviceID) throws {
-        guard isRecording, let unit = audioUnit else {
+        guard isCapturing, let unit = audioUnit else {
             throw CoreAudioRecorderError.audioUnitNotInitialized
         }
 
@@ -261,6 +410,7 @@ final class CoreAudioRecorder: @unchecked Sendable {
         // Update stored format
         deviceFormat = newDeviceFormat
         currentDeviceID = newDeviceID
+        preRollBuffer.clear()
 
         // Step 7: Reinitialize and restart
         status = AudioUnitInitialize(unit)
@@ -549,7 +699,7 @@ final class CoreAudioRecorder: @unchecked Sendable {
         inNumberFrames: UInt32
     ) -> OSStatus {
 
-        guard let audioUnit = audioUnit, isRecording, let renderBuf = renderBuffer else {
+        guard let audioUnit = audioUnit, isCapturing, let renderBuf = renderBuffer else {
             return noErr
         }
 
@@ -629,8 +779,6 @@ final class CoreAudioRecorder: @unchecked Sendable {
     }
 
     private func convertAndWriteToFile(inputBuffer: inout AudioBufferList, frameCount: UInt32) {
-        guard let file = audioFile else { return }
-
         let inputChannels = deviceFormat.mChannelsPerFrame
         let inputSampleRate = deviceFormat.mSampleRate
         let outputSampleRate = outputFormat.mSampleRate
@@ -699,16 +847,60 @@ final class CoreAudioRecorder: @unchecked Sendable {
             )
         )
 
-        let writeStatus = ExtAudioFileWrite(file, outputFrameCount, &outputBufferList)
-        if writeStatus != noErr {
-            logger.error("🎙️ ExtAudioFileWrite failed with status: \(writeStatus, privacy: .public)")
+        preRollBuffer.append(outputBuffer, sampleCount: Int(outputFrameCount))
+
+        if isRecording, let file = audioFile {
+            let writeStatus = ExtAudioFileWrite(file, outputFrameCount, &outputBufferList)
+            if writeStatus != noErr {
+                logger.error("🎙️ ExtAudioFileWrite failed with status: \(writeStatus, privacy: .public)")
+            }
         }
 
         // Send the same PCM data to the streaming callback if set
-        if let onAudioChunk = onAudioChunk {
+        if isRecording, let onAudioChunk = onAudioChunk {
             let byteCount = Int(outputFrameCount) * MemoryLayout<Int16>.size
             let data = Data(bytes: outputBuffer, count: byteCount)
             onAudioChunk(data)
+        }
+    }
+
+    private func writePCMDataToFile(_ data: Data) throws {
+        guard let file = audioFile else { return }
+        guard data.count >= MemoryLayout<Int16>.size else { return }
+
+        let frameCount = UInt32(data.count / MemoryLayout<Int16>.size)
+        var mutableData = data
+        let writeStatus: OSStatus = mutableData.withUnsafeMutableBytes { rawBuffer in
+            var outputBufferList = AudioBufferList(
+                mNumberBuffers: 1,
+                mBuffers: AudioBuffer(
+                    mNumberChannels: 1,
+                    mDataByteSize: frameCount * UInt32(MemoryLayout<Int16>.size),
+                    mData: rawBuffer.baseAddress
+                )
+            )
+            return ExtAudioFileWrite(file, frameCount, &outputBufferList)
+        }
+
+        if writeStatus != noErr {
+            logger.error("🎙️ Failed to write pre-roll buffer: \(writeStatus, privacy: .public)")
+            throw CoreAudioRecorderError.failedToWriteFile(status: writeStatus)
+        }
+    }
+
+    private func emitPreRollDataToStreaming(_ data: Data) {
+        guard let onAudioChunk else { return }
+
+        var offset = 0
+        while offset < data.count {
+            var length = min(preRollStreamingChunkBytes, data.count - offset)
+            if length % MemoryLayout<Int16>.size != 0 {
+                length -= 1
+            }
+            guard length > 0 else { break }
+
+            onAudioChunk(data.subdata(in: offset..<(offset + length)))
+            offset += length
         }
     }
 
@@ -876,6 +1068,7 @@ enum CoreAudioRecorderError: LocalizedError {
     case failedToSetCallback(status: OSStatus)
     case failedToCreateFile(status: OSStatus)
     case failedToSetFileFormat(status: OSStatus)
+    case failedToWriteFile(status: OSStatus)
     case failedToInitialize(status: OSStatus)
     case failedToStart(status: OSStatus)
 
@@ -905,6 +1098,8 @@ enum CoreAudioRecorderError: LocalizedError {
             return "Failed to create audio file: \(status)"
         case .failedToSetFileFormat(let status):
             return "Failed to set file format: \(status)"
+        case .failedToWriteFile(let status):
+            return "Failed to write audio file: \(status)"
         case .failedToInitialize(let status):
             return "Failed to initialize AudioUnit: \(status)"
         case .failedToStart(let status):
