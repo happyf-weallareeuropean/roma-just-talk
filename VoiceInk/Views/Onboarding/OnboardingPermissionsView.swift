@@ -13,6 +13,7 @@ struct OnboardingPermission: Identifiable {
         case microphone
         case audioDeviceSelection
         case accessibility
+        case inputMonitoring
         case screenRecording
         case keyboardShortcut
         
@@ -21,6 +22,7 @@ struct OnboardingPermission: Identifiable {
             case .microphone: return "mic"
             case .audioDeviceSelection: return "headphones"
             case .accessibility: return "accessibility"
+            case .inputMonitoring: return "keyboard.badge.eye"
             case .screenRecording: return "rectangle.inset.filled.and.person.filled"
             case .keyboardShortcut: return "keyboard"
             }
@@ -33,7 +35,7 @@ struct OnboardingPermissionsView: View {
     @EnvironmentObject private var recordingShortcutManager: RecordingShortcutManager
     @ObservedObject private var audioDeviceManager = AudioDeviceManager.shared
     @State private var currentPermissionIndex = 0
-    @State private var permissionStates: [Bool] = [false, false, false, false, false]
+    @State private var permissionStates: [Bool] = [false, false, false, false, false, false]
     @State private var showAnimation = false
     @State private var scale: CGFloat = 0.8
     @State private var opacity: CGFloat = 0
@@ -57,6 +59,12 @@ struct OnboardingPermissionsView: View {
             description: "Allow VoiceInk to help you type anywhere in your Mac.",
             icon: "accessibility",
             type: .accessibility
+        ),
+        OnboardingPermission(
+            title: "Input Monitoring",
+            description: "Allow VoiceInk to detect your recording shortcut while other apps are active.",
+            icon: "keyboard.badge.eye",
+            type: .inputMonitoring
         ),
         OnboardingPermission(
             title: "Screen Recording",
@@ -272,12 +280,15 @@ struct OnboardingPermissionsView: View {
         
         // Check accessibility permission
         permissionStates[2] = AXIsProcessTrusted()
+
+        // Check input monitoring permission
+        permissionStates[3] = ShortcutMonitor.preflightListenEventAccess()
         
         // Check screen recording permission
-        permissionStates[3] = CGPreflightScreenCaptureAccess()
+        permissionStates[4] = CGPreflightScreenCaptureAccess()
         
         // Check keyboard shortcut
-        permissionStates[4] = recordingShortcutManager.isShortcutConfigured
+        permissionStates[5] = recordingShortcutManager.isShortcutConfigured
     }
     
     private func requestPermission() {
@@ -330,6 +341,24 @@ struct OnboardingPermissionsView: View {
             // Start checking for permission status
             Timer.scheduledTimer(withTimeInterval: 0.5, repeats: true) { timer in
                 if AXIsProcessTrusted() {
+                    timer.invalidate()
+                    permissionStates[currentPermissionIndex] = true
+                    withAnimation {
+                        showAnimation = true
+                    }
+                }
+            }
+
+        case .inputMonitoring:
+            let granted = ShortcutMonitor.requestListenEventAccess()
+            permissionStates[currentPermissionIndex] = granted || ShortcutMonitor.preflightListenEventAccess()
+
+            if let url = URL(string: "x-apple.systempreferences:com.apple.preference.security?Privacy_ListenEvent") {
+                NSWorkspace.shared.open(url)
+            }
+
+            Timer.scheduledTimer(withTimeInterval: 0.5, repeats: true) { timer in
+                if ShortcutMonitor.preflightListenEventAccess() {
                     timer.invalidate()
                     permissionStates[currentPermissionIndex] = true
                     withAnimation {

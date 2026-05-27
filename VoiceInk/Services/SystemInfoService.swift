@@ -71,6 +71,7 @@ class SystemInfoService {
 
         PERMISSIONS:
         Accessibility: \(getAccessibilityStatus())
+        Input Monitoring: \(getInputMonitoringStatus())
         Screen Recording: \(getScreenRecordingStatus())
         Microphone: \(getMicrophoneStatus())
         """
@@ -189,6 +190,10 @@ class SystemInfoService {
     }
     private func getAccessibilityStatus() -> String {
         return AXIsProcessTrusted() ? "Granted" : "Not Granted"
+    }
+
+    private func getInputMonitoringStatus() -> String {
+        return ShortcutMonitor.preflightListenEventAccess() ? "Granted" : "Not Granted"
     }
 
     private func getScreenRecordingStatus() -> String {

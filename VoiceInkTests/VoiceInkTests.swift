@@ -77,4 +77,19 @@ struct VoiceInkTests {
         #expect(!sessionActive)
     }
 
+    @Test func inputMonitoringPermissionUsesInjectedSystemClient() async throws {
+        var didRequestAccess = false
+        let client = InputMonitoringPermission.Client(
+            preflight: { false },
+            request: {
+                didRequestAccess = true
+                return true
+            }
+        )
+
+        #expect(!InputMonitoringPermission.isGranted(client: client))
+        #expect(InputMonitoringPermission.requestAccess(client: client))
+        #expect(didRequestAccess)
+    }
+
 }

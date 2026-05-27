@@ -1,10 +1,12 @@
 import SwiftUI
 import AVFoundation
 import Cocoa
+import CoreGraphics
 
 class PermissionManager: ObservableObject {
     @Published var audioPermissionStatus = AVCaptureDevice.authorizationStatus(for: .audio)
     @Published var isAccessibilityEnabled = false
+    @Published var isInputMonitoringEnabled = false
     @Published var isScreenRecordingEnabled = false
     @Published var isKeyboardShortcutSet = false
     
@@ -37,6 +39,7 @@ class PermissionManager: ObservableObject {
     
     func checkAllPermissions() {
         checkAccessibilityPermissions()
+        checkInputMonitoringPermission()
         checkScreenRecordingPermission()
         checkAudioPermissionStatus()
         checkKeyboardShortcut()
@@ -71,6 +74,25 @@ class PermissionManager: ObservableObject {
             DispatchQueue.main.async {
                 self.audioPermissionStatus = granted ? .authorized : .denied
             }
+        }
+    }
+
+    func checkInputMonitoringPermission() {
+        DispatchQueue.main.async {
+            self.isInputMonitoringEnabled = ShortcutMonitor.preflightListenEventAccess()
+        }
+    }
+
+    func requestInputMonitoringPermission() {
+        let granted = ShortcutMonitor.requestListenEventAccess()
+        DispatchQueue.main.async {
+            self.isInputMonitoringEnabled = granted || ShortcutMonitor.preflightListenEventAccess()
+        }
+    }
+
+    static func openInputMonitoringSettings() {
+        if let url = URL(string: "x-apple.systempreferences:com.apple.preference.security?Privacy_ListenEvent") {
+            NSWorkspace.shared.open(url)
         }
     }
     
@@ -223,6 +245,21 @@ struct PermissionsView: View {
                             )
                         },
                         checkPermission: { permissionManager.checkKeyboardShortcut() }
+                    )
+
+                    // Input Monitoring Permission
+                    PermissionCard(
+                        icon: "keyboard.badge.eye",
+                        title: "Input Monitoring Access",
+                        description: "Allow VoiceInk to listen for your recording hotkey globally",
+                        isGranted: permissionManager.isInputMonitoringEnabled,
+                        buttonTitle: "Request Permission",
+                        buttonAction: {
+                            permissionManager.requestInputMonitoringPermission()
+                            PermissionManager.openInputMonitoringSettings()
+                        },
+                        checkPermission: { permissionManager.checkInputMonitoringPermission() },
+                        infoTipMessage: "VoiceInk uses Input Monitoring only to detect your configured recording shortcut while other apps are active."
                     )
                     
                     // Audio Permission

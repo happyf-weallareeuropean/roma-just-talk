@@ -50,6 +50,7 @@ class RecordingShortcutManager: ObservableObject {
     private var shortcutChangeObserver: NSObjectProtocol?
     private let shortcutModeHandler: RecordingShortcutModeHandler
     private let primaryRecordingShortcutModeSource: RecordingShortcutModeSource
+    private var hasShownInputMonitoringPermissionNotification = false
 
     // MARK: - Helper Properties
     private var canHandleShortcutAction: Bool {
@@ -224,7 +225,7 @@ class RecordingShortcutManager: ObservableObject {
             interruptibleRecordingActions.insert(.secondaryRecording)
         }
 
-        shortcutMonitor.start(
+        let isMonitoring = shortcutMonitor.start(
             shortcuts: shortcuts,
             interruptibleActions: interruptibleRecordingActions,
             onKeyDown: { [weak self] action, eventTime in
@@ -258,6 +259,26 @@ class RecordingShortcutManager: ObservableObject {
                     await self.shortcutModeHandler.handleInterruption(action: action)
                 }
             }
+        )
+
+        guard !isMonitoring,
+              !shortcuts.isEmpty,
+              !ShortcutMonitor.preflightListenEventAccess(),
+              !hasShownInputMonitoringPermissionNotification else {
+            return
+        }
+
+        hasShownInputMonitoringPermissionNotification = true
+        NotificationManager.shared.showNotification(
+            title: "Enable Input Monitoring for shortcuts",
+            type: .warning,
+            duration: 6,
+            actionButton: (
+                label: "Open Settings",
+                action: {
+                    PermissionManager.openInputMonitoringSettings()
+                }
+            )
         )
     }
 

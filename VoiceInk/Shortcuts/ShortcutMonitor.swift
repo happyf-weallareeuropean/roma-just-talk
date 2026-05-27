@@ -2,6 +2,27 @@ import AppKit
 import CoreGraphics
 import Foundation
 
+enum InputMonitoringPermission {
+    struct Client {
+        var preflight: () -> Bool
+        var request: () -> Bool
+    }
+
+    static let systemClient = Client(
+        preflight: CGPreflightListenEventAccess,
+        request: CGRequestListenEventAccess
+    )
+
+    static func isGranted(client: Client = systemClient) -> Bool {
+        client.preflight()
+    }
+
+    @discardableResult
+    static func requestAccess(client: Client = systemClient) -> Bool {
+        client.request()
+    }
+}
+
 final class ShortcutMonitor {
     fileprivate enum EventKind {
         case keyDown
@@ -76,7 +97,7 @@ final class ShortcutMonitor {
     }
 
     private func installEventTap() -> Bool {
-        guard Self.hasListenEventAccess() else {
+        guard Self.ensureListenEventAccessForMonitoring() else {
             return false
         }
 
@@ -122,8 +143,17 @@ final class ShortcutMonitor {
         return true
     }
 
-    private static func hasListenEventAccess() -> Bool {
-        if CGPreflightListenEventAccess() {
+    static func preflightListenEventAccess() -> Bool {
+        InputMonitoringPermission.isGranted()
+    }
+
+    @discardableResult
+    static func requestListenEventAccess() -> Bool {
+        InputMonitoringPermission.requestAccess()
+    }
+
+    private static func ensureListenEventAccessForMonitoring() -> Bool {
+        if preflightListenEventAccess() {
             return true
         }
 
@@ -132,7 +162,7 @@ final class ShortcutMonitor {
         }
 
         hasRequestedListenEventAccess = true
-        return CGRequestListenEventAccess()
+        return requestListenEventAccess()
     }
 
     private func handleCGEvent(type: CGEventType, event: CGEvent) -> Bool {
