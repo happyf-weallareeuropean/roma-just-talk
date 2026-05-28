@@ -42,6 +42,27 @@ struct VoiceInkTests {
         #expect(manager.notchWindowManager == nil)
     }
 
+    @Test @MainActor func idleNoneRecorderSessionDoesNotBlockNextShortcutStart() async throws {
+        let oldRecorderType = UserDefaults.standard.string(forKey: "RecorderType")
+        defer {
+            if let oldRecorderType {
+                UserDefaults.standard.set(oldRecorderType, forKey: "RecorderType")
+            } else {
+                UserDefaults.standard.removeObject(forKey: "RecorderType")
+            }
+        }
+
+        UserDefaults.standard.set("none", forKey: "RecorderType")
+        let manager = RecorderUIManager()
+
+        manager.beginRecorderSession()
+
+        #expect(manager.isRecorderSessionActive)
+        #expect(!manager.isActiveForRecordingShortcut(recordingState: .idle))
+        #expect(manager.isActiveForRecordingShortcut(recordingState: .starting))
+        #expect(manager.isActiveForRecordingShortcut(recordingState: .recording))
+    }
+
     @Test @MainActor func pushToTalkUsesActiveSessionWhenRecorderWindowIsNone() async throws {
         var sessionActive = false
         var toggleCount = 0

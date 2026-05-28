@@ -124,6 +124,7 @@ class VoiceInkEngine: NSObject, ObservableObject {
             logger.notice("toggleRecord: entering start-recording branch")
             guard transcriptionModelManager.currentTranscriptionModel != nil else {
                 NotificationManager.shared.showNotification(title: "No AI Model Selected", type: .error)
+                await recorderUIManager?.dismissMiniRecorder()
                 return
             }
             activePipelineTranscriptionID = nil
@@ -233,6 +234,10 @@ class VoiceInkEngine: NSObject, ObservableObject {
                     }
                 } else {
                     logger.error("❌ Recording permission denied.")
+                    NotificationManager.shared.showNotification(title: "Microphone permission required", type: .error)
+                    Task { @MainActor [self] in
+                        await self.recorderUIManager?.dismissMiniRecorder()
+                    }
                 }
             }
         }

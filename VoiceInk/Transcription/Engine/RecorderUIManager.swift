@@ -105,9 +105,22 @@ class RecorderUIManager: ObservableObject {
         }
     }
 
+    func isActiveForRecordingShortcut(recordingState: RecordingState) -> Bool {
+        if recorderType == "none", recordingState == .idle {
+            return false
+        }
+
+        return isRecorderSessionActive
+    }
+
     func toggleMiniRecorder(powerModeId: UUID? = nil) async {
         guard let engine = engine else { return }
         logger.notice("toggleMiniRecorder called – sessionActive=\(self.isRecorderSessionActive, privacy: .public), visible=\(self.isMiniRecorderVisible, privacy: .public), state=\(String(describing: engine.recordingState), privacy: .public)")
+
+        if recorderType == "none", isRecorderSessionActive, engine.recordingState == .idle {
+            logger.notice("toggleMiniRecorder: clearing stale hidden recorder session before starting")
+            isRecorderSessionActive = false
+        }
 
         if isRecorderSessionActive {
             switch engine.recordingState {
