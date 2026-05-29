@@ -107,7 +107,7 @@ struct Shortcut: Codable, Equatable {
             return !normalizedFlags.isSuperset(of: modifierFlags)
         }
 
-        return keyCode == eventKeyCode
+        return keyCode == eventKeyCode && !normalizedFlags.isSuperset(of: modifierFlags)
     }
 
     func isInterruptedByAdditionalKeyDown(keyCode eventKeyCode: UInt16) -> Bool {

@@ -163,6 +163,15 @@ struct VoiceInkTests {
 
         monitor.handleModifierOnlyFlagsChangedForTesting(
             keyCode: UInt16(kVK_RightOption),
+            modifierFlags: [.option],
+            eventTime: 2.5
+        )
+        try await Task.sleep(nanoseconds: 10_000_000)
+        #expect(keyDownCount == 1)
+        #expect(keyUpCount == 0)
+
+        monitor.handleModifierOnlyFlagsChangedForTesting(
+            keyCode: UInt16(kVK_RightOption),
             modifierFlags: [],
             eventTime: 3
         )
