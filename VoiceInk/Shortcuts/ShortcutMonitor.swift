@@ -1,6 +1,8 @@
 import AppKit
+import ApplicationServices
 import CoreGraphics
 import Foundation
+import os
 
 enum InputMonitoringPermission {
     struct Client {
@@ -11,6 +13,30 @@ enum InputMonitoringPermission {
     static let systemClient = Client(
         preflight: CGPreflightListenEventAccess,
         request: CGRequestListenEventAccess
+    )
+
+    static func isGranted(client: Client = systemClient) -> Bool {
+        client.preflight()
+    }
+
+    @discardableResult
+    static func requestAccess(client: Client = systemClient) -> Bool {
+        client.request()
+    }
+}
+
+enum AccessibilityPermission {
+    struct Client {
+        var preflight: () -> Bool
+        var request: () -> Bool
+    }
+
+    static let systemClient = Client(
+        preflight: AXIsProcessTrusted,
+        request: {
+            let options = [kAXTrustedCheckOptionPrompt.takeUnretainedValue() as String: true] as CFDictionary
+            return AXIsProcessTrustedWithOptions(options)
+        }
     )
 
     static func isGranted(client: Client = systemClient) -> Bool {
@@ -44,8 +70,10 @@ final class ShortcutMonitor {
     private var onShortcutInterrupted: ((ShortcutAction, TimeInterval) -> Void)?
     private var eventTap: CFMachPort?
     private var eventTapRunLoopSource: CFRunLoopSource?
+    private let logger = Logger(subsystem: "com.prakashjoshipax.voiceink", category: "ShortcutMonitor")
 
     private static var hasRequestedListenEventAccess = false
+    private static var hasRequestedAccessibilityAccess = false
     private static let shortcutInterruptionWindow: TimeInterval = 1.0
 
     deinit {
@@ -67,6 +95,7 @@ final class ShortcutMonitor {
         }
 
         guard !self.shortcuts.isEmpty else {
+            logger.notice("start: no shortcuts configured")
             return true
         }
 
@@ -74,6 +103,7 @@ final class ShortcutMonitor {
         self.onKeyDown = onKeyDown
         self.onKeyUp = onKeyUp
         self.onShortcutInterrupted = onShortcutInterrupted
+        logger.notice("start: installing event tap for \(self.shortcuts.count, privacy: .public) shortcut(s)")
 
         return installEventTap()
     }
@@ -98,6 +128,12 @@ final class ShortcutMonitor {
 
     private func installEventTap() -> Bool {
         guard Self.ensureListenEventAccessForMonitoring() else {
+            logger.error("installEventTap: listen-event access is not granted")
+            return false
+        }
+
+        guard Self.ensureAccessibilityAccessForMonitoring() else {
+            logger.error("installEventTap: accessibility access is not granted")
             return false
         }
 
@@ -128,11 +164,13 @@ final class ShortcutMonitor {
             callback: callback,
             userInfo: Unmanaged.passUnretained(self).toOpaque()
         ) else {
+            logger.error("installEventTap: CGEvent.tapCreate failed")
             return false
         }
 
         guard let source = CFMachPortCreateRunLoopSource(kCFAllocatorDefault, eventTap, 0) else {
             CFMachPortInvalidate(eventTap)
+            logger.error("installEventTap: failed to create run loop source")
             return false
         }
 
@@ -140,6 +178,7 @@ final class ShortcutMonitor {
         eventTapRunLoopSource = source
         CFRunLoopAddSource(CFRunLoopGetMain(), source, .commonModes)
         CGEvent.tapEnable(tap: eventTap, enable: true)
+        logger.notice("installEventTap: installed")
         return true
     }
 
@@ -150,6 +189,15 @@ final class ShortcutMonitor {
     @discardableResult
     static func requestListenEventAccess() -> Bool {
         InputMonitoringPermission.requestAccess()
+    }
+
+    static func preflightAccessibilityAccess() -> Bool {
+        AccessibilityPermission.isGranted()
+    }
+
+    @discardableResult
+    static func requestAccessibilityAccess() -> Bool {
+        AccessibilityPermission.requestAccess()
     }
 
     private static func ensureListenEventAccessForMonitoring() -> Bool {
@@ -163,6 +211,19 @@ final class ShortcutMonitor {
 
         hasRequestedListenEventAccess = true
         return requestListenEventAccess()
+    }
+
+    private static func ensureAccessibilityAccessForMonitoring() -> Bool {
+        if preflightAccessibilityAccess() {
+            return true
+        }
+
+        guard !hasRequestedAccessibilityAccess else {
+            return false
+        }
+
+        hasRequestedAccessibilityAccess = true
+        return requestAccessibilityAccess()
     }
 
     private func handleCGEvent(type: CGEventType, event: CGEvent) -> Bool {
@@ -357,18 +418,21 @@ final class ShortcutMonitor {
     }
 
     private func dispatchKeyDown(for action: ShortcutAction, eventTime: TimeInterval) {
+        logger.notice("dispatchKeyDown: action=\(action.storageName, privacy: .public)")
         DispatchQueue.main.async { [onKeyDown] in
             onKeyDown?(action, eventTime)
         }
     }
 
     private func dispatchKeyUp(for action: ShortcutAction, eventTime: TimeInterval) {
+        logger.notice("dispatchKeyUp: action=\(action.storageName, privacy: .public)")
         DispatchQueue.main.async { [onKeyUp] in
             onKeyUp?(action, eventTime)
         }
     }
 
     private func dispatchShortcutInterrupted(for action: ShortcutAction, eventTime: TimeInterval) {
+        logger.notice("dispatchShortcutInterrupted: action=\(action.storageName, privacy: .public)")
         DispatchQueue.main.async { [onShortcutInterrupted] in
             onShortcutInterrupted?(action, eventTime)
         }

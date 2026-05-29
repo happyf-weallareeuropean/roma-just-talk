@@ -51,6 +51,8 @@ class RecordingShortcutManager: ObservableObject {
     private let shortcutModeHandler: RecordingShortcutModeHandler
     private let primaryRecordingShortcutModeSource: RecordingShortcutModeSource
     private var hasShownInputMonitoringPermissionNotification = false
+    private var hasShownAccessibilityPermissionNotification = false
+    private var hasShownShortcutMonitorFailureNotification = false
 
     // MARK: - Helper Properties
     private var canHandleShortcutAction: Bool {
@@ -261,24 +263,50 @@ class RecordingShortcutManager: ObservableObject {
             }
         )
 
-        guard !isMonitoring,
-              !shortcuts.isEmpty,
-              !ShortcutMonitor.preflightListenEventAccess(),
-              !hasShownInputMonitoringPermissionNotification else {
+        guard !isMonitoring, !shortcuts.isEmpty else {
             return
         }
 
-        hasShownInputMonitoringPermissionNotification = true
-        NotificationManager.shared.showNotification(
-            title: "Enable Input Monitoring for shortcuts",
-            type: .warning,
-            duration: 6,
-            actionButton: (
-                label: "Open Settings",
-                action: {
-                    PermissionManager.openInputMonitoringSettings()
-                }
+        if !ShortcutMonitor.preflightListenEventAccess() {
+            guard !hasShownInputMonitoringPermissionNotification else { return }
+            hasShownInputMonitoringPermissionNotification = true
+            NotificationManager.shared.showNotification(
+                title: "Enable Input Monitoring for shortcuts",
+                type: .warning,
+                duration: 6,
+                actionButton: (
+                    label: "Open Settings",
+                    action: {
+                        PermissionManager.openInputMonitoringSettings()
+                    }
+                )
             )
+            return
+        }
+
+        if !ShortcutMonitor.preflightAccessibilityAccess() {
+            guard !hasShownAccessibilityPermissionNotification else { return }
+            hasShownAccessibilityPermissionNotification = true
+            NotificationManager.shared.showNotification(
+                title: "Enable Accessibility for shortcuts",
+                type: .warning,
+                duration: 6,
+                actionButton: (
+                    label: "Open Settings",
+                    action: {
+                        PermissionManager.openAccessibilitySettings()
+                    }
+                )
+            )
+            return
+        }
+
+        guard !hasShownShortcutMonitorFailureNotification else { return }
+        hasShownShortcutMonitorFailureNotification = true
+        NotificationManager.shared.showNotification(
+            title: "Keyboard shortcut monitor could not start",
+            type: .error,
+            duration: 6
         )
     }
 

@@ -95,6 +95,12 @@ class PermissionManager: ObservableObject {
             NSWorkspace.shared.open(url)
         }
     }
+
+    static func openAccessibilitySettings() {
+        if let url = URL(string: "x-apple.systempreferences:com.apple.preference.security?Privacy_Accessibility") {
+            NSWorkspace.shared.open(url)
+        }
+    }
     
     func checkKeyboardShortcut() {
         DispatchQueue.main.async {

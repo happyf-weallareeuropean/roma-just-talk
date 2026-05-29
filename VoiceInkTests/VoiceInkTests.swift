@@ -113,4 +113,19 @@ struct VoiceInkTests {
         #expect(didRequestAccess)
     }
 
+    @Test func accessibilityPermissionUsesInjectedSystemClient() async throws {
+        var didRequestAccess = false
+        let client = AccessibilityPermission.Client(
+            preflight: { false },
+            request: {
+                didRequestAccess = true
+                return true
+            }
+        )
+
+        #expect(!AccessibilityPermission.isGranted(client: client))
+        #expect(AccessibilityPermission.requestAccess(client: client))
+        #expect(didRequestAccess)
+    }
+
 }
