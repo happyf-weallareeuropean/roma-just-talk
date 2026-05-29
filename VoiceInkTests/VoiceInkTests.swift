@@ -7,6 +7,7 @@
 
 import Testing
 import Foundation
+import Carbon.HIToolbox
 import os
 @testable import VoiceInk
 
@@ -126,6 +127,47 @@ struct VoiceInkTests {
         #expect(!AccessibilityPermission.isGranted(client: client))
         #expect(AccessibilityPermission.requestAccess(client: client))
         #expect(didRequestAccess)
+    }
+
+    @Test func modifierOnlyShortcutsUseNSEventMonitorPath() async throws {
+        let monitor = ShortcutMonitor()
+        var keyDownCount = 0
+        var keyUpCount = 0
+
+        monitor.configureForTesting(
+            shortcuts: [
+                .primaryRecording: .modifierOnly(
+                    keyCode: UInt16(kVK_RightOption),
+                    modifierFlags: [.option]
+                )
+            ],
+            onKeyDown: { _, _ in keyDownCount += 1 },
+            onKeyUp: { _, _ in keyUpCount += 1 }
+        )
+
+        monitor.handleEventTapFlagsChangedForTesting(
+            keyCode: UInt16(kVK_RightOption),
+            modifierFlags: [.option],
+            eventTime: 1
+        )
+        try await Task.sleep(nanoseconds: 10_000_000)
+        #expect(keyDownCount == 0)
+
+        monitor.handleModifierOnlyFlagsChangedForTesting(
+            keyCode: UInt16(kVK_RightOption),
+            modifierFlags: [.option],
+            eventTime: 2
+        )
+        try await Task.sleep(nanoseconds: 10_000_000)
+        #expect(keyDownCount == 1)
+
+        monitor.handleModifierOnlyFlagsChangedForTesting(
+            keyCode: UInt16(kVK_RightOption),
+            modifierFlags: [],
+            eventTime: 3
+        )
+        try await Task.sleep(nanoseconds: 10_000_000)
+        #expect(keyUpCount == 1)
     }
 
 }

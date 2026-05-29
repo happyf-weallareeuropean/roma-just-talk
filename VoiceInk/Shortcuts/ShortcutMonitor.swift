@@ -56,6 +56,23 @@ final class ShortcutMonitor {
         case flagsChanged
     }
 
+    private enum ShortcutHandlingScope {
+        case all
+        case modifierOnly
+        case nonModifierOnly
+
+        func contains(_ shortcut: Shortcut) -> Bool {
+            switch self {
+            case .all:
+                return true
+            case .modifierOnly:
+                return shortcut.isModifierOnly
+            case .nonModifierOnly:
+                return !shortcut.isModifierOnly
+            }
+        }
+    }
+
     private struct ShortcutState {
         var shortcut: Shortcut
         var isDown = false
@@ -70,6 +87,8 @@ final class ShortcutMonitor {
     private var onShortcutInterrupted: ((ShortcutAction, TimeInterval) -> Void)?
     private var eventTap: CFMachPort?
     private var eventTapRunLoopSource: CFRunLoopSource?
+    private var modifierOnlyGlobalMonitor: Any?
+    private var modifierOnlyLocalMonitor: Any?
     private let logger = Logger(subsystem: "com.prakashjoshipax.voiceink", category: "ShortcutMonitor")
 
     private static var hasRequestedListenEventAccess = false
@@ -109,6 +128,16 @@ final class ShortcutMonitor {
     }
 
     func stop() {
+        if let modifierOnlyGlobalMonitor {
+            NSEvent.removeMonitor(modifierOnlyGlobalMonitor)
+            self.modifierOnlyGlobalMonitor = nil
+        }
+
+        if let modifierOnlyLocalMonitor {
+            NSEvent.removeMonitor(modifierOnlyLocalMonitor)
+            self.modifierOnlyLocalMonitor = nil
+        }
+
         if let eventTapRunLoopSource {
             CFRunLoopRemoveSource(CFRunLoopGetMain(), eventTapRunLoopSource, .commonModes)
             self.eventTapRunLoopSource = nil
@@ -127,6 +156,23 @@ final class ShortcutMonitor {
     }
 
     private func installEventTap() -> Bool {
+        let needsModifierOnlyMonitor = shortcuts.values.contains { $0.shortcut.isModifierOnly }
+        let needsEventTap = shortcuts.values.contains { !$0.shortcut.isModifierOnly }
+
+        if needsModifierOnlyMonitor {
+            guard Self.ensureAccessibilityAccessForMonitoring() else {
+                logger.error("installModifierOnlyMonitors: accessibility access is not granted")
+                return false
+            }
+
+            installModifierOnlyEventMonitors()
+        }
+
+        guard needsEventTap else {
+            logger.notice("installEventTap: skipped; modifier-only shortcuts use NSEvent monitors")
+            return true
+        }
+
         guard Self.ensureListenEventAccessForMonitoring() else {
             logger.error("installEventTap: listen-event access is not granted")
             return false
@@ -180,6 +226,20 @@ final class ShortcutMonitor {
         CGEvent.tapEnable(tap: eventTap, enable: true)
         logger.notice("installEventTap: installed")
         return true
+    }
+
+    private func installModifierOnlyEventMonitors() {
+        modifierOnlyGlobalMonitor = NSEvent.addGlobalMonitorForEvents(matching: .flagsChanged) { [weak self] event in
+            _ = self?.handleNSEvent(event, scope: .modifierOnly)
+        }
+
+        modifierOnlyLocalMonitor = NSEvent.addLocalMonitorForEvents(matching: .flagsChanged) { [weak self] event in
+            _ = self?.handleNSEvent(event, scope: .modifierOnly)
+            return event
+        }
+
+        let modifierOnlyShortcutCount = shortcuts.values.filter { $0.shortcut.isModifierOnly }.count
+        logger.notice("installModifierOnlyMonitors: installed for \(modifierOnlyShortcutCount, privacy: .public) modifier-only shortcut(s)")
     }
 
     static func preflightListenEventAccess() -> Bool {
@@ -237,7 +297,22 @@ final class ShortcutMonitor {
             kind: eventKind,
             keyCode: keyCode,
             modifierFlags: modifierFlags,
-            eventTime: ProcessInfo.processInfo.systemUptime
+            eventTime: ProcessInfo.processInfo.systemUptime,
+            scope: .nonModifierOnly
+        )
+    }
+
+    private func handleNSEvent(_ event: NSEvent, scope: ShortcutHandlingScope) -> Bool {
+        guard let eventKind = EventKind(event.type) else {
+            return false
+        }
+
+        return handleEvent(
+            kind: eventKind,
+            keyCode: event.keyCode,
+            modifierFlags: event.modifierFlags,
+            eventTime: event.timestamp,
+            scope: scope
         )
     }
 
@@ -266,7 +341,8 @@ final class ShortcutMonitor {
         kind: EventKind,
         keyCode: UInt16,
         modifierFlags: NSEvent.ModifierFlags,
-        eventTime: TimeInterval
+        eventTime: TimeInterval,
+        scope: ShortcutHandlingScope = .all
     ) -> Bool {
         var shouldSuppress = false
 
@@ -276,6 +352,10 @@ final class ShortcutMonitor {
 
         for action in Array(shortcuts.keys) {
             guard var state = shortcuts[action] else {
+                continue
+            }
+
+            guard scope.contains(state.shortcut) else {
                 continue
             }
 
@@ -460,4 +540,70 @@ private extension ShortcutMonitor.EventKind {
             return nil
         }
     }
+
+    init?(_ type: NSEvent.EventType) {
+        switch type {
+        case .keyDown:
+            self = .keyDown
+        case .keyUp:
+            self = .keyUp
+        case .flagsChanged:
+            self = .flagsChanged
+        default:
+            return nil
+        }
+    }
 }
+
+#if DEBUG
+extension ShortcutMonitor {
+    func configureForTesting(
+        shortcuts: [ShortcutAction: Shortcut],
+        interruptibleActions: Set<ShortcutAction> = [],
+        onKeyDown: @escaping (ShortcutAction, TimeInterval) -> Void,
+        onKeyUp: @escaping (ShortcutAction, TimeInterval) -> Void,
+        onShortcutInterrupted: ((ShortcutAction, TimeInterval) -> Void)? = nil
+    ) {
+        stop()
+
+        for (action, shortcut) in shortcuts {
+            self.shortcuts[action] = ShortcutState(shortcut: shortcut)
+        }
+
+        self.interruptibleActions = interruptibleActions
+        self.onKeyDown = onKeyDown
+        self.onKeyUp = onKeyUp
+        self.onShortcutInterrupted = onShortcutInterrupted
+    }
+
+    @discardableResult
+    func handleModifierOnlyFlagsChangedForTesting(
+        keyCode: UInt16,
+        modifierFlags: NSEvent.ModifierFlags,
+        eventTime: TimeInterval
+    ) -> Bool {
+        handleEvent(
+            kind: .flagsChanged,
+            keyCode: keyCode,
+            modifierFlags: modifierFlags,
+            eventTime: eventTime,
+            scope: .modifierOnly
+        )
+    }
+
+    @discardableResult
+    func handleEventTapFlagsChangedForTesting(
+        keyCode: UInt16,
+        modifierFlags: NSEvent.ModifierFlags,
+        eventTime: TimeInterval
+    ) -> Bool {
+        handleEvent(
+            kind: .flagsChanged,
+            keyCode: keyCode,
+            modifierFlags: modifierFlags,
+            eventTime: eventTime,
+            scope: .nonModifierOnly
+        )
+    }
+}
+#endif
