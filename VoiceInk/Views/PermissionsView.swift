@@ -2,13 +2,16 @@ import SwiftUI
 import AVFoundation
 import Cocoa
 import CoreGraphics
+import PermissionFlow
 
+@MainActor
 class PermissionManager: ObservableObject {
     @Published var audioPermissionStatus = AVCaptureDevice.authorizationStatus(for: .audio)
     @Published var isAccessibilityEnabled = false
     @Published var isInputMonitoringEnabled = false
     @Published var isScreenRecordingEnabled = false
     @Published var isKeyboardShortcutSet = false
+    private let permissionFlowGuide = PermissionFlowGuide()
     
     init() {
         // Start observing system events that might indicate permission changes
@@ -48,64 +51,66 @@ class PermissionManager: ObservableObject {
     func checkAccessibilityPermissions() {
         let options: NSDictionary = [kAXTrustedCheckOptionPrompt.takeUnretainedValue() as String: false]
         let accessibilityEnabled = AXIsProcessTrustedWithOptions(options)
-        DispatchQueue.main.async {
-            self.isAccessibilityEnabled = accessibilityEnabled
-        }
+        isAccessibilityEnabled = accessibilityEnabled
     }
     
     func checkScreenRecordingPermission() {
-        DispatchQueue.main.async {
-            self.isScreenRecordingEnabled = CGPreflightScreenCaptureAccess()
-        }
+        isScreenRecordingEnabled = CGPreflightScreenCaptureAccess()
     }
     
     func requestScreenRecordingPermission() {
         CGRequestScreenCaptureAccess()
+        permissionFlowGuide.open(.screenRecording)
     }
     
     func checkAudioPermissionStatus() {
-        DispatchQueue.main.async {
-            self.audioPermissionStatus = AVCaptureDevice.authorizationStatus(for: .audio)
-        }
+        audioPermissionStatus = AVCaptureDevice.authorizationStatus(for: .audio)
     }
     
     func requestAudioPermission() {
         AVCaptureDevice.requestAccess(for: .audio) { granted in
-            DispatchQueue.main.async {
+            Task { @MainActor in
                 self.audioPermissionStatus = granted ? .authorized : .denied
             }
         }
     }
 
+    func openMicrophoneSettings() {
+        permissionFlowGuide.open(.microphone)
+    }
+
     func checkInputMonitoringPermission() {
-        DispatchQueue.main.async {
-            self.isInputMonitoringEnabled = ShortcutMonitor.preflightListenEventAccess()
-        }
+        isInputMonitoringEnabled = ShortcutMonitor.preflightListenEventAccess()
     }
 
     func requestInputMonitoringPermission() {
         let granted = ShortcutMonitor.requestListenEventAccess()
-        DispatchQueue.main.async {
-            self.isInputMonitoringEnabled = granted || ShortcutMonitor.preflightListenEventAccess()
+        isInputMonitoringEnabled = granted || ShortcutMonitor.preflightListenEventAccess()
+        permissionFlowGuide.open(.inputMonitoring)
+    }
+
+    nonisolated static func openInputMonitoringSettings() {
+        Task { @MainActor in
+            if let url = URL(string: "x-apple.systempreferences:com.apple.preference.security?Privacy_ListenEvent") {
+                NSWorkspace.shared.open(url)
+            }
         }
     }
 
-    static func openInputMonitoringSettings() {
-        if let url = URL(string: "x-apple.systempreferences:com.apple.preference.security?Privacy_ListenEvent") {
-            NSWorkspace.shared.open(url)
+    nonisolated static func openAccessibilitySettings() {
+        Task { @MainActor in
+            if let url = URL(string: "x-apple.systempreferences:com.apple.preference.security?Privacy_Accessibility") {
+                NSWorkspace.shared.open(url)
+            }
         }
     }
 
-    static func openAccessibilitySettings() {
-        if let url = URL(string: "x-apple.systempreferences:com.apple.preference.security?Privacy_Accessibility") {
-            NSWorkspace.shared.open(url)
-        }
+    func requestAccessibilityPermission() {
+        permissionFlowGuide.open(.accessibility)
     }
     
     func checkKeyboardShortcut() {
-        DispatchQueue.main.async {
-            self.isKeyboardShortcutSet = ShortcutStore.shortcut(for: .primaryRecording) != nil
-        }
+        isKeyboardShortcutSet = ShortcutStore.shortcut(for: .primaryRecording) != nil
     }
 }
 
@@ -262,7 +267,6 @@ struct PermissionsView: View {
                         buttonTitle: "Request Permission",
                         buttonAction: {
                             permissionManager.requestInputMonitoringPermission()
-                            PermissionManager.openInputMonitoringSettings()
                         },
                         checkPermission: { permissionManager.checkInputMonitoringPermission() },
                         infoTipMessage: "VoiceInk uses Input Monitoring only to detect your configured recording shortcut while other apps are active."
@@ -279,9 +283,7 @@ struct PermissionsView: View {
                             if permissionManager.audioPermissionStatus == .notDetermined {
                                 permissionManager.requestAudioPermission()
                             } else {
-                                if let url = URL(string: "x-apple.systempreferences:com.apple.preference.security?Privacy_Microphone") {
-                                    NSWorkspace.shared.open(url)
-                                }
+                                permissionManager.openMicrophoneSettings()
                             }
                         },
                         checkPermission: { permissionManager.checkAudioPermissionStatus() }
@@ -295,9 +297,7 @@ struct PermissionsView: View {
                         isGranted: permissionManager.isAccessibilityEnabled,
                         buttonTitle: "Open System Settings",
                         buttonAction: {
-                            if let url = URL(string: "x-apple.systempreferences:com.apple.preference.security?Privacy_Accessibility") {
-                                NSWorkspace.shared.open(url)
-                            }
+                            permissionManager.requestAccessibilityPermission()
                         },
                         checkPermission: { permissionManager.checkAccessibilityPermissions() },
                         infoTipMessage: "VoiceInk uses Accessibility permissions to paste the transcribed text directly into other applications at your cursor's position. This allows for a seamless dictation experience across your Mac."
@@ -312,10 +312,6 @@ struct PermissionsView: View {
                         buttonTitle: "Request Permission",
                         buttonAction: {
                             permissionManager.requestScreenRecordingPermission()
-                            // After requesting, open system preferences as fallback
-                            if let url = URL(string: "x-apple.systempreferences:com.apple.preference.security?Privacy_ScreenCapture") {
-                                NSWorkspace.shared.open(url)
-                            }
                         },
                         checkPermission: { permissionManager.checkScreenRecordingPermission() },
                         infoTipMessage: "VoiceInk captures on-screen text to understand the context of your voice input, which significantly improves transcription accuracy. Your privacy is important: this data is processed locally and is not stored.",

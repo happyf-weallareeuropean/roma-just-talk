@@ -56,6 +56,15 @@
       }
     },
     {
+      "identity" : "permissionflow",
+      "kind" : "remoteSourceControl",
+      "location" : "https://github.com/jaywcjlove/PermissionFlow",
+      "state" : {
+        "revision" : "164d39937c2edef736f0ac6a5b144013162a6654",
+        "version" : "2.4.0"
+      }
+    },
+    {
       "identity" : "selectedtextkit",
       "kind" : "remoteSourceControl",
       "location" : "https://github.com/tisfeng/SelectedTextKit",

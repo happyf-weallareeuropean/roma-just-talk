@@ -1,6 +1,7 @@
 import SwiftUI
 import AVFoundation
 import AppKit
+import PermissionFlow
 
 struct OnboardingPermission: Identifiable {
     let id = UUID()
@@ -40,6 +41,7 @@ struct OnboardingPermissionsView: View {
     @State private var scale: CGFloat = 0.8
     @State private var opacity: CGFloat = 0
     @State private var showModelDownload = false
+    @StateObject private var permissionFlowGuide = PermissionFlowGuide()
     
     private let permissions: [OnboardingPermission] = [
         OnboardingPermission(
@@ -335,8 +337,7 @@ struct OnboardingPermissionsView: View {
             moveToNext()
             
         case .accessibility:
-            let options: NSDictionary = [kAXTrustedCheckOptionPrompt.takeUnretainedValue() as String: true]
-            AXIsProcessTrustedWithOptions(options)
+            permissionFlowGuide.open(.accessibility)
             
             // Start checking for permission status
             Timer.scheduledTimer(withTimeInterval: 0.5, repeats: true) { timer in
@@ -352,10 +353,7 @@ struct OnboardingPermissionsView: View {
         case .inputMonitoring:
             let granted = ShortcutMonitor.requestListenEventAccess()
             permissionStates[currentPermissionIndex] = granted || ShortcutMonitor.preflightListenEventAccess()
-
-            if let url = URL(string: "x-apple.systempreferences:com.apple.preference.security?Privacy_ListenEvent") {
-                NSWorkspace.shared.open(url)
-            }
+            permissionFlowGuide.open(.inputMonitoring)
 
             Timer.scheduledTimer(withTimeInterval: 0.5, repeats: true) { timer in
                 if ShortcutMonitor.preflightListenEventAccess() {
@@ -370,11 +368,7 @@ struct OnboardingPermissionsView: View {
         case .screenRecording:
             // First try to request permission programmatically
             CGRequestScreenCaptureAccess()
-            
-            // Also open system preferences as fallback
-            if let prefpaneURL = URL(string: "x-apple.systempreferences:com.apple.preference.security?Privacy_ScreenCapture") {
-                NSWorkspace.shared.open(prefpaneURL)
-            }
+            permissionFlowGuide.open(.screenRecording)
             
             // Start checking for permission status
             Timer.scheduledTimer(withTimeInterval: 0.5, repeats: true) { timer in
