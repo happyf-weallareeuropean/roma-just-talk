@@ -1,8 +1,8 @@
 <div align="center">
   <img src="VoiceInk/Assets.xcassets/AppIcon.appiconset/256-mac.png" width="180" height="180" />
   <h1>roma-just-talk</h1>
-  <p>speak at speed of ur thoughts.</p>
-  <p>A VoiceInk fork for fast capture, local-first dictation, and a quieter writing flow.</p>
+  <p>speak before you press the hotkey.</p>
+  <p>A VoiceInk fork rethinking dictation UX: always-listening capture, then local or cloud transcription.</p>
 
   [![License](https://img.shields.io/badge/License-GPL%20v3-blue.svg)](https://www.gnu.org/licenses/gpl-3.0)
   ![Platform](https://img.shields.io/badge/platform-macOS%2014.0%2B-brightgreen)
@@ -21,26 +21,28 @@
 
 ---
 
-roma-just-talk is a native macOS voice-to-text app forked from [VoiceInk](https://github.com/Beingpax/VoiceInk). The base is already strong: local transcription, global shortcuts, app-aware behavior, personal dictionary support, and a focused macOS experience.
+roma-just-talk is a native macOS voice-to-text app forked from [VoiceInk](https://github.com/Beingpax/VoiceInk).
 
-This fork is about building on that foundation toward a sharper direction: less ceremony, faster capture, and a writing loop that keeps up with thought instead of forcing you into app-shaped pauses.
+Most dictation apps wait for the hotkey, then start listening. That means you pause, prepare, press, then speak. This fork explores the other direction: keep the mic warm with a short rolling buffer, so the app can catch what you already started saying.
+
+VoiceInk made dictation feel instant after recording starts. roma-just-talk is interested in the moment before that: speech that begins naturally, then gets committed when you press the shortcut.
 
 ![VoiceInk Mac App](https://github.com/user-attachments/assets/12367379-83e7-48a6-b52c-4488a6a04bba)
 
-## Fork Direction
+## What Makes This Different
 
-- Keep voice input local-first and private by default
-- Reduce friction around starting, stopping, correcting, and continuing speech
-- Make dictation feel like a natural extension of thinking, not a separate tool
-- Explore tighter workflows for coding, notes, chat, and long-form drafting
-- Preserve the parts of VoiceInk that already work well while giving this fork room to diverge
+- **Speak before the hotkey**: a short pre-roll buffer can include the words you said just before triggering capture
+- **Always-listening UX**: not always transcribing, but ready enough that recording does not start from zero
+- **Local or cloud**: use local models when you want control, cloud/custom models when you want speed, quality, or experiments
+- **Less ceremony**: talk first, decide what to do with it second
+- **Built on VoiceInk**: keeps the strong macOS base, shortcuts, dictionary, app-aware modes, and transcription pipeline
 
-Current status: the app bundle, icon, and many internal names still come from VoiceInk. Rebranding and release automation are expected to evolve gradually.
+Current status: app bundle name, icon, and many internal labels still come from VoiceInk. The fork direction is changing first; full rebrand comes after the UX proves itself.
 
 ## Features
 
-- 🎙️ **Accurate Transcription**: Local AI models that transcribe your voice to text with 99% accuracy, almost instantly
-- 🔒 **Privacy First**: 100% offline processing ensures your data never leaves your device
+- 🎙️ **Pre-Roll Capture**: Keep a short mic buffer so the start of your thought is not lost
+- 🧪 **Model Playground**: Run local models, cloud providers, or custom endpoints depending on the workflow
 - ⚡ **Power Mode**: Intelligent app detection automatically applies your perfect pre-configured settings based on the app/ URL you're on
 - 🧠 **Context Aware**: Smart AI that understands your screen content and adapts to the context
 - 🎯 **Global Shortcuts**: Configurable keyboard shortcuts for quick recording and push-to-talk functionality
@@ -77,13 +79,13 @@ You can build the app yourself by following [BUILDING.md](BUILDING.md).
 
 ## Contributing
 
-This fork is early. Issues, experiments, and focused patches are welcome when they help the new direction.
+This fork is early. Issues, experiments, and focused patches are welcome when they help the always-listening dictation direction.
 
 Useful contributions right now:
 - Reporting bugs via [issues](https://github.com/happyf-weallareeuropean/roma-just-talk/issues)
-- Testing local builds on real macOS writing workflows
+- Testing pre-roll capture in real macOS writing workflows
 - Improving rough docs left over from the upstream project
-- Proposing focused changes that make voice input faster, calmer, or more reliable
+- Proposing focused changes that make speak-before-hotkey dictation faster, calmer, or more reliable
 
 For build instructions, see [BUILDING.md](BUILDING.md).
 
@@ -118,4 +120,4 @@ roma-just-talk is built on top of [VoiceInk](https://github.com/Beingpax/VoiceIn
 
 ---
 
-Built from VoiceInk, then pointed toward thought-speed voice workflows.
+Built from VoiceInk, then pointed at speak-before-hotkey dictation.
