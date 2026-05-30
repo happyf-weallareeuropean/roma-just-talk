@@ -1,5 +1,5 @@
 <div align="center">
-  <img src="VoiceInk/Assets.xcassets/AppIcon.appiconset/256-mac.png" width="180" height="180" />
+  <img src="docs/assets/roma-just-talk-logo.png" width="180" height="180" />
   <h1>roma-just-talk</h1>
   <p>speak before you press the hotkey.</p>
   <p>A VoiceInk fork rethinking dictation UX: always-listening capture, then local or cloud transcription.</p>
