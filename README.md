@@ -1,32 +1,41 @@
 <div align="center">
   <img src="VoiceInk/Assets.xcassets/AppIcon.appiconset/256-mac.png" width="180" height="180" />
-  <h1>VoiceInk</h1>
-  <p>Voice to text app for macOS to transcribe what you say to text almost instantly</p>
+  <h1>roma-just-talk</h1>
+  <p>speak at speed of ur thoughts.</p>
+  <p>A VoiceInk fork for fast capture, local-first dictation, and a quieter writing flow.</p>
 
   [![License](https://img.shields.io/badge/License-GPL%20v3-blue.svg)](https://www.gnu.org/licenses/gpl-3.0)
   ![Platform](https://img.shields.io/badge/platform-macOS%2014.0%2B-brightgreen)
-  [![GitHub release (latest by date)](https://img.shields.io/github/v/release/Beingpax/VoiceInk)](https://github.com/Beingpax/VoiceInk/releases)
-  ![GitHub all releases](https://img.shields.io/github/downloads/Beingpax/VoiceInk/total)
-  ![GitHub stars](https://img.shields.io/github/stars/Beingpax/VoiceInk?style=social)
+  [![GitHub release (latest by date)](https://img.shields.io/github/v/release/happyf-weallareeuropean/roma-just-talk)](https://github.com/happyf-weallareeuropean/roma-just-talk/releases)
+  ![GitHub all releases](https://img.shields.io/github/downloads/happyf-weallareeuropean/roma-just-talk/total)
+  ![GitHub stars](https://img.shields.io/github/stars/happyf-weallareeuropean/roma-just-talk?style=social)
   <p>
-    <a href="https://tryvoiceink.com">Website</a> •
-    <a href="https://www.youtube.com/@tryvoiceink">YouTube</a>
+    <a href="https://github.com/happyf-weallareeuropean/roma-just-talk/releases">Download</a> •
+    <a href="https://github.com/Beingpax/VoiceInk">Upstream VoiceInk</a>
   </p>
 
-  <a href="https://tryvoiceink.com">
-    <img src="https://img.shields.io/badge/Download%20Now-Latest%20Version-blue?style=for-the-badge&logo=apple" alt="Download VoiceInk" width="250"/>
+  <a href="https://github.com/happyf-weallareeuropean/roma-just-talk/releases/latest">
+    <img src="https://img.shields.io/badge/Download%20Latest-macOS%20App-blue?style=for-the-badge&logo=apple" alt="Download roma-just-talk" width="250"/>
   </a>
 </div>
 
 ---
 
-VoiceInk is a native macOS application that transcribes what you say to text almost instantly. You can find all the information and download the app from [here](https://tryvoiceink.com). 
+roma-just-talk is a native macOS voice-to-text app forked from [VoiceInk](https://github.com/Beingpax/VoiceInk). The base is already strong: local transcription, global shortcuts, app-aware behavior, personal dictionary support, and a focused macOS experience.
+
+This fork is about building on that foundation toward a sharper direction: less ceremony, faster capture, and a writing loop that keeps up with thought instead of forcing you into app-shaped pauses.
 
 ![VoiceInk Mac App](https://github.com/user-attachments/assets/12367379-83e7-48a6-b52c-4488a6a04bba)
 
-After dedicating the past 5 months to developing this app, I've decided to open source it for the greater good. 
+## Fork Direction
 
-My goal is to make it **the most efficient and privacy-focused voice-to-text solution for macOS** that is a joy to use. While the source code is now open for experienced developers to build and contribute, purchasing a license helps support continued development and gives you access to automatic updates, priority support, and upcoming features.
+- Keep voice input local-first and private by default
+- Reduce friction around starting, stopping, correcting, and continuing speech
+- Make dictation feel like a natural extension of thinking, not a separate tool
+- Explore tighter workflows for coding, notes, chat, and long-form drafting
+- Preserve the parts of VoiceInk that already work well while giving this fork room to diverge
+
+Current status: the app bundle, icon, and many internal names still come from VoiceInk. Rebranding and release automation are expected to evolve gradually.
 
 ## Features
 
@@ -42,17 +51,19 @@ My goal is to make it **the most efficient and privacy-focused voice-to-text sol
 ## Get Started
 
 ### Download
-Get the latest version with a free trial from [tryvoiceink.com](https://tryvoiceink.com). Your purchase helps me work on VoiceInk full-time and continuously improve it with new features and updates.
+Download the latest fork release from [GitHub Releases](https://github.com/happyf-weallareeuropean/roma-just-talk/releases).
+
+The current published app asset is still based on the upstream VoiceInk release while this fork gets its own build and release flow.
 
 #### Homebrew
-Alternatively, you can install VoiceInk via `brew`:
+Upstream VoiceInk can also be installed via `brew`:
 
 ```shell
 brew install --cask voiceink
 ```
 
 ### Build from Source
-As an open-source project, you can build VoiceInk yourself by following the instructions in [BUILDING.md](BUILDING.md). However, the compiled version includes additional benefits like automatic updates, priority support via Discord and email, and helps fund ongoing development.
+You can build the app yourself by following [BUILDING.md](BUILDING.md).
 
 ## Requirements
 
@@ -61,19 +72,20 @@ As an open-source project, you can build VoiceInk yourself by following the inst
 ## Documentation
 
 - [Building from Source](BUILDING.md) - Detailed instructions for building the project
-- [Contributing Guidelines](CONTRIBUTING.md) - How to contribute to VoiceInk
+- [Contributing Guidelines](CONTRIBUTING.md) - Original upstream contribution notes
 - [Code of Conduct](CODE_OF_CONDUCT.md) - Our community standards
 
 ## Contributing
 
-This project is **not accepting pull requests** at this time. You're welcome to fork and modify VoiceInk for your own use.
+This fork is early. Issues, experiments, and focused patches are welcome when they help the new direction.
 
-You can still contribute by:
-- Reporting bugs via [issues](https://github.com/Beingpax/VoiceInk/issues)
-- Suggesting features or enhancements
-- Improving documentation via issues
+Useful contributions right now:
+- Reporting bugs via [issues](https://github.com/happyf-weallareeuropean/roma-just-talk/issues)
+- Testing local builds on real macOS writing workflows
+- Improving rough docs left over from the upstream project
+- Proposing focused changes that make voice input faster, calmer, or more reliable
 
-For more details, see our [Contributing Guidelines](CONTRIBUTING.md). For build instructions, see our [Building Guide](BUILDING.md).
+For build instructions, see [BUILDING.md](BUILDING.md).
 
 ## License
 
@@ -87,6 +99,8 @@ If you encounter any issues or have questions, please:
 3. Provide as much detail as possible about your environment and the problem
 
 ## Acknowledgments
+
+roma-just-talk is built on top of [VoiceInk](https://github.com/Beingpax/VoiceInk). The core app, original product direction, and much of the current implementation come from Pax and the VoiceInk project.
 
 ### Core Technology
 - [whisper.cpp](https://github.com/ggerganov/whisper.cpp) - High-performance inference of OpenAI's Whisper model
@@ -104,4 +118,4 @@ If you encounter any issues or have questions, please:
 
 ---
 
-Made with ❤️ by Pax
+Built from VoiceInk, then pointed toward thought-speed voice workflows.
