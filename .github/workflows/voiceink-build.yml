@@ -1,0 +1,42 @@
+name: Build VoiceInk
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - main
+    paths:
+      - ".github/workflows/voiceink-build.yml"
+      - "LocalBuild.xcconfig"
+      - "Makefile"
+      - "VoiceInk/**"
+      - "VoiceInk.xcodeproj/**"
+
+jobs:
+  build:
+    name: Build local macOS app
+    runs-on: macos-latest
+    timeout-minutes: 60
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Show Xcode version
+        run: |
+          xcode-select -p
+          xcodebuild -version
+          swift --version
+
+      - name: Build local app
+        run: make local
+
+      - name: Package app
+        run: ditto -c -k --keepParent "$HOME/Downloads/VoiceInk.app" VoiceInk.app.zip
+
+      - name: Upload app artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: VoiceInk-app
+          path: VoiceInk.app.zip
+          if-no-files-found: error
