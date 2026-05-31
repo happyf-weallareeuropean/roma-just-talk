@@ -59,15 +59,23 @@ struct MetricsSetupView: View {
         }
         .frame(minWidth: 500, minHeight: 600)
         .background(Color(NSColor.controlBackgroundColor))
+        .onAppear(perform: refreshPermissionStates)
+        .onReceive(NotificationCenter.default.publisher(for: NSApplication.didBecomeActiveNotification)) { _ in
+            refreshPermissionStates()
+        }
+        .onReceive(NotificationCenter.default.publisher(for: .appPermissionsDidChange)) { _ in
+            refreshPermissionStates()
+        }
     }
     
     private func setupStep(for index: Int) -> some View {
-        let stepInfo: (isCompleted: Bool, icon: String, title: String, description: String)
+        let stepInfo: (isCompleted: Bool, isOptional: Bool, icon: String, title: String, description: String)
         
         switch index {
         case 0:
             stepInfo = (
                 isCompleted: recordingShortcutManager.isShortcutConfigured,
+                isOptional: false,
                 icon: "command",
                 title: "Set Keyboard Shortcut",
                 description: "Use VoiceInk anywhere with a shortcut."
@@ -75,6 +83,7 @@ struct MetricsSetupView: View {
         case 1:
             stepInfo = (
                 isCompleted: isAccessibilityEnabled,
+                isOptional: false,
                 icon: "hand.raised.fill",
                 title: "Enable Accessibility",
                 description: "Paste transcribed text at your cursor."
@@ -82,13 +91,15 @@ struct MetricsSetupView: View {
         case 2:
             stepInfo = (
                 isCompleted: isScreenRecordingEnabled,
+                isOptional: true,
                 icon: "video.fill",
-                title: "Enable Screen Recording",
-                description: "Get better transcriptions with screen context."
+                title: "Screen Context (Optional)",
+                description: "Use visible text for better transcript enhancement when you choose."
             )
         default:
             stepInfo = (
                 isCompleted: transcriptionModelManager.currentTranscriptionModel != nil,
+                isOptional: false,
                 icon: "arrow.down.to.line",
                 title: "Download Model",
                 description: "Choose an AI model to start transcribing."
@@ -99,8 +110,8 @@ struct MetricsSetupView: View {
             Image(systemName: stepInfo.icon)
                 .font(.system(size: 18))
                 .frame(width: 40, height: 40)
-                .background((stepInfo.isCompleted ? Color.green : Color.accentColor).opacity(0.1))
-                .foregroundColor(stepInfo.isCompleted ? .green : Color.accentColor)
+                .background(stepColor(for: stepInfo).opacity(0.1))
+                .foregroundColor(stepColor(for: stepInfo))
                 .clipShape(Circle())
             
             VStack(alignment: .leading, spacing: 3) {
@@ -118,6 +129,10 @@ struct MetricsSetupView: View {
                 Image(systemName: "checkmark.circle.fill")
                     .font(.system(size: 24))
                     .foregroundColor(.green)
+            } else if stepInfo.isOptional {
+                Image(systemName: "circle")
+                    .font(.system(size: 18, weight: .semibold))
+                    .foregroundColor(.secondary)
             } else {
                 Image(systemName: "chevron.right")
                     .font(.system(size: 14, weight: .bold))
@@ -145,18 +160,15 @@ struct MetricsSetupView: View {
     }
     
     private func handleActionButton() {
-        if isShortcutAndAccessibilityGranted {
+        refreshPermissionStates()
+
+        if isRequiredSetupComplete {
             openModelManagement()
         } else {
-            // Handle different permission requests based on which one is missing
             if !recordingShortcutManager.isShortcutConfigured {
                 openSettings()
-            } else if !AXIsProcessTrusted() {
+            } else if !isAccessibilityEnabled {
                 if let url = URL(string: "x-apple.systempreferences:com.apple.preference.security?Privacy_Accessibility") {
-                    NSWorkspace.shared.open(url)
-                }
-            } else if !CGPreflightScreenCaptureAccess() {
-                if let url = URL(string: "x-apple.systempreferences:com.apple.preference.security?Privacy_ScreenCapture") {
                     NSWorkspace.shared.open(url)
                 }
             }
@@ -166,10 +178,8 @@ struct MetricsSetupView: View {
     private func getActionButtonTitle() -> String {
         if !recordingShortcutManager.isShortcutConfigured {
             return "Configure Shortcut"
-        } else if !AXIsProcessTrusted() {
+        } else if !isAccessibilityEnabled {
             return "Enable Accessibility"
-        } else if !CGPreflightScreenCaptureAccess() {
-            return "Enable Screen Recording"
         } else if transcriptionModelManager.currentTranscriptionModel == nil {
             return "Download Model"
         }
@@ -182,10 +192,24 @@ struct MetricsSetupView: View {
             .foregroundColor(.secondary)
     }
     
-    private var isShortcutAndAccessibilityGranted: Bool {
+    private var isRequiredSetupComplete: Bool {
         recordingShortcutManager.isShortcutConfigured &&
-        AXIsProcessTrusted() && 
-        CGPreflightScreenCaptureAccess()
+        isAccessibilityEnabled
+    }
+
+    private func refreshPermissionStates() {
+        isAccessibilityEnabled = AXIsProcessTrusted()
+        isScreenRecordingEnabled = CGPreflightScreenCaptureAccess()
+    }
+
+    private func stepColor(
+        for stepInfo: (isCompleted: Bool, isOptional: Bool, icon: String, title: String, description: String)
+    ) -> Color {
+        if stepInfo.isCompleted {
+            return .green
+        }
+
+        return stepInfo.isOptional ? .secondary : Color.accentColor
     }
     
     private func openSettings() {
