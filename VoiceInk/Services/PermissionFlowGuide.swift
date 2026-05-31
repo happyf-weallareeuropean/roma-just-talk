@@ -95,17 +95,11 @@ enum PermissionGrantCoordinator {
 
     static func openPermissionsAndGrantMicrophone() {
         NSApplication.shared.setActivationPolicy(.regular)
-        _ = WindowManager.shared.showMainWindow()
-
-        DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
-            Task { @MainActor in
-                NotificationCenter.default.post(
-                    name: .openMainWindowRequested,
-                    object: nil,
-                    userInfo: ["destination": "Permissions"]
-                )
-            }
-        }
+        NotificationCenter.default.post(
+            name: .openMainWindowRequested,
+            object: nil,
+            userInfo: ["destination": "Permissions"]
+        )
 
         DispatchQueue.main.asyncAfter(deadline: .now() + 0.2) {
             Task { @MainActor in

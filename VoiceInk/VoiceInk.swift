@@ -380,6 +380,7 @@ struct VoiceInkApp: App {
             }(NSImage(named: "menuBarIcon")!)
 
             Image(nsImage: image)
+                .background(MainWindowRequestHandler())
         }
         .menuBarExtraStyle(.menu)
 
@@ -390,6 +391,45 @@ struct VoiceInkApp: App {
             }
         }
         #endif
+    }
+}
+
+private struct MainWindowRequestHandler: View {
+    @Environment(\.openWindow) private var openWindow
+    private static let logger = Logger(subsystem: "com.prakashjoshipax.voiceink", category: "MainWindowRequestHandler")
+
+    var body: some View {
+        Color.clear
+            .frame(width: 0, height: 0)
+            .onReceive(NotificationCenter.default.publisher(for: .openMainWindowRequested)) { notification in
+                let destination = notification.userInfo?["destination"] as? String ?? "Settings"
+                openMainWindowAndNavigate(to: destination)
+            }
+    }
+
+    private func openMainWindowAndNavigate(to destination: String) {
+        Self.logger.notice("openMainWindowAndNavigate: requested destination=\(destination, privacy: .public)")
+        NSApplication.shared.setActivationPolicy(.regular)
+        openWindow(id: "main")
+
+        Self.focusAndNavigate(to: destination, attempt: 1)
+    }
+
+    private static func focusAndNavigate(to destination: String, attempt: Int) {
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.25) {
+            if WindowManager.shared.showMainWindow() == nil, attempt < 6 {
+                logger.notice("focusAndNavigate: main window not ready, retry \(attempt, privacy: .public)")
+                focusAndNavigate(to: destination, attempt: attempt + 1)
+                return
+            }
+
+            NotificationCenter.default.post(
+                name: .navigateToDestination,
+                object: nil,
+                userInfo: ["destination": destination]
+            )
+            logger.notice("focusAndNavigate: navigation notification posted for \(destination, privacy: .public)")
+        }
     }
 }
 

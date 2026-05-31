@@ -211,6 +211,10 @@ struct MenuBarView: View {
                 menuBarManager.openHistoryWindow()
             }
             .keyboardShortcut("h", modifiers: [.command, .shift])
+
+            Button("Permissions") {
+                openMainWindowAndNavigate(to: "Permissions")
+            }
             
             Button("Settings") {
                 openMainWindowAndNavigate(to: "Settings")
