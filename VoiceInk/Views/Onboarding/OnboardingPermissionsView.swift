@@ -367,8 +367,6 @@ struct OnboardingPermissionsView: View {
             }
             
         case .screenRecording:
-            // First try to request permission programmatically
-            CGRequestScreenCaptureAccess()
             permissionFlowGuide.open(.screenRecording)
             
             // Start checking for permission status

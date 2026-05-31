@@ -62,7 +62,6 @@ class PermissionManager: ObservableObject {
     }
     
     func requestScreenRecordingPermission() {
-        CGRequestScreenCaptureAccess()
         permissionFlowGuide.open(.screenRecording)
         startPermissionRefreshPolling()
     }

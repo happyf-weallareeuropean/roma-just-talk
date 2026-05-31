@@ -156,8 +156,6 @@ struct MetricsSetupView: View {
                     NSWorkspace.shared.open(url)
                 }
             } else if !CGPreflightScreenCaptureAccess() {
-                CGRequestScreenCaptureAccess()
-                // After requesting, open system preferences as fallback
                 if let url = URL(string: "x-apple.systempreferences:com.apple.preference.security?Privacy_ScreenCapture") {
                     NSWorkspace.shared.open(url)
                 }
