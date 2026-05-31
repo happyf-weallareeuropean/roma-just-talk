@@ -11,6 +11,8 @@ class PermissionManager: ObservableObject {
     @Published var isInputMonitoringEnabled = false
     @Published var isScreenRecordingEnabled = false
     @Published var isKeyboardShortcutSet = false
+    @Published var inputMonitoringNeedsRelaunch = false
+    @Published var screenRecordingNeedsRelaunch = false
     private let permissionFlowGuide = PermissionFlowGuide()
     private var permissionRefreshTimer: Timer?
     private var permissionRefreshPollsRemaining = 0
@@ -69,11 +71,16 @@ class PermissionManager: ObservableObject {
     
     func checkScreenRecordingPermission() {
         isScreenRecordingEnabled = CGPreflightScreenCaptureAccess()
+        if isScreenRecordingEnabled {
+            screenRecordingNeedsRelaunch = false
+        }
     }
     
     func requestScreenRecordingPermission() {
+        screenRecordingNeedsRelaunch = false
         permissionFlowGuide.open(.screenRecording)
         startPermissionRefreshPolling()
+        markRelaunchNeededIfPermissionStillInactive(.screenRecording)
     }
     
     func checkAudioPermissionStatus() {
@@ -93,13 +100,18 @@ class PermissionManager: ObservableObject {
 
     func checkInputMonitoringPermission() {
         isInputMonitoringEnabled = ShortcutMonitor.preflightListenEventAccess()
+        if isInputMonitoringEnabled {
+            inputMonitoringNeedsRelaunch = false
+        }
     }
 
     func requestInputMonitoringPermission() {
+        inputMonitoringNeedsRelaunch = false
         let granted = ShortcutMonitor.requestListenEventAccess()
         isInputMonitoringEnabled = granted || ShortcutMonitor.preflightListenEventAccess()
         permissionFlowGuide.open(.inputMonitoring)
         startPermissionRefreshPolling()
+        markRelaunchNeededIfPermissionStillInactive(.inputMonitoring)
     }
 
     nonisolated static func openInputMonitoringSettings() {
@@ -150,6 +162,32 @@ class PermissionManager: ObservableObject {
             }
         }
     }
+
+    private enum RelaunchSensitivePermission {
+        case inputMonitoring
+        case screenRecording
+    }
+
+    private func markRelaunchNeededIfPermissionStillInactive(_ permission: RelaunchSensitivePermission) {
+        DispatchQueue.main.asyncAfter(deadline: .now() + 6.0) { [weak self] in
+            Task { @MainActor [weak self] in
+                guard let self else { return }
+
+                switch permission {
+                case .inputMonitoring:
+                    self.checkInputMonitoringPermission()
+                    if !self.isInputMonitoringEnabled {
+                        self.inputMonitoringNeedsRelaunch = true
+                    }
+                case .screenRecording:
+                    self.checkScreenRecordingPermission()
+                    if !self.isScreenRecordingEnabled {
+                        self.screenRecordingNeedsRelaunch = true
+                    }
+                }
+            }
+        }
+    }
 }
 
 struct PermissionCard: View {
@@ -160,6 +198,7 @@ struct PermissionCard: View {
     let buttonTitle: String
     let buttonAction: () -> Void
     let checkPermission: () -> Void
+    var relaunchRequired: Bool = false
     var infoTipMessage: String?
     var infoTipLink: String?
     @State private var isRefreshing = false
@@ -234,6 +273,12 @@ struct PermissionCard: View {
             }
             
             if !isGranted {
+                if relaunchRequired {
+                    Text("If you already turned this on in System Settings, relaunch VoiceInk to activate it.")
+                        .font(.caption)
+                        .foregroundColor(.secondary)
+                }
+
                 Button(action: buttonAction) {
                     HStack {
                         Text(buttonTitle)
@@ -302,11 +347,16 @@ struct PermissionsView: View {
                         title: "Input Monitoring Access",
                         description: "Allow VoiceInk to listen for your recording hotkey globally",
                         isGranted: permissionManager.isInputMonitoringEnabled,
-                        buttonTitle: "Grant",
+                        buttonTitle: permissionManager.inputMonitoringNeedsRelaunch ? "Relaunch to Apply" : "Grant",
                         buttonAction: {
-                            permissionManager.requestInputMonitoringPermission()
+                            if permissionManager.inputMonitoringNeedsRelaunch {
+                                AppRelauncher.relaunch()
+                            } else {
+                                permissionManager.requestInputMonitoringPermission()
+                            }
                         },
                         checkPermission: { permissionManager.checkInputMonitoringPermission() },
+                        relaunchRequired: permissionManager.inputMonitoringNeedsRelaunch,
                         infoTipMessage: "VoiceInk uses Input Monitoring only to detect your configured recording shortcut while other apps are active."
                     )
                     
@@ -343,11 +393,16 @@ struct PermissionsView: View {
                         title: "Screen Context (Optional)",
                         description: "Use visible screen text to improve transcript enhancement when you choose.",
                         isGranted: permissionManager.isScreenRecordingEnabled,
-                        buttonTitle: "Enable",
+                        buttonTitle: permissionManager.screenRecordingNeedsRelaunch ? "Relaunch to Apply" : "Enable",
                         buttonAction: {
-                            permissionManager.requestScreenRecordingPermission()
+                            if permissionManager.screenRecordingNeedsRelaunch {
+                                AppRelauncher.relaunch()
+                            } else {
+                                permissionManager.requestScreenRecordingPermission()
+                            }
                         },
                         checkPermission: { permissionManager.checkScreenRecordingPermission() },
+                        relaunchRequired: permissionManager.screenRecordingNeedsRelaunch,
                         infoTipMessage: "VoiceInk captures on-screen text to understand the context of your voice input, which significantly improves transcription accuracy. Your privacy is important: this data is processed locally and is not stored.",
                         infoTipLink: "https://tryvoiceink.com/docs/contextual-awareness"
                     )

@@ -41,6 +41,7 @@ struct OnboardingPermissionsView: View {
     @State private var scale: CGFloat = 0.8
     @State private var opacity: CGFloat = 0
     @State private var showModelDownload = false
+    @State private var relaunchRequiredStates: [Bool] = [false, false, false, false, false, false]
     @StateObject private var permissionFlowGuide = PermissionFlowGuide()
     
     private let permissions: [OnboardingPermission] = [
@@ -232,6 +233,14 @@ struct OnboardingPermissionsView: View {
                                     .cornerRadius(25)
                             }
                             .buttonStyle(ScaleButtonStyle())
+
+                            if relaunchRequiredStates[currentPermissionIndex] {
+                                Text("If you already turned this on in System Settings, relaunch VoiceInk to activate it.")
+                                    .font(.caption)
+                                    .foregroundColor(.white.opacity(0.65))
+                                    .multilineTextAlignment(.center)
+                                    .frame(maxWidth: 360)
+                            }
                             
                             if !permissionStates[currentPermissionIndex] && 
                                permissions[currentPermissionIndex].type != .keyboardShortcut &&
@@ -276,24 +285,35 @@ struct OnboardingPermissionsView: View {
     private func checkExistingPermissions() {
         // Check microphone permission
         permissionStates[0] = AVCaptureDevice.authorizationStatus(for: .audio) == .authorized
+        if permissionStates[0] { relaunchRequiredStates[0] = false }
         
         // Check if device is selected
         permissionStates[1] = audioDeviceManager.selectedDeviceID != nil
+        if permissionStates[1] { relaunchRequiredStates[1] = false }
         
         // Check accessibility permission
         permissionStates[2] = AXIsProcessTrusted()
+        if permissionStates[2] { relaunchRequiredStates[2] = false }
 
         // Check input monitoring permission
         permissionStates[3] = ShortcutMonitor.preflightListenEventAccess()
+        if permissionStates[3] { relaunchRequiredStates[3] = false }
         
         // Check screen recording permission
         permissionStates[4] = CGPreflightScreenCaptureAccess()
+        if permissionStates[4] { relaunchRequiredStates[4] = false }
         
         // Check keyboard shortcut
         permissionStates[5] = recordingShortcutManager.isShortcutConfigured
+        if permissionStates[5] { relaunchRequiredStates[5] = false }
     }
     
     private func requestPermission() {
+        if relaunchRequiredStates[currentPermissionIndex] {
+            AppRelauncher.relaunch()
+            return
+        }
+
         if permissionStates[currentPermissionIndex] {
             moveToNext()
             return
@@ -352,33 +372,47 @@ struct OnboardingPermissionsView: View {
             }
 
         case .inputMonitoring:
+            relaunchRequiredStates[currentPermissionIndex] = false
             let granted = ShortcutMonitor.requestListenEventAccess()
             permissionStates[currentPermissionIndex] = granted || ShortcutMonitor.preflightListenEventAccess()
             permissionFlowGuide.open(.inputMonitoring)
 
+            let permissionIndex = currentPermissionIndex
             Timer.scheduledTimer(withTimeInterval: 0.5, repeats: true) { timer in
                 if ShortcutMonitor.preflightListenEventAccess() {
                     timer.invalidate()
-                    permissionStates[currentPermissionIndex] = true
+                    permissionStates[permissionIndex] = true
+                    relaunchRequiredStates[permissionIndex] = false
                     withAnimation {
                         showAnimation = true
                     }
                 }
             }
+            markRelaunchNeededIfPermissionStillInactive(
+                at: permissionIndex,
+                isActive: ShortcutMonitor.preflightListenEventAccess
+            )
             
         case .screenRecording:
+            relaunchRequiredStates[currentPermissionIndex] = false
             permissionFlowGuide.open(.screenRecording)
             
+            let permissionIndex = currentPermissionIndex
             // Start checking for permission status
             Timer.scheduledTimer(withTimeInterval: 0.5, repeats: true) { timer in
                 if CGPreflightScreenCaptureAccess() {
                     timer.invalidate()
-                    permissionStates[currentPermissionIndex] = true
+                    permissionStates[permissionIndex] = true
+                    relaunchRequiredStates[permissionIndex] = false
                     withAnimation {
                         showAnimation = true
                     }
                 }
             }
+            markRelaunchNeededIfPermissionStillInactive(
+                at: permissionIndex,
+                isActive: CGPreflightScreenCaptureAccess
+            )
             
         case .keyboardShortcut:
             // The shortcut recorder handles this step directly.
@@ -400,6 +434,10 @@ struct OnboardingPermissionsView: View {
     }
     
     private func getButtonTitle() -> String {
+        if relaunchRequiredStates[currentPermissionIndex] {
+            return "Relaunch to Apply"
+        }
+
         switch permissions[currentPermissionIndex].type {
         case .keyboardShortcut:
             return permissionStates[currentPermissionIndex] ? "Continue" : "Set Shortcut"
@@ -409,6 +447,21 @@ struct OnboardingPermissionsView: View {
             return permissionStates[currentPermissionIndex] ? "Continue" : "Enable"
         default:
             return permissionStates[currentPermissionIndex] ? "Continue" : "Grant"
+        }
+    }
+
+    private func markRelaunchNeededIfPermissionStillInactive(at index: Int, isActive: @escaping () -> Bool) {
+        DispatchQueue.main.asyncAfter(deadline: .now() + 6.0) {
+            Task { @MainActor in
+                guard index < permissionStates.count else { return }
+
+                if isActive() {
+                    permissionStates[index] = true
+                    relaunchRequiredStates[index] = false
+                } else {
+                    relaunchRequiredStates[index] = true
+                }
+            }
         }
     }
 

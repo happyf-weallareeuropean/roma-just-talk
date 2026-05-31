@@ -122,6 +122,28 @@ final class PermissionRefreshCenter: NSObject {
 }
 
 @MainActor
+enum AppRelauncher {
+    static func relaunch() {
+        let task = Process()
+        task.executableURL = URL(fileURLWithPath: "/bin/sh")
+        task.arguments = [
+            "-c",
+            "sleep 0.6; /usr/bin/open \"$1\"",
+            "voiceink-relaunch",
+            Bundle.main.bundleURL.path
+        ]
+
+        do {
+            try task.run()
+            NSApplication.shared.terminate(nil)
+        } catch {
+            NSWorkspace.shared.open(Bundle.main.bundleURL)
+            NSApplication.shared.terminate(nil)
+        }
+    }
+}
+
+@MainActor
 enum PermissionGrantCoordinator {
     private static let permissionFlowGuide = PermissionFlowGuide()
 
