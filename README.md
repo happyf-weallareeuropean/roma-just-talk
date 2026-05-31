@@ -2,8 +2,8 @@
   <img src="docs/assets/roma-just-talk-logo.png" width="180" height="180" />
   <h1>roma-just-talk</h1>
   <p>speak before you press the hotkey.</p>
-  <p>in fact typing is 3~4x slower than speak</p>
-  <p>rethink dictation UX: always-listening capture, -87% bin size & -83% ram usage wisperflow use 780mb we just 132, local and cloud transcription both available.</p>
+  <p>did u know typing 3~4x slower than speak</p>
+  <p>rethink UX: always-listening capture, -87% bin size & -83% ram usage (780mb → 132mb), local & cloud stt solution both available.</p>
 
   [![License](https://img.shields.io/badge/License-GPL%20v3-blue.svg)](https://www.gnu.org/licenses/gpl-3.0)
   ![Platform](https://img.shields.io/badge/platform-macOS%2014.0%2B-brightgreen)
