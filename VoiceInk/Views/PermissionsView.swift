@@ -274,7 +274,7 @@ struct PermissionsView: View {
                 CompactHeroSection(
                     icon: "shield.lefthalf.filled",
                     title: "App Permissions",
-                    description: "VoiceInk requires the following permissions to function properly"
+                    description: "Microphone and shortcut access are needed for recording. Screen context is optional."
                 )
                 
                 // Permission Cards
@@ -340,10 +340,10 @@ struct PermissionsView: View {
                     // Screen Recording Permission
                     PermissionCard(
                         icon: "rectangle.on.rectangle",
-                        title: "Screen Recording Access",
-                        description: "Allow VoiceInk to understand context from your screen for transcript Enhancement",
+                        title: "Screen Context (Optional)",
+                        description: "Use visible screen text to improve transcript enhancement when you choose.",
                         isGranted: permissionManager.isScreenRecordingEnabled,
-                        buttonTitle: "Grant",
+                        buttonTitle: "Enable",
                         buttonAction: {
                             permissionManager.requestScreenRecordingPermission()
                         },

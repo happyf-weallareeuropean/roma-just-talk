@@ -69,8 +69,8 @@ struct OnboardingPermissionsView: View {
             type: .inputMonitoring
         ),
         OnboardingPermission(
-            title: "Screen Recording",
-            description: "This helps to improve the accuracy of transcription.",
+            title: "Screen Context (Optional)",
+            description: "Enable screen context only if you want VoiceInk to use visible text for transcript enhancement.",
             icon: "rectangle.inset.filled.and.person.filled",
             type: .screenRecording
         ),
@@ -405,6 +405,8 @@ struct OnboardingPermissionsView: View {
             return permissionStates[currentPermissionIndex] ? "Continue" : "Set Shortcut"
         case .audioDeviceSelection:
             return "Continue"
+        case .screenRecording:
+            return permissionStates[currentPermissionIndex] ? "Continue" : "Enable"
         default:
             return permissionStates[currentPermissionIndex] ? "Continue" : "Grant"
         }
