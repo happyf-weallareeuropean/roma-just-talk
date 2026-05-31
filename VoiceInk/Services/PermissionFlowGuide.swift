@@ -100,7 +100,7 @@ enum PermissionGrantCoordinator {
         DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
             Task { @MainActor in
                 NotificationCenter.default.post(
-                    name: .navigateToDestination,
+                    name: .openMainWindowRequested,
                     object: nil,
                     userInfo: ["destination": "Permissions"]
                 )

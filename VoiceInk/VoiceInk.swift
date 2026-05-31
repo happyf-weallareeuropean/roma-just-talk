@@ -274,7 +274,7 @@ struct VoiceInkApp: App {
     }
 
     var body: some Scene {
-        WindowGroup {
+        WindowGroup("VoiceInk", id: "main") {
             if hasCompletedOnboarding {
                 ContentView()
                     .environmentObject(engine)

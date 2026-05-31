@@ -2,6 +2,7 @@ import SwiftUI
 import LaunchAtLogin
 
 struct MenuBarView: View {
+    @Environment(\.openWindow) private var openWindow
     @EnvironmentObject var engine: VoiceInkEngine
     @EnvironmentObject var recorderUIManager: RecorderUIManager
     @EnvironmentObject var transcriptionModelManager: TranscriptionModelManager
@@ -43,7 +44,7 @@ struct MenuBarView: View {
                 Divider()
 
                 Button("Manage Models") {
-                    menuBarManager.openMainWindowAndNavigate(to: "AI Models")
+                    openMainWindowAndNavigate(to: "AI Models")
                 }
             } label: {
                 HStack {
@@ -212,7 +213,7 @@ struct MenuBarView: View {
             .keyboardShortcut("h", modifiers: [.command, .shift])
             
             Button("Settings") {
-                menuBarManager.openMainWindowAndNavigate(to: "Settings")
+                openMainWindowAndNavigate(to: "Settings")
             }
             .keyboardShortcut(",", modifiers: .command)
             
@@ -242,6 +243,24 @@ struct MenuBarView: View {
             Button("Quit VoiceInk") {
                 NSApplication.shared.terminate(nil)
             }
+        }
+        .onReceive(NotificationCenter.default.publisher(for: .openMainWindowRequested)) { notification in
+            let destination = notification.userInfo?["destination"] as? String ?? "Settings"
+            openMainWindowAndNavigate(to: destination)
+        }
+    }
+
+    private func openMainWindowAndNavigate(to destination: String) {
+        NSApplication.shared.setActivationPolicy(.regular)
+        openWindow(id: "main")
+
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.35) {
+            _ = WindowManager.shared.showMainWindow()
+            NotificationCenter.default.post(
+                name: .navigateToDestination,
+                object: nil,
+                userInfo: ["destination": destination]
+            )
         }
     }
 }

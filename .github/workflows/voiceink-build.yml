@@ -32,7 +32,7 @@ jobs:
         run: make local
 
       - name: Package app
-        run: ditto -c -k --keepParent "$HOME/Downloads/VoiceInk.app" VoiceInk.app.zip
+        run: ditto -c -k --keepParent "$HOME/Applications/VoiceInk.app" VoiceInk.app.zip
 
       - name: Upload app artifact
         uses: actions/upload-artifact@v4
