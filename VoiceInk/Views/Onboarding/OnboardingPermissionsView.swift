@@ -301,15 +301,14 @@ struct OnboardingPermissionsView: View {
         
         switch permissions[currentPermissionIndex].type {
         case .microphone:
-            AVCaptureDevice.requestAccess(for: .audio) { granted in
-                DispatchQueue.main.async {
-                    self.permissionStates[self.currentPermissionIndex] = granted
-                    if granted {
-                        withAnimation {
-                            self.showAnimation = true
-                        }
-                        self.audioDeviceManager.loadAvailableDevices()
+            PermissionGrantCoordinator.grantMicrophone { status in
+                let granted = status == .authorized
+                permissionStates[currentPermissionIndex] = granted
+                if granted {
+                    withAnimation {
+                        showAnimation = true
                     }
+                    audioDeviceManager.loadAvailableDevices()
                 }
             }
             
@@ -337,6 +336,8 @@ struct OnboardingPermissionsView: View {
             moveToNext()
             
         case .accessibility:
+            let options: NSDictionary = [kAXTrustedCheckOptionPrompt.takeUnretainedValue() as String: true]
+            _ = AXIsProcessTrustedWithOptions(options)
             permissionFlowGuide.open(.accessibility)
             
             // Start checking for permission status
@@ -407,7 +408,7 @@ struct OnboardingPermissionsView: View {
         case .audioDeviceSelection:
             return "Continue"
         default:
-            return permissionStates[currentPermissionIndex] ? "Continue" : "Enable Access"
+            return permissionStates[currentPermissionIndex] ? "Continue" : "Grant"
         }
     }
 

@@ -12,6 +12,8 @@ class PermissionManager: ObservableObject {
     @Published var isScreenRecordingEnabled = false
     @Published var isKeyboardShortcutSet = false
     private let permissionFlowGuide = PermissionFlowGuide()
+    private var permissionRefreshTimer: Timer?
+    private var permissionRefreshPollsRemaining = 0
     
     init() {
         // Start observing system events that might indicate permission changes
@@ -24,6 +26,7 @@ class PermissionManager: ObservableObject {
     
     deinit {
         NotificationCenter.default.removeObserver(self)
+        permissionRefreshTimer?.invalidate()
     }
     
     private func setupNotificationObservers() {
@@ -61,6 +64,7 @@ class PermissionManager: ObservableObject {
     func requestScreenRecordingPermission() {
         CGRequestScreenCaptureAccess()
         permissionFlowGuide.open(.screenRecording)
+        startPermissionRefreshPolling()
     }
     
     func checkAudioPermissionStatus() {
@@ -68,15 +72,14 @@ class PermissionManager: ObservableObject {
     }
     
     func requestAudioPermission() {
-        AVCaptureDevice.requestAccess(for: .audio) { granted in
-            Task { @MainActor in
-                self.audioPermissionStatus = granted ? .authorized : .denied
-            }
+        PermissionGrantCoordinator.grantMicrophone { [weak self] status in
+            self?.audioPermissionStatus = status
+            self?.startPermissionRefreshPolling()
         }
     }
 
     func openMicrophoneSettings() {
-        permissionFlowGuide.open(.microphone)
+        requestAudioPermission()
     }
 
     func checkInputMonitoringPermission() {
@@ -87,6 +90,7 @@ class PermissionManager: ObservableObject {
         let granted = ShortcutMonitor.requestListenEventAccess()
         isInputMonitoringEnabled = granted || ShortcutMonitor.preflightListenEventAccess()
         permissionFlowGuide.open(.inputMonitoring)
+        startPermissionRefreshPolling()
     }
 
     nonisolated static func openInputMonitoringSettings() {
@@ -106,11 +110,35 @@ class PermissionManager: ObservableObject {
     }
 
     func requestAccessibilityPermission() {
+        let options: NSDictionary = [kAXTrustedCheckOptionPrompt.takeUnretainedValue() as String: true]
+        _ = AXIsProcessTrustedWithOptions(options)
         permissionFlowGuide.open(.accessibility)
+        startPermissionRefreshPolling()
     }
     
     func checkKeyboardShortcut() {
         isKeyboardShortcutSet = ShortcutStore.shortcut(for: .primaryRecording) != nil
+    }
+
+    private func startPermissionRefreshPolling() {
+        permissionRefreshTimer?.invalidate()
+        permissionRefreshPollsRemaining = 120
+        permissionRefreshTimer = Timer.scheduledTimer(withTimeInterval: 0.5, repeats: true) { [weak self] timer in
+            Task { @MainActor [weak self] in
+                guard let self else {
+                    timer.invalidate()
+                    return
+                }
+
+                self.checkAllPermissions()
+                self.permissionRefreshPollsRemaining -= 1
+
+                if self.permissionRefreshPollsRemaining <= 0 {
+                    timer.invalidate()
+                    self.permissionRefreshTimer = nil
+                }
+            }
+        }
     }
 }
 
@@ -264,7 +292,7 @@ struct PermissionsView: View {
                         title: "Input Monitoring Access",
                         description: "Allow VoiceInk to listen for your recording hotkey globally",
                         isGranted: permissionManager.isInputMonitoringEnabled,
-                        buttonTitle: "Request Permission",
+                        buttonTitle: "Grant",
                         buttonAction: {
                             permissionManager.requestInputMonitoringPermission()
                         },
@@ -278,13 +306,9 @@ struct PermissionsView: View {
                         title: "Microphone Access",
                         description: "Allow VoiceInk to record your voice for transcription",
                         isGranted: permissionManager.audioPermissionStatus == .authorized,
-                        buttonTitle: permissionManager.audioPermissionStatus == .notDetermined ? "Request Permission" : "Open System Settings",
+                        buttonTitle: "Grant",
                         buttonAction: {
-                            if permissionManager.audioPermissionStatus == .notDetermined {
-                                permissionManager.requestAudioPermission()
-                            } else {
-                                permissionManager.openMicrophoneSettings()
-                            }
+                            permissionManager.requestAudioPermission()
                         },
                         checkPermission: { permissionManager.checkAudioPermissionStatus() }
                     )
@@ -295,7 +319,7 @@ struct PermissionsView: View {
                         title: "Accessibility Access",
                         description: "Allow VoiceInk to paste transcribed text directly at your cursor position",
                         isGranted: permissionManager.isAccessibilityEnabled,
-                        buttonTitle: "Open System Settings",
+                        buttonTitle: "Grant",
                         buttonAction: {
                             permissionManager.requestAccessibilityPermission()
                         },
@@ -309,7 +333,7 @@ struct PermissionsView: View {
                         title: "Screen Recording Access",
                         description: "Allow VoiceInk to understand context from your screen for transcript Enhancement",
                         isGranted: permissionManager.isScreenRecordingEnabled,
-                        buttonTitle: "Request Permission",
+                        buttonTitle: "Grant",
                         buttonAction: {
                             permissionManager.requestScreenRecordingPermission()
                         },

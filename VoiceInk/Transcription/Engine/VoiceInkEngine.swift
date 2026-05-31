@@ -234,7 +234,24 @@ class VoiceInkEngine: NSObject, ObservableObject {
                     }
                 } else {
                     logger.error("❌ Recording permission denied.")
-                    NotificationManager.shared.showNotification(title: "Microphone permission required", type: .error)
+                    NotificationManager.shared.showNotification(
+                        title: "Microphone permission required",
+                        type: .error,
+                        duration: 8.0,
+                        onTap: {
+                            Task { @MainActor in
+                                PermissionGrantCoordinator.openPermissionsAndGrantMicrophone()
+                            }
+                        },
+                        actionButton: (
+                            label: "Grant",
+                            action: {
+                                Task { @MainActor in
+                                    PermissionGrantCoordinator.openPermissionsAndGrantMicrophone()
+                                }
+                            }
+                        )
+                    )
                     Task { @MainActor [self] in
                         await self.recorderUIManager?.dismissMiniRecorder()
                     }
