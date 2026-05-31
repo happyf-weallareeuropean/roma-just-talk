@@ -248,10 +248,6 @@ struct MenuBarView: View {
                 NSApplication.shared.terminate(nil)
             }
         }
-        .onReceive(NotificationCenter.default.publisher(for: .openMainWindowRequested)) { notification in
-            let destination = notification.userInfo?["destination"] as? String ?? "Settings"
-            openMainWindowAndNavigate(to: destination)
-        }
     }
 
     private func openMainWindowAndNavigate(to destination: String) {
