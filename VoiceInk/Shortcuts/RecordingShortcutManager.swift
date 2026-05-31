@@ -48,6 +48,7 @@ class RecordingShortcutManager: ObservableObject {
     private let powerModeShortcutManager: PowerModeShortcutManager
     private let shortcutMonitor = ShortcutMonitor()
     private var shortcutChangeObserver: NSObjectProtocol?
+    private var permissionChangeObserver: NSObjectProtocol?
     private let shortcutModeHandler: RecordingShortcutModeHandler
     private let primaryRecordingShortcutModeSource: RecordingShortcutModeSource
     private var hasShownInputMonitoringPermissionNotification = false
@@ -164,10 +165,34 @@ class RecordingShortcutManager: ObservableObject {
             }
         }
 
+        permissionChangeObserver = NotificationCenter.default.addObserver(
+            forName: .appPermissionsDidChange,
+            object: nil,
+            queue: .main
+        ) { [weak self] _ in
+            Task { @MainActor in
+                self?.handlePermissionChange()
+            }
+        }
+
         Task { @MainActor in
+            PermissionRefreshCenter.shared.startObservingApplicationActivation()
             try? await Task.sleep(nanoseconds: 100_000_000)
             self.refreshShortcutMonitoring()
         }
+    }
+
+    private func handlePermissionChange() {
+        if ShortcutMonitor.preflightListenEventAccess() {
+            hasShownInputMonitoringPermissionNotification = false
+        }
+
+        if ShortcutMonitor.preflightAccessibilityAccess() {
+            hasShownAccessibilityPermissionNotification = false
+        }
+
+        hasShownShortcutMonitorFailureNotification = false
+        refreshShortcutMonitoring()
     }
     
     private func refreshShortcutMonitoring() {
@@ -374,6 +399,10 @@ class RecordingShortcutManager: ObservableObject {
     deinit {
         if let shortcutChangeObserver {
             NotificationCenter.default.removeObserver(shortcutChangeObserver)
+        }
+
+        if let permissionChangeObserver {
+            NotificationCenter.default.removeObserver(permissionChangeObserver)
         }
 
         MainActor.assumeIsolated {

@@ -11,6 +11,7 @@ extension Notification.Name {
     static let licenseStatusChanged = Notification.Name("licenseStatusChanged")
     static let openMainWindowRequested = Notification.Name("openMainWindowRequested")
     static let navigateToDestination = Notification.Name("navigateToDestination")
+    static let appPermissionsDidChange = Notification.Name("appPermissionsDidChange")
     static let promptSelectionChanged = Notification.Name("promptSelectionChanged")
     static let powerModeConfigurationApplied = Notification.Name("powerModeConfigurationApplied")
     static let powerModeConfigurationsDidChange = Notification.Name("PowerModeConfigurationsDidChange")

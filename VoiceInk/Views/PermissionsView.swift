@@ -37,9 +37,19 @@ class PermissionManager: ObservableObject {
             name: NSApplication.didBecomeActiveNotification,
             object: nil
         )
+        NotificationCenter.default.addObserver(
+            self,
+            selector: #selector(appPermissionsDidChange),
+            name: .appPermissionsDidChange,
+            object: nil
+        )
     }
     
     @objc private func applicationDidBecomeActive() {
+        checkAllPermissions()
+    }
+
+    @objc private func appPermissionsDidChange() {
         checkAllPermissions()
     }
     
@@ -120,6 +130,7 @@ class PermissionManager: ObservableObject {
     }
 
     private func startPermissionRefreshPolling() {
+        PermissionRefreshCenter.shared.beginPolling()
         permissionRefreshTimer?.invalidate()
         permissionRefreshPollsRemaining = 120
         permissionRefreshTimer = Timer.scheduledTimer(withTimeInterval: 0.5, repeats: true) { [weak self] timer in

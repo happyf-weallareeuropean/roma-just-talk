@@ -1,5 +1,7 @@
 import AppKit
+import ApplicationServices
 import AVFoundation
+import CoreGraphics
 import PermissionFlow
 
 @MainActor
@@ -26,6 +28,8 @@ final class PermissionFlowGuide: ObservableObject {
                 }
             }
         }
+
+        PermissionRefreshCenter.shared.beginPolling()
     }
 
     private static func currentAppBundleURLs() -> [URL] {
@@ -39,11 +43,90 @@ final class PermissionFlowGuide: ObservableObject {
     }
 }
 
+struct AppPermissionSnapshot: Equatable {
+    var microphone: AVAuthorizationStatus
+    var accessibility: Bool
+    var inputMonitoring: Bool
+    var screenRecording: Bool
+
+    static func current() -> AppPermissionSnapshot {
+        AppPermissionSnapshot(
+            microphone: AVCaptureDevice.authorizationStatus(for: .audio),
+            accessibility: AXIsProcessTrusted(),
+            inputMonitoring: ShortcutMonitor.preflightListenEventAccess(),
+            screenRecording: CGPreflightScreenCaptureAccess()
+        )
+    }
+}
+
+@MainActor
+final class PermissionRefreshCenter: NSObject {
+    static let shared = PermissionRefreshCenter()
+
+    private var timer: Timer?
+    private var pollsRemaining = 0
+    private var lastSnapshot = AppPermissionSnapshot.current()
+    private var isObservingApplicationActivation = false
+
+    private override init() {
+        super.init()
+    }
+
+    func startObservingApplicationActivation() {
+        guard !isObservingApplicationActivation else { return }
+        isObservingApplicationActivation = true
+
+        NotificationCenter.default.addObserver(
+            self,
+            selector: #selector(applicationDidBecomeActive),
+            name: NSApplication.didBecomeActiveNotification,
+            object: nil
+        )
+    }
+
+    func beginPolling() {
+        startObservingApplicationActivation()
+        refreshPermissions()
+        pollsRemaining = 120
+
+        guard timer == nil else { return }
+        timer = Timer.scheduledTimer(withTimeInterval: 0.5, repeats: true) { [weak self] timer in
+            Task { @MainActor [weak self] in
+                guard let self else {
+                    timer.invalidate()
+                    return
+                }
+
+                self.refreshPermissions()
+                self.pollsRemaining -= 1
+
+                if self.pollsRemaining <= 0 {
+                    timer.invalidate()
+                    self.timer = nil
+                }
+            }
+        }
+    }
+
+    @objc private func applicationDidBecomeActive() {
+        beginPolling()
+    }
+
+    private func refreshPermissions() {
+        let snapshot = AppPermissionSnapshot.current()
+        guard snapshot != lastSnapshot else { return }
+
+        lastSnapshot = snapshot
+        NotificationCenter.default.post(name: .appPermissionsDidChange, object: self)
+    }
+}
+
 @MainActor
 enum PermissionGrantCoordinator {
     private static let permissionFlowGuide = PermissionFlowGuide()
 
     static func grantMicrophone(statusUpdate: ((AVAuthorizationStatus) -> Void)? = nil) {
+        PermissionRefreshCenter.shared.beginPolling()
         let currentStatus = AVCaptureDevice.authorizationStatus(for: .audio)
 
         switch currentStatus {
@@ -54,6 +137,7 @@ enum PermissionGrantCoordinator {
                 Task { @MainActor in
                     let status = granted ? AVAuthorizationStatus.authorized : AVCaptureDevice.authorizationStatus(for: .audio)
                     statusUpdate?(status)
+                    PermissionRefreshCenter.shared.beginPolling()
                     if !granted {
                         permissionFlowGuide.open(.microphone)
                     }
