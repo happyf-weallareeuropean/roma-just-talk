@@ -58,7 +58,7 @@ struct OnboardingPermissionsView: View {
         ),
         OnboardingPermission(
             title: "Accessibility Access",
-            description: "Allow VoiceInk to help you type anywhere in your Mac.",
+            description: "Add VoiceInk to Accessibility, then turn its switch on.",
             icon: "accessibility",
             type: .accessibility
         ),

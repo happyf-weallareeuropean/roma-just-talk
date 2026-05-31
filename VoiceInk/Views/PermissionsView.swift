@@ -317,14 +317,14 @@ struct PermissionsView: View {
                     PermissionCard(
                         icon: "hand.raised",
                         title: "Accessibility Access",
-                        description: "Allow VoiceInk to paste transcribed text directly at your cursor position",
+                        description: "Add VoiceInk to Accessibility, then turn its switch on",
                         isGranted: permissionManager.isAccessibilityEnabled,
                         buttonTitle: "Grant",
                         buttonAction: {
                             permissionManager.requestAccessibilityPermission()
                         },
                         checkPermission: { permissionManager.checkAccessibilityPermissions() },
-                        infoTipMessage: "VoiceInk uses Accessibility permissions to paste the transcribed text directly into other applications at your cursor's position. This allows for a seamless dictation experience across your Mac."
+                        infoTipMessage: "macOS requires you to enable the VoiceInk switch yourself. Dragging the app into the list only adds it when it is missing."
                     )
                     
                     // Screen Recording Permission

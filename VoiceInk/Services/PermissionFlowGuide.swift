@@ -26,6 +26,8 @@ final class PermissionFlowGuide: ObservableObject {
                 }
             }
         }
+
+        showGrantHint(for: pane)
     }
 
     private static func currentAppBundleURLs() -> [URL] {
@@ -36,6 +38,29 @@ final class PermissionFlowGuide: ObservableObject {
     private static func clickSourceFrameInScreen() -> CGRect {
         let mouse = NSEvent.mouseLocation
         return CGRect(x: mouse.x - 16, y: mouse.y - 16, width: 32, height: 32)
+    }
+
+    private func showGrantHint(for pane: PermissionFlowPane) {
+        let title: String
+
+        switch pane {
+        case .accessibility:
+            title = "Drag VoiceInk into Accessibility, then turn its switch on"
+        case .inputMonitoring:
+            title = "Add VoiceInk to Input Monitoring, then turn its switch on"
+        case .screenRecording:
+            title = "Add VoiceInk to Screen Recording, then turn its switch on"
+        case .microphone:
+            title = "Turn on VoiceInk in Microphone settings"
+        default:
+            return
+        }
+
+        NotificationManager.shared.showNotification(
+            title: title,
+            type: .info,
+            duration: 8.0
+        )
     }
 }
 
