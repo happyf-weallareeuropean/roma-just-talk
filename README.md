@@ -2,7 +2,7 @@
   <img src="docs/assets/roma-just-talk-logo.png" width="180" height="180" />
   <h1>roma-just-talk</h1>
   <p>speak before you press the hotkey.</p>
-  <p>rethink UX: always-listening capture, -87% bin size & -83% ram usage (780mb → 132mb), local & cloud stt solution both available.</p>
+  <p>rethink UX: pre-roll voice capture, -87% bin size & -83% ram usage (780mb → 132mb), local & cloud stt solution both available.</p>
   <p>did u know speak is 3~4x faster than type? now u know</p>
 
   [![License](https://img.shields.io/badge/License-GPL%20v3-blue.svg)](https://www.gnu.org/licenses/gpl-3.0)
@@ -24,7 +24,7 @@
 
 roma-just-talk is a native macOS voice-to-text app forked from [VoiceInk](https://github.com/Beingpax/VoiceInk).
 
-Most dictation apps wait for the hotkey, then start listening. That means you pause, prepare, press, then speak. This fork explores the other direction: keep the mic warm with a short rolling buffer, so the app can catch what you already started saying.
+Most dictation apps wait for the hotkey, then open the mic. That means you pause, prepare, press, then speak. This fork explores the other direction: keep a short rolling voice buffer, so the app can catch what you already started saying.
 
 VoiceInk made dictation feel instant after recording starts. roma-just-talk is interested in the moment before that: speech that begins naturally, then gets committed when you press the shortcut.
 
@@ -33,7 +33,7 @@ VoiceInk made dictation feel instant after recording starts. roma-just-talk is i
 ## What Makes This Different
 
 - **Speak before the hotkey**: a short pre-roll buffer can include the words you said just before triggering capture
-- **Always-listening UX**: not always transcribing, but ready enough that recording does not start from zero
+- **Pre-roll capture UX**: not always transcribing, just buffering enough that recording does not start from zero
 - **Local or cloud**: use local models when you want control, cloud/custom models when you want speed, quality, or experiments
 - **Less ceremony**: talk first, decide what to do with it second
 - **Built on VoiceInk**: keeps the strong macOS base, shortcuts, dictionary, app-aware modes, and transcription pipeline
@@ -80,7 +80,7 @@ You can build the app yourself by following [BUILDING.md](BUILDING.md).
 
 ## Contributing
 
-This fork is early. Issues, experiments, and focused patches are welcome when they help the always-listening dictation direction.
+This fork is early. Issues, experiments, and focused patches are welcome when they help the pre-roll dictation direction.
 
 Useful contributions right now:
 - Reporting bugs via [issues](https://github.com/happyf-weallareeuropean/roma-just-talk/issues)
@@ -122,5 +122,4 @@ roma-just-talk is built on top of [VoiceInk](https://github.com/Beingpax/VoiceIn
 ---
 
 Built from VoiceInk, then pointed at speak-before-hotkey dictation.
-
 
