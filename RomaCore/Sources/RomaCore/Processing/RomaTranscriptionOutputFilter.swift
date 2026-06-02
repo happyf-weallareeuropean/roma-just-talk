@@ -200,6 +200,15 @@ public struct RomaTranscriptionOutputFilter {
     private static let blockedPreviousWordsForTerminalYouKnow: Set<String> = [
         "do", "does", "did", "don't", "if", "know", "let", "should", "to", "whether", "will", "would"
     ]
+    private static let allowedPreviousWordsForUnpunctuatedLikeFiller: Set<String> = [
+        "am", "are", "be", "been", "being", "i'm", "im", "is", "it's", "its",
+        "that's", "thats", "they're", "theyre", "was", "we're", "were", "you're", "youre"
+    ]
+    private static let allowedNextWordsForUnpunctuatedLikeFiller: Set<String> = [
+        "actually", "almost", "basically", "doing", "going", "just", "kind", "kinda",
+        "looking", "maybe", "not", "probably", "really", "saying", "so", "sort",
+        "sorta", "thinking", "trying", "using", "waiting", "working"
+    ]
     private static let inlineNumberedListMarkerPattern = #"(?<![\p{L}\p{N}])\d{1,2}\.\s+(?=\S)"#
     private static let markdownHeadingPattern = #"(?im)(^|\n)[ \t]*(?:heading|header)[ \t]+(one|two|three|1|2|3)[ \t]+([^\n]+)"#
     private static let uncheckedMarkdownTaskPattern = #"(?im)(^|\n)[ \t]*(?:todo|to[ \t]+do|checkbox|check[ \t]+box|unchecked[ \t]+(?:task|checkbox|check[ \t]+box))[ \t]+([^\n]+)"#
@@ -597,6 +606,7 @@ public struct RomaTranscriptionOutputFilter {
 
         filteredText = removePunctuatedDiscourseFillers(from: filteredText)
         filteredText = removeTerminalDiscourseFillers(from: filteredText)
+        filteredText = removeUnpunctuatedLikeFillers(from: filteredText)
 
         let joinedPausePattern = #"(?i)(?<![\p{L}\p{N}])(?:m+h+m+|m+[\s-]+h+m+|u+h+[\s-]+h*u+h+|u+h+[\s-]+u+h+|u+m+[\s-]+h+m+)(?:[.,;:!?…]+)?(?![\p{L}\p{N}])"#
         if let regex = try? NSRegularExpression(pattern: joinedPausePattern) {
@@ -652,6 +662,37 @@ public struct RomaTranscriptionOutputFilter {
         }
 
         return "\(trimmedPrefix)\(String(text[punctuationRange]))"
+    }
+
+    private static func removeUnpunctuatedLikeFillers(from text: String) -> String {
+        guard let regex = try? NSRegularExpression(
+            pattern: #"(?i)(?<![\p{L}\p{N}])like(?:[ \t]*[,;:…]+)?(?![\p{L}\p{N}])"#
+        ) else {
+            return text
+        }
+
+        var filteredText = text
+        let range = NSRange(filteredText.startIndex..., in: filteredText)
+        let matches = regex.matches(in: filteredText, range: range).reversed()
+
+        for match in matches {
+            guard let matchRange = Range(match.range, in: filteredText) else {
+                continue
+            }
+
+            let prefix = String(filteredText[..<matchRange.lowerBound])
+            let suffix = String(filteredText[matchRange.upperBound...])
+            guard let previousWord = previousWord(in: prefix),
+                  let nextWord = nextWord(in: suffix),
+                  allowedPreviousWordsForUnpunctuatedLikeFiller.contains(previousWord),
+                  allowedNextWordsForUnpunctuatedLikeFiller.contains(nextWord) else {
+                continue
+            }
+
+            filteredText.replaceSubrange(matchRange, with: "")
+        }
+
+        return filteredText
     }
 
     private static func removePunctuatedDiscourseFillers(from text: String) -> String {

@@ -227,6 +227,11 @@ struct RomaCoreChecks {
                 "hyphenated pause sounds"
             ),
             (
+                "I was like going there.",
+                "I was going there.",
+                "unpunctuated like filler"
+            ),
+            (
                 "This works you know.",
                 "This works.",
                 "terminal discourse filler"
@@ -315,6 +320,11 @@ struct RomaCoreChecks {
                 "Use dot notation.",
                 "Use dot notation.",
                 "dot command prose guard"
+            ),
+            (
+                "This is like magic.",
+                "This is like magic.",
+                "like simile guard"
             ),
             (
                 "I lost twenty pounds.",
