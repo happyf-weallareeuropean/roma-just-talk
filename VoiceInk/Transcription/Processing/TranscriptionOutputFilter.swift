@@ -84,6 +84,24 @@ struct TranscriptionOutputFilter {
         #"\(.*?\)"#,     // ()
         #"\{.*?\}"#      // {}
     ]
+    private static let backtrackingMarkerPattern = #"""
+        (?ix)
+        \s*
+        (?:
+            (?:[,;:…]|\.\.\.)\s*actually |
+            sorry\s+not\s+that\s*[,;:]?\s+actually |
+            scratch\s+that |
+            wait\s+no |
+            sorry\s+not\s+that |
+            sorry\s+no |
+            i\s+mean
+        )
+        \s*[,;:]?\s+
+        """#
+    private static let phraseBoundaryPunctuation = CharacterSet(charactersIn: ".,!?;:…")
+    private static let softPhrasePunctuation = CharacterSet(charactersIn: ",;:…")
+    private static let wordConnectorCharacters = CharacterSet(charactersIn: "'’ʼ-")
+    private static let maxBacktrackingCorrectionWords = 4
 
     static func filter(_ text: String) -> String {
         var filteredText = unwrapBracketedWholeOutput(text)
@@ -108,6 +126,7 @@ struct TranscriptionOutputFilter {
             filteredText = removeFillerWords(from: filteredText)
         }
 
+        filteredText = applyBacktrackingCorrections(in: filteredText)
         filteredText = collapseAdjacentRepeatedWords(in: filteredText)
 
         // Clean whitespace
@@ -221,6 +240,174 @@ struct TranscriptionOutputFilter {
         }
 
         return filteredText
+    }
+
+    private static func applyBacktrackingCorrections(in text: String) -> String {
+        guard let regex = try? NSRegularExpression(pattern: backtrackingMarkerPattern) else {
+            return text
+        }
+
+        var correctedText = text
+        var rewriteCount = 0
+
+        while rewriteCount < 8 {
+            let fullRange = NSRange(correctedText.startIndex..., in: correctedText)
+            let matches = regex.matches(in: correctedText, range: fullRange)
+            var nextText: String?
+
+            for match in matches {
+                guard let matchRange = Range(match.range, in: correctedText),
+                      let rewrittenText = rewriteBacktrackingMatch(in: correctedText, markerRange: matchRange),
+                      rewrittenText != correctedText else {
+                    continue
+                }
+
+                nextText = rewrittenText
+                break
+            }
+
+            guard let nextText else {
+                break
+            }
+
+            correctedText = nextText
+            rewriteCount += 1
+        }
+
+        return correctedText
+    }
+
+    private static func rewriteBacktrackingMatch(in text: String, markerRange: Range<String.Index>) -> String? {
+        let beforeMarker = String(text[..<markerRange.lowerBound])
+        let afterMarker = String(text[markerRange.upperBound...])
+
+        guard let correction = leadingCorrectionPhrase(in: afterMarker),
+              let prefix = removeTrailingWords(correction.wordCount, from: beforeMarker) else {
+            return nil
+        }
+
+        let correctionText = String(afterMarker[correction.range])
+        let suffix = String(afterMarker[correction.range.upperBound...])
+        return normalizeBacktrackingWhitespace(join(prefix, correctionText, suffix))
+    }
+
+    private static func leadingCorrectionPhrase(in text: String) -> (range: Range<String.Index>, wordCount: Int)? {
+        var index = text.startIndex
+        while index < text.endIndex, text[index].isWhitespace {
+            index = text.index(after: index)
+        }
+
+        let start = index
+        var end = index
+        var wordCount = 0
+
+        while index < text.endIndex, wordCount < maxBacktrackingCorrectionWords {
+            if character(text[index], isIn: phraseBoundaryPunctuation) {
+                break
+            }
+
+            while index < text.endIndex, text[index].isWhitespace {
+                index = text.index(after: index)
+            }
+
+            guard index < text.endIndex,
+                  isWordCharacter(text[index]) else {
+                break
+            }
+
+            while index < text.endIndex, isWordCharacter(text[index]) {
+                index = text.index(after: index)
+            }
+
+            end = index
+            wordCount += 1
+
+            let lookahead = text[index...].drop(while: \.isWhitespace)
+            guard let nextCharacter = lookahead.first,
+                  !character(nextCharacter, isIn: phraseBoundaryPunctuation) else {
+                break
+            }
+        }
+
+        guard wordCount > 0 else { return nil }
+        return (start..<end, wordCount)
+    }
+
+    private static func removeTrailingWords(_ wordCount: Int, from text: String) -> String? {
+        guard wordCount > 0 else { return text }
+
+        var startOfRemovedWords = text.endIndex
+        var wordsRemoved = 0
+
+        while wordsRemoved < wordCount {
+            startOfRemovedWords = indexBeforeTrailingNoise(in: text, from: startOfRemovedWords)
+            guard startOfRemovedWords > text.startIndex else { return nil }
+
+            var wordStart = startOfRemovedWords
+            while wordStart > text.startIndex {
+                let previousIndex = text.index(before: wordStart)
+                guard isWordCharacter(text[previousIndex]) else { break }
+                wordStart = previousIndex
+            }
+
+            guard wordStart < startOfRemovedWords else { return nil }
+            startOfRemovedWords = wordStart
+            wordsRemoved += 1
+        }
+
+        var prefix = String(text[..<startOfRemovedWords])
+        prefix = prefix.trimmingCharacters(in: .whitespacesAndNewlines)
+        prefix = prefix.trimmingCharacters(in: softPhrasePunctuation)
+        return prefix
+    }
+
+    private static func indexBeforeTrailingNoise(in text: String, from endIndex: String.Index) -> String.Index {
+        var index = endIndex
+        while index > text.startIndex {
+            let previousIndex = text.index(before: index)
+            let previousCharacter = text[previousIndex]
+            if previousCharacter.isWhitespace || character(previousCharacter, isIn: softPhrasePunctuation) {
+                index = previousIndex
+                continue
+            }
+            break
+        }
+
+        return index
+    }
+
+    private static func isWordCharacter(_ character: Character) -> Bool {
+        character.isLetter ||
+            character.isNumber ||
+            character.unicodeScalars.allSatisfy { wordConnectorCharacters.contains($0) }
+    }
+
+    private static func character(_ character: Character, isIn characterSet: CharacterSet) -> Bool {
+        character.unicodeScalars.allSatisfy { characterSet.contains($0) }
+    }
+
+    private static func join(_ prefix: String, _ correction: String, _ suffix: String) -> String {
+        let trimmedPrefix = prefix.trimmingCharacters(in: .whitespacesAndNewlines)
+        let trimmedCorrection = correction.trimmingCharacters(in: .whitespacesAndNewlines)
+        let trimmedSuffix = suffix.trimmingCharacters(in: .whitespacesAndNewlines)
+
+        var pieces: [String] = []
+        if !trimmedPrefix.isEmpty { pieces.append(trimmedPrefix) }
+        if !trimmedCorrection.isEmpty { pieces.append(trimmedCorrection) }
+
+        let base = pieces.joined(separator: " ")
+        guard !trimmedSuffix.isEmpty else { return base }
+        if let firstSuffixCharacter = trimmedSuffix.first,
+           firstSuffixCharacter.isPunctuation {
+            return base + trimmedSuffix
+        }
+        return base.isEmpty ? trimmedSuffix : "\(base) \(trimmedSuffix)"
+    }
+
+    private static func normalizeBacktrackingWhitespace(_ text: String) -> String {
+        normalizeWhitespace(text)
+            .replacingOccurrences(of: #"\s+([,.!?;:])"#, with: "$1", options: .regularExpression)
+            .replacingOccurrences(of: #"([([{])\s+"#, with: "$1", options: .regularExpression)
     }
 
     private static func unwrapBracketedWholeOutput(_ text: String) -> String {

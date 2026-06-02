@@ -159,6 +159,15 @@ struct VoiceInkTests {
         #expect(TranscriptionOutputFilter.applyInsertionPolish("VoiceInk.", context: nil) == "VoiceInk")
     }
 
+    @Test func transcriptionFilterAppliesBoundedBacktrackingCorrections() async throws {
+        #expect(TranscriptionOutputFilter.filter("Let's meet at two, wait no, three.") == "Let's meet at three.")
+        #expect(TranscriptionOutputFilter.filter("The meeting is on Tuesday, sorry not that, actually Wednesday.") == "The meeting is on Wednesday.")
+        #expect(TranscriptionOutputFilter.filter("Use model wait no models.") == "Use models.")
+        #expect(TranscriptionOutputFilter.filter("Let's meet at two... actually three.") == "Let's meet at three.")
+        #expect(TranscriptionOutputFilter.filter("I actually think this works.") == "I actually think this works.")
+        #expect(TranscriptionOutputFilter.filter("I mean this is wrong wait no right.") == "I mean this is right.")
+    }
+
     @Test func modifierOnlyShortcutsUseNSEventMonitorPath() async throws {
         let monitor = ShortcutMonitor()
         var keyDownCount = 0
