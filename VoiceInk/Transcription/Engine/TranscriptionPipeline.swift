@@ -25,6 +25,40 @@ class TranscriptionPipeline {
         self.licenseViewModel = LicenseViewModel()
     }
 
+    private struct PrivacySafeTextMetrics {
+        let characters: Int
+        let words: Int
+        let lines: Int
+
+        init(_ text: String) {
+            characters = text.count
+            words = WordCounter.count(in: text)
+            lines = text.isEmpty ? 0 : text.components(separatedBy: .newlines).count
+        }
+    }
+
+    private func logInsertionContext(_ context: TranscriptionOutputFilter.TextInsertionContext?) {
+        let selectedCharacters = context?.selectedText?.count ?? 0
+        logger.notice(
+            "Dictation insertion context available=\(context != nil, privacy: .public) precedingChars=\(context?.precedingText.count ?? 0, privacy: .public) selectedChars=\(selectedCharacters, privacy: .public)"
+        )
+    }
+
+    private func logCleanupStage(_ stage: String, before: String, after: String) {
+        let beforeMetrics = PrivacySafeTextMetrics(before)
+        let afterMetrics = PrivacySafeTextMetrics(after)
+        logger.notice(
+            "Dictation cleanup stage=\(stage, privacy: .public) changed=\(before != after, privacy: .public) beforeChars=\(beforeMetrics.characters, privacy: .public) afterChars=\(afterMetrics.characters, privacy: .public) beforeWords=\(beforeMetrics.words, privacy: .public) afterWords=\(afterMetrics.words, privacy: .public) beforeLines=\(beforeMetrics.lines, privacy: .public) afterLines=\(afterMetrics.lines, privacy: .public)"
+        )
+    }
+
+    private func logPastePrepared(source: String, text: String) {
+        let metrics = PrivacySafeTextMetrics(text)
+        logger.notice(
+            "Dictation paste prepared source=\(source, privacy: .public) chars=\(metrics.characters, privacy: .public) words=\(metrics.words, privacy: .public) lines=\(metrics.lines, privacy: .public)"
+        )
+    }
+
     /// Run the full pipeline for a given transcription record.
     /// - Parameters:
     ///   - transcription: The pending Transcription SwiftData object to populate and save.
@@ -94,6 +128,7 @@ class TranscriptionPipeline {
 
         do {
             let insertionContext = TranscriptionOutputFilter.currentInsertionContext()
+            logInsertionContext(insertionContext)
             let transcriptionStart = Date()
             var text: String
             if let session {
@@ -101,20 +136,31 @@ class TranscriptionPipeline {
             } else {
                 text = try await serviceRegistry.transcribe(audioURL: audioURL, model: model)
             }
-            text = TranscriptionOutputFilter.filter(text)
+            let rawText = text
+            text = TranscriptionOutputFilter.filter(rawText)
+            logCleanupStage("filter", before: rawText, after: text)
             let transcriptionDuration = Date().timeIntervalSince(transcriptionStart)
 
             if shouldCancel() { await finishCanceledTranscription(); return }
 
+            let filteredText = text
             text = text.trimmingCharacters(in: .whitespacesAndNewlines)
+            logCleanupStage("trim", before: filteredText, after: text)
 
             if UserDefaults.standard.bool(forKey: "IsTextFormattingEnabled") {
+                let textBeforeFormatting = text
                 text = WhisperTextFormatter.format(text)
+                logCleanupStage("formatter", before: textBeforeFormatting, after: text)
             }
 
+            let textBeforeReplacements = text
             text = WordReplacementService.shared.applyReplacements(to: text, using: modelContext)
+            logCleanupStage("word_replacements", before: textBeforeReplacements, after: text)
+            let textBeforeUserCleanup = text
             let cleanedText = TranscriptionOutputFilter.applyUserCleanupPreferences(text)
+            logCleanupStage("user_cleanup_preferences", before: textBeforeUserCleanup, after: cleanedText)
             let polishedCleanedText = TranscriptionOutputFilter.applyInsertionPolish(cleanedText, context: insertionContext)
+            logCleanupStage("insertion_polish", before: cleanedText, after: polishedCleanedText)
 
             let actualDuration = await AudioFileMetadata.duration(for: audioURL)
 
@@ -122,7 +168,10 @@ class TranscriptionPipeline {
             transcription.duration = actualDuration
             transcription.transcriptionModelName = model.displayName
             transcription.transcriptionDuration = transcriptionDuration
-            finalPastedText = TranscriptionOutputFilter.applyInsertionSpacing(polishedCleanedText, context: insertionContext)
+            let spacedCleanedText = TranscriptionOutputFilter.applyInsertionSpacing(polishedCleanedText, context: insertionContext)
+            logCleanupStage("insertion_spacing", before: polishedCleanedText, after: spacedCleanedText)
+            finalPastedText = spacedCleanedText
+            logPastePrepared(source: "transcription", text: spacedCleanedText)
 
             if let enhancementService, enhancementService.isConfigured {
                 let detectionResult = promptDetectionService.analyzeText(text, with: enhancementService)
@@ -147,13 +196,17 @@ class TranscriptionPipeline {
                 do {
                     let (enhancedText, enhancementDuration, promptName) = try await enhancementService.enhance(textForAI)
                     let polishedEnhancedText = TranscriptionOutputFilter.applyInsertionPolish(enhancedText, context: insertionContext)
+                    logCleanupStage("enhancement_insertion_polish", before: enhancedText, after: polishedEnhancedText)
                     transcription.enhancedText = polishedEnhancedText
                     transcription.aiEnhancementModelName = enhancementService.getAIService()?.currentModel
                     transcription.promptName = promptName
                     transcription.enhancementDuration = enhancementDuration
                     transcription.aiRequestSystemMessage = enhancementService.lastSystemMessageSent
                     transcription.aiRequestUserMessage = enhancementService.lastUserMessageSent
-                    finalPastedText = TranscriptionOutputFilter.applyInsertionSpacing(polishedEnhancedText, context: insertionContext)
+                    let spacedEnhancedText = TranscriptionOutputFilter.applyInsertionSpacing(polishedEnhancedText, context: insertionContext)
+                    logCleanupStage("enhancement_insertion_spacing", before: polishedEnhancedText, after: spacedEnhancedText)
+                    finalPastedText = spacedEnhancedText
+                    logPastePrepared(source: "enhancement", text: spacedEnhancedText)
                 } catch {
                     let errorDescription = (error as? LocalizedError)?.errorDescription ?? error.localizedDescription
                     transcription.enhancedText = "Enhancement failed: \(errorDescription)"
