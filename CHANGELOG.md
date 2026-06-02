@@ -2,7 +2,7 @@
 
 ## v1.81 - Unreleased
 
-- Next patch release notes go here.
+- Improved final dictation cleanup for mid-sentence fragments, stray bracket wrappers, pause sounds, and repeated words.
 
 ## v1.80 - 2026-06-01
 

@@ -5,7 +5,8 @@ class FillerWordManager: ObservableObject {
 
     static let defaultFillerWords = [
         "uh", "um", "uhm", "umm", "uhh", "uhhh",
-        "hmm", "hm", "mmm", "mm", "mh", "ehh"
+        "hmm", "hmmm", "hmmmm", "hm", "mmm", "mm", "mh",
+        "eh", "ehh", "er", "erm", "ah", "ahh", "huh"
     ]
 
     private let fillerWordsKey = "FillerWords"

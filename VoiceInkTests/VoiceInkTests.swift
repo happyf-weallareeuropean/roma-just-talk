@@ -129,6 +129,34 @@ struct VoiceInkTests {
         #expect(didRequestAccess)
     }
 
+    @Test func transcriptionFilterCleansPauseNoiseAndRepeatedWords() async throws {
+        let oldRemoveFillerWords = UserDefaults.standard.object(forKey: "RemoveFillerWords")
+        defer {
+            if let oldRemoveFillerWords {
+                UserDefaults.standard.set(oldRemoveFillerWords, forKey: "RemoveFillerWords")
+            } else {
+                UserDefaults.standard.removeObject(forKey: "RemoveFillerWords")
+            }
+        }
+
+        UserDefaults.standard.set(true, forKey: "RemoveFillerWords")
+
+        #expect(TranscriptionOutputFilter.filter("[Model.]") == "Model.")
+        #expect(TranscriptionOutputFilter.filter("hmm.... eh... I I think think this this works.") == "I think this works.")
+        #expect(TranscriptionOutputFilter.filter("no no this is fine") == "no no this is fine")
+    }
+
+    @Test func insertionPolishUsesCursorContextForMidSentenceFragments() async throws {
+        let midSentenceContext = TranscriptionOutputFilter.TextInsertionContext(precedingText: "...so this")
+        let sentenceStartContext = TranscriptionOutputFilter.TextInsertionContext(precedingText: "Done. ")
+
+        #expect(TranscriptionOutputFilter.applyInsertionPolish("Model.", context: midSentenceContext) == "model")
+        #expect(TranscriptionOutputFilter.applyInsertionSpacing("model", context: midSentenceContext) == " model")
+        #expect(TranscriptionOutputFilter.applyInsertionPolish("Model.", context: sentenceStartContext) == "Model")
+        #expect(TranscriptionOutputFilter.applyInsertionPolish("Model.", context: nil) == "model")
+        #expect(TranscriptionOutputFilter.applyInsertionPolish("VoiceInk.", context: nil) == "VoiceInk")
+    }
+
     @Test func modifierOnlyShortcutsUseNSEventMonitorPath() async throws {
         let monitor = ShortcutMonitor()
         var keyDownCount = 0

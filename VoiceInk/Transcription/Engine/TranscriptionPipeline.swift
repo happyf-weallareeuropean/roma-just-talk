@@ -93,6 +93,7 @@ class TranscriptionPipeline {
         }
 
         do {
+            let insertionContext = TranscriptionOutputFilter.currentInsertionContext()
             let transcriptionStart = Date()
             var text: String
             if let session {
@@ -113,14 +114,15 @@ class TranscriptionPipeline {
 
             text = WordReplacementService.shared.applyReplacements(to: text, using: modelContext)
             let cleanedText = TranscriptionOutputFilter.applyUserCleanupPreferences(text)
+            let polishedCleanedText = TranscriptionOutputFilter.applyInsertionPolish(cleanedText, context: insertionContext)
 
             let actualDuration = await AudioFileMetadata.duration(for: audioURL)
 
-            transcription.text = cleanedText
+            transcription.text = polishedCleanedText
             transcription.duration = actualDuration
             transcription.transcriptionModelName = model.displayName
             transcription.transcriptionDuration = transcriptionDuration
-            finalPastedText = cleanedText
+            finalPastedText = TranscriptionOutputFilter.applyInsertionSpacing(polishedCleanedText, context: insertionContext)
 
             if let enhancementService, enhancementService.isConfigured {
                 let detectionResult = promptDetectionService.analyzeText(text, with: enhancementService)
@@ -144,13 +146,14 @@ class TranscriptionPipeline {
 
                 do {
                     let (enhancedText, enhancementDuration, promptName) = try await enhancementService.enhance(textForAI)
-                    transcription.enhancedText = enhancedText
+                    let polishedEnhancedText = TranscriptionOutputFilter.applyInsertionPolish(enhancedText, context: insertionContext)
+                    transcription.enhancedText = polishedEnhancedText
                     transcription.aiEnhancementModelName = enhancementService.getAIService()?.currentModel
                     transcription.promptName = promptName
                     transcription.enhancementDuration = enhancementDuration
                     transcription.aiRequestSystemMessage = enhancementService.lastSystemMessageSent
                     transcription.aiRequestUserMessage = enhancementService.lastUserMessageSent
-                    finalPastedText = enhancedText
+                    finalPastedText = TranscriptionOutputFilter.applyInsertionSpacing(polishedEnhancedText, context: insertionContext)
                 } catch {
                     let errorDescription = (error as? LocalizedError)?.errorDescription ?? error.localizedDescription
                     transcription.enhancedText = "Enhancement failed: \(errorDescription)"
