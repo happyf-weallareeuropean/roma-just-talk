@@ -149,6 +149,7 @@ Minimum Windows MVP permission surface: microphone + shortcut + clipboard/paste.
    - `RegisterHotKey` toggles start/stop
    - cloud STT first, or whisper.cpp CLI/DLL if model packaging is ready
    - Win32 clipboard + `SendInput` pastes text
+   - `windows-dictation-proof` composes those pieces into one hotkey -> pre-roll WAV -> STT -> optional paste proof
 6. Only after the proof target works, build tray/settings UI.
 
 ## Windows Proof Checklist
@@ -175,6 +176,8 @@ Useful script options:
 - `-TranscribeEndpoint https://api.groq.com/openai/v1/audio/transcriptions -TranscribeModel whisper-large-v3-turbo -TranscribeApiKeyEnv GROQ_API_KEY` runs the OpenAI-compatible transcription proof.
 - `-TranscribeAudio C:\tmp\proof.wav` uses an existing WAV for transcription, useful with `-SkipMic`.
 - `-TranscribeLanguage en` and `-TranscribePrompt "roma just talk"` pass optional STT hints.
+- `-RunInteractiveDictation` waits for `Ctrl+Shift+R`, records with pre-roll, transcribes, and writes `dictation-proof.wav`.
+- `-PasteDictation` adds the final paste step to the interactive dictation proof.
 
 Raw command sequence:
 
@@ -192,6 +195,7 @@ swift run RomaProofAgent windows-hotkey-doctor
 swift run RomaProofAgent windows-hotkey-proof
 swift run RomaProofAgent windows-paste-doctor
 swift run RomaProofAgent windows-paste-proof --text "roma just talk proof"
+swift run RomaProofAgent windows-dictation-proof --out dictation-proof.wav --seconds 2 --endpoint https://api.groq.com/openai/v1/audio/transcriptions --model whisper-large-v3-turbo --api-key-env GROQ_API_KEY --paste
 ```
 
 Manual proof:

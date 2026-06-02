@@ -10,7 +10,9 @@ param(
     [string]$TranscribePrompt = "",
     [switch]$SkipMic,
     [switch]$RunInteractiveHotkey,
-    [switch]$RunInteractivePaste
+    [switch]$RunInteractivePaste,
+    [switch]$RunInteractiveDictation,
+    [switch]$PasteDictation
 )
 
 $ErrorActionPreference = "Stop"
@@ -154,6 +156,45 @@ try {
         Write-Host ""
         Write-Host "== windows paste proof skipped =="
         Write-Host "rerun with -RunInteractivePaste after focusing Notepad"
+    }
+
+    if ($RunInteractiveDictation) {
+        if ([string]::IsNullOrWhiteSpace($TranscribeEndpoint) -or
+            [string]::IsNullOrWhiteSpace($TranscribeModel) -or
+            [string]::IsNullOrWhiteSpace($TranscribeApiKeyEnv)) {
+            throw "RunInteractiveDictation requires -TranscribeEndpoint, -TranscribeModel, and -TranscribeApiKeyEnv"
+        }
+
+        $dictationProof = Join-Path $OutputDir "dictation-proof.wav"
+        Invoke-Step "windows dictation proof" {
+            Write-Host "Say a phrase before Ctrl+Shift+R, press Ctrl+Shift+R, then say a phrase after it."
+            if ($PasteDictation) {
+                Write-Host "Focus Notepad or another normal-integrity text field before transcription completes."
+            }
+            $dictationArgs = @(
+                "run", "RomaProofAgent", "windows-dictation-proof",
+                "--out", $dictationProof,
+                "--seconds", "$RecordSeconds",
+                "--endpoint", $TranscribeEndpoint,
+                "--model", $TranscribeModel,
+                "--api-key-env", $TranscribeApiKeyEnv
+            )
+            if (![string]::IsNullOrWhiteSpace($TranscribeLanguage)) {
+                $dictationArgs += @("--language", $TranscribeLanguage)
+            }
+            if (![string]::IsNullOrWhiteSpace($TranscribePrompt)) {
+                $dictationArgs += @("--prompt", $TranscribePrompt)
+            }
+            if ($PasteDictation) {
+                $dictationArgs += "--paste"
+            }
+            swift @dictationArgs
+            Assert-FileWithBytes -Path $dictationProof
+        }
+    } else {
+        Write-Host ""
+        Write-Host "== windows dictation proof skipped =="
+        Write-Host "rerun with -RunInteractiveDictation and transcription args to prove hotkey -> pre-roll WAV -> STT"
     }
 
     Write-Host ""

@@ -19,6 +19,8 @@ struct RomaProofAgent {
             printWindowsPasteDoctor()
         case "windows-paste-proof":
             try runWindowsPasteProof(arguments: Array(arguments.dropFirst()))
+        case "windows-dictation-proof":
+            try await runWindowsDictationProof(arguments: Array(arguments.dropFirst()))
         case "miniaudio-capture-doctor":
             printMiniaudioCaptureDoctor()
         case "miniaudio-record-proof":
@@ -43,6 +45,7 @@ struct RomaProofAgent {
         print("windows_paste_adapter_source=true")
         print("miniaudio_capture_adapter_source=true")
         print("openai_compatible_transcription_source=true")
+        print("windows_dictation_proof_source=true")
     }
 
     private static func printWindowsHotKeyDoctor() {
@@ -100,6 +103,66 @@ struct RomaProofAgent {
         print("text_utf16_bytes=\(WindowsClipboardPayload.cfUnicodeTextData(for: text).count)")
         #else
         throw AgentError.unsupportedPlatform("windows-paste-proof requires Windows")
+        #endif
+    }
+
+    private static func runWindowsDictationProof(arguments: [String]) async throws {
+        #if os(Windows)
+        let outputURL = URL(fileURLWithPath: try value(after: "--out", in: arguments))
+        let seconds = try doubleValue(after: "--seconds", in: arguments, default: 2)
+        let endpointText = try value(after: "--endpoint", in: arguments)
+        let modelName = try value(after: "--model", in: arguments)
+        let apiKeyEnvironmentName = try value(after: "--api-key-env", in: arguments)
+        let shouldPaste = arguments.contains("--paste")
+        let hotKey = WindowsHotKey.proofToggle
+        let recorder = MiniaudioCaptureRecorder()
+
+        do {
+            try await recorder.startPreRollBuffering()
+            print("pre_roll_buffering=true")
+            print("waiting_for=\(hotKey.displayName)")
+            try WindowsRegisterHotKeyProof.waitForSingleTrigger(hotKey: hotKey)
+            print("hotkey_received=true")
+
+            try await recorder.startRecording(toOutputFile: outputURL)
+            try await sleep(seconds: seconds)
+            let audio = try await recorder.finishRecording()
+            await recorder.stopCapture()
+
+            print("wrote=\(audio.fileURL.path)")
+            print("duration_seconds=\(String(format: "%.3f", audio.durationSeconds ?? 0))")
+            print("included_pre_roll_seconds=\(audio.includedPreRollSeconds ?? 0)")
+            print("sample_rate=\(audio.format.sampleRate)")
+            print("channels=\(audio.format.channelCount)")
+
+            let result = try await transcribeAudio(
+                audioURL: audio.fileURL,
+                endpointText: endpointText,
+                modelName: modelName,
+                apiKeyEnvironmentName: apiKeyEnvironmentName,
+                language: optionalValue(after: "--language", in: arguments),
+                prompt: optionalValue(after: "--prompt", in: arguments)
+            )
+            printTranscriptionResult(
+                result,
+                endpointText: endpointText,
+                modelName: modelName,
+                apiKeyEnvironmentName: apiKeyEnvironmentName,
+                audioURL: audio.fileURL
+            )
+
+            if shouldPaste {
+                try WindowsPasteProof.pasteText(result.text)
+                print("paste_sent=true")
+            } else {
+                print("paste_sent=false")
+            }
+        } catch {
+            await recorder.stopCapture()
+            throw error
+        }
+        #else
+        throw AgentError.unsupportedPlatform("windows-dictation-proof requires Windows")
         #endif
     }
 
@@ -174,6 +237,31 @@ struct RomaProofAgent {
         let modelName = try value(after: "--model", in: arguments)
         let apiKeyEnvironmentName = try value(after: "--api-key-env", in: arguments)
 
+        let result = try await transcribeAudio(
+            audioURL: audioURL,
+            endpointText: endpointText,
+            modelName: modelName,
+            apiKeyEnvironmentName: apiKeyEnvironmentName,
+            language: optionalValue(after: "--language", in: arguments),
+            prompt: optionalValue(after: "--prompt", in: arguments)
+        )
+        printTranscriptionResult(
+            result,
+            endpointText: endpointText,
+            modelName: modelName,
+            apiKeyEnvironmentName: apiKeyEnvironmentName,
+            audioURL: audioURL
+        )
+    }
+
+    private static func transcribeAudio(
+        audioURL: URL,
+        endpointText: String,
+        modelName: String,
+        apiKeyEnvironmentName: String,
+        language: String?,
+        prompt: String?
+    ) async throws -> TranscriptionResult {
         guard isValidEnvironmentName(apiKeyEnvironmentName) else {
             throw AgentError.invalidOptionValue("--api-key-env")
         }
@@ -196,16 +284,25 @@ struct RomaProofAgent {
             displayName: modelName,
             provider: .custom
         )
-        let request = TranscriptionRequest(
-            audioURL: audioURL,
-            model: model,
-            language: optionalValue(after: "--language", in: arguments),
-            prompt: optionalValue(after: "--prompt", in: arguments)
+        return try await service.transcribe(
+            TranscriptionRequest(
+                audioURL: audioURL,
+                model: model,
+                language: language,
+                prompt: prompt
+            )
         )
-        let result = try await service.transcribe(request)
+    }
 
+    private static func printTranscriptionResult(
+        _ result: TranscriptionResult,
+        endpointText: String,
+        modelName: String,
+        apiKeyEnvironmentName: String,
+        audioURL: URL
+    ) {
         print("provider=openai-compatible")
-        print("endpoint=\(endpointURL.absoluteString)")
+        print("endpoint=\(endpointText)")
         print("model=\(modelName)")
         print("api_key_env=\(apiKeyEnvironmentName)")
         print("audio=\(audioURL.path)")
@@ -270,6 +367,7 @@ struct RomaProofAgent {
         print("  RomaProofAgent windows-hotkey-proof")
         print("  RomaProofAgent windows-paste-doctor")
         print("  RomaProofAgent windows-paste-proof --text \"roma just talk proof\"")
+        print("  RomaProofAgent windows-dictation-proof --out proof.wav --seconds 2 --endpoint https://api.example.com/v1/audio/transcriptions --model whisper-large-v3-turbo --api-key-env OPENAI_API_KEY [--paste]")
         print("  RomaProofAgent miniaudio-capture-doctor")
         print("  RomaProofAgent miniaudio-record-proof --out proof.wav --seconds 2")
         print("  RomaProofAgent transcribe-proof-doctor")
