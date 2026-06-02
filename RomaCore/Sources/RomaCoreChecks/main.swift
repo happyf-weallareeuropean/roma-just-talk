@@ -681,6 +681,41 @@ struct RomaCoreChecks {
         try require(cleanupResult.session.insertedText == " roma", "pipeline session should store processed inserted text")
         try require(await cleanupInserter.pastedText == " roma", "pipeline should paste processed text")
 
+        let midSentenceRecorder = FakeRecorder()
+        let midSentenceInserter = FakeTextInsertion()
+        let midSentencePipeline = DictationPipeline(
+            recorder: midSentenceRecorder,
+            transcriptionService: FakeTranscriptionService(
+                expectedFileName: "mid-sentence-proof.wav",
+                text: "Model."
+            ),
+            textInsertion: midSentenceInserter
+        )
+        let midSentenceRequest = DictationPipelineRequest(
+            outputURL: URL(fileURLWithPath: "/tmp/mid-sentence-proof.wav"),
+            model: model,
+            shouldInsertTranscription: true,
+            textProcessing: DictationTextProcessingConfiguration(
+                insertionContext: TextInsertionContext(precedingText: "...so this")
+            )
+        )
+
+        try await midSentenceRecorder.startPreRollBuffering()
+        let midSentenceResult = try await midSentencePipeline.runRecordingWindow(midSentenceRequest) {}
+
+        try require(
+            midSentenceResult.processedText == " model",
+            "pipeline should lowercase and remove trailing punctuation for mid-sentence fragments"
+        )
+        try require(
+            midSentenceResult.session.insertedText == " model",
+            "pipeline session should store mid-sentence polished inserted text"
+        )
+        try require(
+            await midSentenceInserter.pastedText == " model",
+            "pipeline should paste mid-sentence polished text"
+        )
+
         let missingInserterPipeline = DictationPipeline(
             recorder: FakeRecorder(),
             transcriptionService: transcriber
