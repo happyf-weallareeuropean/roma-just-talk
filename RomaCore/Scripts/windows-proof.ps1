@@ -104,14 +104,13 @@ try {
     }
 
     $secretProofDir = Join-Path $OutputDir "secrets"
-    $hasTranscriptionKey = ![string]::IsNullOrWhiteSpace($TranscribeApiKeyEnv) -or
-        ![string]::IsNullOrWhiteSpace($TranscribeApiKeyName)
-
     $transcribeApiKeyEnvValue = if ([string]::IsNullOrWhiteSpace($TranscribeApiKeyEnv)) {
         ""
     } else {
         [Environment]::GetEnvironmentVariable($TranscribeApiKeyEnv)
     }
+    $hasTranscriptionKey = ![string]::IsNullOrWhiteSpace($transcribeApiKeyEnvValue) -or
+        ![string]::IsNullOrWhiteSpace($TranscribeApiKeyName)
 
     if (![string]::IsNullOrWhiteSpace($TranscribeApiKeyName) -and
         ![string]::IsNullOrWhiteSpace($transcribeApiKeyEnvValue)) {
