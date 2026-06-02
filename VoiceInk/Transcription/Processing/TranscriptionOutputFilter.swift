@@ -183,6 +183,7 @@ struct TranscriptionOutputFilter {
     private static let spokenSchemeURLPattern = #"(?i)(?<![\p{L}\p{N}])((?:h[ \t]+t[ \t]+t[ \t]+p[ \t]+s?)|https?)[ \t]*(?:colon|:)[ \t]+(?:slash[ \t]+slash|forward[ \t]+slash[ \t]+forward[ \t]+slash)[ \t]+((?:(?:[A-Za-z0-9-]+[ \t]+dot[ \t]+)+(?:ai|app|co|com|dev|edu|gov|io|net|org)(?:(?:[ \t]+(?:slash|forward[ \t]+slash)[ \t]+[A-Za-z0-9_-]+)+)?)|(?:localhost(?:[ \t]+colon[ \t]+\d{1,5})?(?:(?:[ \t]+(?:slash|forward[ \t]+slash)[ \t]+[A-Za-z0-9_-]+)+)?))([.!?])?(?=\s|$|\n)"#
     private static let spokenWWWURLPattern = #"(?i)(?<![\p{L}\p{N}])www[ \t]+dot[ \t]+((?:[A-Za-z0-9-]+[ \t]+dot[ \t]+)*(?:ai|app|co|com|dev|edu|gov|io|net|org)(?:(?:[ \t]+(?:slash|forward[ \t]+slash)[ \t]+[A-Za-z0-9_-]+)+)?)([.!?])?(?=\s|$|\n)"#
     private static let monthOrdinalDatePattern = #"(?i)(?<![\p{L}\p{N}])(january|february|march|april|may|june|july|august|september|october|november|december)[ \t]+(thirty[ \t]+first|thirtieth|twenty[ \t]+ninth|twenty[ \t]+eighth|twenty[ \t]+seventh|twenty[ \t]+sixth|twenty[ \t]+fifth|twenty[ \t]+fourth|twenty[ \t]+third|twenty[ \t]+second|twenty[ \t]+first|twentieth|nineteenth|eighteenth|seventeenth|sixteenth|fifteenth|fourteenth|thirteenth|twelfth|eleventh|tenth|ninth|eighth|seventh|sixth|fifth|fourth|third|second|first)(?:[ \t]+(\d{4}))?(?![\p{L}\p{N}])"#
+    private static let monthNumberDatePattern = #"(?i)(?<![\p{L}\p{N}])(january|february|march|april|may|june|july|august|september|october|november|december)[ \t]+(\d{1,2})(?:st|nd|rd|th)?(?:[ \t]+(\d{4}))?(?![\p{L}\p{N}])"#
     private static let spokenTimePattern = #"(?i)(?<![\p{L}\p{N}])(\d{1,2})(?:[ \t]+(?:(?:colon|:)[ \t]*)?(\d{2}))?[ \t]*(a[ \t]*m|p[ \t]*m|am|pm)(?![\p{L}\p{N}])"#
     private static let leadingCurrencySignPattern = #"(?i)(?<![\p{L}\p{N}])(dollar|euro|pound)[ \t]+sign[ \t]+(\d+(?:\.\d{1,2})?)(?![\p{L}\p{N}])"#
     private static let trailingCurrencyPattern = #"(?i)(?<![\p{L}\p{N}])(\d+(?:\.\d{1,2})?)[ \t]+(dollars?|bucks|usd|euros?|eur|pounds?|gbp)(?![\p{L}\p{N}])"#
@@ -952,6 +953,7 @@ struct TranscriptionOutputFilter {
 
     private static func applySpokenValueFormattingCommands(in text: String) -> String {
         var formattedText = replaceSpokenMonthOrdinalDates(in: text)
+        formattedText = replaceSpokenMonthNumberDates(in: formattedText)
         formattedText = replaceSpokenTimes(in: formattedText)
         formattedText = replaceLeadingCurrencySigns(in: formattedText)
         formattedText = replaceTrailingCurrencyWords(in: formattedText)
@@ -973,6 +975,37 @@ struct TranscriptionOutputFilter {
                   let monthRange = Range(match.range(at: 1), in: dateText),
                   let ordinalRange = Range(match.range(at: 2), in: dateText),
                   let day = ordinalDayNumber(String(dateText[ordinalRange])) else {
+                continue
+            }
+
+            let rawMonth = String(dateText[monthRange])
+            let beforeDate = String(dateText[..<fullRange.lowerBound])
+            guard shouldFormatSpokenMonth(rawMonth, precedingText: beforeDate) else { continue }
+
+            let month = normalizedMonthName(rawMonth)
+            let year = optionalMatchText(in: dateText, match: match, rangeIndex: 3)
+            let replacement = year.map { "\(month) \(day), \($0)" } ?? "\(month) \(day)"
+            dateText.replaceSubrange(fullRange, with: replacement)
+        }
+
+        return dateText
+    }
+
+    private static func replaceSpokenMonthNumberDates(in text: String) -> String {
+        guard let regex = try? NSRegularExpression(pattern: monthNumberDatePattern) else {
+            return text
+        }
+
+        var dateText = text
+        let matches = regex.matches(in: dateText, range: NSRange(dateText.startIndex..., in: dateText))
+
+        for match in matches.reversed() {
+            guard match.numberOfRanges >= 3,
+                  let fullRange = Range(match.range(at: 0), in: dateText),
+                  let monthRange = Range(match.range(at: 1), in: dateText),
+                  let dayRange = Range(match.range(at: 2), in: dateText),
+                  let day = Int(dateText[dayRange]),
+                  (1...31).contains(day) else {
                 continue
             }
 
