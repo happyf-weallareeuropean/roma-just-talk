@@ -78,12 +78,14 @@ function Copy-SwiftRuntimeLibraries {
         Write-Host "swift_runtime_dlls=0"
         return @{
             Directory = ""
-            Count = 0
+            DllCount = 0
         }
     }
 
-    $runtimeLibraries = Get-ChildItem -LiteralPath $runtimeDirectory.FullName -Filter "*.dll" |
-        Sort-Object Name
+    $runtimeLibraries = @(
+        Get-ChildItem -LiteralPath $runtimeDirectory.FullName -Filter "*.dll" |
+            Sort-Object Name
+    )
     foreach ($library in $runtimeLibraries) {
         Copy-Item -LiteralPath $library.FullName -Destination (Join-Path $OutputDir $library.Name) -Force
     }
@@ -93,8 +95,32 @@ function Copy-SwiftRuntimeLibraries {
 
     return @{
         Directory = $runtimeDirectory.FullName
-        Count = $runtimeLibraries.Count
+        DllCount = $runtimeLibraries.Count
     }
+}
+
+function Assert-SwiftRuntimePackaged {
+    param(
+        [Parameter(Mandatory = $true)]
+        [string]$OutputDir,
+        [Parameter(Mandatory = $true)]
+        [hashtable]$SwiftRuntime
+    )
+
+    if ([System.Environment]::OSVersion.Platform -ne [System.PlatformID]::Win32NT) {
+        return
+    }
+
+    if ($SwiftRuntime.DllCount -le 0) {
+        throw "Swift runtime DLLs were not copied into the Windows agent artifact"
+    }
+
+    $swiftCore = Join-Path $OutputDir "swiftCore.dll"
+    if (!(Test-Path -LiteralPath $swiftCore)) {
+        throw "swiftCore.dll was not copied into the Windows agent artifact"
+    }
+
+    Write-Host "asserted_runtime_dll=swiftCore.dll"
 }
 
 $packageRoot = Resolve-Path "$PSScriptRoot\.."
@@ -137,6 +163,7 @@ try {
     $swiftRuntime = @{}
     Invoke-Step "copy Swift runtime libraries" {
         $script:swiftRuntime = Copy-SwiftRuntimeLibraries -OutputDir $OutputDir
+        Assert-SwiftRuntimePackaged -OutputDir $OutputDir -SwiftRuntime $script:swiftRuntime
     }
 
     Invoke-Step "packaged agent smoke" {
@@ -156,7 +183,7 @@ try {
         "sample_config=$configPath",
         "smoke_script=$smokeScriptOutput",
         "swift_runtime_dir=$($swiftRuntime.Directory)",
-        "swift_runtime_dlls=$($swiftRuntime.Count)",
+        "swift_runtime_dlls=$($swiftRuntime.DllCount)",
         "bytes=$($agentFile.Length)"
     ) | Set-Content -LiteralPath $manifestPath -Encoding UTF8
 
