@@ -187,6 +187,7 @@ Useful script options:
 - `-TranscribeLanguage en` and `-TranscribePrompt "roma just talk"` pass optional STT hints.
 - `-WordReplacement "just talk=roma-just-talk"` adds a proof-time dictionary replacement before optional paste.
 - `-RunInteractiveDictation` waits for `Ctrl+Shift+R`, records with pre-roll, transcribes, and writes `dictation-proof.wav`.
+- `-RunInteractiveWindowsAgent` runs the user-facing `RomaWindowsAgent dictate` command with the same transcription options and writes `windows-agent-dictation.wav`.
 - `-UseHoldHook` makes interactive dictation use `WH_KEYBOARD_LL`: recording starts on `Ctrl+Shift+R` keydown and stops on keyup.
 - `-HoldTimeoutSeconds 15` changes the keydown/keyup wait timeout for hold-hook dictation.
 - `-PasteDictation` adds the final paste step to the interactive dictation proof.
@@ -225,6 +226,12 @@ swift run RomaWindowsAgent dictate --hold-hook --endpoint https://api.groq.com/o
 swift run RomaProofAgent transcribe-proof --audio mic-proof.wav --endpoint https://api.groq.com/openai/v1/audio/transcriptions --model whisper-large-v3-turbo --api-key-name groq --secret-dir C:\tmp\roma-secrets
 swift run RomaProofAgent windows-dictation-proof --out dictation-proof.wav --seconds 2 --endpoint https://api.groq.com/openai/v1/audio/transcriptions --model whisper-large-v3-turbo --api-key-env GROQ_API_KEY --replace "just talk=roma-just-talk" --paste
 swift run RomaProofAgent windows-dictation-proof --out hold-dictation-proof.wav --hold-hook --timeout 15 --endpoint https://api.groq.com/openai/v1/audio/transcriptions --model whisper-large-v3-turbo --api-key-env GROQ_API_KEY --paste
+```
+
+User-facing Windows agent proof:
+
+```powershell
+powershell -ExecutionPolicy Bypass -File .\Scripts\windows-proof.ps1 -RunInteractiveWindowsAgent -UseHoldHook -PasteDictation -TranscribeEndpoint https://api.groq.com/openai/v1/audio/transcriptions -TranscribeModel whisper-large-v3-turbo -TranscribeApiKeyEnv GROQ_API_KEY -WordReplacement "just talk=roma-just-talk"
 ```
 
 Manual proof:

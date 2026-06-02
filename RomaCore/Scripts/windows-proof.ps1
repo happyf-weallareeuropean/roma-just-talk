@@ -15,6 +15,7 @@ param(
     [switch]$RunInteractiveKeyboardHook,
     [switch]$RunInteractivePaste,
     [switch]$RunInteractiveDictation,
+    [switch]$RunInteractiveWindowsAgent,
     [switch]$UseHoldHook,
     [int]$HoldTimeoutSeconds = 15,
     [switch]$PasteDictation
@@ -297,6 +298,62 @@ try {
         Write-Host ""
         Write-Host "== windows dictation proof skipped =="
         Write-Host "rerun with -RunInteractiveDictation and transcription args to prove hotkey -> pre-roll WAV -> STT"
+    }
+
+    if ($RunInteractiveWindowsAgent) {
+        if ([string]::IsNullOrWhiteSpace($TranscribeEndpoint) -or
+            [string]::IsNullOrWhiteSpace($TranscribeModel) -or
+            !$hasTranscriptionKey) {
+            throw "RunInteractiveWindowsAgent requires -TranscribeEndpoint, -TranscribeModel, and -TranscribeApiKeyEnv or -TranscribeApiKeyName"
+        }
+
+        $agentProof = Join-Path $OutputDir "windows-agent-dictation.wav"
+        Invoke-Step "windows agent dictate" {
+            if ($UseHoldHook) {
+                Write-Host "Say a phrase before Ctrl+Shift+R, hold Ctrl+Shift+R while speaking, then release it."
+            } else {
+                Write-Host "Say a phrase before Ctrl+Shift+R, press Ctrl+Shift+R, then say a phrase after it."
+            }
+            if ($PasteDictation) {
+                Write-Host "Focus Notepad or another normal-integrity text field before transcription completes."
+            }
+            $agentArgs = @(
+                "run", "RomaWindowsAgent", "dictate",
+                "--out", $agentProof,
+                "--endpoint", $TranscribeEndpoint,
+                "--model", $TranscribeModel
+            )
+            if ($UseHoldHook) {
+                $agentArgs += @("--hold-hook", "--timeout", "$HoldTimeoutSeconds")
+            } else {
+                $agentArgs += @("--seconds", "$RecordSeconds")
+            }
+            if (![string]::IsNullOrWhiteSpace($TranscribeApiKeyName)) {
+                $agentArgs += @("--api-key-name", $TranscribeApiKeyName, "--secret-dir", $secretProofDir)
+            } else {
+                $agentArgs += @("--api-key-env", $TranscribeApiKeyEnv)
+            }
+            if (![string]::IsNullOrWhiteSpace($TranscribeLanguage)) {
+                $agentArgs += @("--language", $TranscribeLanguage)
+            }
+            if (![string]::IsNullOrWhiteSpace($TranscribePrompt)) {
+                $agentArgs += @("--prompt", $TranscribePrompt)
+            }
+            foreach ($replacement in $WordReplacement) {
+                if (![string]::IsNullOrWhiteSpace($replacement)) {
+                    $agentArgs += @("--replace", $replacement)
+                }
+            }
+            if ($PasteDictation) {
+                $agentArgs += "--paste"
+            }
+            swift @agentArgs
+            Assert-FileWithBytes -Path $agentProof
+        }
+    } else {
+        Write-Host ""
+        Write-Host "== windows agent dictate skipped =="
+        Write-Host "rerun with -RunInteractiveWindowsAgent and transcription args to prove the user-facing Windows agent"
     }
 
     Write-Host ""
