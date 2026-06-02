@@ -167,6 +167,7 @@ Run on a Windows laptop or Windows CI runner with audio loopback/mock where poss
 ```powershell
 cd RomaCore
 powershell -ExecutionPolicy Bypass -File .\Scripts\windows-proof.ps1
+powershell -ExecutionPolicy Bypass -File .\Scripts\package-windows-agent.ps1 -OutputDir C:\tmp\roma-windows-agent
 ```
 
 For the foreground-dependent proofs:
@@ -197,6 +198,7 @@ CI proof:
 - `.github/workflows/romacore.yml` builds `RomaCore` on macOS and Windows.
 - The Windows job verifies Visual Studio C++ tools, installs the official Swift toolchain with `winget install --id Swift.Toolchain`, then runs `windows-proof.ps1 -SkipMic`.
 - CI is noninteractive, so it proves Windows compilation, PowerShell parse validity, pre-roll/WAV output, shared cleanup/replacement/paste text processing, DPAPI secret round-trip, stored-key transcription against a local mock STT endpoint, and hotkey/paste doctor paths. It does not prove real microphone permission, real hotkey delivery, or paste into Notepad.
+- CI also runs `package-windows-agent.ps1`, verifies the packaged `RomaWindowsAgent.exe doctor` output, and uploads a `roma-windows-agent` artifact for laptop smoke tests.
 
 Raw command sequence:
 
@@ -226,6 +228,7 @@ swift run RomaWindowsAgent dictate --hold-hook --endpoint https://api.groq.com/o
 swift run RomaProofAgent transcribe-proof --audio mic-proof.wav --endpoint https://api.groq.com/openai/v1/audio/transcriptions --model whisper-large-v3-turbo --api-key-name groq --secret-dir C:\tmp\roma-secrets
 swift run RomaProofAgent windows-dictation-proof --out dictation-proof.wav --seconds 2 --endpoint https://api.groq.com/openai/v1/audio/transcriptions --model whisper-large-v3-turbo --api-key-env GROQ_API_KEY --replace "just talk=roma-just-talk" --paste
 swift run RomaProofAgent windows-dictation-proof --out hold-dictation-proof.wav --hold-hook --timeout 15 --endpoint https://api.groq.com/openai/v1/audio/transcriptions --model whisper-large-v3-turbo --api-key-env GROQ_API_KEY --paste
+powershell -ExecutionPolicy Bypass -File .\Scripts\package-windows-agent.ps1 -OutputDir C:\tmp\roma-windows-agent
 ```
 
 User-facing Windows agent proof:

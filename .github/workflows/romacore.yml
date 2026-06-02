@@ -116,14 +116,17 @@ jobs:
 
       - name: Parse Windows proof script
         run: |
-          $errors = $null
-          [System.Management.Automation.PSParser]::Tokenize(
-            (Get-Content -Raw .\Scripts\windows-proof.ps1),
-            [ref]$errors
-          ) | Out-Null
-          if ($errors.Count -gt 0) {
-            $errors | Format-List | Out-String | Write-Host
-            throw "PowerShell parse errors in windows-proof.ps1"
+          foreach ($script in @(".\Scripts\windows-proof.ps1", ".\Scripts\package-windows-agent.ps1")) {
+            $errors = $null
+            [System.Management.Automation.PSParser]::Tokenize(
+              (Get-Content -Raw $script),
+              [ref]$errors
+            ) | Out-Null
+            if ($errors.Count -gt 0) {
+              $errors | Format-List | Out-String | Write-Host
+              throw "PowerShell parse errors in $script"
+            }
+            Write-Host "parsed=$script"
           }
 
       - name: Run noninteractive Windows proof
@@ -214,9 +217,19 @@ jobs:
             Remove-Job $mockJob -Force
           }
 
+      - name: Package Windows agent
+        run: .\Scripts\package-windows-agent.ps1 -OutputDir "$env:RUNNER_TEMP\roma-windows-agent"
+
       - name: Upload proof artifacts
         uses: actions/upload-artifact@v4
         with:
           name: romacore-windows-proof
           path: ${{ runner.temp }}\roma-proof
+          if-no-files-found: error
+
+      - name: Upload Windows agent artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: roma-windows-agent
+          path: ${{ runner.temp }}\roma-windows-agent
           if-no-files-found: error
