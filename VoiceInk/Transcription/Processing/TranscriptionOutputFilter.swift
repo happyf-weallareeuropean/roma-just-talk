@@ -1103,7 +1103,8 @@ struct TranscriptionOutputFilter {
             return false
         }
 
-        if firstCharacter.isPunctuation {
+        let noLeadingSpaceBefore = CharacterSet(charactersIn: ".,;:!?)]}/\\-")
+        if firstCharacter.unicodeScalars.allSatisfy({ noLeadingSpaceBefore.contains($0) }) {
             return false
         }
 

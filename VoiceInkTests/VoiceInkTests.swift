@@ -160,6 +160,8 @@ struct VoiceInkTests {
         let colonContext = TranscriptionOutputFilter.TextInsertionContext(precedingText: "Note:")
         let selectedTextContext = TranscriptionOutputFilter.TextInsertionContext(precedingText: "Done?", selectedText: "old")
         let openParenthesisContext = TranscriptionOutputFilter.TextInsertionContext(precedingText: "(")
+        let wordBeforeParenthesisContext = TranscriptionOutputFilter.TextInsertionContext(precedingText: "Use")
+        let wordBeforeQuoteContext = TranscriptionOutputFilter.TextInsertionContext(precedingText: "She said")
         let newLineContext = TranscriptionOutputFilter.TextInsertionContext(precedingText: "Done\n")
 
         #expect(TranscriptionOutputFilter.applyInsertionPolish("Model.", context: midSentenceContext) == "model")
@@ -169,6 +171,9 @@ struct VoiceInkTests {
         #expect(TranscriptionOutputFilter.applyInsertionSpacing("model", context: colonContext) == " model")
         #expect(TranscriptionOutputFilter.applyInsertionSpacing("Model", context: selectedTextContext) == "Model")
         #expect(TranscriptionOutputFilter.applyInsertionSpacing("model", context: openParenthesisContext) == "model")
+        #expect(TranscriptionOutputFilter.applyInsertionSpacing("(model)", context: wordBeforeParenthesisContext) == " (model)")
+        #expect(TranscriptionOutputFilter.applyInsertionSpacing("\"hello\"", context: wordBeforeQuoteContext) == " \"hello\"")
+        #expect(TranscriptionOutputFilter.applyInsertionSpacing("/users", context: wordBeforeParenthesisContext) == "/users")
         #expect(TranscriptionOutputFilter.applyInsertionPolish("Comma.", context: midSentenceContext) == ",")
         #expect(TranscriptionOutputFilter.applyInsertionSpacing(",", context: midSentenceContext) == ",")
         #expect(TranscriptionOutputFilter.applyInsertionPolish("Question mark.", context: midSentenceContext) == "?")

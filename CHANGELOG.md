@@ -8,7 +8,7 @@
 - Added spoken quote and parenthesis formatting commands.
 - Added guarded spoken slash, backslash, dash, and hyphen formatting commands.
 - Added cursor-aware cleanup for standalone spoken punctuation fragments such as "comma" and "question mark".
-- Improved cursor insertion spacing after question marks, exclamation marks, colons, semicolons, and closing braces.
+- Improved cursor insertion spacing after punctuation and before dictated opening quotes or parentheses.
 - Removed common ASR boilerplate such as video/subtitle closing phrases from dictated output.
 - Improved cursor-context lookup for rich editors that expose focused text ranges without exposing the full field value.
 
