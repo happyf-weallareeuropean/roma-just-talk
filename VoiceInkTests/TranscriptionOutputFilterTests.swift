@@ -121,8 +121,11 @@ struct TranscriptionOutputFilterTests {
 
     @Test func transcriptionFilterAppliesConservativeSpokenPunctuationCommands() async throws {
         #expect(TranscriptionOutputFilter.filter("Hello comma world full stop") == "Hello, world.")
+        #expect(TranscriptionOutputFilter.filter("Hello comma, world.") == "Hello, world.")
         #expect(TranscriptionOutputFilter.filter("Are you coming question mark") == "Are you coming?")
+        #expect(TranscriptionOutputFilter.filter("Are you coming question mark. I am waiting.") == "Are you coming? I am waiting.")
         #expect(TranscriptionOutputFilter.filter("Ship it exclamation mark") == "Ship it!")
+        #expect(TranscriptionOutputFilter.filter("Ship it exclamation mark.") == "Ship it!")
         #expect(TranscriptionOutputFilter.filter("Use model semicolon retry colon now") == "Use model; retry: now")
         #expect(TranscriptionOutputFilter.filter("This is a trial period") == "This is a trial period")
         #expect(TranscriptionOutputFilter.filter("Use the Oxford comma") == "Use the Oxford comma")

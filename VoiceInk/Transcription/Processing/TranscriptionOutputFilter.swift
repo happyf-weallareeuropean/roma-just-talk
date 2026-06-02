@@ -867,12 +867,37 @@ struct TranscriptionOutputFilter {
             return prefix + command.output
         }
 
+        if let suffixWithoutAutoPunctuation = suffixDroppingLeadingPhrasePunctuation(from: suffix) {
+            guard !suffixWithoutAutoPunctuation.isEmpty else {
+                return prefix + command.output
+            }
+            if let firstSuffixCharacter = suffixWithoutAutoPunctuation.first,
+               firstSuffixCharacter.isWhitespace || firstSuffixCharacter.isNewline {
+                return prefix + command.output + suffixWithoutAutoPunctuation
+            }
+            return "\(prefix)\(command.output) \(suffixWithoutAutoPunctuation)"
+        }
+
         if let firstSuffixCharacter = suffix.first,
            firstSuffixCharacter.isPunctuation || firstSuffixCharacter.isNewline {
             return prefix + command.output + suffix
         }
 
         return "\(prefix)\(command.output) \(suffix)"
+    }
+
+    private static func suffixDroppingLeadingPhrasePunctuation(from text: String) -> String? {
+        var suffixStart = text.startIndex
+        var didDropPunctuation = false
+
+        while suffixStart < text.endIndex,
+              character(text[suffixStart], isIn: phraseBoundaryPunctuation) {
+            didDropPunctuation = true
+            suffixStart = text.index(after: suffixStart)
+        }
+
+        guard didDropPunctuation else { return nil }
+        return String(text[suffixStart...])
     }
 
     private static func normalizePunctuationSpacing(_ text: String) -> String {
