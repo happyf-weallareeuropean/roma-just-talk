@@ -1112,7 +1112,10 @@ struct TranscriptionOutputFilter {
             return false
         }
 
-        return previousCharacter.isLetter || previousCharacter.isNumber || previousCharacter == "." || previousCharacter == "," || previousCharacter == ")" || previousCharacter == "]"
+        let leadingSpaceAfter = CharacterSet(charactersIn: ".,;:!?)]}")
+        return previousCharacter.isLetter ||
+            previousCharacter.isNumber ||
+            previousCharacter.unicodeScalars.allSatisfy { leadingSpaceAfter.contains($0) }
     }
 
     private static func normalizeWhitespace(_ text: String) -> String {
