@@ -185,7 +185,9 @@ try {
         & $installScriptOutput `
             -PackageDir $OutputDir `
             -InstallDir (Join-Path $OutputDir "install-proof") `
-            -ConfigPath (Join-Path $OutputDir "install-proof\windows-agent.json")
+            -ConfigPath (Join-Path $OutputDir "install-proof\windows-agent.json") `
+            -CreateShortcut `
+            -ShortcutDir (Join-Path $OutputDir "shortcuts")
     }
 
     $manifestPath = Join-Path $OutputDir "manifest.txt"

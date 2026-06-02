@@ -182,6 +182,15 @@ if (!$SkipSmoke) {
 
         & $installedSmoke @smokeArgs
     }
+
+    Invoke-Step "installed launcher doctor" {
+        $installedRun = Join-Path $InstallDir "run-windows-agent.ps1"
+        Require-File -Path $installedRun
+        & $installedRun `
+            -InstallDir $InstallDir `
+            -ConfigPath $ConfigPath `
+            -DoctorOnly
+    }
 }
 
 if ($CreateShortcut) {
