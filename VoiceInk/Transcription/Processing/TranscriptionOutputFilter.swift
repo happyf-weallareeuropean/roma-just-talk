@@ -140,6 +140,7 @@ struct TranscriptionOutputFilter {
         (#"(?i)[,;:…]\s+(?:you\s+know|like)[,;:…]*([.!?])\s*$"#, "$1"),
         (#"(?i)[,;:…]\s+(?:you\s+know|like)[,;:…]+(?=\s)"#, " ")
     ]
+    private static let inlineNumberedListMarkerPattern = #"(?<![\p{L}\p{N}])\d{1,2}\.\s+(?=\S)"#
     private static let backtrackingMarkerPattern = #"""
         (?ix)
         \s*
@@ -286,6 +287,7 @@ struct TranscriptionOutputFilter {
         filteredText = applySpokenFormattingCommands(in: filteredText)
         filteredText = applySpokenEnclosureCommands(in: filteredText)
         filteredText = applySpokenPunctuationCommands(in: filteredText)
+        filteredText = formatInlineNumberedLists(in: filteredText)
         filteredText = applySpokenSymbolCommands(in: filteredText)
         filteredText = collapseAdjacentRepeatedWords(in: filteredText)
         filteredText = collapseRepeatedShortSentences(in: filteredText)
@@ -900,11 +902,60 @@ struct TranscriptionOutputFilter {
         return String(text[suffixStart...])
     }
 
+    private static func formatInlineNumberedLists(in text: String) -> String {
+        guard let regex = try? NSRegularExpression(pattern: inlineNumberedListMarkerPattern) else {
+            return text
+        }
+
+        let matches = regex.matches(in: text, range: NSRange(text.startIndex..., in: text))
+        guard matches.count >= 2 else { return text }
+
+        var formattedText = ""
+        var currentIndex = text.startIndex
+
+        for match in matches {
+            guard let markerRange = Range(match.range, in: text),
+                  markerRange.lowerBound > currentIndex else {
+                continue
+            }
+
+            let previousIndex = text.index(before: markerRange.lowerBound)
+            if text[previousIndex].isNewline { continue }
+
+            let whitespaceStart = precedingWhitespaceStart(in: text, before: markerRange.lowerBound)
+            formattedText += String(text[currentIndex..<whitespaceStart])
+            formattedText += "\n"
+            currentIndex = markerRange.lowerBound
+        }
+
+        guard currentIndex > text.startIndex else { return text }
+        formattedText += String(text[currentIndex...])
+        return formattedText
+    }
+
+    private static func precedingWhitespaceStart(in text: String, before index: String.Index) -> String.Index {
+        var whitespaceStart = index
+        while whitespaceStart > text.startIndex {
+            let previousIndex = text.index(before: whitespaceStart)
+            guard text[previousIndex].isWhitespace, !text[previousIndex].isNewline else {
+                break
+            }
+            whitespaceStart = previousIndex
+        }
+        return whitespaceStart
+    }
+
     private static func normalizePunctuationSpacing(_ text: String) -> String {
-        text
+        let spacedText = text
             .replacingOccurrences(of: #"\s+([,.;:!?])"#, with: "$1", options: .regularExpression)
             .replacingOccurrences(of: #"([,.;:!?])([^\s,.;:!?\]\)}])"#, with: "$1 $2", options: .regularExpression)
             .replacingOccurrences(of: #"\s+([)\]\}])"#, with: "$1", options: .regularExpression)
+
+        return spacedText.replacingOccurrences(
+            of: #"(\d)\.\s+(?=\d)"#,
+            with: "$1.",
+            options: .regularExpression
+        )
     }
 
     private static func previousWord(in text: String) -> String? {

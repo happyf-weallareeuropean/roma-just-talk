@@ -84,6 +84,9 @@ struct TranscriptionOutputFilterTests {
         #expect(TranscriptionOutputFilter.filter("First line new line second line.") == "First line\nsecond line.")
         #expect(TranscriptionOutputFilter.filter("Intro new paragraph Details.") == "Intro\n\nDetails.")
         #expect(TranscriptionOutputFilter.filter("Todo new line bullet point first item new line bullet point second item.") == "Todo\n- first item\n- second item")
+        #expect(TranscriptionOutputFilter.filter("Shopping list 1. Apples 2. Bananas 3. Oranges.") == "Shopping list\n1. Apples\n2. Bananas\n3. Oranges.")
+        #expect(TranscriptionOutputFilter.filter("Rank 1. Apples only.") == "Rank 1. Apples only.")
+        #expect(TranscriptionOutputFilter.filter("Use version 1.2.3 today.") == "Use version 1.2.3 today.")
         #expect(TranscriptionOutputFilter.filter("This newlineish word should stay.") == "This newlineish word should stay.")
     }
 
