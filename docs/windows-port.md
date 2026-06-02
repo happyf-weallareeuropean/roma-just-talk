@@ -49,7 +49,7 @@ Reusable now:
 - Cloud provider code is mostly HTTP + model metadata.
 - `TranscriptionOutputFilter`, formatter, prompt detection, word replacements, and dictionary behavior are product logic.
 - `PCMPreRollBuffer` now lives in `RomaCore` as Foundation-only circular PCM storage.
-- `CoreAudioRecorder` already outputs the right streaming shape: 16 kHz mono Int16 PCM chunks and a WAV file with a 3 second pre-roll buffer.
+- `CoreAudioRecorder` already outputs the right streaming shape: 16 kHz mono Int16 PCM chunks and a WAV file with a 3 second pre-roll buffer, and now reuses `RomaCore.PCMPreRollBuffer`.
 
 Not reusable without adapters:
 
