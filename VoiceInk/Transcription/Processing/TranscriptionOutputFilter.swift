@@ -179,6 +179,24 @@ struct TranscriptionOutputFilter {
             output: "\\"
         ),
         SpokenSymbolCommand(
+            pattern: #"(?i)(?<![\p{L}\p{N}])at\s+sign(?![\p{L}\p{N}])"#,
+            output: "@",
+            blockedPreviousWords: ["a", "an", "the"],
+            blockedNextWords: ["symbol"]
+        ),
+        SpokenSymbolCommand(
+            pattern: #"(?i)(?<![\p{L}\p{N}])dot(?![\p{L}\p{N}])"#,
+            output: ".",
+            blockedPreviousWords: ["a", "an", "the"],
+            blockedNextWords: ["matrix", "plot", "product"]
+        ),
+        SpokenSymbolCommand(
+            pattern: #"(?i)(?<![\p{L}\p{N}])underscore(?![\p{L}\p{N}])"#,
+            output: "_",
+            blockedPreviousWords: ["a", "an", "the"],
+            blockedNextWords: ["command", "commands", "symbol"]
+        ),
+        SpokenSymbolCommand(
             pattern: #"(?i)(?<![\p{L}\p{N}])(?:dash|hyphen)(?![\p{L}\p{N}])"#,
             output: "-",
             blockedPreviousWords: ["a"],
@@ -262,8 +280,8 @@ struct TranscriptionOutputFilter {
         filteredText = applyBacktrackingCorrections(in: filteredText)
         filteredText = applySpokenFormattingCommands(in: filteredText)
         filteredText = applySpokenEnclosureCommands(in: filteredText)
-        filteredText = applySpokenSymbolCommands(in: filteredText)
         filteredText = applySpokenPunctuationCommands(in: filteredText)
+        filteredText = applySpokenSymbolCommands(in: filteredText)
         filteredText = collapseAdjacentRepeatedWords(in: filteredText)
         filteredText = collapseRepeatedShortSentences(in: filteredText)
 

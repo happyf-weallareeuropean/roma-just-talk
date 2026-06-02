@@ -211,8 +211,13 @@ struct VoiceInkTests {
         #expect(TranscriptionOutputFilter.filter("Use api slash users.") == "Use api/users.")
         #expect(TranscriptionOutputFilter.filter("Use model hyphen beta.") == "Use model-beta.")
         #expect(TranscriptionOutputFilter.filter("Use path backslash temp.") == "Use path\\temp.")
+        #expect(TranscriptionOutputFilter.filter("Email felix at sign example dot com.") == "Email felix@example.com.")
+        #expect(TranscriptionOutputFilter.filter("Set user underscore id.") == "Set user_id.")
         #expect(TranscriptionOutputFilter.filter("Use the slash command.") == "Use the slash command.")
         #expect(TranscriptionOutputFilter.filter("Add a dash of salt.") == "Add a dash of salt.")
+        #expect(TranscriptionOutputFilter.filter("Use the at sign symbol.") == "Use the at sign symbol.")
+        #expect(TranscriptionOutputFilter.filter("Use the dot product.") == "Use the dot product.")
+        #expect(TranscriptionOutputFilter.filter("Use the underscore command.") == "Use the underscore command.")
     }
 
     @Test func transcriptionFilterRemovesCommonASRBoilerplate() async throws {
