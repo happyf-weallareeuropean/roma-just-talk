@@ -6,30 +6,63 @@ public struct DictationPipelineRequest: Equatable, Hashable, Sendable {
     public var language: String?
     public var prompt: String?
     public var shouldInsertTranscription: Bool
+    public var textProcessing: DictationTextProcessingConfiguration
 
     public init(
         outputURL: URL,
         model: TranscriptionModelDescriptor,
         language: String? = nil,
         prompt: String? = nil,
-        shouldInsertTranscription: Bool = false
+        shouldInsertTranscription: Bool = false,
+        textProcessing: DictationTextProcessingConfiguration = .standard
     ) {
         self.outputURL = outputURL
         self.model = model
         self.language = language
         self.prompt = prompt
         self.shouldInsertTranscription = shouldInsertTranscription
+        self.textProcessing = textProcessing
     }
 }
 
 public struct DictationPipelineResult: Equatable, Hashable, Sendable {
     public var session: DictationSession
     public var transcription: TranscriptionResult
+    public var processedText: String
 
-    public init(session: DictationSession, transcription: TranscriptionResult) {
+    public init(
+        session: DictationSession,
+        transcription: TranscriptionResult,
+        processedText: String
+    ) {
         self.session = session
         self.transcription = transcription
+        self.processedText = processedText
     }
+}
+
+public struct DictationTextProcessingConfiguration: Equatable, Hashable, Sendable {
+    public var removesFillerWords: Bool
+    public var fillerWords: [String]
+    public var punctuationMode: RomaPunctuationCleanupMode
+    public var shouldLowercase: Bool
+    public var insertionContext: TextInsertionContext?
+
+    public init(
+        removesFillerWords: Bool = true,
+        fillerWords: [String] = RomaTranscriptionOutputFilter.defaultFillerWords,
+        punctuationMode: RomaPunctuationCleanupMode = .keep,
+        shouldLowercase: Bool = false,
+        insertionContext: TextInsertionContext? = nil
+    ) {
+        self.removesFillerWords = removesFillerWords
+        self.fillerWords = fillerWords
+        self.punctuationMode = punctuationMode
+        self.shouldLowercase = shouldLowercase
+        self.insertionContext = insertionContext
+    }
+
+    public static let standard = DictationTextProcessingConfiguration()
 }
 
 public enum DictationPipelineError: Error, LocalizedError, Equatable {
@@ -79,11 +112,12 @@ public final class DictationPipeline: @unchecked Sendable {
                     prompt: request.prompt
                 )
             )
+            let processedText = processText(transcription.text, using: request.textProcessing)
 
             var insertedText: String?
             if request.shouldInsertTranscription {
-                try await textInsertion?.pasteAtCursor(transcription.text)
-                insertedText = transcription.text
+                try await textInsertion?.pasteAtCursor(processedText)
+                insertedText = processedText
             }
 
             await recorder.stopCapture()
@@ -94,10 +128,38 @@ public final class DictationPipeline: @unchecked Sendable {
                 rawText: transcription.text,
                 insertedText: insertedText
             )
-            return DictationPipelineResult(session: session, transcription: transcription)
+            return DictationPipelineResult(
+                session: session,
+                transcription: transcription,
+                processedText: processedText
+            )
         } catch {
             await recorder.stopCapture()
             throw error
         }
+    }
+
+    private func processText(
+        _ text: String,
+        using configuration: DictationTextProcessingConfiguration
+    ) -> String {
+        let filteredText = RomaTranscriptionOutputFilter.filter(
+            text,
+            removesFillerWords: configuration.removesFillerWords,
+            fillerWords: configuration.fillerWords
+        )
+        let cleanedText = RomaTranscriptionOutputFilter.applyCleanupPreferences(
+            filteredText.trimmingCharacters(in: .whitespacesAndNewlines),
+            punctuationMode: configuration.punctuationMode,
+            shouldLowercase: configuration.shouldLowercase
+        )
+        let context = configuration.insertionContext.map {
+            RomaTranscriptionOutputFilter.TextInsertionContext(
+                precedingText: $0.precedingText,
+                selectedText: $0.selectedText
+            )
+        }
+        let polishedText = RomaTranscriptionOutputFilter.applyInsertionPolish(cleanedText, context: context)
+        return RomaTranscriptionOutputFilter.applyInsertionSpacing(polishedText, context: context)
     }
 }

@@ -285,8 +285,11 @@ struct RomaProofAgent {
                 apiKeySource: apiKeySource,
                 audioURL: audio.fileURL
             )
+            print("processed_transcript_length=\(result.processedText.count)")
+            print("processed_transcript_text=\(oneLine(result.processedText))")
 
             print("paste_sent=\(shouldPaste)")
+            print("paste_text_source=processed_transcript")
         } catch {
             await recorder.stopCapture()
             throw error

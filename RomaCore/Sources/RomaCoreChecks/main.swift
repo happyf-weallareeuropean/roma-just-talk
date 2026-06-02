@@ -332,8 +332,37 @@ struct RomaCoreChecks {
         try require(result.session.rawText == "roma just talk proof", "pipeline should store raw transcript")
         try require(result.session.insertedText == "roma just talk proof", "pipeline should store inserted transcript")
         try require(result.transcription.text == "roma just talk proof", "pipeline should return transcription result")
+        try require(result.processedText == "roma just talk proof", "pipeline should return processed transcript")
         try require(await inserter.pastedText == "roma just talk proof", "pipeline should paste through injected text insertion")
         try require(recorder.stopCaptureCallCount == 1, "pipeline should stop capture after success")
+
+        let cleanupRecorder = FakeRecorder()
+        let cleanupInserter = FakeTextInsertion()
+        let cleanupPipeline = DictationPipeline(
+            recorder: cleanupRecorder,
+            transcriptionService: FakeTranscriptionService(
+                expectedFileName: "cleanup-proof.wav",
+                text: "hmm... Model."
+            ),
+            textInsertion: cleanupInserter
+        )
+        let cleanupRequest = DictationPipelineRequest(
+            outputURL: URL(fileURLWithPath: "/tmp/cleanup-proof.wav"),
+            model: model,
+            shouldInsertTranscription: true,
+            textProcessing: DictationTextProcessingConfiguration(
+                removesFillerWords: true,
+                insertionContext: TextInsertionContext(precedingText: "Use")
+            )
+        )
+
+        try await cleanupRecorder.startPreRollBuffering()
+        let cleanupResult = try await cleanupPipeline.runRecordingWindow(cleanupRequest) {}
+
+        try require(cleanupResult.session.rawText == "hmm... Model.", "pipeline should preserve raw STT text")
+        try require(cleanupResult.processedText == " model", "pipeline should clean and space inserted text")
+        try require(cleanupResult.session.insertedText == " model", "pipeline session should store processed inserted text")
+        try require(await cleanupInserter.pastedText == " model", "pipeline should paste processed text")
 
         let missingInserterPipeline = DictationPipeline(
             recorder: FakeRecorder(),
@@ -523,12 +552,13 @@ private actor FakeTextInsertion: TextInsertion {
 
 private struct FakeTranscriptionService: TranscriptionService {
     var expectedFileName = "proof.wav"
+    var text = "roma just talk proof"
 
     func transcribe(_ request: TranscriptionRequest) async throws -> TranscriptionResult {
         try RomaCoreChecks.require(
             request.audioURL.lastPathComponent == expectedFileName,
             "request should carry \(expectedFileName)"
         )
-        return TranscriptionResult(text: "roma just talk proof")
+        return TranscriptionResult(text: text)
     }
 }
