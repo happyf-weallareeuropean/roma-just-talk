@@ -13,6 +13,7 @@
 - Preserved dotted numeric text such as version numbers during punctuation cleanup.
 - Added guarded spoken Markdown formatting for headings, task checkboxes, and code fences.
 - Added guarded spoken Markdown formatting for inline code and links.
+- Tightened spoken inline-code formatting so trailing prose stays outside backticks.
 - Added guarded spoken code-case formatting for camelCase, snake_case, kebab-case, and PascalCase identifiers.
 - Tightened spoken code-case formatting so trailing prose stays outside identifiers.
 - Added guarded spoken slash, backslash, dash, hyphen, at sign, dot, and underscore formatting commands.

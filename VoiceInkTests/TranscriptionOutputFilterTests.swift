@@ -94,6 +94,8 @@ struct TranscriptionOutputFilterTests {
         #expect(TranscriptionOutputFilter.filter("Checked checkbox send email.") == "- [x] send email")
         #expect(TranscriptionOutputFilter.filter("Inline code user underscore id.") == "`user_id`")
         #expect(TranscriptionOutputFilter.filter("Use inline code user underscore id.") == "Use `user_id`.")
+        #expect(TranscriptionOutputFilter.filter("Use inline code user underscore id in the docs.") == "Use `user_id` in the docs.")
+        #expect(TranscriptionOutputFilter.filter("Write inline code api slash users for the example.") == "Write `api/users` for the example.")
         #expect(TranscriptionOutputFilter.filter("Link docs to docs dot example dot com.") == "[docs](docs.example.com)")
         #expect(TranscriptionOutputFilter.filter("Markdown link VoiceInk docs to docs dot example dot com slash api.") == "[VoiceInk docs](docs.example.com/api)")
         #expect(TranscriptionOutputFilter.filter("Open code block swift new line let x equals one new line close code block") == "```swift\nlet x equals one\n```")
