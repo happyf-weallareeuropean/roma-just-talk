@@ -481,6 +481,7 @@ struct RomaCoreChecks {
             model: "base-model",
             apiKeyName: "groq",
             shouldPaste: false,
+            restoreClipboardAfterPaste: false,
             usesHoldHook: false,
             recordSeconds: 2,
             wordReplacements: [
@@ -492,6 +493,8 @@ struct RomaCoreChecks {
             "--api-key-env", "ROMA_KEY",
             "--hold-hook",
             "--paste",
+            "--restore-clipboard",
+            "--clipboard-restore-delay", "0.75",
             "--timeout", "22",
             "--replace", "just talk=roma-just-talk"
         ]))
@@ -501,6 +504,15 @@ struct RomaCoreChecks {
         try require(merged.apiKeyEnvironment == "ROMA_KEY", "CLI env key should override stored key")
         try require(merged.apiKeyName == nil, "CLI env key should clear stored key name")
         try require(merged.shouldPaste == true, "CLI paste flag should enable paste")
+        try require(merged.restoreClipboardAfterPaste == true, "CLI restore flag should enable clipboard restore")
+        try require(merged.clipboardRestoreDelaySeconds == 0.75, "CLI restore delay should override config")
+        try require(
+            merged.clipboardRestoreConfiguration() == WindowsClipboardRestoreConfiguration(
+                restoreClipboard: true,
+                restoreDelaySeconds: 0.75
+            ),
+            "merged config should resolve clipboard restore settings"
+        )
         try require(merged.usesHoldHook == true, "CLI hold flag should enable hold mode")
         try require(merged.holdTimeoutSeconds == 22, "CLI timeout should override hold timeout")
         try require(
@@ -525,6 +537,15 @@ struct RomaCoreChecks {
                 apiKeyName: "groq"
             ).apiKeySource()
             throw CheckFailure("config should reject conflicting api key sources")
+        } catch RomaCommandLineOptionsError.conflictingOptions {
+        }
+
+        do {
+            try RomaWindowsAgentConfiguration(
+                restoreClipboardAfterPaste: false,
+                clipboardRestoreDelaySeconds: 2
+            ).validate()
+            throw CheckFailure("config should reject restore delay when clipboard restore is disabled")
         } catch RomaCommandLineOptionsError.conflictingOptions {
         }
     }
