@@ -104,6 +104,16 @@ struct TranscriptionOutputFilter {
         #"\(.*?\)"#,     // ()
         #"\{.*?\}"#      // {}
     ]
+    private static let asrBoilerplatePatterns: [(pattern: String, replacement: String)] = [
+        (
+            #"(?im)(^|(?<=[.!?])\s+|\n)\s*(?:thank\s+you\s+for\s+watching|thanks\s+for\s+watching|please\s+subscribe|like\s+and\s+subscribe|don't\s+forget\s+to\s+subscribe)(?:[.!?]+)?(?=\s*$|\s+[A-Z]|\n)"#,
+            "$1"
+        ),
+        (
+            #"(?im)^\s*(?:subtitles?|captions?|captioned|transcribed)\s+by\b[^\n]*$"#,
+            ""
+        )
+    ]
     private static let backtrackingMarkerPattern = #"""
         (?ix)
         \s*
@@ -185,6 +195,8 @@ struct TranscriptionOutputFilter {
                 filteredText = regex.stringByReplacingMatches(in: filteredText, options: [], range: range, withTemplate: "")
             }
         }
+
+        filteredText = removeASRBoilerplate(from: filteredText)
 
         // Remove filler words (if enabled)
         if FillerWordManager.shared.isEnabled {
@@ -293,6 +305,25 @@ struct TranscriptionOutputFilter {
             precedingText: String(fullText[..<cursorIndex]),
             selectedText: selectedText
         )
+    }
+
+    private static func removeASRBoilerplate(from text: String) -> String {
+        var filteredText = text
+        for pattern in asrBoilerplatePatterns {
+            guard let regex = try? NSRegularExpression(pattern: pattern.pattern) else {
+                continue
+            }
+
+            let range = NSRange(filteredText.startIndex..., in: filteredText)
+            filteredText = regex.stringByReplacingMatches(
+                in: filteredText,
+                options: [],
+                range: range,
+                withTemplate: pattern.replacement
+            )
+        }
+
+        return filteredText
     }
 
     static func applyInsertionPolish(_ text: String, context: TextInsertionContext?) -> String {

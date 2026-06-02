@@ -171,8 +171,16 @@ struct VoiceInkTests {
     @Test func transcriptionFilterAppliesSpokenFormattingCommands() async throws {
         #expect(TranscriptionOutputFilter.filter("First line new line second line.") == "First line\nsecond line.")
         #expect(TranscriptionOutputFilter.filter("Intro new paragraph Details.") == "Intro\n\nDetails.")
-        #expect(TranscriptionOutputFilter.filter("Todo new line bullet point first item new line bullet point second item.") == "Todo\n- first item\n- second item.")
+        #expect(TranscriptionOutputFilter.filter("Todo new line bullet point first item new line bullet point second item.") == "Todo\n- first item\n- second item")
         #expect(TranscriptionOutputFilter.filter("This newlineish word should stay.") == "This newlineish word should stay.")
+    }
+
+    @Test func transcriptionFilterRemovesCommonASRBoilerplate() async throws {
+        #expect(TranscriptionOutputFilter.filter("Thank you for watching.") == "")
+        #expect(TranscriptionOutputFilter.filter("Okay. Thank you for watching.") == "Okay.")
+        #expect(TranscriptionOutputFilter.filter("Ship it.\nSubtitles by Amara.org community") == "Ship it.")
+        #expect(TranscriptionOutputFilter.filter("Thank you for helping.") == "Thank you for helping.")
+        #expect(TranscriptionOutputFilter.filter("End with thank you for watching.") == "End with thank you for watching.")
     }
 
     @Test func transcriptionFilterAppliesConservativeSpokenPunctuationCommands() async throws {
