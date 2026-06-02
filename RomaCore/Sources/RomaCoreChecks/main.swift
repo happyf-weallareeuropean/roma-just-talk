@@ -11,6 +11,7 @@ struct RomaCoreChecks {
         try checkOpenAICompatibleMultipartBody()
         try checkWindowsHotKeyProofDescriptor()
         try checkWindowsClipboardPayloadIsCFUnicodeText()
+        try checkWindowsDPAPISecretStoreContract()
         try checkTranscriptionRequestMetadata()
         try await checkDictationPipelineTranscribesAndInserts()
         try await checkFakeAdaptersSatisfyCorePorts()
@@ -164,6 +165,42 @@ struct RomaCoreChecks {
             Array(decodedCodeUnits.dropLast()) == Array("roma proof".utf16),
             "payload should round-trip the original UTF-16 code units"
         )
+    }
+
+    private static func checkWindowsDPAPISecretStoreContract() throws {
+        try require(
+            try WindowsDPAPISecretStore.fileName(forKey: "groqAPIKey") == "67726f714150494b6579.dpapi",
+            "secret file names should be deterministic UTF-8 hex"
+        )
+        do {
+            _ = try WindowsDPAPISecretStore.fileName(forKey: "   ")
+            throw CheckFailure("empty secret keys should be rejected")
+        } catch WindowsDPAPISecretError.invalidKey {
+        }
+
+        let plaintext = Data("roma just talk proof secret".utf8)
+        if WindowsDPAPIProtectedData.isRuntimeAvailable {
+            let protected = try WindowsDPAPIProtectedData.protect(plaintext)
+            try require(!protected.isEmpty, "DPAPI protected data should not be empty")
+            try require(protected != plaintext, "DPAPI protected data should not equal plaintext")
+            try require(try WindowsDPAPIProtectedData.unprotect(protected) == plaintext, "DPAPI data should round-trip")
+
+            let directoryURL = FileManager.default.temporaryDirectory
+                .appendingPathComponent("roma-secret-check-\(UUID().uuidString)", isDirectory: true)
+            defer { try? FileManager.default.removeItem(at: directoryURL) }
+
+            let store = WindowsDPAPISecretStore(directoryURL: directoryURL)
+            try store.save("roma secret", forKey: "proof")
+            try require(try store.get("proof") == "roma secret", "DPAPI store should retrieve saved secrets")
+            try store.delete("proof")
+            try require(try store.get("proof") == nil, "DPAPI store delete should remove secrets")
+        } else {
+            do {
+                _ = try WindowsDPAPIProtectedData.protect(plaintext)
+                throw CheckFailure("DPAPI protect should be unsupported off Windows")
+            } catch WindowsDPAPISecretError.unsupported {
+            }
+        }
     }
 
     private static func checkTranscriptionRequestMetadata() throws {

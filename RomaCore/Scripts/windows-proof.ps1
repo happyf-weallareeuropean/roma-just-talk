@@ -147,6 +147,15 @@ try {
         swift run RomaProofAgent windows-paste-doctor
     }
 
+    Invoke-Step "windows secret doctor" {
+        swift run RomaProofAgent windows-secret-doctor
+    }
+
+    $secretProofDir = Join-Path $OutputDir "secrets"
+    Invoke-Step "windows secret proof" {
+        swift run RomaProofAgent windows-secret-proof --dir $secretProofDir
+    }
+
     if ($RunInteractivePaste) {
         Invoke-Step "windows paste proof" {
             Write-Host "Focus Notepad or another normal-integrity text field before this step."

@@ -55,6 +55,7 @@ Reusable now:
 - `DictationPipeline` now lives in `RomaCore` as the shared record -> transcribe -> optional paste orchestration.
 - `WindowsHotKey.proofToggle` and the Windows-only `WindowsRegisterHotKeyProof` source define the first `RegisterHotKey` toggle proof path.
 - `WindowsClipboardPayload` and the Windows-only `WindowsPasteProof` source define the first `CF_UNICODETEXT` plus `SendInput` paste proof path.
+- `WindowsDPAPISecretStore` now lives in `RomaCore` as the first Windows API-key storage adapter.
 - `CoreAudioRecorder` already outputs the right streaming shape: 16 kHz mono Int16 PCM chunks and a WAV file with a 3 second pre-roll buffer, and now reuses `RomaCore.PCMPreRollBuffer`.
 
 Not reusable without adapters:
@@ -115,7 +116,7 @@ These are the lowest-redo candidates because they map directly to the behavior a
 | Global shortcut | `RegisterHotKey` for toggle proof | Simple system-wide hotkey, enough for MVP toggle mode. `RomaProofAgent windows-hotkey-proof` is the first source path for this. |
 | Push-to-talk keydown/keyup | `WH_KEYBOARD_LL` only after toggle proof | Needed for modifier-only or hold behavior, but higher risk and more AV/security sensitivity. |
 | Paste | Win32 clipboard plus `SendInput` Ctrl+V | Same behavioral model as macOS: put text on clipboard, synthesize paste command, restore clipboard if enabled. `RomaProofAgent windows-paste-proof` is the first source path for this. |
-| Secrets | DPAPI | Windows user-bound secret storage equivalent for API keys. |
+| Secrets | DPAPI | Windows user-bound secret storage equivalent for API keys. `RomaProofAgent windows-secret-proof` is the first source path for this. |
 | UI | tray/small shell first; Tauri optional later | Avoid re-creating all SwiftUI views before the actual Windows native behavior is proven. |
 
 ## Permission Model
@@ -185,7 +186,7 @@ CI proof:
 
 - `.github/workflows/romacore.yml` builds `RomaCore` on macOS and Windows.
 - The Windows job verifies Visual Studio C++ tools, installs the official Swift toolchain with `winget install --id Swift.Toolchain`, then runs `windows-proof.ps1 -SkipMic`.
-- CI is noninteractive, so it proves Windows compilation plus pre-roll/WAV/transcription/hotkey/paste doctor paths. It does not prove real microphone permission, real hotkey delivery, or paste into Notepad.
+- CI is noninteractive, so it proves Windows compilation plus pre-roll/WAV/transcription/hotkey/paste doctor paths and DPAPI secret round-trip. It does not prove real microphone permission, real hotkey delivery, or paste into Notepad.
 
 Raw command sequence:
 
@@ -203,6 +204,8 @@ swift run RomaProofAgent windows-hotkey-doctor
 swift run RomaProofAgent windows-hotkey-proof
 swift run RomaProofAgent windows-paste-doctor
 swift run RomaProofAgent windows-paste-proof --text "roma just talk proof"
+swift run RomaProofAgent windows-secret-doctor
+swift run RomaProofAgent windows-secret-proof --dir C:\tmp\roma-secrets
 swift run RomaProofAgent windows-dictation-proof --out dictation-proof.wav --seconds 2 --endpoint https://api.groq.com/openai/v1/audio/transcriptions --model whisper-large-v3-turbo --api-key-env GROQ_API_KEY --paste
 ```
 
@@ -237,4 +240,6 @@ Do not claim Windows support until the audio, transcription, and paste proof all
 - RegisterHotKey: https://learn.microsoft.com/en-us/windows/win32/api/winuser/nf-winuser-registerhotkey
 - SetWindowsHookEx: https://learn.microsoft.com/en-us/windows/win32/api/winuser/nf-winuser-setwindowshookexa
 - SendInput: https://learn.microsoft.com/en-us/windows/win32/api/winuser/nf-winuser-sendinput
+- CryptProtectData: https://learn.microsoft.com/en-us/windows/win32/api/dpapi/nf-dpapi-cryptprotectdata
+- CryptUnprotectData: https://learn.microsoft.com/en-us/windows/win32/api/dpapi/nf-dpapi-cryptunprotectdata
 - Windows microphone privacy: https://support.microsoft.com/en-us/windows/windows-camera-microphone-and-privacy-a83257bc-e990-d54a-d212-b5e41beba857

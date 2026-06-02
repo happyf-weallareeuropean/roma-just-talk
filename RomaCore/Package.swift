@@ -27,8 +27,12 @@ let package = Package(
             publicHeadersPath: "include"
         ),
         .target(
+            name: "CWindowsSupport",
+            publicHeadersPath: "include"
+        ),
+        .target(
             name: "RomaCore",
-            dependencies: ["CMiniaudio"]
+            dependencies: ["CMiniaudio", "CWindowsSupport"]
         ),
         .executableTarget(
             name: "RomaCoreChecks",

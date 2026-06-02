@@ -19,6 +19,10 @@ struct RomaProofAgent {
             printWindowsPasteDoctor()
         case "windows-paste-proof":
             try runWindowsPasteProof(arguments: Array(arguments.dropFirst()))
+        case "windows-secret-doctor":
+            printWindowsSecretDoctor()
+        case "windows-secret-proof":
+            try runWindowsSecretProof(arguments: Array(arguments.dropFirst()))
         case "windows-dictation-proof":
             try await runWindowsDictationProof(arguments: Array(arguments.dropFirst()))
         case "miniaudio-capture-doctor":
@@ -43,6 +47,7 @@ struct RomaProofAgent {
         print("native_windows_adapters=false")
         print("windows_register_hotkey_adapter_source=true")
         print("windows_paste_adapter_source=true")
+        print("windows_dpapi_secret_store_source=true")
         print("miniaudio_capture_adapter_source=true")
         print("openai_compatible_transcription_source=true")
         print("windows_dictation_proof_source=true")
@@ -92,6 +97,39 @@ struct RomaProofAgent {
         #else
         print("windows_paste_runtime=false")
         #endif
+    }
+
+    private static func printWindowsSecretDoctor() {
+        print("platform=\(platformName)")
+        print("secret_store=dpapi")
+        print("storage=file")
+        print("key_filename_format=utf8_hex_dpapi")
+        print("api=CryptProtectData/CryptUnprotectData")
+        print("permission_prompt=false")
+        print("dpapi_runtime=\(WindowsDPAPIProtectedData.isRuntimeAvailable)")
+    }
+
+    private static func runWindowsSecretProof(arguments: [String]) throws {
+        let directoryURL = URL(fileURLWithPath: try value(after: "--dir", in: arguments), isDirectory: true)
+        let key = "proof-api-key"
+        let value = "roma just talk proof secret"
+        let store = WindowsDPAPISecretStore(directoryURL: directoryURL)
+
+        try store.save(value, forKey: key)
+        guard try store.get(key) == value else {
+            throw AgentError.secretProofFailed("saved secret did not round-trip")
+        }
+        try store.delete(key)
+        guard try store.get(key) == nil else {
+            throw AgentError.secretProofFailed("deleted secret is still readable")
+        }
+
+        print("secret_store=dpapi")
+        print("directory=\(directoryURL.path)")
+        print("key_file=\(try WindowsDPAPISecretStore.fileName(forKey: key))")
+        print("stored=true")
+        print("retrieved=true")
+        print("deleted=true")
     }
 
     private static func runWindowsPasteProof(arguments: [String]) throws {
@@ -396,6 +434,8 @@ struct RomaProofAgent {
         print("  RomaProofAgent windows-hotkey-proof")
         print("  RomaProofAgent windows-paste-doctor")
         print("  RomaProofAgent windows-paste-proof --text \"roma just talk proof\"")
+        print("  RomaProofAgent windows-secret-doctor")
+        print("  RomaProofAgent windows-secret-proof --dir C:\\tmp\\roma-secrets")
         print("  RomaProofAgent windows-dictation-proof --out proof.wav --seconds 2 --endpoint https://api.example.com/v1/audio/transcriptions --model whisper-large-v3-turbo --api-key-env OPENAI_API_KEY [--paste]")
         print("  RomaProofAgent miniaudio-capture-doctor")
         print("  RomaProofAgent miniaudio-record-proof --out proof.wav --seconds 2")
@@ -437,6 +477,7 @@ private enum AgentError: Error, CustomStringConvertible {
     case missingOption(String)
     case invalidOptionValue(String)
     case missingEnvironmentValue(String)
+    case secretProofFailed(String)
     case unsupportedPlatform(String)
 
     var description: String {
@@ -447,6 +488,8 @@ private enum AgentError: Error, CustomStringConvertible {
             return "invalid value for option \(option)"
         case .missingEnvironmentValue(let name):
             return "missing environment value \(name)"
+        case .secretProofFailed(let message):
+            return message
         case .unsupportedPlatform(let message):
             return message
         }
