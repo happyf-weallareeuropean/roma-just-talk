@@ -16,6 +16,7 @@
 - Added guarded spoken slash, backslash, dash, hyphen, at sign, dot, and underscore formatting commands.
 - Added guarded spoken URL cleanup for "https colon slash slash" and "www dot" dictation.
 - Tightened spoken URL cleanup so trailing prose after a domain stays outside the URL.
+- Added guarded date, time, currency, and percent cleanup for natural dictation.
 - Tightened compact symbol cleanup so prose such as "dot notation" stays unchanged.
 - Added cursor-aware cleanup for standalone spoken punctuation fragments such as "comma" and "question mark".
 - Avoided duplicate punctuation when ASR already punctuates spoken punctuation commands.

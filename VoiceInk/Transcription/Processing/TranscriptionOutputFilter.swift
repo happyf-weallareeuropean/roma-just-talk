@@ -176,6 +176,11 @@ struct TranscriptionOutputFilter {
     private static let closeCodeBlockPattern = #"(?im)(^|\n)[ \t]*(?:close|end)[ \t]+code[ \t]+block[ \t]*(?=\n|$)"#
     private static let spokenSchemeURLPattern = #"(?i)(?<![\p{L}\p{N}])((?:h[ \t]+t[ \t]+t[ \t]+p[ \t]+s?)|https?)[ \t]*(?:colon|:)[ \t]+(?:slash[ \t]+slash|forward[ \t]+slash[ \t]+forward[ \t]+slash)[ \t]+((?:(?:[A-Za-z0-9-]+[ \t]+dot[ \t]+)+(?:ai|app|co|com|dev|edu|gov|io|net|org)(?:(?:[ \t]+(?:slash|forward[ \t]+slash)[ \t]+[A-Za-z0-9_-]+)+)?)|(?:localhost(?:[ \t]+colon[ \t]+\d{1,5})?(?:(?:[ \t]+(?:slash|forward[ \t]+slash)[ \t]+[A-Za-z0-9_-]+)+)?))([.!?])?(?=\s|$|\n)"#
     private static let spokenWWWURLPattern = #"(?i)(?<![\p{L}\p{N}])www[ \t]+dot[ \t]+((?:[A-Za-z0-9-]+[ \t]+dot[ \t]+)*(?:ai|app|co|com|dev|edu|gov|io|net|org)(?:(?:[ \t]+(?:slash|forward[ \t]+slash)[ \t]+[A-Za-z0-9_-]+)+)?)([.!?])?(?=\s|$|\n)"#
+    private static let monthOrdinalDatePattern = #"(?i)(?<![\p{L}\p{N}])(january|february|march|april|may|june|july|august|september|october|november|december)[ \t]+(thirty[ \t]+first|thirtieth|twenty[ \t]+ninth|twenty[ \t]+eighth|twenty[ \t]+seventh|twenty[ \t]+sixth|twenty[ \t]+fifth|twenty[ \t]+fourth|twenty[ \t]+third|twenty[ \t]+second|twenty[ \t]+first|twentieth|nineteenth|eighteenth|seventeenth|sixteenth|fifteenth|fourteenth|thirteenth|twelfth|eleventh|tenth|ninth|eighth|seventh|sixth|fifth|fourth|third|second|first)(?:[ \t]+(\d{4}))?(?![\p{L}\p{N}])"#
+    private static let spokenTimePattern = #"(?i)(?<![\p{L}\p{N}])(\d{1,2})(?:[ \t]+(?:(?:colon|:)[ \t]*)?(\d{2}))?[ \t]*(a[ \t]*m|p[ \t]*m|am|pm)(?![\p{L}\p{N}])"#
+    private static let leadingCurrencySignPattern = #"(?i)(?<![\p{L}\p{N}])(dollar|euro|pound)[ \t]+sign[ \t]+(\d+(?:\.\d{1,2})?)(?![\p{L}\p{N}])"#
+    private static let trailingCurrencyPattern = #"(?i)(?<![\p{L}\p{N}])(\d+(?:\.\d{1,2})?)[ \t]+(dollars?|bucks|usd|euros?|eur|pounds?|gbp)(?![\p{L}\p{N}])"#
+    private static let spokenPercentPattern = #"(?i)(?<![\p{L}\p{N}])(\d+(?:\.\d+)?)[ \t]+(?:percent|per[ \t]+cent)(?![\p{L}\p{N}])"#
     private static let backtrackingMarkerPattern = #"""
         (?ix)
         \s*
@@ -341,6 +346,7 @@ struct TranscriptionOutputFilter {
         filteredText = applySpokenFormattingCommands(in: filteredText)
         filteredText = applySpokenEnclosureCommands(in: filteredText)
         filteredText = applySpokenURLCommands(in: filteredText)
+        filteredText = applySpokenValueFormattingCommands(in: filteredText)
         filteredText = applySpokenPunctuationCommands(in: filteredText)
         filteredText = formatInlineNumberedLists(in: filteredText)
         filteredText = applySpokenSymbolCommands(in: filteredText)
@@ -920,6 +926,190 @@ struct TranscriptionOutputFilter {
         }
 
         return isCommonTopLevelDomain(topLevelDomain)
+    }
+
+    private static func applySpokenValueFormattingCommands(in text: String) -> String {
+        var formattedText = replaceSpokenMonthOrdinalDates(in: text)
+        formattedText = replaceSpokenTimes(in: formattedText)
+        formattedText = replaceLeadingCurrencySigns(in: formattedText)
+        formattedText = replaceTrailingCurrencyWords(in: formattedText)
+        formattedText = replaceSpokenPercents(in: formattedText)
+        return formattedText
+    }
+
+    private static func replaceSpokenMonthOrdinalDates(in text: String) -> String {
+        guard let regex = try? NSRegularExpression(pattern: monthOrdinalDatePattern) else {
+            return text
+        }
+
+        var dateText = text
+        let matches = regex.matches(in: dateText, range: NSRange(dateText.startIndex..., in: dateText))
+
+        for match in matches.reversed() {
+            guard match.numberOfRanges >= 3,
+                  let fullRange = Range(match.range(at: 0), in: dateText),
+                  let monthRange = Range(match.range(at: 1), in: dateText),
+                  let ordinalRange = Range(match.range(at: 2), in: dateText),
+                  let day = ordinalDayNumber(String(dateText[ordinalRange])) else {
+                continue
+            }
+
+            let rawMonth = String(dateText[monthRange])
+            guard shouldFormatSpokenMonth(rawMonth) else { continue }
+
+            let month = normalizedMonthName(rawMonth)
+            let year = optionalMatchText(in: dateText, match: match, rangeIndex: 3)
+            let replacement = year.map { "\(month) \(day), \($0)" } ?? "\(month) \(day)"
+            dateText.replaceSubrange(fullRange, with: replacement)
+        }
+
+        return dateText
+    }
+
+    private static func replaceSpokenTimes(in text: String) -> String {
+        guard let regex = try? NSRegularExpression(pattern: spokenTimePattern) else {
+            return text
+        }
+
+        var timeText = text
+        let matches = regex.matches(in: timeText, range: NSRange(timeText.startIndex..., in: timeText))
+
+        for match in matches.reversed() {
+            guard match.numberOfRanges >= 4,
+                  let fullRange = Range(match.range(at: 0), in: timeText),
+                  let hourRange = Range(match.range(at: 1), in: timeText),
+                  let hour = Int(timeText[hourRange]),
+                  (1...12).contains(hour),
+                  let meridiemRange = Range(match.range(at: 3), in: timeText) else {
+                continue
+            }
+
+            let minuteText = optionalMatchText(in: timeText, match: match, rangeIndex: 2)
+            if let minuteText,
+               let minute = Int(minuteText),
+               !(0...59).contains(minute) {
+                continue
+            }
+
+            let meridiem = normalizedMeridiem(String(timeText[meridiemRange]))
+            let replacement = minuteText.map { "\(hour):\($0) \(meridiem)" } ?? "\(hour) \(meridiem)"
+            timeText.replaceSubrange(fullRange, with: replacement)
+        }
+
+        return timeText
+    }
+
+    private static func replaceLeadingCurrencySigns(in text: String) -> String {
+        replaceCurrency(in: text, pattern: leadingCurrencySignPattern, amountRangeIndex: 2, currencyRangeIndex: 1)
+    }
+
+    private static func replaceTrailingCurrencyWords(in text: String) -> String {
+        replaceCurrency(in: text, pattern: trailingCurrencyPattern, amountRangeIndex: 1, currencyRangeIndex: 2)
+    }
+
+    private static func replaceCurrency(
+        in text: String,
+        pattern: String,
+        amountRangeIndex: Int,
+        currencyRangeIndex: Int
+    ) -> String {
+        guard let regex = try? NSRegularExpression(pattern: pattern) else {
+            return text
+        }
+
+        var currencyText = text
+        let matches = regex.matches(in: currencyText, range: NSRange(currencyText.startIndex..., in: currencyText))
+
+        for match in matches.reversed() {
+            guard let fullRange = Range(match.range(at: 0), in: currencyText),
+                  let amountRange = Range(match.range(at: amountRangeIndex), in: currencyText),
+                  let currencyRange = Range(match.range(at: currencyRangeIndex), in: currencyText),
+                  let symbol = currencySymbol(for: String(currencyText[currencyRange])) else {
+                continue
+            }
+
+            currencyText.replaceSubrange(fullRange, with: "\(symbol)\(currencyText[amountRange])")
+        }
+
+        return currencyText
+    }
+
+    private static func replaceSpokenPercents(in text: String) -> String {
+        guard let regex = try? NSRegularExpression(pattern: spokenPercentPattern) else {
+            return text
+        }
+
+        var percentText = text
+        let matches = regex.matches(in: percentText, range: NSRange(percentText.startIndex..., in: percentText))
+
+        for match in matches.reversed() {
+            guard match.numberOfRanges >= 2,
+                  let fullRange = Range(match.range(at: 0), in: percentText),
+                  let amountRange = Range(match.range(at: 1), in: percentText) else {
+                continue
+            }
+
+            percentText.replaceSubrange(fullRange, with: "\(percentText[amountRange])%")
+        }
+
+        return percentText
+    }
+
+    private static func optionalMatchText(in text: String, match: NSTextCheckingResult, rangeIndex: Int) -> String? {
+        guard match.numberOfRanges > rangeIndex,
+              let range = Range(match.range(at: rangeIndex), in: text) else {
+            return nil
+        }
+
+        return String(text[range])
+    }
+
+    private static func normalizedMonthName(_ text: String) -> String {
+        let lowercasedText = text.lowercased()
+        guard let firstCharacter = lowercasedText.first else { return lowercasedText }
+        return String(firstCharacter).uppercased() + lowercasedText.dropFirst()
+    }
+
+    private static func shouldFormatSpokenMonth(_ text: String) -> Bool {
+        guard text.lowercased() == "may" else { return true }
+        return text.first?.isUppercase == true
+    }
+
+    private static func ordinalDayNumber(_ text: String) -> Int? {
+        let normalizedText = text
+            .lowercased()
+            .replacingOccurrences(of: #"\s+"#, with: " ", options: .regularExpression)
+
+        let ordinals = [
+            "first": 1, "second": 2, "third": 3, "fourth": 4, "fifth": 5,
+            "sixth": 6, "seventh": 7, "eighth": 8, "ninth": 9, "tenth": 10,
+            "eleventh": 11, "twelfth": 12, "thirteenth": 13, "fourteenth": 14,
+            "fifteenth": 15, "sixteenth": 16, "seventeenth": 17, "eighteenth": 18,
+            "nineteenth": 19, "twentieth": 20, "twenty first": 21,
+            "twenty second": 22, "twenty third": 23, "twenty fourth": 24,
+            "twenty fifth": 25, "twenty sixth": 26, "twenty seventh": 27,
+            "twenty eighth": 28, "twenty ninth": 29, "thirtieth": 30,
+            "thirty first": 31
+        ]
+
+        return ordinals[normalizedText]
+    }
+
+    private static func normalizedMeridiem(_ text: String) -> String {
+        text.lowercased().contains("p") ? "PM" : "AM"
+    }
+
+    private static func currencySymbol(for text: String) -> String? {
+        switch text.lowercased() {
+        case "dollar", "dollars", "bucks", "usd":
+            return "$"
+        case "euro", "euros", "eur":
+            return "€"
+        case "pound", "pounds", "gbp":
+            return "£"
+        default:
+            return nil
+        }
     }
 
     private static func containsSpokenDomainSuffix(_ text: String) -> Bool {
@@ -1532,11 +1722,17 @@ struct TranscriptionOutputFilter {
             .replacingOccurrences(of: #"([,.;:!?])([^\s,.;:!?\]\)}])"#, with: "$1 $2", options: .regularExpression)
             .replacingOccurrences(of: #"\s+([)\]\}])"#, with: "$1", options: .regularExpression)
 
-        let normalizedText = spacedText.replacingOccurrences(
+        let normalizedText = spacedText
+            .replacingOccurrences(
             of: #"(\d)\.\s+(?=\d)"#,
             with: "$1.",
             options: .regularExpression
-        )
+            )
+            .replacingOccurrences(
+                of: #"(\b\d{1,2}):\s+(\d{2}\s+(?:AM|PM)\b)"#,
+                with: "$1:$2",
+                options: .regularExpression
+            )
 
         return restoreProtectedURLSpans(in: normalizedText, urls: protectedText.urls)
     }

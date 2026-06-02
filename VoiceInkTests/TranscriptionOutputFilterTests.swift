@@ -145,6 +145,21 @@ struct TranscriptionOutputFilterTests {
         #expect(TranscriptionOutputFilter.filter("I prefer snake case user id.") == "I prefer snake case user id.")
     }
 
+    @Test func transcriptionFilterAppliesGuardedValueFormatting() async throws {
+        #expect(TranscriptionOutputFilter.filter("Meet on June second 2026.") == "Meet on June 2, 2026.")
+        #expect(TranscriptionOutputFilter.filter("Meet on September twenty first.") == "Meet on September 21.")
+        #expect(TranscriptionOutputFilter.filter("Meet on May second.") == "Meet on May 2.")
+        #expect(TranscriptionOutputFilter.filter("Call at 9 30 a m.") == "Call at 9:30 AM.")
+        #expect(TranscriptionOutputFilter.filter("Call at 7 p m.") == "Call at 7 PM.")
+        #expect(TranscriptionOutputFilter.filter("Pay 20 dollars today.") == "Pay $20 today.")
+        #expect(TranscriptionOutputFilter.filter("Send dollar sign 19.99 now.") == "Send $19.99 now.")
+        #expect(TranscriptionOutputFilter.filter("Budget 30 euros and 20 pounds.") == "Budget €30 and £20.")
+        #expect(TranscriptionOutputFilter.filter("Progress is 85 percent done.") == "Progress is 85% done.")
+        #expect(TranscriptionOutputFilter.filter("The dollar sign is confusing.") == "The dollar sign is confusing.")
+        #expect(TranscriptionOutputFilter.filter("I may second that idea.") == "I may second that idea.")
+        #expect(TranscriptionOutputFilter.filter("Use 13 99 p m as a test.") == "Use 13 99 p m as a test.")
+    }
+
     @Test func transcriptionFilterRemovesCommonASRBoilerplate() async throws {
         #expect(TranscriptionOutputFilter.filter("Thank you for watching.") == "")
         #expect(TranscriptionOutputFilter.filter("Okay. Thank you for watching.") == "Okay.")
