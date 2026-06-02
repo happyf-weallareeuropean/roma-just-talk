@@ -7,6 +7,7 @@ struct RomaCoreChecks {
         try checkDefaultPreRollContract()
         try checkPreRollBufferKeepsChronologicalSamples()
         try checkPCM16WAVFileWritesCanonicalHeader()
+        try checkWindowsHotKeyProofDescriptor()
         try checkTranscriptionRequestMetadata()
         try await checkFakeAdaptersSatisfyCorePorts()
         try checkSourcesDoNotImportApplePlatformFrameworks()
@@ -94,6 +95,19 @@ struct RomaCoreChecks {
         } catch PCM16WAVFile.WriteError.pcmDataNotInt16Aligned(let byteCount) {
             try require(byteCount == 1, "unaligned PCM error should report byte count")
         }
+    }
+
+    private static func checkWindowsHotKeyProofDescriptor() throws {
+        let hotKey = WindowsHotKey.proofToggle
+
+        try require(hotKey.id == 1, "proof hotkey should use the thread-local proof id")
+        try require(hotKey.modifiers.contains(.control), "proof hotkey should include Ctrl")
+        try require(hotKey.modifiers.contains(.shift), "proof hotkey should include Shift")
+        try require(hotKey.modifiers.contains(.noRepeat), "proof hotkey should avoid auto-repeat")
+        try require(!hotKey.modifiers.contains(.win), "proof hotkey should avoid OS-reserved Win key chords")
+        try require(hotKey.modifiers.rawValue == 0x4006, "proof hotkey should map to Ctrl+Shift+MOD_NOREPEAT")
+        try require(hotKey.virtualKeyCode == 0x52, "proof hotkey should use virtual-key R")
+        try require(hotKey.displayName == "Ctrl+Shift+R", "proof hotkey display name should be readable")
     }
 
     private static func checkTranscriptionRequestMetadata() throws {

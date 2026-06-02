@@ -11,6 +11,10 @@ struct RomaProofAgent {
             printDoctor()
         case "pre-roll-proof":
             try writePreRollProof(arguments: Array(arguments.dropFirst()))
+        case "windows-hotkey-doctor":
+            printWindowsHotKeyDoctor()
+        case "windows-hotkey-proof":
+            try runWindowsHotKeyProof()
         default:
             printUsage()
         }
@@ -23,6 +27,36 @@ struct RomaProofAgent {
         print("audio_format=pcm16_16000_mono")
         print("wav_writer=true")
         print("native_windows_adapters=false")
+        print("windows_register_hotkey_adapter_source=true")
+    }
+
+    private static func printWindowsHotKeyDoctor() {
+        let hotKey = WindowsHotKey.proofToggle
+        print("platform=\(platformName)")
+        print("hotkey=\(hotKey.displayName)")
+        print("hotkey_id=\(hotKey.id)")
+        print("modifiers_raw=0x\(String(hotKey.modifiers.rawValue, radix: 16, uppercase: true))")
+        print("virtual_key=0x\(String(hotKey.virtualKeyCode, radix: 16, uppercase: true))")
+        print("api=RegisterHotKey")
+        print("mode=toggle")
+        print("permission_prompt=false")
+        #if os(Windows)
+        print("windows_hotkey_runtime=true")
+        #else
+        print("windows_hotkey_runtime=false")
+        #endif
+    }
+
+    private static func runWindowsHotKeyProof() throws {
+        let hotKey = WindowsHotKey.proofToggle
+
+        #if os(Windows)
+        print("waiting_for=\(hotKey.displayName)")
+        try WindowsRegisterHotKeyProof.waitForSingleTrigger(hotKey: hotKey)
+        print("hotkey_received=true")
+        #else
+        throw AgentError.unsupportedPlatform("windows-hotkey-proof requires Windows")
+        #endif
     }
 
     private static func writePreRollProof(arguments: [String]) throws {
@@ -68,6 +102,8 @@ struct RomaProofAgent {
         print("usage:")
         print("  RomaProofAgent doctor")
         print("  RomaProofAgent pre-roll-proof --out proof.wav")
+        print("  RomaProofAgent windows-hotkey-doctor")
+        print("  RomaProofAgent windows-hotkey-proof")
     }
 
     private static var platformName: String {
@@ -85,11 +121,14 @@ struct RomaProofAgent {
 
 private enum AgentError: Error, CustomStringConvertible {
     case missingOption(String)
+    case unsupportedPlatform(String)
 
     var description: String {
         switch self {
         case .missingOption(let option):
             return "missing required option \(option)"
+        case .unsupportedPlatform(let message):
+            return message
         }
     }
 }
