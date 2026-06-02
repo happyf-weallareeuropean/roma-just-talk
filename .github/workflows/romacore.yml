@@ -41,6 +41,7 @@ jobs:
       - name: Run noninteractive proof checks
         run: |
           swift run RomaProofAgent doctor
+          swift run RomaWindowsAgent doctor
           swift run RomaProofAgent pre-roll-proof --out "$RUNNER_TEMP/roma-core-proof.wav"
           test -s "$RUNNER_TEMP/roma-core-proof.wav"
           swift run RomaProofAgent miniaudio-capture-doctor

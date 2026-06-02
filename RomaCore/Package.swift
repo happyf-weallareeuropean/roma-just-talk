@@ -19,6 +19,10 @@ let package = Package(
         .executable(
             name: "RomaProofAgent",
             targets: ["RomaProofAgent"]
+        ),
+        .executable(
+            name: "RomaWindowsAgent",
+            targets: ["RomaWindowsAgent"]
         )
     ],
     targets: [
@@ -40,6 +44,10 @@ let package = Package(
         ),
         .executableTarget(
             name: "RomaProofAgent",
+            dependencies: ["RomaCore"]
+        ),
+        .executableTarget(
+            name: "RomaWindowsAgent",
             dependencies: ["RomaCore"]
         )
     ]

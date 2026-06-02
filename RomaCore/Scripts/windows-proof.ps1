@@ -92,6 +92,10 @@ try {
         swift run RomaProofAgent doctor
     }
 
+    Invoke-Step "windows agent doctor" {
+        swift run RomaWindowsAgent doctor
+    }
+
     $coreProof = Join-Path $OutputDir "core-proof.wav"
     Invoke-Step "core pre-roll wav proof" {
         swift run RomaProofAgent pre-roll-proof --out $coreProof

@@ -416,7 +416,7 @@ struct RomaProofAgent {
         audioURL: URL,
         endpointText: String,
         modelName: String,
-        apiKeySource: APIKeySource,
+        apiKeySource: TranscriptionAPIKeySource,
         language: String?,
         prompt: String?
     ) async throws -> TranscriptionResult {
@@ -441,7 +441,7 @@ struct RomaProofAgent {
 
     private static func makeTranscriptionService(
         endpointText: String,
-        apiKeySource: APIKeySource
+        apiKeySource: TranscriptionAPIKeySource
     ) throws -> OpenAICompatibleTranscriptionService {
         guard let endpointURL = URL(string: endpointText), endpointURL.scheme != nil else {
             throw AgentError.invalidOptionValue("--endpoint")
@@ -460,7 +460,7 @@ struct RomaProofAgent {
         _ result: TranscriptionResult,
         endpointText: String,
         modelName: String,
-        apiKeySource: APIKeySource,
+        apiKeySource: TranscriptionAPIKeySource,
         audioURL: URL
     ) {
         print("provider=openai-compatible")
@@ -479,7 +479,7 @@ struct RomaProofAgent {
         print("transcript_text=\(oneLine(result.text))")
     }
 
-    private static func makeAPIKeySource(arguments: [String]) throws -> APIKeySource {
+    private static func makeAPIKeySource(arguments: [String]) throws -> TranscriptionAPIKeySource {
         let environmentName = optionalValue(after: "--api-key-env", in: arguments)
         let storedKeyName = optionalValue(after: "--api-key-name", in: arguments)
 
@@ -643,7 +643,6 @@ private enum AgentError: Error, CustomStringConvertible {
     case missingOption(String)
     case invalidOptionValue(String)
     case missingEnvironmentValue(String)
-    case missingStoredSecret(String)
     case conflictingOptions(String)
     case secretProofFailed(String)
     case unsupportedPlatform(String)
@@ -656,53 +655,12 @@ private enum AgentError: Error, CustomStringConvertible {
             return "invalid value for option \(option)"
         case .missingEnvironmentValue(let name):
             return "missing environment value \(name)"
-        case .missingStoredSecret(let key):
-            return "missing stored secret \(key)"
         case .conflictingOptions(let message):
             return "conflicting options: \(message)"
         case .secretProofFailed(let message):
             return message
         case .unsupportedPlatform(let message):
             return message
-        }
-    }
-}
-
-private enum APIKeySource {
-    case environment(name: String)
-    case stored(key: String, directoryURL: URL)
-
-    var kind: String {
-        switch self {
-        case .environment:
-            return "environment"
-        case .stored:
-            return "dpapi"
-        }
-    }
-
-    var reference: String {
-        switch self {
-        case .environment(let name):
-            return name
-        case .stored(let key, let directoryURL):
-            return "\(key)@\(directoryURL.path)"
-        }
-    }
-
-    func resolve() throws -> String {
-        switch self {
-        case .environment(let name):
-            guard let apiKey = ProcessInfo.processInfo.environment[name], !apiKey.isEmpty else {
-                throw AgentError.missingEnvironmentValue(name)
-            }
-            return apiKey
-        case .stored(let key, let directoryURL):
-            let store = WindowsDPAPISecretStore(directoryURL: directoryURL)
-            guard let apiKey = try store.get(key), !apiKey.isEmpty else {
-                throw AgentError.missingStoredSecret(key)
-            }
-            return apiKey
         }
     }
 }

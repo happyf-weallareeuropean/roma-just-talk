@@ -24,7 +24,7 @@ roma-just-talk
     NSEvent/CGEventTap shortcut adapter
     SwiftData/Keychain/UserDefaults storage adapters
   Windows app/
-    tray or small desktop shell
+    RomaWindowsAgent first, then tray or small desktop shell
     miniaudio/WASAPI recorder adapter
     Win32 hotkey/hook adapter
     Win32 clipboard + SendInput paste adapter
@@ -56,6 +56,7 @@ Reusable now:
 - `RomaTranscriptionOutputFilter` now lives in `RomaCore` as the shared Foundation-only post-STT cleanup and insertion-polish path.
 - `RomaWordReplacementProcessor` now lives in `RomaCore` as the shared dictionary replacement matching path.
 - `WindowsDictationRuntime` now lives in `RomaCore` as the reusable Windows hotkey/hook -> miniaudio -> STT -> cleanup/replacement -> optional paste composition.
+- `RomaWindowsAgent` is the first user-facing Windows executable. It stays thin and calls `WindowsDictationRuntime` instead of duplicating recorder/STT/paste orchestration.
 - `WindowsHotKey.proofToggle` and the Windows-only `WindowsRegisterHotKeyProof` source define the first `RegisterHotKey` toggle proof path.
 - `WindowsLowLevelKeyboardHookProof` now defines the first `WH_KEYBOARD_LL` hold-to-talk keydown/keyup proof path.
 - `WindowsClipboardPayload` and the Windows-only `WindowsPasteProof` source define the first `CF_UNICODETEXT` plus `SendInput` paste proof path.
@@ -157,7 +158,7 @@ Minimum Windows MVP permission surface: microphone + shortcut + clipboard/paste.
    - cloud STT first, or whisper.cpp CLI/DLL if model packaging is ready
    - Win32 clipboard + `SendInput` pastes text
    - `windows-dictation-proof` composes those pieces into one hotkey -> pre-roll WAV -> STT -> optional paste proof
-7. Only after the proof target works, build tray/settings UI.
+7. Use `RomaWindowsAgent` as the first laptop-usable Windows entrypoint, then add tray/settings UI around the same runtime.
 
 ## Windows Proof Checklist
 
@@ -203,6 +204,7 @@ swift --version
 swift build
 swift run RomaCoreChecks
 swift run RomaProofAgent doctor
+swift run RomaWindowsAgent doctor
 swift run RomaProofAgent pre-roll-proof --out core-proof.wav
 swift run RomaProofAgent miniaudio-capture-doctor
 swift run RomaProofAgent miniaudio-record-proof --out mic-proof.wav --seconds 2
@@ -218,6 +220,8 @@ swift run RomaProofAgent windows-paste-proof --text "roma just talk proof"
 swift run RomaProofAgent windows-secret-doctor
 swift run RomaProofAgent windows-secret-proof --dir C:\tmp\roma-secrets
 swift run RomaProofAgent windows-secret-save-from-env --dir C:\tmp\roma-secrets --key groq --value-env GROQ_API_KEY
+swift run RomaWindowsAgent save-key-from-env --key groq --value-env GROQ_API_KEY
+swift run RomaWindowsAgent dictate --hold-hook --endpoint https://api.groq.com/openai/v1/audio/transcriptions --model whisper-large-v3-turbo --api-key-name groq --paste
 swift run RomaProofAgent transcribe-proof --audio mic-proof.wav --endpoint https://api.groq.com/openai/v1/audio/transcriptions --model whisper-large-v3-turbo --api-key-name groq --secret-dir C:\tmp\roma-secrets
 swift run RomaProofAgent windows-dictation-proof --out dictation-proof.wav --seconds 2 --endpoint https://api.groq.com/openai/v1/audio/transcriptions --model whisper-large-v3-turbo --api-key-env GROQ_API_KEY --replace "just talk=roma-just-talk" --paste
 swift run RomaProofAgent windows-dictation-proof --out hold-dictation-proof.wav --hold-hook --timeout 15 --endpoint https://api.groq.com/openai/v1/audio/transcriptions --model whisper-large-v3-turbo --api-key-env GROQ_API_KEY --paste
