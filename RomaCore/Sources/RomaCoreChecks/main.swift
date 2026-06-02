@@ -175,6 +175,10 @@ struct RomaCoreChecks {
     private static func checkTranscriptionOutputFilter() throws {
         let midSentenceContext = RomaTranscriptionOutputFilter.TextInsertionContext(precedingText: "...so this")
         let sentenceStartContext = RomaTranscriptionOutputFilter.TextInsertionContext(precedingText: "Done. ")
+        let selectedMidSentenceContext = RomaTranscriptionOutputFilter.TextInsertionContext(
+            precedingText: "Use ",
+            selectedText: "old"
+        )
 
         try require(
             RomaTranscriptionOutputFilter.filter(
@@ -199,6 +203,14 @@ struct RomaCoreChecks {
         try require(
             RomaTranscriptionOutputFilter.applyInsertionSpacing("model", context: midSentenceContext) == " model",
             "shared insertion spacing should add a leading space after words"
+        )
+        try require(
+            RomaTranscriptionOutputFilter.applyInsertionPolish("Model.", context: selectedMidSentenceContext) == "model",
+            "shared insertion polish should lowercase selected mid-sentence replacements"
+        )
+        try require(
+            RomaTranscriptionOutputFilter.applyInsertionSpacing("model", context: selectedMidSentenceContext) == "model",
+            "shared insertion spacing should not add a leading space when replacing selected text"
         )
         try require(
             RomaTranscriptionOutputFilter.applyInsertionPolish("Model.", context: sentenceStartContext) == "Model",
@@ -809,6 +821,43 @@ struct RomaCoreChecks {
         try require(
             await midSentenceInserter.pastedText == " model",
             "pipeline should paste mid-sentence polished text"
+        )
+
+        let selectedReplacementRecorder = FakeRecorder()
+        let selectedReplacementInserter = FakeTextInsertion()
+        let selectedReplacementPipeline = DictationPipeline(
+            recorder: selectedReplacementRecorder,
+            transcriptionService: FakeTranscriptionService(
+                expectedFileName: "selected-replacement-proof.wav",
+                text: "Model."
+            ),
+            textInsertion: selectedReplacementInserter
+        )
+        let selectedReplacementRequest = DictationPipelineRequest(
+            outputURL: URL(fileURLWithPath: "/tmp/selected-replacement-proof.wav"),
+            model: model,
+            shouldInsertTranscription: true,
+            textProcessing: DictationTextProcessingConfiguration(
+                insertionContext: TextInsertionContext(precedingText: "Use ", selectedText: "old")
+            )
+        )
+
+        try await selectedReplacementRecorder.startPreRollBuffering()
+        let selectedReplacementResult = try await selectedReplacementPipeline.runRecordingWindow(
+            selectedReplacementRequest
+        ) {}
+
+        try require(
+            selectedReplacementResult.processedText == "model",
+            "pipeline should polish selected replacements without adding a leading space"
+        )
+        try require(
+            selectedReplacementResult.session.insertedText == "model",
+            "pipeline session should store selected replacement text without leading space"
+        )
+        try require(
+            await selectedReplacementInserter.pastedText == "model",
+            "pipeline should paste selected replacement text without leading space"
         )
 
         let missingInserterPipeline = DictationPipeline(
