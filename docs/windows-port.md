@@ -121,7 +121,7 @@ These are the lowest-redo candidates because they map directly to the behavior a
 | Cloud STT | Existing OpenAI-compatible provider logic behind a portable API-key source | Low native surface; fastest proof if local model packaging is not ready. `RomaProofAgent transcribe-proof` is the first source path for this. |
 | Global shortcut | `RegisterHotKey` for toggle proof | Simple system-wide hotkey, enough for MVP toggle mode. `RomaProofAgent windows-hotkey-proof` is the first source path for this. |
 | Push-to-talk keydown/keyup | `WH_KEYBOARD_LL` after toggle proof | Needed for hold behavior. `RomaProofAgent windows-keyboard-hook-proof` is the first source path for this and still keeps the hook work in a native adapter. |
-| Paste | Win32 clipboard plus `SendInput` Ctrl+V | Same behavioral model as macOS: put text on clipboard, synthesize paste command, restore clipboard if enabled. `RomaProofAgent windows-paste-proof` is the first source path for this. |
+| Paste | Win32 clipboard plus `SendInput` Ctrl+V | Same MVP behavior as macOS paste: put text on clipboard and synthesize the paste command. Clipboard restore is a later adapter option, not current proof. `RomaProofAgent windows-paste-proof` is the first source path for this. |
 | Secrets | DPAPI | Windows user-bound secret storage equivalent for API keys. `RomaProofAgent windows-secret-proof` is the first source path for this. |
 | UI | tray/small shell first; Tauri optional later | Avoid re-creating all SwiftUI views before the actual Windows native behavior is proven. |
 
