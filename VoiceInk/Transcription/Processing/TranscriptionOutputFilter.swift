@@ -170,6 +170,8 @@ struct TranscriptionOutputFilter {
     private static let markdownHeadingPattern = #"(?im)(^|\n)[ \t]*(?:heading|header)[ \t]+(one|two|three|1|2|3)[ \t]+([^\n]+)"#
     private static let uncheckedMarkdownTaskPattern = #"(?im)(^|\n)[ \t]*(?:todo|to[ \t]+do|checkbox|check[ \t]+box|unchecked[ \t]+(?:task|checkbox|check[ \t]+box))[ \t]+([^\n]+)"#
     private static let checkedMarkdownTaskPattern = #"(?im)(^|\n)[ \t]*(?:(?:checked|done|completed)[ \t]+(?:task|checkbox|check[ \t]+box))[ \t]+([^\n]+)"#
+    private static let inlineCodePattern = #"(?i)(?<![\p{L}\p{N}])inline[ \t]+code[ \t]+((?:[\p{L}\p{N}_./@:+#-]+[ \t]*){1,4})([.!?])?(?=\s|$)"#
+    private static let markdownLinkPattern = #"(?im)(^|\n)[ \t]*(?:markdown[ \t]+)?link[ \t]+([^\n]{1,80}?)[ \t]+to[ \t]+([^ \t\n]+)[ \t]*[.!?]?(?=\n|$)"#
     private static let openCodeBlockPattern = #"(?im)(^|\n)[ \t]*(?:open|start)[ \t]+code[ \t]+block(?:[ \t]+([A-Za-z0-9_+#.-]+))?[ \t]*(?=\n|$)"#
     private static let closeCodeBlockPattern = #"(?im)(^|\n)[ \t]*(?:close|end)[ \t]+code[ \t]+block[ \t]*(?=\n|$)"#
     private static let backtrackingMarkerPattern = #"""
@@ -950,6 +952,8 @@ struct TranscriptionOutputFilter {
     private static func applySpokenMarkdownCommands(in text: String) -> String {
         var formattedText = applySpokenMarkdownHeadings(in: text)
         formattedText = applySpokenMarkdownTasks(in: formattedText)
+        formattedText = applySpokenMarkdownInlineCode(in: formattedText)
+        formattedText = applySpokenMarkdownLinks(in: formattedText)
         formattedText = applySpokenMarkdownCodeBlocks(in: formattedText)
         return formattedText
     }
@@ -1038,6 +1042,152 @@ struct TranscriptionOutputFilter {
         }
 
         return formattedText
+    }
+
+    private static func applySpokenMarkdownInlineCode(in text: String) -> String {
+        guard let regex = try? NSRegularExpression(pattern: inlineCodePattern) else {
+            return text
+        }
+
+        var formattedText = text
+        let matches = regex.matches(in: formattedText, range: NSRange(formattedText.startIndex..., in: formattedText))
+
+        for match in matches.reversed() {
+            guard match.numberOfRanges >= 3,
+                  let fullRange = Range(match.range(at: 0), in: formattedText),
+                  let phraseRange = Range(match.range(at: 1), in: formattedText),
+                  shouldApplySpokenInlineCodeCommand(in: formattedText, commandRange: fullRange, phraseRange: phraseRange) else {
+                continue
+            }
+
+            let rawContent = String(formattedText[phraseRange])
+            let content = inlineCodeContent(rawContent)
+            guard !content.isEmpty else { continue }
+
+            let terminalPunctuation = inlineCodeTerminalPunctuation(in: rawContent, fullText: formattedText, match: match)
+            let beforeCommand = String(formattedText[..<fullRange.lowerBound])
+                .trimmingCharacters(in: .whitespacesAndNewlines)
+            let shouldKeepTerminalPunctuation = !beforeCommand.isEmpty
+            let replacement = shouldKeepTerminalPunctuation ? "`\(content)`\(terminalPunctuation)" : "`\(content)`"
+            formattedText.replaceSubrange(fullRange, with: replacement)
+        }
+
+        return formattedText
+    }
+
+    private static func shouldApplySpokenInlineCodeCommand(
+        in text: String,
+        commandRange: Range<String.Index>,
+        phraseRange: Range<String.Index>
+    ) -> Bool {
+        let words = codeCaseWords(in: String(text[phraseRange]))
+        guard !words.isEmpty,
+              words.count <= 4,
+              !words.contains(where: isBlockedInlineCodeWord) else {
+            return false
+        }
+
+        let beforeCommand = String(text[..<commandRange.lowerBound])
+            .trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !beforeCommand.isEmpty else {
+            return words.count <= 3
+        }
+
+        if let previousCharacter = beforeCommand.last,
+           ".!?([{:\n".contains(previousCharacter) {
+            return true
+        }
+
+        guard let previousWord = previousWord(in: beforeCommand) else {
+            return false
+        }
+        return allowedPreviousWordsForSpokenCodeCase.contains(previousWord) || previousWord == "write"
+    }
+
+    private static func isBlockedInlineCodeWord(_ word: String) -> Bool {
+        blockedFirstWordsForSpokenCodeCase.contains(word) ||
+            ["are", "example", "examples", "from", "into", "on"].contains(word)
+    }
+
+    private static func inlineCodeContent(_ text: String) -> String {
+        let normalizedText = normalizeWhitespace(text)
+        return removeTrailingFragmentPunctuation(from: normalizedText)
+    }
+
+    private static func inlineCodeTerminalPunctuation(
+        in rawContent: String,
+        fullText: String,
+        match: NSTextCheckingResult
+    ) -> String {
+        guard match.numberOfRanges >= 3,
+              let punctuationRange = Range(match.range(at: 2), in: fullText) else {
+            return terminalPhrasePunctuation(in: rawContent)
+        }
+
+        let explicitPunctuation = String(fullText[punctuationRange])
+        return explicitPunctuation.isEmpty ? terminalPhrasePunctuation(in: rawContent) : explicitPunctuation
+    }
+
+    private static func terminalPhrasePunctuation(in text: String) -> String {
+        let trimmedText = text.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard let lastCharacter = trimmedText.last,
+              ".!?".contains(lastCharacter) else {
+            return ""
+        }
+        return String(lastCharacter)
+    }
+
+    private static func applySpokenMarkdownLinks(in text: String) -> String {
+        guard let regex = try? NSRegularExpression(pattern: markdownLinkPattern) else {
+            return text
+        }
+
+        var formattedText = text
+        let matches = regex.matches(in: formattedText, range: NSRange(formattedText.startIndex..., in: formattedText))
+
+        for match in matches.reversed() {
+            guard match.numberOfRanges >= 4,
+                  let fullRange = Range(match.range(at: 0), in: formattedText),
+                  let prefixRange = Range(match.range(at: 1), in: formattedText),
+                  let labelRange = Range(match.range(at: 2), in: formattedText),
+                  let targetRange = Range(match.range(at: 3), in: formattedText) else {
+                continue
+            }
+
+            let label = markdownLinkLabel(String(formattedText[labelRange]))
+            let target = markdownLinkTarget(String(formattedText[targetRange]))
+            guard !label.isEmpty,
+                  isMarkdownLinkTarget(target),
+                  shouldApplySpokenMarkdownLineCommand(to: label) else {
+                continue
+            }
+
+            let prefix = String(formattedText[prefixRange])
+            formattedText.replaceSubrange(fullRange, with: "\(prefix)[\(label)](\(target))")
+        }
+
+        return formattedText
+    }
+
+    private static func markdownLinkLabel(_ text: String) -> String {
+        markdownLineContent(text)
+    }
+
+    private static func markdownLinkTarget(_ text: String) -> String {
+        text.trimmingCharacters(
+            in: CharacterSet(charactersIn: ".!?,;:… ")
+                .union(.whitespacesAndNewlines)
+        )
+    }
+
+    private static func isMarkdownLinkTarget(_ text: String) -> Bool {
+        let lowercasedText = text.lowercased()
+        return lowercasedText.hasPrefix("http://") ||
+            lowercasedText.hasPrefix("https://") ||
+            lowercasedText.hasPrefix("www.") ||
+            lowercasedText.hasPrefix("#") ||
+            text.contains(".") ||
+            text.contains("/")
     }
 
     private static func applySpokenMarkdownCodeBlocks(in text: String) -> String {

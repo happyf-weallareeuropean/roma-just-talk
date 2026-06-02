@@ -11,6 +11,7 @@
 - Formatted inline numbered-list dictation with multiple markers onto separate lines.
 - Preserved dotted numeric text such as version numbers during punctuation cleanup.
 - Added guarded spoken Markdown formatting for headings, task checkboxes, and code fences.
+- Added guarded spoken Markdown formatting for inline code and links.
 - Added guarded spoken code-case formatting for camelCase, snake_case, kebab-case, and PascalCase identifiers.
 - Added guarded spoken slash, backslash, dash, hyphen, at sign, dot, and underscore formatting commands.
 - Tightened compact symbol cleanup so prose such as "dot notation" stays unchanged.

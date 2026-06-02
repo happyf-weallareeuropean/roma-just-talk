@@ -91,9 +91,15 @@ struct TranscriptionOutputFilterTests {
         #expect(TranscriptionOutputFilter.filter("Intro new line heading two details.") == "Intro\n## details")
         #expect(TranscriptionOutputFilter.filter("Todo buy milk.") == "- [ ] buy milk")
         #expect(TranscriptionOutputFilter.filter("Checked checkbox send email.") == "- [x] send email")
+        #expect(TranscriptionOutputFilter.filter("Inline code user underscore id.") == "`user_id`")
+        #expect(TranscriptionOutputFilter.filter("Use inline code user underscore id.") == "Use `user_id`.")
+        #expect(TranscriptionOutputFilter.filter("Link docs to docs dot example dot com.") == "[docs](docs.example.com)")
+        #expect(TranscriptionOutputFilter.filter("Markdown link VoiceInk docs to docs dot example dot com slash api.") == "[VoiceInk docs](docs.example.com/api)")
         #expect(TranscriptionOutputFilter.filter("Open code block swift new line let x equals one new line close code block") == "```swift\nlet x equals one\n```")
         #expect(TranscriptionOutputFilter.filter("Task force meeting.") == "Task force meeting.")
         #expect(TranscriptionOutputFilter.filter("Heading one is common.") == "Heading one is common.")
+        #expect(TranscriptionOutputFilter.filter("Inline code is useful.") == "Inline code is useful.")
+        #expect(TranscriptionOutputFilter.filter("Link building to product.") == "Link building to product.")
         #expect(TranscriptionOutputFilter.filter("This newlineish word should stay.") == "This newlineish word should stay.")
     }
 
