@@ -168,6 +168,11 @@ struct TranscriptionOutputFilterTests {
         #expect(TranscriptionOutputFilter.filter("Send dollar sign 19.99 now.") == "Send $19.99 now.")
         #expect(TranscriptionOutputFilter.filter("Budget 30 euros and 20 pounds.") == "Budget €30 and £20.")
         #expect(TranscriptionOutputFilter.filter("Progress is 85 percent done.") == "Progress is 85% done.")
+        #expect(TranscriptionOutputFilter.filter("Pay twenty dollars today.") == "Pay $20 today.")
+        #expect(TranscriptionOutputFilter.filter("Budget thirty euros and twenty pounds.") == "Budget €30 and £20.")
+        #expect(TranscriptionOutputFilter.filter("Progress is eighty five percent done.") == "Progress is 85% done.")
+        #expect(TranscriptionOutputFilter.filter("Version two point zero shipped.") == "Version 2.0 shipped.")
+        #expect(TranscriptionOutputFilter.filter("The score is four point six today.") == "The score is 4.6 today.")
         #expect(TranscriptionOutputFilter.filter("The dollar sign is confusing.") == "The dollar sign is confusing.")
         #expect(TranscriptionOutputFilter.filter("I may second that idea.") == "I may second that idea.")
         #expect(TranscriptionOutputFilter.filter("We march first then rest.") == "We march first then rest.")
@@ -175,6 +180,9 @@ struct TranscriptionOutputFilterTests {
         #expect(TranscriptionOutputFilter.filter("March 42 is invalid.") == "March 42 is invalid.")
         #expect(TranscriptionOutputFilter.filter("I lost 20 pounds.") == "I lost 20 pounds.")
         #expect(TranscriptionOutputFilter.filter("Use 20 pounds of flour.") == "Use 20 pounds of flour.")
+        #expect(TranscriptionOutputFilter.filter("I lost twenty pounds.") == "I lost twenty pounds.")
+        #expect(TranscriptionOutputFilter.filter("Use twenty pounds of flour.") == "Use twenty pounds of flour.")
+        #expect(TranscriptionOutputFilter.filter("One point to remember.") == "One point to remember.")
         #expect(TranscriptionOutputFilter.filter("Use 13 99 p m as a test.") == "Use 13 99 p m as a test.")
     }
 

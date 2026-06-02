@@ -188,6 +188,12 @@ struct TranscriptionOutputFilter {
     private static let leadingCurrencySignPattern = #"(?i)(?<![\p{L}\p{N}])(dollar|euro|pound)[ \t]+sign[ \t]+(\d+(?:\.\d{1,2})?)(?![\p{L}\p{N}])"#
     private static let trailingCurrencyPattern = #"(?i)(?<![\p{L}\p{N}])(\d+(?:\.\d{1,2})?)[ \t]+(dollars?|bucks|usd|euros?|eur|pounds?|gbp)(?![\p{L}\p{N}])"#
     private static let spokenPercentPattern = #"(?i)(?<![\p{L}\p{N}])(\d+(?:\.\d+)?)[ \t]+(?:percent|per[ \t]+cent)(?![\p{L}\p{N}])"#
+    private static let simpleNumberWordsPattern = #"(?:zero|oh|o|one|two|three|four|five|six|seven|eight|nine|ten|eleven|twelve|thirteen|fourteen|fifteen|sixteen|seventeen|eighteen|nineteen|twenty|thirty|forty|fifty|sixty|seventy|eighty|ninety)(?:[ \t]+(?:one|two|three|four|five|six|seven|eight|nine))?"#
+    private static let decimalDigitWordsPattern = #"(?:zero|oh|o|one|two|three|four|five|six|seven|eight|nine|\d)"#
+    private static let spokenDecimalValuePattern = #"(?i)(?<![\p{L}\p{N}])(\#(simpleNumberWordsPattern)|\d{1,3})[ \t]+point[ \t]+(\#(decimalDigitWordsPattern)(?:[ \t]+\#(decimalDigitWordsPattern)){0,5})(?![\p{L}\p{N}])"#
+    private static let leadingWordCurrencySignPattern = #"(?i)(?<![\p{L}\p{N}])(dollar|euro|pound)[ \t]+sign[ \t]+(\#(simpleNumberWordsPattern))(?![\p{L}\p{N}])"#
+    private static let trailingWordCurrencyPattern = #"(?i)(?<![\p{L}\p{N}])(\#(simpleNumberWordsPattern))[ \t]+(dollars?|bucks|usd|euros?|eur|pounds?|gbp)(?![\p{L}\p{N}])"#
+    private static let spokenWordPercentPattern = #"(?i)(?<![\p{L}\p{N}])(\#(simpleNumberWordsPattern))[ \t]+(?:percent|per[ \t]+cent)(?![\p{L}\p{N}])"#
     private static let backtrackingMarkerPattern = #"""
         (?ix)
         \s*
@@ -955,9 +961,12 @@ struct TranscriptionOutputFilter {
         var formattedText = replaceSpokenMonthOrdinalDates(in: text)
         formattedText = replaceSpokenMonthNumberDates(in: formattedText)
         formattedText = replaceSpokenTimes(in: formattedText)
+        formattedText = replaceSpokenDecimalValues(in: formattedText)
         formattedText = replaceLeadingCurrencySigns(in: formattedText)
         formattedText = replaceTrailingCurrencyWords(in: formattedText)
+        formattedText = replaceSpokenWordCurrencyAmounts(in: formattedText)
         formattedText = replaceSpokenPercents(in: formattedText)
+        formattedText = replaceSpokenWordPercents(in: formattedText)
         return formattedText
     }
 
@@ -1055,6 +1064,30 @@ struct TranscriptionOutputFilter {
         return timeText
     }
 
+    private static func replaceSpokenDecimalValues(in text: String) -> String {
+        guard let regex = try? NSRegularExpression(pattern: spokenDecimalValuePattern) else {
+            return text
+        }
+
+        var decimalText = text
+        let matches = regex.matches(in: decimalText, range: NSRange(decimalText.startIndex..., in: decimalText))
+
+        for match in matches.reversed() {
+            guard match.numberOfRanges >= 3,
+                  let fullRange = Range(match.range(at: 0), in: decimalText),
+                  let integerRange = Range(match.range(at: 1), in: decimalText),
+                  let fractionalRange = Range(match.range(at: 2), in: decimalText),
+                  let integerPart = spokenNumberValue(String(decimalText[integerRange])),
+                  let fractionalDigits = spokenDecimalDigits(String(decimalText[fractionalRange])) else {
+                continue
+            }
+
+            decimalText.replaceSubrange(fullRange, with: "\(integerPart).\(fractionalDigits)")
+        }
+
+        return decimalText
+    }
+
     private static func replaceLeadingCurrencySigns(in text: String) -> String {
         replaceCurrency(in: text, pattern: leadingCurrencySignPattern, amountRangeIndex: 2, currencyRangeIndex: 1)
     }
@@ -1098,6 +1131,58 @@ struct TranscriptionOutputFilter {
         return currencyText
     }
 
+    private static func replaceSpokenWordCurrencyAmounts(in text: String) -> String {
+        var currencyText = replaceWordCurrency(
+            in: text,
+            pattern: leadingWordCurrencySignPattern,
+            amountRangeIndex: 2,
+            currencyRangeIndex: 1
+        )
+        currencyText = replaceWordCurrency(
+            in: currencyText,
+            pattern: trailingWordCurrencyPattern,
+            amountRangeIndex: 1,
+            currencyRangeIndex: 2
+        )
+        return currencyText
+    }
+
+    private static func replaceWordCurrency(
+        in text: String,
+        pattern: String,
+        amountRangeIndex: Int,
+        currencyRangeIndex: Int
+    ) -> String {
+        guard let regex = try? NSRegularExpression(pattern: pattern) else {
+            return text
+        }
+
+        var currencyText = text
+        let matches = regex.matches(in: currencyText, range: NSRange(currencyText.startIndex..., in: currencyText))
+
+        for match in matches.reversed() {
+            guard let fullRange = Range(match.range(at: 0), in: currencyText),
+                  let amountRange = Range(match.range(at: amountRangeIndex), in: currencyText),
+                  let amount = spokenNumberValue(String(currencyText[amountRange])),
+                  let currencyRange = Range(match.range(at: currencyRangeIndex), in: currencyText),
+                  let symbol = currencySymbol(for: String(currencyText[currencyRange])) else {
+                continue
+            }
+
+            guard shouldFormatCurrencyAmount(
+                currencyWord: String(currencyText[currencyRange]),
+                beforeAmount: String(currencyText[..<fullRange.lowerBound]),
+                afterAmount: String(currencyText[fullRange.upperBound...])
+            ) else {
+                continue
+            }
+
+            currencyText.replaceSubrange(fullRange, with: "\(symbol)\(amount)")
+        }
+
+        return currencyText
+    }
+
     private static func replaceSpokenPercents(in text: String) -> String {
         guard let regex = try? NSRegularExpression(pattern: spokenPercentPattern) else {
             return text
@@ -1119,6 +1204,28 @@ struct TranscriptionOutputFilter {
         return percentText
     }
 
+    private static func replaceSpokenWordPercents(in text: String) -> String {
+        guard let regex = try? NSRegularExpression(pattern: spokenWordPercentPattern) else {
+            return text
+        }
+
+        var percentText = text
+        let matches = regex.matches(in: percentText, range: NSRange(percentText.startIndex..., in: percentText))
+
+        for match in matches.reversed() {
+            guard match.numberOfRanges >= 2,
+                  let fullRange = Range(match.range(at: 0), in: percentText),
+                  let amountRange = Range(match.range(at: 1), in: percentText),
+                  let amount = spokenNumberValue(String(percentText[amountRange])) else {
+                continue
+            }
+
+            percentText.replaceSubrange(fullRange, with: "\(amount)%")
+        }
+
+        return percentText
+    }
+
     private static func optionalMatchText(in text: String, match: NSTextCheckingResult, rangeIndex: Int) -> String? {
         guard match.numberOfRanges > rangeIndex,
               let range = Range(match.range(at: rangeIndex), in: text) else {
@@ -1126,6 +1233,70 @@ struct TranscriptionOutputFilter {
         }
 
         return String(text[range])
+    }
+
+    private static func spokenNumberValue(_ text: String) -> Int? {
+        let normalizedText = text
+            .lowercased()
+            .replacingOccurrences(of: #"\s+"#, with: " ", options: .regularExpression)
+            .trimmingCharacters(in: .whitespacesAndNewlines)
+
+        if let value = Int(normalizedText) {
+            return value
+        }
+
+        let ones = [
+            "zero": 0, "oh": 0, "o": 0, "one": 1, "two": 2, "three": 3,
+            "four": 4, "five": 5, "six": 6, "seven": 7, "eight": 8, "nine": 9,
+            "ten": 10, "eleven": 11, "twelve": 12, "thirteen": 13, "fourteen": 14,
+            "fifteen": 15, "sixteen": 16, "seventeen": 17, "eighteen": 18, "nineteen": 19
+        ]
+        if let value = ones[normalizedText] {
+            return value
+        }
+
+        let tens = [
+            "twenty": 20, "thirty": 30, "forty": 40, "fifty": 50,
+            "sixty": 60, "seventy": 70, "eighty": 80, "ninety": 90
+        ]
+        if let value = tens[normalizedText] {
+            return value
+        }
+
+        let parts = normalizedText.split(separator: " ").map(String.init)
+        guard parts.count == 2,
+              let tensValue = tens[parts[0]],
+              let onesValue = ones[parts[1]],
+              (1...9).contains(onesValue) else {
+            return nil
+        }
+
+        return tensValue + onesValue
+    }
+
+    private static func spokenDecimalDigits(_ text: String) -> String? {
+        let parts = text
+            .lowercased()
+            .split(whereSeparator: \.isWhitespace)
+            .map(String.init)
+        guard !parts.isEmpty else { return nil }
+
+        var digits: [String] = []
+        for part in parts {
+            if let value = Int(part),
+               (0...9).contains(value) {
+                digits.append(String(value))
+                continue
+            }
+
+            guard let value = spokenNumberValue(part),
+                  (0...9).contains(value) else {
+                return nil
+            }
+            digits.append(String(value))
+        }
+
+        return digits.joined()
     }
 
     private static func normalizedMonthName(_ text: String) -> String {

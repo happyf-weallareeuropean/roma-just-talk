@@ -21,6 +21,7 @@
 - Added guarded spoken URL cleanup for "https colon slash slash" and "www dot" dictation.
 - Tightened spoken URL cleanup so trailing prose after a domain stays outside the URL.
 - Added guarded date, time, currency, and percent cleanup for natural dictation.
+- Added guarded cleanup for spoken decimal values and word-based currency/percent amounts.
 - Added guarded numeric month-date cleanup such as "June 2 2026".
 - Tightened date and currency cleanup so verb phrases and weight units stay unchanged.
 - Tightened compact symbol cleanup so prose such as "dot notation" stays unchanged.
