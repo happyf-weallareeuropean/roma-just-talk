@@ -217,6 +217,7 @@ struct TranscriptionOutputFilter {
         filteredText = applySpokenFormattingCommands(in: filteredText)
         filteredText = applySpokenPunctuationCommands(in: filteredText)
         filteredText = collapseAdjacentRepeatedWords(in: filteredText)
+        filteredText = collapseRepeatedShortSentences(in: filteredText)
 
         // Clean whitespace
         filteredText = normalizeWhitespace(filteredText)
@@ -790,6 +791,49 @@ struct TranscriptionOutputFilter {
         }
 
         return result.joined(separator: " ")
+    }
+
+    private static func collapseRepeatedShortSentences(in text: String) -> String {
+        guard let regex = try? NSRegularExpression(
+            pattern: #"(?i)(^|(?<=[.!?])\s+)([^.!?\n]{3,120}[.!?])\s+\2(?=\s|$)"#
+        ) else {
+            return text
+        }
+
+        var collapsedText = text
+        var rewriteCount = 0
+
+        while rewriteCount < 4 {
+            let range = NSRange(collapsedText.startIndex..., in: collapsedText)
+            let matches = regex.matches(in: collapsedText, range: range).reversed()
+            var didRewrite = false
+
+            for match in matches {
+                guard match.numberOfRanges >= 3,
+                      let fullRange = Range(match.range, in: collapsedText),
+                      let prefixRange = Range(match.range(at: 1), in: collapsedText),
+                      let sentenceRange = Range(match.range(at: 2), in: collapsedText) else {
+                    continue
+                }
+
+                let sentence = String(collapsedText[sentenceRange])
+                let sentenceWordCount = wordCount(in: sentence)
+                guard sentenceWordCount >= 2 && sentenceWordCount <= 12 else {
+                    continue
+                }
+
+                collapsedText.replaceSubrange(
+                    fullRange,
+                    with: String(collapsedText[prefixRange]) + sentence
+                )
+                didRewrite = true
+            }
+
+            guard didRewrite else { break }
+            rewriteCount += 1
+        }
+
+        return collapsedText
     }
 
     private static func normalizedRepeatWord(_ token: String) -> String? {

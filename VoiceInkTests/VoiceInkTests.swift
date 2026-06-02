@@ -147,6 +147,9 @@ struct VoiceInkTests {
         #expect(TranscriptionOutputFilter.filter("uh-uh... not that.") == "not that.")
         #expect(TranscriptionOutputFilter.filter("mhmm, this works.") == "this works.")
         #expect(TranscriptionOutputFilter.filter("no no this is fine") == "no no this is fine")
+        #expect(TranscriptionOutputFilter.filter("I think this works. I think this works.") == "I think this works.")
+        #expect(TranscriptionOutputFilter.filter("Ship the model. ship the model.") == "Ship the model.")
+        #expect(TranscriptionOutputFilter.filter("Okay. Okay.") == "Okay. Okay.")
     }
 
     @Test func insertionPolishUsesCursorContextForMidSentenceFragments() async throws {
