@@ -20,6 +20,7 @@ public struct WindowsDictationRuntimeRequest: Sendable {
     public var language: String?
     public var prompt: String?
     public var shouldPaste: Bool
+    public var clipboardRestoreConfiguration: WindowsClipboardRestoreConfiguration
     public var textProcessing: DictationTextProcessingConfiguration
     public var trigger: WindowsDictationTrigger
 
@@ -29,6 +30,7 @@ public struct WindowsDictationRuntimeRequest: Sendable {
         language: String? = nil,
         prompt: String? = nil,
         shouldPaste: Bool = false,
+        clipboardRestoreConfiguration: WindowsClipboardRestoreConfiguration = WindowsClipboardRestoreConfiguration(),
         textProcessing: DictationTextProcessingConfiguration = .standard,
         trigger: WindowsDictationTrigger
     ) {
@@ -37,6 +39,7 @@ public struct WindowsDictationRuntimeRequest: Sendable {
         self.language = language
         self.prompt = prompt
         self.shouldPaste = shouldPaste
+        self.clipboardRestoreConfiguration = clipboardRestoreConfiguration
         self.textProcessing = textProcessing
         self.trigger = trigger
     }
@@ -72,7 +75,11 @@ public enum WindowsDictationRuntime {
         let pipeline = DictationPipeline(
             recorder: recorder,
             transcriptionService: transcriptionService,
-            textInsertion: request.shouldPaste ? WindowsClipboardTextInsertion() : nil
+            textInsertion: request.shouldPaste
+                ? WindowsClipboardTextInsertion(
+                    restoreConfiguration: request.clipboardRestoreConfiguration
+                )
+                : nil
         )
         let pipelineRequest = DictationPipelineRequest(
             outputURL: request.outputURL,

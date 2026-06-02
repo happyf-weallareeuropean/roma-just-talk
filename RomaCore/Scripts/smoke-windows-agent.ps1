@@ -16,6 +16,9 @@ param(
     [int]$HoldTimeoutSeconds = 15,
     [int]$RecordSeconds = 2,
     [switch]$PasteDictation,
+    [switch]$RestoreClipboard,
+    [switch]$NoRestoreClipboard,
+    [double]$ClipboardRestoreDelaySeconds = 2,
     [switch]$RunDictation
 )
 
@@ -93,6 +96,14 @@ function Resolve-FullPath {
 
 if ($UseHoldHook -and $UseToggle) {
     throw "UseHoldHook and UseToggle are mutually exclusive"
+}
+
+if ($RestoreClipboard -and $NoRestoreClipboard) {
+    throw "RestoreClipboard and NoRestoreClipboard are mutually exclusive"
+}
+
+if ($ClipboardRestoreDelaySeconds -lt 0) {
+    throw "ClipboardRestoreDelaySeconds must be non-negative"
 }
 
 if ([string]::IsNullOrWhiteSpace($PackageDir)) {
@@ -215,6 +226,15 @@ Invoke-Step "agent config" {
     if ($PasteDictation) {
         $configArgs += "--paste"
     }
+    if ($RestoreClipboard) {
+        $configArgs += "--restore-clipboard"
+    }
+    if ($NoRestoreClipboard) {
+        $configArgs += "--no-restore-clipboard"
+    }
+    if ($PSBoundParameters.ContainsKey("ClipboardRestoreDelaySeconds")) {
+        $configArgs += @("--clipboard-restore-delay", "$ClipboardRestoreDelaySeconds")
+    }
 
     $configOutput = & $AgentPath @configArgs 2>&1 | Out-String
     if ($LASTEXITCODE -ne 0) {
@@ -224,6 +244,8 @@ Invoke-Step "agent config" {
     Write-Host $configOutput
     Assert-OutputContains -Output $configOutput -Expected "written=true"
     Assert-OutputContains -Output $configOutput -Expected "config=$ConfigPath"
+    Assert-OutputContains -Output $configOutput -Expected "restore_clipboard_after_paste="
+    Assert-OutputContains -Output $configOutput -Expected "clipboard_restore_delay_seconds="
     Assert-NonEmptyFile -Path $ConfigPath
 }
 

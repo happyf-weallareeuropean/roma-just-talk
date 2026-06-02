@@ -10,6 +10,8 @@ public struct RomaWindowsAgentConfiguration: Codable, Equatable, Sendable {
     public var prompt: String?
     public var outputPath: String?
     public var shouldPaste: Bool?
+    public var restoreClipboardAfterPaste: Bool?
+    public var clipboardRestoreDelaySeconds: Double?
     public var usesHoldHook: Bool?
     public var recordSeconds: Double?
     public var holdTimeoutSeconds: Double?
@@ -25,6 +27,8 @@ public struct RomaWindowsAgentConfiguration: Codable, Equatable, Sendable {
         prompt: String? = nil,
         outputPath: String? = nil,
         shouldPaste: Bool? = nil,
+        restoreClipboardAfterPaste: Bool? = nil,
+        clipboardRestoreDelaySeconds: Double? = nil,
         usesHoldHook: Bool? = nil,
         recordSeconds: Double? = nil,
         holdTimeoutSeconds: Double? = nil,
@@ -39,6 +43,8 @@ public struct RomaWindowsAgentConfiguration: Codable, Equatable, Sendable {
         self.prompt = prompt
         self.outputPath = outputPath
         self.shouldPaste = shouldPaste
+        self.restoreClipboardAfterPaste = restoreClipboardAfterPaste
+        self.clipboardRestoreDelaySeconds = clipboardRestoreDelaySeconds
         self.usesHoldHook = usesHoldHook
         self.recordSeconds = recordSeconds
         self.holdTimeoutSeconds = holdTimeoutSeconds
@@ -118,6 +124,19 @@ public struct RomaWindowsAgentConfiguration: Codable, Equatable, Sendable {
         if options.contains("--no-paste") {
             configuration.shouldPaste = false
         }
+        if options.contains("--restore-clipboard") {
+            configuration.restoreClipboardAfterPaste = true
+        }
+        if options.contains("--no-restore-clipboard") {
+            configuration.restoreClipboardAfterPaste = false
+            configuration.clipboardRestoreDelaySeconds = nil
+        }
+        if options.contains("--clipboard-restore-delay") {
+            configuration.clipboardRestoreDelaySeconds = try options.doubleValue(
+                after: "--clipboard-restore-delay",
+                default: 2
+            )
+        }
         if options.contains("--hold-hook") {
             configuration.usesHoldHook = true
         }
@@ -146,6 +165,13 @@ public struct RomaWindowsAgentConfiguration: Codable, Equatable, Sendable {
         )
     }
 
+    public func clipboardRestoreConfiguration() -> WindowsClipboardRestoreConfiguration {
+        WindowsClipboardRestoreConfiguration(
+            restoreClipboard: restoreClipboardAfterPaste ?? true,
+            restoreDelaySeconds: clipboardRestoreDelaySeconds ?? 2
+        )
+    }
+
     public func requireEndpoint() throws -> String {
         try required(endpoint, option: "--endpoint")
     }
@@ -160,6 +186,14 @@ public struct RomaWindowsAgentConfiguration: Codable, Equatable, Sendable {
         }
         if let holdTimeoutSeconds, holdTimeoutSeconds < 0 {
             throw RomaCommandLineOptionsError.invalidOptionValue("--timeout")
+        }
+        if let clipboardRestoreDelaySeconds, clipboardRestoreDelaySeconds < 0 {
+            throw RomaCommandLineOptionsError.invalidOptionValue("--clipboard-restore-delay")
+        }
+        if restoreClipboardAfterPaste == false, clipboardRestoreDelaySeconds != nil {
+            throw RomaCommandLineOptionsError.conflictingOptions(
+                "--no-restore-clipboard and --clipboard-restore-delay"
+            )
         }
         if let apiKeyEnvironment,
            !RomaCommandLineText.isValidEnvironmentName(apiKeyEnvironment) {

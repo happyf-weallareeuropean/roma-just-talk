@@ -1,5 +1,18 @@
 import Foundation
 
+public struct WindowsClipboardRestoreConfiguration: Codable, Equatable, Hashable, Sendable {
+    public var restoreClipboard: Bool
+    public var restoreDelaySeconds: TimeInterval
+
+    public init(
+        restoreClipboard: Bool = true,
+        restoreDelaySeconds: TimeInterval = 2
+    ) {
+        self.restoreClipboard = restoreClipboard
+        self.restoreDelaySeconds = restoreDelaySeconds
+    }
+}
+
 public enum WindowsClipboardPayload {
     public static func cfUnicodeTextData(for text: String) -> Data {
         var data = Data()

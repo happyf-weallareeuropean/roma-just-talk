@@ -15,6 +15,9 @@ param(
     [int]$HoldTimeoutSeconds = 15,
     [int]$RecordSeconds = 2,
     [switch]$PasteDictation,
+    [switch]$RestoreClipboard,
+    [switch]$NoRestoreClipboard,
+    [double]$ClipboardRestoreDelaySeconds = 2,
     [switch]$RunDictation,
     [switch]$SkipSmoke,
     [switch]$CreateShortcut,
@@ -83,6 +86,14 @@ if ([string]::IsNullOrWhiteSpace($ConfigPath)) {
     }
 }
 $ConfigPath = Resolve-FullPath -Path $ConfigPath
+
+if ($RestoreClipboard -and $NoRestoreClipboard) {
+    throw "RestoreClipboard and NoRestoreClipboard are mutually exclusive"
+}
+
+if ($ClipboardRestoreDelaySeconds -lt 0) {
+    throw "ClipboardRestoreDelaySeconds must be non-negative"
+}
 
 if ([string]::IsNullOrWhiteSpace($SecretDir) -and
     ![string]::IsNullOrWhiteSpace($ApiKeyName)) {
@@ -175,6 +186,15 @@ if (!$SkipSmoke) {
         $smokeArgs += @("-RecordSeconds", "$RecordSeconds")
         if ($PasteDictation) {
             $smokeArgs += "-PasteDictation"
+        }
+        if ($RestoreClipboard) {
+            $smokeArgs += "-RestoreClipboard"
+        }
+        if ($NoRestoreClipboard) {
+            $smokeArgs += "-NoRestoreClipboard"
+        }
+        if ($PSBoundParameters.ContainsKey("ClipboardRestoreDelaySeconds")) {
+            $smokeArgs += @("-ClipboardRestoreDelaySeconds", "$ClipboardRestoreDelaySeconds")
         }
         if ($RunDictation) {
             $smokeArgs += "-RunDictation"

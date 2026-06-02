@@ -16,6 +16,9 @@ param(
     [int]$RecordSeconds = 2,
     [switch]$PasteDictation,
     [switch]$NoPaste,
+    [switch]$RestoreClipboard,
+    [switch]$NoRestoreClipboard,
+    [double]$ClipboardRestoreDelaySeconds = 2,
     [switch]$DoctorOnly
 )
 
@@ -48,6 +51,14 @@ if ($UseHoldHook -and $UseToggle) {
 
 if ($PasteDictation -and $NoPaste) {
     throw "PasteDictation and NoPaste are mutually exclusive"
+}
+
+if ($RestoreClipboard -and $NoRestoreClipboard) {
+    throw "RestoreClipboard and NoRestoreClipboard are mutually exclusive"
+}
+
+if ($ClipboardRestoreDelaySeconds -lt 0) {
+    throw "ClipboardRestoreDelaySeconds must be non-negative"
 }
 
 if ([string]::IsNullOrWhiteSpace($InstallDir)) {
@@ -154,6 +165,15 @@ if ($hasEndpoint -or $hasModel) {
     }
     if ($NoPaste) {
         $configArgs += "--no-paste"
+    }
+    if ($RestoreClipboard) {
+        $configArgs += "--restore-clipboard"
+    }
+    if ($NoRestoreClipboard) {
+        $configArgs += "--no-restore-clipboard"
+    }
+    if ($PSBoundParameters.ContainsKey("ClipboardRestoreDelaySeconds")) {
+        $configArgs += @("--clipboard-restore-delay", "$ClipboardRestoreDelaySeconds")
     }
 
     $configOutput = & $AgentPath @configArgs 2>&1 | Out-String

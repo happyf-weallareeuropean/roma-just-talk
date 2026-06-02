@@ -18,11 +18,15 @@ param(
     [switch]$RunInteractiveWindowsAgent,
     [switch]$UseHoldHook,
     [int]$HoldTimeoutSeconds = 15,
+    [switch]$RestoreClipboard,
+    [switch]$NoRestoreClipboard,
+    [double]$ClipboardRestoreDelaySeconds = 2,
     [switch]$PasteDictation
 )
 
 $ErrorActionPreference = "Stop"
 Set-StrictMode -Version Latest
+$hasExplicitClipboardRestoreDelay = $PSBoundParameters.ContainsKey("ClipboardRestoreDelaySeconds")
 
 function Invoke-Step {
     param(
@@ -130,8 +134,25 @@ function New-WindowsAgentConfigArgs {
     if ($PasteDictation) {
         $configArgs += "--paste"
     }
+    if ($RestoreClipboard) {
+        $configArgs += "--restore-clipboard"
+    }
+    if ($NoRestoreClipboard) {
+        $configArgs += "--no-restore-clipboard"
+    }
+    if ($hasExplicitClipboardRestoreDelay) {
+        $configArgs += @("--clipboard-restore-delay", "$ClipboardRestoreDelaySeconds")
+    }
 
     return $configArgs
+}
+
+if ($RestoreClipboard -and $NoRestoreClipboard) {
+    throw "RestoreClipboard and NoRestoreClipboard are mutually exclusive"
+}
+
+if ($ClipboardRestoreDelaySeconds -lt 0) {
+    throw "ClipboardRestoreDelaySeconds must be non-negative"
 }
 
 $packageRoot = Resolve-Path "$PSScriptRoot\.."

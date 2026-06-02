@@ -178,7 +178,9 @@ try {
         & $smokeScriptOutput `
             -AgentPath $agentOutput `
             -OutputDir $OutputDir `
-            -ConfigPath $configPath
+            -ConfigPath $configPath `
+            -RestoreClipboard `
+            -ClipboardRestoreDelaySeconds 0
     }
 
     Invoke-Step "packaged agent install smoke" {
@@ -186,6 +188,8 @@ try {
             -PackageDir $OutputDir `
             -InstallDir (Join-Path $OutputDir "install-proof") `
             -ConfigPath (Join-Path $OutputDir "install-proof\windows-agent.json") `
+            -RestoreClipboard `
+            -ClipboardRestoreDelaySeconds 0 `
             -CreateShortcut `
             -ShortcutDir (Join-Path $OutputDir "shortcuts")
     }

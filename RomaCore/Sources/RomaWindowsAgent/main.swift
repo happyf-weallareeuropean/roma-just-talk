@@ -40,6 +40,7 @@ struct RomaWindowsAgent {
         print("toggle_hotkey=RegisterHotKey Ctrl+Shift+R")
         print("hold_hook=WH_KEYBOARD_LL Ctrl+Shift+R")
         print("paste=win32_clipboard_sendinput")
+        print("clipboard_restore=text_only_after_delay")
         print("secret_store=dpapi")
         print("config_default=\(RomaWindowsAgentConfiguration.defaultURL().path)")
         print("minimum_permission_surface=microphone,hotkey,clipboard")
@@ -55,6 +56,7 @@ struct RomaWindowsAgent {
         let modelName = try configuration.requireModel()
         let apiKeySource = try configuration.apiKeySource()
         let shouldPaste = configuration.shouldPaste ?? false
+        let clipboardRestoreConfiguration = configuration.clipboardRestoreConfiguration()
         let shouldUseHoldHook = configuration.usesHoldHook ?? false
         let seconds = configuration.recordSeconds ?? 2
         let timeoutMilliseconds = UInt32((configuration.holdTimeoutSeconds ?? 15) * 1_000)
@@ -82,6 +84,8 @@ struct RomaWindowsAgent {
         print("agent=roma-windows-agent")
         print("recording_mode=\(shouldUseHoldHook ? "hold" : "toggle")")
         print("paste_requested=\(shouldPaste)")
+        print("restore_clipboard_after_paste=\(clipboardRestoreConfiguration.restoreClipboard)")
+        print("clipboard_restore_delay_seconds=\(clipboardRestoreConfiguration.restoreDelaySeconds)")
         print("api_key_source=\(apiKeySource.kind)")
         print("api_key_ref=\(apiKeySource.reference)")
 
@@ -92,6 +96,7 @@ struct RomaWindowsAgent {
                 language: configuration.language,
                 prompt: configuration.prompt,
                 shouldPaste: shouldPaste,
+                clipboardRestoreConfiguration: clipboardRestoreConfiguration,
                 textProcessing: DictationTextProcessingConfiguration(
                     wordReplacements: wordReplacements
                 ),
@@ -161,6 +166,8 @@ struct RomaWindowsAgent {
         print("model=\(try configuration.requireModel())")
         print("api_key_source=\(try configuration.apiKeySource().kind)")
         print("paste=\(configuration.shouldPaste ?? false)")
+        print("restore_clipboard_after_paste=\(configuration.clipboardRestoreConfiguration().restoreClipboard)")
+        print("clipboard_restore_delay_seconds=\(configuration.clipboardRestoreConfiguration().restoreDelaySeconds)")
         print("recording_mode=\((configuration.usesHoldHook ?? false) ? "hold" : "toggle")")
         print("word_replacements=\(configuration.wordReplacements.count)")
         print("written=true")
@@ -219,9 +226,9 @@ struct RomaWindowsAgent {
         print("usage:")
         print("  RomaWindowsAgent doctor")
         print("  RomaWindowsAgent save-key-from-env --key groq --value-env GROQ_API_KEY [--secret-dir C:\\tmp\\roma-secrets]")
-        print("  RomaWindowsAgent write-config --endpoint https://api.example.com/v1/audio/transcriptions --model whisper-large-v3-turbo --api-key-name groq [--config C:\\tmp\\roma-agent.json] [--hold-hook] [--paste]")
-        print("  RomaWindowsAgent dictate [--config C:\\tmp\\roma-agent.json] [--endpoint https://api.example.com/v1/audio/transcriptions --model whisper-large-v3-turbo --api-key-env OPENAI_API_KEY] [--out proof.wav] [--seconds 2] [--replace \"just talk=roma-just-talk\"] [--paste]")
-        print("  RomaWindowsAgent dictate --hold-hook --timeout 15 --endpoint https://api.example.com/v1/audio/transcriptions --model whisper-large-v3-turbo --api-key-name groq [--paste]")
+        print("  RomaWindowsAgent write-config --endpoint https://api.example.com/v1/audio/transcriptions --model whisper-large-v3-turbo --api-key-name groq [--config C:\\tmp\\roma-agent.json] [--hold-hook] [--paste] [--no-restore-clipboard]")
+        print("  RomaWindowsAgent dictate [--config C:\\tmp\\roma-agent.json] [--endpoint https://api.example.com/v1/audio/transcriptions --model whisper-large-v3-turbo --api-key-env OPENAI_API_KEY] [--out proof.wav] [--seconds 2] [--replace \"just talk=roma-just-talk\"] [--paste] [--clipboard-restore-delay 2]")
+        print("  RomaWindowsAgent dictate --hold-hook --timeout 15 --endpoint https://api.example.com/v1/audio/transcriptions --model whisper-large-v3-turbo --api-key-name groq [--paste] [--no-restore-clipboard]")
     }
 
     private static func printError(_ error: Error) {
