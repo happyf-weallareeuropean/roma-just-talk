@@ -54,6 +54,7 @@ Reusable now:
 - `OpenAICompatibleTranscriptionService` now lives in `RomaCore` as a Foundation-only multipart HTTP proof path for OpenAI-compatible cloud STT.
 - `DictationPipeline` now lives in `RomaCore` as the shared record -> transcribe -> optional paste orchestration.
 - `WindowsHotKey.proofToggle` and the Windows-only `WindowsRegisterHotKeyProof` source define the first `RegisterHotKey` toggle proof path.
+- `WindowsLowLevelKeyboardHookProof` now defines the first `WH_KEYBOARD_LL` hold-to-talk keydown/keyup proof path.
 - `WindowsClipboardPayload` and the Windows-only `WindowsPasteProof` source define the first `CF_UNICODETEXT` plus `SendInput` paste proof path.
 - `WindowsDPAPISecretStore` now lives in `RomaCore` as the first Windows API-key storage adapter.
 - `CoreAudioRecorder` already outputs the right streaming shape: 16 kHz mono Int16 PCM chunks and a WAV file with a 3 second pre-roll buffer, and now reuses `RomaCore.PCMPreRollBuffer`.
@@ -114,7 +115,7 @@ These are the lowest-redo candidates because they map directly to the behavior a
 | Local Whisper | whisper.cpp C API or CLI/DLL | Current app already uses whisper.cpp; upstream supports Windows with MSVC/MinGW and CPU/GPU paths. |
 | Cloud STT | Existing OpenAI-compatible provider logic behind a portable API-key source | Low native surface; fastest proof if local model packaging is not ready. `RomaProofAgent transcribe-proof` is the first source path for this. |
 | Global shortcut | `RegisterHotKey` for toggle proof | Simple system-wide hotkey, enough for MVP toggle mode. `RomaProofAgent windows-hotkey-proof` is the first source path for this. |
-| Push-to-talk keydown/keyup | `WH_KEYBOARD_LL` only after toggle proof | Needed for modifier-only or hold behavior, but higher risk and more AV/security sensitivity. |
+| Push-to-talk keydown/keyup | `WH_KEYBOARD_LL` after toggle proof | Needed for hold behavior. `RomaProofAgent windows-keyboard-hook-proof` is the first source path for this and still keeps the hook work in a native adapter. |
 | Paste | Win32 clipboard plus `SendInput` Ctrl+V | Same behavioral model as macOS: put text on clipboard, synthesize paste command, restore clipboard if enabled. `RomaProofAgent windows-paste-proof` is the first source path for this. |
 | Secrets | DPAPI | Windows user-bound secret storage equivalent for API keys. `RomaProofAgent windows-secret-proof` is the first source path for this. |
 | UI | tray/small shell first; Tauri optional later | Avoid re-creating all SwiftUI views before the actual Windows native behavior is proven. |
@@ -203,6 +204,8 @@ swift run RomaProofAgent transcribe-proof-doctor
 swift run RomaProofAgent transcribe-proof --audio mic-proof.wav --endpoint https://api.groq.com/openai/v1/audio/transcriptions --model whisper-large-v3-turbo --api-key-env GROQ_API_KEY
 swift run RomaProofAgent windows-hotkey-doctor
 swift run RomaProofAgent windows-hotkey-proof
+swift run RomaProofAgent windows-keyboard-hook-doctor
+swift run RomaProofAgent windows-keyboard-hook-proof --timeout 15
 swift run RomaProofAgent windows-paste-doctor
 swift run RomaProofAgent windows-paste-proof --text "roma just talk proof"
 swift run RomaProofAgent windows-secret-doctor
@@ -242,6 +245,9 @@ Do not claim Windows support until the audio, transcription, and paste proof all
 - WASAPI capture: https://learn.microsoft.com/en-us/windows/win32/coreaudio/capturing-a-stream
 - RegisterHotKey: https://learn.microsoft.com/en-us/windows/win32/api/winuser/nf-winuser-registerhotkey
 - SetWindowsHookEx: https://learn.microsoft.com/en-us/windows/win32/api/winuser/nf-winuser-setwindowshookexa
+- LowLevelKeyboardProc: https://learn.microsoft.com/en-us/windows/win32/winmsg/lowlevelkeyboardproc
+- KBDLLHOOKSTRUCT: https://learn.microsoft.com/en-us/windows/win32/api/winuser/ns-winuser-kbdllhookstruct
+- CallNextHookEx: https://learn.microsoft.com/en-us/windows/win32/api/winuser/nf-winuser-callnexthookex
 - SendInput: https://learn.microsoft.com/en-us/windows/win32/api/winuser/nf-winuser-sendinput
 - CryptProtectData: https://learn.microsoft.com/en-us/windows/win32/api/dpapi/nf-dpapi-cryptprotectdata
 - CryptUnprotectData: https://learn.microsoft.com/en-us/windows/win32/api/dpapi/nf-dpapi-cryptunprotectdata

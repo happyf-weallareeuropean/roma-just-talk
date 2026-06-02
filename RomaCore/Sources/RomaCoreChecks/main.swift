@@ -10,6 +10,7 @@ struct RomaCoreChecks {
         try checkMiniaudioRecorderUsesSpeechPCMContract()
         try checkOpenAICompatibleMultipartBody()
         try checkWindowsHotKeyProofDescriptor()
+        try checkWindowsLowLevelKeyboardHookProofDescriptor()
         try checkWindowsClipboardPayloadIsCFUnicodeText()
         try checkWindowsDPAPISecretStoreContract()
         try checkTranscriptionRequestMetadata()
@@ -151,6 +152,31 @@ struct RomaCoreChecks {
         try require(hotKey.modifiers.rawValue == 0x4006, "proof hotkey should map to Ctrl+Shift+MOD_NOREPEAT")
         try require(hotKey.virtualKeyCode == 0x52, "proof hotkey should use virtual-key R")
         try require(hotKey.displayName == "Ctrl+Shift+R", "proof hotkey display name should be readable")
+    }
+
+    private static func checkWindowsLowLevelKeyboardHookProofDescriptor() throws {
+        let chord = WindowsLowLevelKeyboardHookChord.proofHold
+
+        try require(chord.virtualKeyCode == 0x52, "low-level hook proof should use virtual-key R")
+        try require(
+            chord.requiredModifiers == 0x3,
+            "low-level hook proof should require Ctrl+Shift"
+        )
+        try require(chord.displayName == "Ctrl+Shift+R", "low-level hook proof should match the hotkey proof")
+
+        let result = WindowsLowLevelKeyboardHookResult(
+            observedEvents: 0x3
+        )
+        try require(result.observedKeyDown, "low-level hook result should expose keydown")
+        try require(result.observedKeyUp, "low-level hook result should expose keyup")
+
+        if !WindowsLowLevelKeyboardHookProof.isRuntimeAvailable {
+            do {
+                _ = try WindowsLowLevelKeyboardHookProof.waitForHold(timeoutMilliseconds: 1)
+                throw CheckFailure("low-level hook should be unsupported off Windows")
+            } catch WindowsLowLevelKeyboardHookError.unsupported {
+            }
+        }
     }
 
     private static func checkWindowsClipboardPayloadIsCFUnicodeText() throws {

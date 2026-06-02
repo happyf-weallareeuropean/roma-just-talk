@@ -11,6 +11,7 @@ param(
     [string]$TranscribePrompt = "",
     [switch]$SkipMic,
     [switch]$RunInteractiveHotkey,
+    [switch]$RunInteractiveKeyboardHook,
     [switch]$RunInteractivePaste,
     [switch]$RunInteractiveDictation,
     [switch]$PasteDictation
@@ -162,6 +163,21 @@ try {
         Write-Host ""
         Write-Host "== windows hotkey proof skipped =="
         Write-Host "rerun with -RunInteractiveHotkey, then press Ctrl+Shift+R"
+    }
+
+    Invoke-Step "windows keyboard hook doctor" {
+        swift run RomaProofAgent windows-keyboard-hook-doctor
+    }
+
+    if ($RunInteractiveKeyboardHook) {
+        Invoke-Step "windows keyboard hook proof" {
+            Write-Host "Press and release Ctrl+Shift+R in this session to complete the low-level hook proof."
+            swift run RomaProofAgent windows-keyboard-hook-proof --timeout 15
+        }
+    } else {
+        Write-Host ""
+        Write-Host "== windows keyboard hook proof skipped =="
+        Write-Host "rerun with -RunInteractiveKeyboardHook, then press and release Ctrl+Shift+R"
     }
 
     Invoke-Step "windows paste doctor" {

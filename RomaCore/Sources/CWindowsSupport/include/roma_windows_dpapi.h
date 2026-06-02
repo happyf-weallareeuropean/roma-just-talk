@@ -4,6 +4,8 @@
 #include <stddef.h>
 #include <stdint.h>
 
+#include "roma_windows_keyboard_hook.h"
+
 #ifdef __cplusplus
 extern "C" {
 #endif

@@ -15,6 +15,10 @@ struct RomaProofAgent {
             printWindowsHotKeyDoctor()
         case "windows-hotkey-proof":
             try runWindowsHotKeyProof()
+        case "windows-keyboard-hook-doctor":
+            printWindowsKeyboardHookDoctor()
+        case "windows-keyboard-hook-proof":
+            try runWindowsKeyboardHookProof(arguments: Array(arguments.dropFirst()))
         case "windows-paste-doctor":
             printWindowsPasteDoctor()
         case "windows-paste-proof":
@@ -48,6 +52,7 @@ struct RomaProofAgent {
         print("wav_writer=true")
         print("native_windows_adapters=false")
         print("windows_register_hotkey_adapter_source=true")
+        print("windows_low_level_keyboard_hook_source=true")
         print("windows_paste_adapter_source=true")
         print("windows_dpapi_secret_store_source=true")
         print("miniaudio_capture_adapter_source=true")
@@ -82,6 +87,35 @@ struct RomaProofAgent {
         #else
         throw AgentError.unsupportedPlatform("windows-hotkey-proof requires Windows")
         #endif
+    }
+
+    private static func printWindowsKeyboardHookDoctor() {
+        let chord = WindowsLowLevelKeyboardHookChord.proofHold
+        print("platform=\(platformName)")
+        print("hook=WH_KEYBOARD_LL")
+        print("api=SetWindowsHookEx")
+        print("chain_api=CallNextHookEx")
+        print("mode=hold")
+        print("key=\(chord.displayName)")
+        print("virtual_key=0x\(String(chord.virtualKeyCode, radix: 16, uppercase: true))")
+        print("required_modifiers=0x\(String(chord.requiredModifiers, radix: 16, uppercase: true))")
+        print("message_loop_required=true")
+        print("permission_prompt=false")
+        print("runtime=\(WindowsLowLevelKeyboardHookProof.isRuntimeAvailable)")
+    }
+
+    private static func runWindowsKeyboardHookProof(arguments: [String]) throws {
+        let timeoutMilliseconds = UInt32(try doubleValue(after: "--timeout", in: arguments, default: 15) * 1_000)
+        let chord = WindowsLowLevelKeyboardHookChord.proofHold
+
+        print("waiting_for_hold=\(chord.displayName)")
+        let result = try WindowsLowLevelKeyboardHookProof.waitForHold(
+            chord: chord,
+            timeoutMilliseconds: timeoutMilliseconds
+        )
+        print("key_down=\(result.observedKeyDown)")
+        print("key_up=\(result.observedKeyUp)")
+        print("observed_events=0x\(String(result.observedEvents, radix: 16, uppercase: true))")
     }
 
     private static func printWindowsPasteDoctor() {
@@ -467,6 +501,8 @@ struct RomaProofAgent {
         print("  RomaProofAgent pre-roll-proof --out proof.wav")
         print("  RomaProofAgent windows-hotkey-doctor")
         print("  RomaProofAgent windows-hotkey-proof")
+        print("  RomaProofAgent windows-keyboard-hook-doctor")
+        print("  RomaProofAgent windows-keyboard-hook-proof --timeout 15")
         print("  RomaProofAgent windows-paste-doctor")
         print("  RomaProofAgent windows-paste-proof --text \"roma just talk proof\"")
         print("  RomaProofAgent windows-secret-doctor")
