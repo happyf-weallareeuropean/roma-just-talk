@@ -242,6 +242,11 @@ struct RomaCoreChecks {
                 "long terminal discourse filler"
             ),
             (
+                "This works, you know what I mean.",
+                "This works.",
+                "punctuated long terminal discourse filler"
+            ),
+            (
                 "I think this works. I think this works.",
                 "I think this works.",
                 "duplicate short sentence"

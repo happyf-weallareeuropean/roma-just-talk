@@ -653,11 +653,13 @@ public struct RomaTranscriptionOutputFilter {
         }
 
         let prefix = String(text[prefixRange])
-        let trimmedPrefix = prefix.trimmingCharacters(in: .whitespacesAndNewlines)
+        let trimmedPrefix = prefix
+            .trimmingCharacters(in: .whitespacesAndNewlines)
+            .trimmingCharacters(in: softPhrasePunctuation)
+            .trimmingCharacters(in: .whitespacesAndNewlines)
         guard wordCount(in: trimmedPrefix) >= 2,
               let previousWord = previousWord(in: trimmedPrefix),
-              !blockedPreviousWordsForTerminalYouKnow.contains(previousWord),
-              trimmedPrefix.last.map({ !",;:…".contains($0) }) == true else {
+              !blockedPreviousWordsForTerminalYouKnow.contains(previousWord) else {
             return text
         }
 

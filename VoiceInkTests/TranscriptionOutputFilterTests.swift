@@ -37,6 +37,7 @@ struct TranscriptionOutputFilterTests {
         #expect(TranscriptionOutputFilter.filter("This works, you know.") == "This works.")
         #expect(TranscriptionOutputFilter.filter("This works you know.") == "This works.")
         #expect(TranscriptionOutputFilter.filter("This works you know what I mean.") == "This works.")
+        #expect(TranscriptionOutputFilter.filter("This works, you know what I mean.") == "This works.")
         #expect(TranscriptionOutputFilter.filter("I like this model.") == "I like this model.")
         #expect(TranscriptionOutputFilter.filter("This is like magic.") == "This is like magic.")
         #expect(TranscriptionOutputFilter.filter("Do you know this?") == "Do you know this?")
