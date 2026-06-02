@@ -131,6 +131,9 @@ public struct RomaTranscriptionOutputFilter {
     private static let preservedRepeatedWords: Set<String> = [
         "ha", "haha", "no", "ok", "okay", "really", "so", "very", "yes"
     ]
+    private static let preservedRepeatedClauses: Set<String> = [
+        "i know", "you know"
+    ]
     private static let allowedPreviousWordsForSpokenCodeCase: Set<String> = [
         "argument", "branch", "call", "called", "class", "constant", "enum",
         "field", "file", "folder", "function", "identifier", "key", "method",
@@ -386,6 +389,7 @@ public struct RomaTranscriptionOutputFilter {
         filteredText = applySpokenCodeCaseCommands(in: filteredText)
         filteredText = applySpokenMarkdownCommands(in: filteredText)
         filteredText = collapseAdjacentRepeatedWords(in: filteredText)
+        filteredText = collapseRepeatedShortClauses(in: filteredText)
         filteredText = collapseRepeatedShortSentences(in: filteredText)
 
         // Clean whitespace
@@ -2264,6 +2268,50 @@ public struct RomaTranscriptionOutputFilter {
         return collapsedText
     }
 
+    private static func collapseRepeatedShortClauses(in text: String) -> String {
+        guard let regex = try? NSRegularExpression(
+            pattern: #"(?i)(^|(?<=[.!?])\s+|\n)([^,;:.!?\n]{5,120}?)[ \t]*[,;:][ \t]+\2(?=[.!?]|\s|$)"#
+        ) else {
+            return text
+        }
+
+        var collapsedText = text
+        var rewriteCount = 0
+
+        while rewriteCount < 4 {
+            let range = NSRange(collapsedText.startIndex..., in: collapsedText)
+            let matches = regex.matches(in: collapsedText, range: range).reversed()
+            var didRewrite = false
+
+            for match in matches {
+                guard match.numberOfRanges >= 3,
+                      let fullRange = Range(match.range, in: collapsedText),
+                      let prefixRange = Range(match.range(at: 1), in: collapsedText),
+                      let clauseRange = Range(match.range(at: 2), in: collapsedText) else {
+                    continue
+                }
+
+                let clause = String(collapsedText[clauseRange]).trimmingCharacters(in: .whitespacesAndNewlines)
+                let clauseWordCount = wordCount(in: clause)
+                guard clauseWordCount >= 2 && clauseWordCount <= 12,
+                      !preservedRepeatedClauses.contains(normalizedRepeatedClause(clause)) else {
+                    continue
+                }
+
+                collapsedText.replaceSubrange(
+                    fullRange,
+                    with: String(collapsedText[prefixRange]) + clause
+                )
+                didRewrite = true
+            }
+
+            guard didRewrite else { break }
+            rewriteCount += 1
+        }
+
+        return collapsedText
+    }
+
     private static func normalizedRepeatWord(_ token: String) -> String? {
         let trimmedToken = token.trimmingCharacters(
             in: CharacterSet.punctuationCharacters
@@ -2276,6 +2324,13 @@ public struct RomaTranscriptionOutputFilter {
         }
 
         return trimmedToken.lowercased()
+    }
+
+    private static func normalizedRepeatedClause(_ text: String) -> String {
+        text
+            .lowercased()
+            .trimmingCharacters(in: CharacterSet.punctuationCharacters.union(.whitespacesAndNewlines))
+            .replacingOccurrences(of: #"\s+"#, with: " ", options: .regularExpression)
     }
 
     private static func stripBoundaryNoise(from text: String) -> String {

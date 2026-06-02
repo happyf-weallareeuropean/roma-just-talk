@@ -31,7 +31,10 @@ struct TranscriptionOutputFilterTests {
         #expect(TranscriptionOutputFilter.filter("no no this is fine") == "no no this is fine")
         #expect(TranscriptionOutputFilter.filter("I think this works. I think this works.") == "I think this works.")
         #expect(TranscriptionOutputFilter.filter("Ship the model. ship the model.") == "Ship the model.")
+        #expect(TranscriptionOutputFilter.filter("I think this works, I think this works.") == "I think this works.")
+        #expect(TranscriptionOutputFilter.filter("Ship the model; ship the model.") == "Ship the model.")
         #expect(TranscriptionOutputFilter.filter("Okay. Okay.") == "Okay. Okay.")
+        #expect(TranscriptionOutputFilter.filter("I know, I know.") == "I know, I know.")
     }
 
     @Test func insertionPolishUsesCursorContextForMidSentenceFragments() async throws {
