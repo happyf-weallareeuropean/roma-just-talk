@@ -48,6 +48,7 @@ Reusable now:
 - `TranscriptionService` already abstracts file-based STT.
 - Cloud provider code is mostly HTTP + model metadata.
 - `TranscriptionOutputFilter`, formatter, prompt detection, word replacements, and dictionary behavior are product logic.
+- `PCMPreRollBuffer` now lives in `RomaCore` as Foundation-only circular PCM storage.
 - `CoreAudioRecorder` already outputs the right streaming shape: 16 kHz mono Int16 PCM chunks and a WAV file with a 3 second pre-roll buffer.
 
 Not reusable without adapters:
@@ -125,7 +126,7 @@ Minimum Windows MVP permission surface: microphone + shortcut + clipboard/paste.
 
 ## First Implementation Plan
 
-1. Add `RomaCore` as a SwiftPM package or internal package folder. The initial package now exists under `RomaCore/` with portable interfaces for recorder, shortcut, paste, permissions, secrets, settings, and transcription services.
+1. Add `RomaCore` as a SwiftPM package or internal package folder. The initial package now exists under `RomaCore/` with portable interfaces for recorder, shortcut, paste, permissions, secrets, settings, and transcription services, plus shared pre-roll PCM buffering.
 2. Move only pure types and services first:
    - `TranscriptionService`
    - model/provider types that do not import SwiftData/AppKit

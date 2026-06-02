@@ -5,6 +5,7 @@ import RomaCore
 struct RomaCoreChecks {
     static func main() async throws {
         try checkDefaultPreRollContract()
+        try checkPreRollBufferKeepsChronologicalSamples()
         try checkTranscriptionRequestMetadata()
         try await checkFakeAdaptersSatisfyCorePorts()
         try checkSourcesDoNotImportApplePlatformFrameworks()
@@ -18,6 +19,41 @@ struct RomaCoreChecks {
         try require(configuration.outputFormat.sampleRate == 16_000, "sample rate should be 16 kHz")
         try require(configuration.outputFormat.channelCount == 1, "channel count should be mono")
         try require(configuration.outputFormat.sampleFormat == .signedInteger16, "sample format should be Int16")
+    }
+
+    private static func checkPreRollBufferKeepsChronologicalSamples() throws {
+        let buffer = PCMPreRollBuffer(sampleRate: 5, seconds: 1)
+
+        try require(buffer.capacitySamples == 5, "pre-roll capacity should derive from sample rate and seconds")
+        try require(buffer.snapshotSamples().isEmpty, "empty pre-roll buffer should snapshot empty")
+
+        buffer.append(samples: [1, 2, 3])
+        try require(buffer.snapshotSamples() == [1, 2, 3], "pre-roll should preserve initial order")
+
+        buffer.append(samples: [4, 5, 6])
+        try require(
+            buffer.snapshotSamples() == [2, 3, 4, 5, 6],
+            "pre-roll should keep newest samples in chronological order after wrap"
+        )
+        try require(buffer.availableSampleCount == 5, "pre-roll should report capacity when full")
+
+        let data = buffer.snapshotData()
+        try require(data.count == 10, "pre-roll snapshot data should be Int16 PCM")
+        let decodedData = try decodeInt16LittleEndian(data)
+        try require(
+            decodedData == [2, 3, 4, 5, 6],
+            "pre-roll data should round-trip as little-endian Int16"
+        )
+
+        buffer.append(samples: [10, 11, 12, 13, 14, 15, 16])
+        try require(
+            buffer.snapshotSamples() == [12, 13, 14, 15, 16],
+            "oversized append should keep last capacity samples"
+        )
+
+        buffer.clear()
+        try require(buffer.availableSampleCount == 0, "clear should reset available samples")
+        try require(buffer.snapshotSamples().isEmpty, "clear should reset snapshot")
     }
 
     private static func checkTranscriptionRequestMetadata() throws {
@@ -118,6 +154,16 @@ struct RomaCoreChecks {
                     "\(file.path) imports \(bannedImport), which blocks Windows portability"
                 )
             }
+        }
+    }
+
+    private static func decodeInt16LittleEndian(_ data: Data) throws -> [Int16] {
+        try require(data.count.isMultiple(of: MemoryLayout<Int16>.size), "PCM data should be Int16-aligned")
+
+        return stride(from: 0, to: data.count, by: MemoryLayout<Int16>.size).map { offset in
+            let low = UInt16(data[offset])
+            let high = UInt16(data[offset + 1]) << 8
+            return Int16(bitPattern: low | high)
         }
     }
 
