@@ -2,6 +2,7 @@
 
 ## v1.81 - Unreleased
 
+- Added a packaged Windows-agent smoke script for artifact-level doctor/config/dictation proof.
 - Added reusable Windows-agent configuration for endpoint/model/key and dictation defaults.
 - Added a thin `RomaWindowsAgent` entrypoint for Windows dictation through the shared `RomaCore` runtime.
 - Improved final dictation cleanup for mid-sentence fragments, stray bracket wrappers, pause sounds, repeated words, obvious self-corrections, and spoken formatting/punctuation commands.
