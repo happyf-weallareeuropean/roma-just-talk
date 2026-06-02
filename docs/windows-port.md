@@ -51,6 +51,7 @@ Reusable now:
 - `PCMPreRollBuffer` now lives in `RomaCore` as Foundation-only circular PCM storage.
 - `PCM16WAVFile` now lives in `RomaCore` as Foundation-only PCM16 WAV output for proof recordings.
 - `MiniaudioCaptureRecorder` now lives in `RomaCore` and feeds miniaudio capture frames into the shared pre-roll/WAV path.
+- `OpenAICompatibleTranscriptionService` now lives in `RomaCore` as a Foundation-only multipart HTTP proof path for OpenAI-compatible cloud STT.
 - `WindowsHotKey.proofToggle` and the Windows-only `WindowsRegisterHotKeyProof` source define the first `RegisterHotKey` toggle proof path.
 - `WindowsClipboardPayload` and the Windows-only `WindowsPasteProof` source define the first `CF_UNICODETEXT` plus `SendInput` paste proof path.
 - `CoreAudioRecorder` already outputs the right streaming shape: 16 kHz mono Int16 PCM chunks and a WAV file with a 3 second pre-roll buffer, and now reuses `RomaCore.PCMPreRollBuffer`.
@@ -109,7 +110,7 @@ These are the lowest-redo candidates because they map directly to the behavior a
 | --- | --- | --- |
 | Rolling mic capture | miniaudio first, raw WASAPI second | miniaudio is single-file C, supports capture, WASAPI, Core Audio, conversion, and ring buffers. `RomaProofAgent miniaudio-record-proof` is the first source path for this. |
 | Local Whisper | whisper.cpp C API or CLI/DLL | Current app already uses whisper.cpp; upstream supports Windows with MSVC/MinGW and CPU/GPU paths. |
-| Cloud STT | Existing provider logic behind a portable API-key store and vocabulary source | Low native surface; fastest proof if local model packaging is not ready. |
+| Cloud STT | Existing OpenAI-compatible provider logic behind a portable API-key source | Low native surface; fastest proof if local model packaging is not ready. `RomaProofAgent transcribe-proof` is the first source path for this. |
 | Global shortcut | `RegisterHotKey` for toggle proof | Simple system-wide hotkey, enough for MVP toggle mode. `RomaProofAgent windows-hotkey-proof` is the first source path for this. |
 | Push-to-talk keydown/keyup | `WH_KEYBOARD_LL` only after toggle proof | Needed for modifier-only or hold behavior, but higher risk and more AV/security sensitivity. |
 | Paste | Win32 clipboard plus `SendInput` Ctrl+V | Same behavioral model as macOS: put text on clipboard, synthesize paste command, restore clipboard if enabled. `RomaProofAgent windows-paste-proof` is the first source path for this. |
@@ -171,24 +172,26 @@ Useful script options:
 - `-SkipMic` skips real microphone capture when Windows microphone access is not ready.
 - `-RecordSeconds 5` changes the live mic capture window.
 - `-OutputDir C:\tmp\roma-proof` writes proof WAVs somewhere explicit.
+- `-TranscribeEndpoint https://api.groq.com/openai/v1/audio/transcriptions -TranscribeModel whisper-large-v3-turbo -TranscribeApiKeyEnv GROQ_API_KEY` runs the OpenAI-compatible transcription proof.
+- `-TranscribeAudio C:\tmp\proof.wav` uses an existing WAV for transcription, useful with `-SkipMic`.
+- `-TranscribeLanguage en` and `-TranscribePrompt "roma just talk"` pass optional STT hints.
 
 Raw command sequence:
 
 ```powershell
 swift --version
-swift test
+swift build
+swift run RomaCoreChecks
 swift run RomaProofAgent doctor
 swift run RomaProofAgent pre-roll-proof --out core-proof.wav
 swift run RomaProofAgent miniaudio-capture-doctor
 swift run RomaProofAgent miniaudio-record-proof --out mic-proof.wav --seconds 2
+swift run RomaProofAgent transcribe-proof-doctor
+swift run RomaProofAgent transcribe-proof --audio mic-proof.wav --endpoint https://api.groq.com/openai/v1/audio/transcriptions --model whisper-large-v3-turbo --api-key-env GROQ_API_KEY
 swift run RomaProofAgent windows-hotkey-doctor
 swift run RomaProofAgent windows-hotkey-proof
 swift run RomaProofAgent windows-paste-doctor
 swift run RomaProofAgent windows-paste-proof --text "roma just talk proof"
-roma-agent.exe doctor
-roma-agent.exe record-proof --seconds-before-hotkey 2 --seconds-after-hotkey 2 --out proof.wav
-roma-agent.exe transcribe-proof --audio proof.wav
-roma-agent.exe paste-proof --text "roma just talk proof"
 ```
 
 Manual proof:

@@ -2,6 +2,12 @@ param(
     [string]$OutputDir = "$PSScriptRoot\..\proof-artifacts\windows",
     [int]$RecordSeconds = 2,
     [string]$PasteText = "roma just talk proof",
+    [string]$TranscribeAudio = "",
+    [string]$TranscribeEndpoint = "",
+    [string]$TranscribeModel = "",
+    [string]$TranscribeApiKeyEnv = "OPENAI_API_KEY",
+    [string]$TranscribeLanguage = "",
+    [string]$TranscribePrompt = "",
     [switch]$SkipMic,
     [switch]$RunInteractiveHotkey,
     [switch]$RunInteractivePaste
@@ -74,15 +80,50 @@ try {
         swift run RomaProofAgent miniaudio-capture-doctor
     }
 
+    $micProof = Join-Path $OutputDir "mic-proof.wav"
     if ($SkipMic) {
         Write-Host ""
         Write-Host "== miniaudio mic proof skipped =="
     } else {
-        $micProof = Join-Path $OutputDir "mic-proof.wav"
         Invoke-Step "miniaudio mic proof" {
             swift run RomaProofAgent miniaudio-record-proof --out $micProof --seconds $RecordSeconds
             Assert-FileWithBytes -Path $micProof
         }
+    }
+
+    Invoke-Step "transcription doctor" {
+        swift run RomaProofAgent transcribe-proof-doctor
+    }
+
+    $transcribeAudioPath = $TranscribeAudio
+    if ([string]::IsNullOrWhiteSpace($transcribeAudioPath) -and !$SkipMic) {
+        $transcribeAudioPath = $micProof
+    }
+
+    if (![string]::IsNullOrWhiteSpace($TranscribeEndpoint) -and
+        ![string]::IsNullOrWhiteSpace($TranscribeModel) -and
+        ![string]::IsNullOrWhiteSpace($TranscribeApiKeyEnv) -and
+        ![string]::IsNullOrWhiteSpace($transcribeAudioPath)) {
+        Invoke-Step "transcription proof" {
+            $transcribeArgs = @(
+                "run", "RomaProofAgent", "transcribe-proof",
+                "--audio", $transcribeAudioPath,
+                "--endpoint", $TranscribeEndpoint,
+                "--model", $TranscribeModel,
+                "--api-key-env", $TranscribeApiKeyEnv
+            )
+            if (![string]::IsNullOrWhiteSpace($TranscribeLanguage)) {
+                $transcribeArgs += @("--language", $TranscribeLanguage)
+            }
+            if (![string]::IsNullOrWhiteSpace($TranscribePrompt)) {
+                $transcribeArgs += @("--prompt", $TranscribePrompt)
+            }
+            swift @transcribeArgs
+        }
+    } else {
+        Write-Host ""
+        Write-Host "== transcription proof skipped =="
+        Write-Host "pass -TranscribeEndpoint, -TranscribeModel, and -TranscribeApiKeyEnv; use -TranscribeAudio when -SkipMic is set"
     }
 
     Invoke-Step "windows hotkey doctor" {

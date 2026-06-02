@@ -8,6 +8,7 @@ struct RomaCoreChecks {
         try checkPreRollBufferKeepsChronologicalSamples()
         try checkPCM16WAVFileWritesCanonicalHeader()
         try checkMiniaudioRecorderUsesSpeechPCMContract()
+        try checkOpenAICompatibleMultipartBody()
         try checkWindowsHotKeyProofDescriptor()
         try checkWindowsClipboardPayloadIsCFUnicodeText()
         try checkTranscriptionRequestMetadata()
@@ -108,6 +109,33 @@ struct RomaCoreChecks {
             recorder.preRollConfiguration.outputFormat == .speechPCM16kMono,
             "miniaudio recorder should capture the shared speech PCM contract"
         )
+    }
+
+    private static func checkOpenAICompatibleMultipartBody() throws {
+        let audioData = Data([0x52, 0x49, 0x46, 0x46])
+        let multipart = OpenAICompatibleMultipartRequestBuilder.makeBody(
+            audioData: audioData,
+            fileName: "proof.wav",
+            modelName: "whisper-large-v3-turbo",
+            language: "en",
+            prompt: "roma vocabulary",
+            boundary: "Boundary-RomaProof"
+        )
+        let body = String(decoding: multipart.data, as: UTF8.self)
+
+        try require(
+            multipart.contentType == "multipart/form-data; boundary=Boundary-RomaProof",
+            "multipart content type should include the boundary"
+        )
+        try require(body.contains("name=\"file\"; filename=\"proof.wav\""), "multipart should include the audio file field")
+        try require(body.contains("Content-Type: audio/wav"), "multipart should mark the audio as WAV")
+        try require(body.contains("name=\"model\"\r\n\r\nwhisper-large-v3-turbo"), "multipart should include model")
+        try require(body.contains("name=\"response_format\"\r\n\r\njson"), "multipart should request JSON response")
+        try require(body.contains("name=\"temperature\"\r\n\r\n0"), "multipart should keep deterministic temperature")
+        try require(body.contains("name=\"language\"\r\n\r\nen"), "multipart should include explicit language")
+        try require(body.contains("name=\"prompt\"\r\n\r\nroma vocabulary"), "multipart should include prompt")
+        try require(multipart.data.range(of: audioData) != nil, "multipart should preserve raw audio bytes")
+        try require(body.hasSuffix("--Boundary-RomaProof--\r\n"), "multipart should close the boundary")
     }
 
     private static func checkWindowsHotKeyProofDescriptor() throws {

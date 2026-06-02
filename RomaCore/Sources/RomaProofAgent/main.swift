@@ -23,6 +23,10 @@ struct RomaProofAgent {
             printMiniaudioCaptureDoctor()
         case "miniaudio-record-proof":
             try await runMiniaudioRecordProof(arguments: Array(arguments.dropFirst()))
+        case "transcribe-proof-doctor":
+            printTranscribeProofDoctor()
+        case "transcribe-proof":
+            try await runTranscribeProof(arguments: Array(arguments.dropFirst()))
         default:
             printUsage()
         }
@@ -38,6 +42,7 @@ struct RomaProofAgent {
         print("windows_register_hotkey_adapter_source=true")
         print("windows_paste_adapter_source=true")
         print("miniaudio_capture_adapter_source=true")
+        print("openai_compatible_transcription_source=true")
     }
 
     private static func printWindowsHotKeyDoctor() {
@@ -112,6 +117,16 @@ struct RomaProofAgent {
         print("requires_microphone_access=true")
     }
 
+    private static func printTranscribeProofDoctor() {
+        print("platform=\(platformName)")
+        print("transcription_client=openai-compatible")
+        print("request_format=multipart/form-data")
+        print("audio_field=file")
+        print("response_field=text")
+        print("api_key_source=environment")
+        print("network_required=true")
+    }
+
     private static func runMiniaudioRecordProof(arguments: [String]) async throws {
         let outputURL = URL(fileURLWithPath: try value(after: "--out", in: arguments))
         let seconds = try doubleValue(after: "--seconds", in: arguments, default: 2)
@@ -153,12 +168,73 @@ struct RomaProofAgent {
         print("channels=\(format.channelCount)")
     }
 
+    private static func runTranscribeProof(arguments: [String]) async throws {
+        let audioURL = URL(fileURLWithPath: try value(after: "--audio", in: arguments))
+        let endpointText = try value(after: "--endpoint", in: arguments)
+        let modelName = try value(after: "--model", in: arguments)
+        let apiKeyEnvironmentName = try value(after: "--api-key-env", in: arguments)
+
+        guard isValidEnvironmentName(apiKeyEnvironmentName) else {
+            throw AgentError.invalidOptionValue("--api-key-env")
+        }
+        guard let endpointURL = URL(string: endpointText), endpointURL.scheme != nil else {
+            throw AgentError.invalidOptionValue("--endpoint")
+        }
+        guard let apiKey = ProcessInfo.processInfo.environment[apiKeyEnvironmentName],
+              !apiKey.isEmpty else {
+            throw AgentError.missingEnvironmentValue(apiKeyEnvironmentName)
+        }
+
+        let service = OpenAICompatibleTranscriptionService(
+            configuration: OpenAICompatibleTranscriptionConfiguration(
+                endpointURL: endpointURL,
+                apiKey: apiKey
+            )
+        )
+        let model = TranscriptionModelDescriptor(
+            name: modelName,
+            displayName: modelName,
+            provider: .custom
+        )
+        let request = TranscriptionRequest(
+            audioURL: audioURL,
+            model: model,
+            language: optionalValue(after: "--language", in: arguments),
+            prompt: optionalValue(after: "--prompt", in: arguments)
+        )
+        let result = try await service.transcribe(request)
+
+        print("provider=openai-compatible")
+        print("endpoint=\(endpointURL.absoluteString)")
+        print("model=\(modelName)")
+        print("api_key_env=\(apiKeyEnvironmentName)")
+        print("audio=\(audioURL.path)")
+        if let language = result.language {
+            print("language=\(language)")
+        }
+        if let duration = result.durationSeconds {
+            print("duration_seconds=\(String(format: "%.3f", duration))")
+        }
+        print("transcript_length=\(result.text.count)")
+        print("transcript_text=\(oneLine(result.text))")
+    }
+
     private static func value(after option: String, in arguments: [String]) throws -> String {
         guard let index = arguments.firstIndex(of: option),
               arguments.indices.contains(index + 1) else {
             throw AgentError.missingOption(option)
         }
         return arguments[index + 1]
+    }
+
+    private static func optionalValue(after option: String, in arguments: [String]) -> String? {
+        guard let index = arguments.firstIndex(of: option),
+              arguments.indices.contains(index + 1) else {
+            return nil
+        }
+
+        let trimmed = arguments[index + 1].trimmingCharacters(in: .whitespacesAndNewlines)
+        return trimmed.isEmpty ? nil : trimmed
     }
 
     private static func doubleValue(after option: String, in arguments: [String], default defaultValue: Double) throws -> Double {
@@ -196,6 +272,8 @@ struct RomaProofAgent {
         print("  RomaProofAgent windows-paste-proof --text \"roma just talk proof\"")
         print("  RomaProofAgent miniaudio-capture-doctor")
         print("  RomaProofAgent miniaudio-record-proof --out proof.wav --seconds 2")
+        print("  RomaProofAgent transcribe-proof-doctor")
+        print("  RomaProofAgent transcribe-proof --audio proof.wav --endpoint https://api.example.com/v1/audio/transcriptions --model whisper-large-v3-turbo --api-key-env OPENAI_API_KEY")
     }
 
     private static var platformName: String {
@@ -209,11 +287,29 @@ struct RomaProofAgent {
         return "unknown"
         #endif
     }
+
+    private static func isValidEnvironmentName(_ value: String) -> Bool {
+        guard let first = value.unicodeScalars.first,
+              first == "_" || CharacterSet.letters.contains(first) else {
+            return false
+        }
+
+        return value.unicodeScalars.dropFirst().allSatisfy {
+            $0 == "_" || CharacterSet.alphanumerics.contains($0)
+        }
+    }
+
+    private static func oneLine(_ text: String) -> String {
+        text
+            .split(whereSeparator: \.isNewline)
+            .joined(separator: " ")
+    }
 }
 
 private enum AgentError: Error, CustomStringConvertible {
     case missingOption(String)
     case invalidOptionValue(String)
+    case missingEnvironmentValue(String)
     case unsupportedPlatform(String)
 
     var description: String {
@@ -222,6 +318,8 @@ private enum AgentError: Error, CustomStringConvertible {
             return "missing required option \(option)"
         case .invalidOptionValue(let option):
             return "invalid value for option \(option)"
+        case .missingEnvironmentValue(let name):
+            return "missing environment value \(name)"
         case .unsupportedPlatform(let message):
             return message
         }
