@@ -18,7 +18,8 @@
 - Collapsed obvious repeated short clauses from dictated output.
 - Collapsed obvious repeated short phrases from dictated output.
 - Expanded bounded self-correction cleanup for "never mind", "no sorry", and "or rather" corrections.
-- Added bounded "scratch that" and "delete that" cleanup for removing the previous dictated phrase.
+- Added bounded "replace that with" and "change that to" cleanup for correcting the previous dictated phrase.
+- Added bounded "scratch/undo/strike/delete that" cleanup for removing the previous dictated phrase.
 - Added spoken quote and parenthesis formatting commands.
 - Added spoken square bracket and brace formatting commands.
 - Preserved dictated quote and parenthesis fragments through final insertion cleanup.
