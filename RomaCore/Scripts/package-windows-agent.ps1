@@ -138,6 +138,8 @@ try {
     $agentOutput = Join-Path $OutputDir "RomaWindowsAgent.exe"
     $smokeScriptSource = Join-Path $PSScriptRoot "smoke-windows-agent.ps1"
     $smokeScriptOutput = Join-Path $OutputDir "smoke-windows-agent.ps1"
+    $runScriptSource = Join-Path $PSScriptRoot "run-windows-agent.ps1"
+    $runScriptOutput = Join-Path $OutputDir "run-windows-agent.ps1"
     $installScriptSource = Join-Path $PSScriptRoot "install-windows-agent.ps1"
     $installScriptOutput = Join-Path $OutputDir "install-windows-agent.ps1"
     $configPath = Join-Path $OutputDir "sample-windows-agent.json"
@@ -160,6 +162,8 @@ try {
 
         Copy-Item -LiteralPath $smokeScriptSource -Destination $smokeScriptOutput -Force
         Write-Host "smoke_script=$smokeScriptOutput"
+        Copy-Item -LiteralPath $runScriptSource -Destination $runScriptOutput -Force
+        Write-Host "run_script=$runScriptOutput"
         Copy-Item -LiteralPath $installScriptSource -Destination $installScriptOutput -Force
         Write-Host "install_script=$installScriptOutput"
     }
@@ -193,6 +197,7 @@ try {
         "output=$agentOutput",
         "sample_config=$configPath",
         "smoke_script=$smokeScriptOutput",
+        "run_script=$runScriptOutput",
         "install_script=$installScriptOutput",
         "swift_runtime_dir=$($swiftRuntime.Directory)",
         "swift_runtime_dlls=$($swiftRuntime.DllCount)",

@@ -16,7 +16,10 @@ param(
     [int]$RecordSeconds = 2,
     [switch]$PasteDictation,
     [switch]$RunDictation,
-    [switch]$SkipSmoke
+    [switch]$SkipSmoke,
+    [switch]$CreateShortcut,
+    [string]$ShortcutDir = "",
+    [string]$ShortcutName = "Roma Just Talk Agent.lnk"
 )
 
 $ErrorActionPreference = "Stop"
@@ -68,11 +71,15 @@ if ([string]::IsNullOrWhiteSpace($InstallDir)) {
 }
 $InstallDir = Resolve-FullPath -Path $InstallDir
 
+$hasExplicitEndpoint = $PSBoundParameters.ContainsKey("Endpoint")
+$hasExplicitModel = $PSBoundParameters.ContainsKey("Model")
+
 if ([string]::IsNullOrWhiteSpace($ConfigPath)) {
-    if (![string]::IsNullOrWhiteSpace($env:APPDATA)) {
+    if (($hasExplicitEndpoint -or $hasExplicitModel -or $RunDictation) -and
+        ![string]::IsNullOrWhiteSpace($env:APPDATA)) {
         $ConfigPath = Join-Path $env:APPDATA "roma-just-talk\windows-agent.json"
     } else {
-        $ConfigPath = Join-Path $InstallDir "windows-agent.json"
+        $ConfigPath = Join-Path $InstallDir "smoke\windows-agent-smoke.json"
     }
 }
 $ConfigPath = Resolve-FullPath -Path $ConfigPath
@@ -87,8 +94,10 @@ if (![string]::IsNullOrWhiteSpace($SecretDir)) {
 
 $agentSource = Join-Path $PackageDir "RomaWindowsAgent.exe"
 $smokeSource = Join-Path $PackageDir "smoke-windows-agent.ps1"
+$runSource = Join-Path $PackageDir "run-windows-agent.ps1"
 Require-File -Path $agentSource
 Require-File -Path $smokeSource
+Require-File -Path $runSource
 
 Invoke-Step "copy package files" {
     New-Item -ItemType Directory -Force -Path $InstallDir | Out-Null
@@ -97,6 +106,7 @@ Invoke-Step "copy package files" {
         "RomaWindowsAgent.exe",
         "RomaWindowsAgent.pdb",
         "smoke-windows-agent.ps1",
+        "run-windows-agent.ps1",
         "install-windows-agent.ps1",
         "manifest.txt",
         "sample-windows-agent.json"
@@ -174,9 +184,43 @@ if (!$SkipSmoke) {
     }
 }
 
+if ($CreateShortcut) {
+    Invoke-Step "create user shortcut" {
+        if ([System.Environment]::OSVersion.Platform -ne [System.PlatformID]::Win32NT) {
+            throw "CreateShortcut is only available on Windows"
+        }
+        if ([string]::IsNullOrWhiteSpace($ShortcutDir)) {
+            $programs = [System.Environment]::GetFolderPath("Programs")
+            if ([string]::IsNullOrWhiteSpace($programs)) {
+                throw "Start Menu Programs folder was not found"
+            }
+            $ShortcutDir = Join-Path $programs "Roma Just Talk"
+        }
+        $ShortcutDir = Resolve-FullPath -Path $ShortcutDir
+        New-Item -ItemType Directory -Force -Path $ShortcutDir | Out-Null
+
+        $shortcutPath = Join-Path $ShortcutDir $ShortcutName
+        $runScript = Join-Path $InstallDir "run-windows-agent.ps1"
+        Require-File -Path $runScript
+
+        $shell = New-Object -ComObject WScript.Shell
+        $shortcut = $shell.CreateShortcut($shortcutPath)
+        $shortcut.TargetPath = "powershell.exe"
+        $shortcut.Arguments = "-NoProfile -ExecutionPolicy Bypass -File `"$runScript`""
+        $shortcut.WorkingDirectory = $InstallDir
+        $shortcut.Description = "Start roma-just-talk Windows dictation agent"
+        $shortcut.Save()
+
+        Require-File -Path $shortcutPath
+        Write-Host "shortcut=$shortcutPath"
+    }
+}
+
 Write-Host ""
 $installedAgent = Join-Path $InstallDir "RomaWindowsAgent.exe"
 $installedSmoke = Join-Path $InstallDir "smoke-windows-agent.ps1"
+$installedRun = Join-Path $InstallDir "run-windows-agent.ps1"
 Write-Host "installed_agent=$installedAgent"
 Write-Host "installed_smoke=$installedSmoke"
+Write-Host "installed_run=$installedRun"
 Write-Host "config=$ConfigPath"
