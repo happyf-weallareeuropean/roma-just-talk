@@ -187,7 +187,7 @@ CI proof:
 
 - `.github/workflows/romacore.yml` builds `RomaCore` on macOS and Windows.
 - The Windows job verifies Visual Studio C++ tools, installs the official Swift toolchain with `winget install --id Swift.Toolchain`, then runs `windows-proof.ps1 -SkipMic`.
-- CI is noninteractive, so it proves Windows compilation plus pre-roll/WAV/transcription/hotkey/paste doctor paths and DPAPI secret round-trip. It does not prove real microphone permission, real hotkey delivery, or paste into Notepad.
+- CI is noninteractive, so it proves Windows compilation, PowerShell parse validity, pre-roll/WAV output, DPAPI secret round-trip, stored-key transcription against a local mock STT endpoint, and hotkey/paste doctor paths. It does not prove real microphone permission, real hotkey delivery, or paste into Notepad.
 
 Raw command sequence:
 

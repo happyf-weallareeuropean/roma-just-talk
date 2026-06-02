@@ -111,8 +111,105 @@ jobs:
       - name: Show Swift version
         run: swift --version
 
+      - name: Parse Windows proof script
+        run: |
+          $errors = $null
+          [System.Management.Automation.PSParser]::Tokenize(
+            (Get-Content -Raw .\Scripts\windows-proof.ps1),
+            [ref]$errors
+          ) | Out-Null
+          if ($errors.Count -gt 0) {
+            $errors | Format-List | Out-String | Write-Host
+            throw "PowerShell parse errors in windows-proof.ps1"
+          }
+
       - name: Run noninteractive Windows proof
-        run: .\Scripts\windows-proof.ps1 -SkipMic -OutputDir "$env:RUNNER_TEMP\roma-proof"
+        run: |
+          $env:ROMA_MOCK_STT_KEY = "roma-mock-ci-key"
+          $proofDir = "$env:RUNNER_TEMP\roma-proof"
+          $mockPort = 48765
+          $mockJob = Start-Job -ScriptBlock {
+            param([int]$Port)
+
+            $listener = [System.Net.Sockets.TcpListener]::new(
+              [System.Net.IPAddress]::Parse("127.0.0.1"),
+              $Port
+            )
+            $listener.Start()
+            try {
+              $client = $listener.AcceptTcpClient()
+              try {
+                $stream = $client.GetStream()
+                $buffer = [byte[]]::new(8192)
+                $requestBytes = [System.Collections.Generic.List[byte]]::new()
+                $contentLength = 0
+                $bodyBytesRead = 0
+                $sawHeaders = $false
+
+                while ($true) {
+                  $read = $stream.Read($buffer, 0, $buffer.Length)
+                  if ($read -le 0) {
+                    break
+                  }
+
+                  for ($index = 0; $index -lt $read; $index++) {
+                    $requestBytes.Add($buffer[$index])
+                  }
+
+                  $requestText = [System.Text.Encoding]::ASCII.GetString($requestBytes.ToArray())
+                  $headerEnd = $requestText.IndexOf("`r`n`r`n")
+                  if (!$sawHeaders -and $headerEnd -ge 0) {
+                    $sawHeaders = $true
+                    $headers = $requestText.Substring(0, $headerEnd)
+                    $match = [regex]::Match($headers, "Content-Length:\s*(\d+)", "IgnoreCase")
+                    if ($match.Success) {
+                      $contentLength = [int]$match.Groups[1].Value
+                    }
+                    $bodyBytesRead = $requestBytes.Count - ($headerEnd + 4)
+                  } elseif ($sawHeaders) {
+                    $bodyBytesRead += $read
+                  }
+
+                  if ($sawHeaders -and $bodyBytesRead -ge $contentLength) {
+                    break
+                  }
+                }
+
+                $body = '{"text":"roma just talk proof","language":"en","duration":1.25}'
+                $bodyBytes = [System.Text.Encoding]::UTF8.GetBytes($body)
+                $headers = "HTTP/1.1 200 OK`r`nContent-Type: application/json`r`nContent-Length: $($bodyBytes.Length)`r`nConnection: close`r`n`r`n"
+                $headerBytes = [System.Text.Encoding]::ASCII.GetBytes($headers)
+                $stream.Write($headerBytes, 0, $headerBytes.Length)
+                $stream.Write($bodyBytes, 0, $bodyBytes.Length)
+                $stream.Flush()
+              } finally {
+                $client.Close()
+              }
+            } finally {
+              $listener.Stop()
+            }
+          } -ArgumentList $mockPort
+
+          Start-Sleep -Seconds 1
+          try {
+            .\Scripts\windows-proof.ps1 `
+              -SkipMic `
+              -OutputDir $proofDir `
+              -TranscribeAudio "$proofDir\core-proof.wav" `
+              -TranscribeEndpoint "http://127.0.0.1:$mockPort/v1/audio/transcriptions" `
+              -TranscribeModel "mock-whisper" `
+              -TranscribeApiKeyEnv "ROMA_MOCK_STT_KEY" `
+              -TranscribeApiKeyName "ci-mock"
+          } finally {
+            if ($mockJob.State -eq "Running") {
+              Wait-Job $mockJob -Timeout 10 | Out-Null
+            }
+            if ($mockJob.State -eq "Running") {
+              Stop-Job $mockJob
+            }
+            Receive-Job $mockJob -ErrorAction SilentlyContinue
+            Remove-Job $mockJob -Force
+          }
 
       - name: Upload proof artifacts
         uses: actions/upload-artifact@v4
