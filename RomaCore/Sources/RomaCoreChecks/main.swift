@@ -8,6 +8,7 @@ struct RomaCoreChecks {
         try checkPreRollBufferKeepsChronologicalSamples()
         try checkPCM16WAVFileWritesCanonicalHeader()
         try checkWindowsHotKeyProofDescriptor()
+        try checkWindowsClipboardPayloadIsCFUnicodeText()
         try checkTranscriptionRequestMetadata()
         try await checkFakeAdaptersSatisfyCorePorts()
         try checkSourcesDoNotImportApplePlatformFrameworks()
@@ -108,6 +109,20 @@ struct RomaCoreChecks {
         try require(hotKey.modifiers.rawValue == 0x4006, "proof hotkey should map to Ctrl+Shift+MOD_NOREPEAT")
         try require(hotKey.virtualKeyCode == 0x52, "proof hotkey should use virtual-key R")
         try require(hotKey.displayName == "Ctrl+Shift+R", "proof hotkey display name should be readable")
+    }
+
+    private static func checkWindowsClipboardPayloadIsCFUnicodeText() throws {
+        let data = WindowsClipboardPayload.cfUnicodeTextData(for: "roma proof")
+
+        try require(data.count == 22, "CF_UNICODETEXT should include UTF-16LE bytes plus null terminator")
+        try require(try readUInt16LittleEndian(data, offset: 0) == 0x0072, "payload should start with r")
+        try require(try readUInt16LittleEndian(data, offset: 2) == 0x006F, "payload should encode o")
+        try require(try readUInt16LittleEndian(data, offset: data.count - 2) == 0, "payload should be null terminated")
+        let decodedCodeUnits = try decodeUTF16LittleEndian(data)
+        try require(
+            Array(decodedCodeUnits.dropLast()) == Array("roma proof".utf16),
+            "payload should round-trip the original UTF-16 code units"
+        )
     }
 
     private static func checkTranscriptionRequestMetadata() throws {
@@ -224,6 +239,14 @@ struct RomaCoreChecks {
         try require(offset + 2 <= data.count, "UInt16 read should stay inside data")
 
         return UInt16(data[offset]) | (UInt16(data[offset + 1]) << 8)
+    }
+
+    private static func decodeUTF16LittleEndian(_ data: Data) throws -> [UInt16] {
+        try require(data.count.isMultiple(of: MemoryLayout<UInt16>.size), "UTF-16 data should be UInt16-aligned")
+
+        return try stride(from: 0, to: data.count, by: MemoryLayout<UInt16>.size).map { offset in
+            try readUInt16LittleEndian(data, offset: offset)
+        }
     }
 
     private static func readUInt32LittleEndian(_ data: Data, offset: Int) throws -> UInt32 {

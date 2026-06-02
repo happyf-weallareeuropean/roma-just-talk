@@ -15,6 +15,10 @@ struct RomaProofAgent {
             printWindowsHotKeyDoctor()
         case "windows-hotkey-proof":
             try runWindowsHotKeyProof()
+        case "windows-paste-doctor":
+            printWindowsPasteDoctor()
+        case "windows-paste-proof":
+            try runWindowsPasteProof(arguments: Array(arguments.dropFirst()))
         default:
             printUsage()
         }
@@ -28,6 +32,7 @@ struct RomaProofAgent {
         print("wav_writer=true")
         print("native_windows_adapters=false")
         print("windows_register_hotkey_adapter_source=true")
+        print("windows_paste_adapter_source=true")
     }
 
     private static func printWindowsHotKeyDoctor() {
@@ -56,6 +61,35 @@ struct RomaProofAgent {
         print("hotkey_received=true")
         #else
         throw AgentError.unsupportedPlatform("windows-hotkey-proof requires Windows")
+        #endif
+    }
+
+    private static func printWindowsPasteDoctor() {
+        let proofText = "roma just talk proof"
+        let payload = WindowsClipboardPayload.cfUnicodeTextData(for: proofText)
+        print("platform=\(platformName)")
+        print("clipboard_format=CF_UNICODETEXT")
+        print("clipboard_payload_bytes=\(payload.count)")
+        print("input_api=SendInput")
+        print("paste_chord=Ctrl+V")
+        print("permission_prompt=false")
+        print("integrity_limit=equal_or_lower")
+        #if os(Windows)
+        print("windows_paste_runtime=true")
+        #else
+        print("windows_paste_runtime=false")
+        #endif
+    }
+
+    private static func runWindowsPasteProof(arguments: [String]) throws {
+        let text = try value(after: "--text", in: arguments)
+
+        #if os(Windows)
+        try WindowsPasteProof.pasteText(text)
+        print("paste_sent=true")
+        print("text_utf16_bytes=\(WindowsClipboardPayload.cfUnicodeTextData(for: text).count)")
+        #else
+        throw AgentError.unsupportedPlatform("windows-paste-proof requires Windows")
         #endif
     }
 
@@ -104,6 +138,8 @@ struct RomaProofAgent {
         print("  RomaProofAgent pre-roll-proof --out proof.wav")
         print("  RomaProofAgent windows-hotkey-doctor")
         print("  RomaProofAgent windows-hotkey-proof")
+        print("  RomaProofAgent windows-paste-doctor")
+        print("  RomaProofAgent windows-paste-proof --text \"roma just talk proof\"")
     }
 
     private static var platformName: String {
