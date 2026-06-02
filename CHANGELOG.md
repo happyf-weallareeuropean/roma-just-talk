@@ -2,6 +2,7 @@
 
 ## v1.81 - Unreleased
 
+- Required `swiftCore.dll` in the packaged Windows agent artifact on Windows.
 - Copied Swift runtime DLLs into the Windows agent artifact when the runtime is available on `PATH`.
 - Added a packaged Windows-agent smoke script for artifact-level doctor/config/dictation proof.
 - Added reusable Windows-agent configuration for endpoint/model/key and dictation defaults.
@@ -15,6 +16,7 @@
 - Collapsed obvious repeated short clauses from dictated output.
 - Collapsed obvious repeated short phrases from dictated output.
 - Expanded bounded self-correction cleanup for "never mind", "no sorry", and "or rather" corrections.
+- Added bounded "scratch that" and "delete that" cleanup for removing the previous dictated phrase.
 - Added spoken quote and parenthesis formatting commands.
 - Added spoken square bracket and brace formatting commands.
 - Preserved dictated quote and parenthesis fragments through final insertion cleanup.
