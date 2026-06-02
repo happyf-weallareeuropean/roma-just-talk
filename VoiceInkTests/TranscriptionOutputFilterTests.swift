@@ -5,15 +5,22 @@ import Testing
 struct TranscriptionOutputFilterTests {
     @Test func transcriptionFilterCleansPauseNoiseAndRepeatedWords() async throws {
         let oldRemoveFillerWords = UserDefaults.standard.object(forKey: "RemoveFillerWords")
+        let oldCleanupLevel = UserDefaults.standard.object(forKey: TranscriptionCleanupLevel.userDefaultsKey)
         defer {
             if let oldRemoveFillerWords {
                 UserDefaults.standard.set(oldRemoveFillerWords, forKey: "RemoveFillerWords")
             } else {
                 UserDefaults.standard.removeObject(forKey: "RemoveFillerWords")
             }
+            if let oldCleanupLevel {
+                UserDefaults.standard.set(oldCleanupLevel, forKey: TranscriptionCleanupLevel.userDefaultsKey)
+            } else {
+                UserDefaults.standard.removeObject(forKey: TranscriptionCleanupLevel.userDefaultsKey)
+            }
         }
 
         UserDefaults.standard.set(true, forKey: "RemoveFillerWords")
+        TranscriptionCleanupLevel.setCurrent(.polished)
 
         #expect(TranscriptionOutputFilter.filter("[Model.]") == "Model.")
         #expect(TranscriptionOutputFilter.filter("[inaudible]") == "")
@@ -38,6 +45,7 @@ struct TranscriptionOutputFilterTests {
     }
 
     @Test func insertionPolishUsesCursorContextForMidSentenceFragments() async throws {
+        TranscriptionCleanupLevel.setCurrent(.polished)
         let midSentenceContext = TranscriptionOutputFilter.TextInsertionContext(precedingText: "...so this")
         let sentenceStartContext = TranscriptionOutputFilter.TextInsertionContext(precedingText: "Done. ")
         let questionContext = TranscriptionOutputFilter.TextInsertionContext(precedingText: "Done?")
@@ -75,7 +83,40 @@ struct TranscriptionOutputFilterTests {
         #expect(TranscriptionOutputFilter.applyInsertionPolish("VoiceInk.", context: nil) == "VoiceInk")
     }
 
+    @Test func transcriptionFilterRespectsCleanupLevels() async throws {
+        let oldRemoveFillerWords = UserDefaults.standard.object(forKey: "RemoveFillerWords")
+        let oldCleanupLevel = UserDefaults.standard.object(forKey: TranscriptionCleanupLevel.userDefaultsKey)
+        defer {
+            if let oldRemoveFillerWords {
+                UserDefaults.standard.set(oldRemoveFillerWords, forKey: "RemoveFillerWords")
+            } else {
+                UserDefaults.standard.removeObject(forKey: "RemoveFillerWords")
+            }
+            if let oldCleanupLevel {
+                UserDefaults.standard.set(oldCleanupLevel, forKey: TranscriptionCleanupLevel.userDefaultsKey)
+            } else {
+                UserDefaults.standard.removeObject(forKey: TranscriptionCleanupLevel.userDefaultsKey)
+            }
+        }
+
+        UserDefaults.standard.set(true, forKey: "RemoveFillerWords")
+
+        TranscriptionCleanupLevel.setCurrent(.raw)
+        #expect(TranscriptionOutputFilter.filter("hmm... Hello comma world. Hello comma world.") == "hmm... Hello comma world. Hello comma world.")
+
+        TranscriptionCleanupLevel.setCurrent(.light)
+        #expect(TranscriptionOutputFilter.filter("hmm... Hello comma world.") == "hmm... Hello, world.")
+        #expect(TranscriptionOutputFilter.filter("Let's meet at two, wait no, three.") == "Let's meet at two, wait no, three.")
+        #expect(TranscriptionOutputFilter.filter("I think this works, I think this works.") == "I think this works, I think this works.")
+
+        TranscriptionCleanupLevel.setCurrent(.polished)
+        #expect(TranscriptionOutputFilter.filter("hmm... Hello comma world.") == "Hello, world.")
+        #expect(TranscriptionOutputFilter.filter("Let's meet at two, wait no, three.") == "Let's meet at three.")
+        #expect(TranscriptionOutputFilter.filter("I think this works, I think this works.") == "I think this works.")
+    }
+
     @Test func transcriptionFilterAppliesBoundedBacktrackingCorrections() async throws {
+        TranscriptionCleanupLevel.setCurrent(.polished)
         #expect(TranscriptionOutputFilter.filter("Let's meet at two, wait no, three.") == "Let's meet at three.")
         #expect(TranscriptionOutputFilter.filter("The meeting is on Tuesday, sorry not that, actually Wednesday.") == "The meeting is on Wednesday.")
         #expect(TranscriptionOutputFilter.filter("Use model wait no models.") == "Use models.")
@@ -89,6 +130,7 @@ struct TranscriptionOutputFilterTests {
     }
 
     @Test func transcriptionFilterAppliesSpokenFormattingCommands() async throws {
+        TranscriptionCleanupLevel.setCurrent(.polished)
         #expect(TranscriptionOutputFilter.filter("First line new line second line.") == "First line\nsecond line.")
         #expect(TranscriptionOutputFilter.filter("Intro new paragraph Details.") == "Intro\n\nDetails.")
         #expect(TranscriptionOutputFilter.filter("Todo new line bullet point first item new line bullet point second item.") == "Todo\n- first item\n- second item")
@@ -116,6 +158,7 @@ struct TranscriptionOutputFilterTests {
     }
 
     @Test func transcriptionFilterAppliesSpokenEnclosureCommands() async throws {
+        TranscriptionCleanupLevel.setCurrent(.polished)
         #expect(TranscriptionOutputFilter.filter("She said open quote hello close quote.") == "She said \"hello\".")
         #expect(TranscriptionOutputFilter.filter("Open quote hello comma world close quote.") == "\"hello, world\".")
         #expect(TranscriptionOutputFilter.filter("Use open parenthesis model close parenthesis now.") == "Use (model) now.")
@@ -125,6 +168,7 @@ struct TranscriptionOutputFilterTests {
     }
 
     @Test func transcriptionFilterAppliesGuardedSpokenSymbolCommands() async throws {
+        TranscriptionCleanupLevel.setCurrent(.polished)
         #expect(TranscriptionOutputFilter.filter("Use api slash users.") == "Use api/users.")
         #expect(TranscriptionOutputFilter.filter("Use model hyphen beta.") == "Use model-beta.")
         #expect(TranscriptionOutputFilter.filter("Use path backslash temp.") == "Use path\\temp.")
@@ -149,6 +193,7 @@ struct TranscriptionOutputFilterTests {
     }
 
     @Test func transcriptionFilterAppliesGuardedCodeCaseCommands() async throws {
+        TranscriptionCleanupLevel.setCurrent(.polished)
         #expect(TranscriptionOutputFilter.filter("Use camel case user id.") == "Use userId.")
         #expect(TranscriptionOutputFilter.filter("Set variable snake case user id.") == "Set variable user_id.")
         #expect(TranscriptionOutputFilter.filter("Use kebab case user id.") == "Use user-id.")
@@ -162,6 +207,7 @@ struct TranscriptionOutputFilterTests {
     }
 
     @Test func transcriptionFilterAppliesGuardedValueFormatting() async throws {
+        TranscriptionCleanupLevel.setCurrent(.polished)
         #expect(TranscriptionOutputFilter.filter("Meet on June second 2026.") == "Meet on June 2, 2026.")
         #expect(TranscriptionOutputFilter.filter("Meet on June 2 2026.") == "Meet on June 2, 2026.")
         #expect(TranscriptionOutputFilter.filter("Meet on June 2nd.") == "Meet on June 2.")
@@ -194,6 +240,7 @@ struct TranscriptionOutputFilterTests {
     }
 
     @Test func transcriptionFilterRemovesCommonASRBoilerplate() async throws {
+        TranscriptionCleanupLevel.setCurrent(.polished)
         #expect(TranscriptionOutputFilter.filter("Thank you for watching.") == "")
         #expect(TranscriptionOutputFilter.filter("Okay. Thank you for watching.") == "Okay.")
         #expect(TranscriptionOutputFilter.filter("Ship it.\nSubtitles by Amara.org community") == "Ship it.")
@@ -202,6 +249,7 @@ struct TranscriptionOutputFilterTests {
     }
 
     @Test func transcriptionFilterAppliesConservativeSpokenPunctuationCommands() async throws {
+        TranscriptionCleanupLevel.setCurrent(.polished)
         #expect(TranscriptionOutputFilter.filter("Hello comma world full stop") == "Hello, world.")
         #expect(TranscriptionOutputFilter.filter("Hello comma, world.") == "Hello, world.")
         #expect(TranscriptionOutputFilter.filter("Are you coming question mark") == "Are you coming?")

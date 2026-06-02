@@ -4,6 +4,7 @@ struct ModelSettingsView: View {
     @ObservedObject var whisperPrompt: WhisperPrompt
     @AppStorage("SelectedLanguage") private var selectedLanguage: String = "en"
     @AppStorage("IsTextFormattingEnabled") private var isTextFormattingEnabled = true
+    @AppStorage(TranscriptionCleanupLevel.userDefaultsKey) private var transcriptionCleanupLevelRaw = TranscriptionCleanupLevel.polished.rawValue
     @AppStorage(PunctuationCleanupMode.userDefaultsKey) private var punctuationCleanupModeRaw = PunctuationCleanupMode.current().rawValue
     @AppStorage("LowercaseTranscription") private var lowercaseTranscription = false
     @AppStorage("IsVADEnabled") private var isVADEnabled = true
@@ -21,6 +22,18 @@ struct ModelSettingsView: View {
             set: { newMode in
                 punctuationCleanupModeRaw = newMode.rawValue
                 PunctuationCleanupMode.setCurrent(newMode)
+            }
+        )
+    }
+
+    private var transcriptionCleanupLevel: Binding<TranscriptionCleanupLevel> {
+        Binding(
+            get: {
+                TranscriptionCleanupLevel(rawValue: transcriptionCleanupLevelRaw) ?? .polished
+            },
+            set: { newLevel in
+                transcriptionCleanupLevelRaw = newLevel.rawValue
+                TranscriptionCleanupLevel.setCurrent(newLevel)
             }
         )
     }
@@ -63,6 +76,18 @@ struct ModelSettingsView: View {
             }
 
             Section {
+                Picker(selection: transcriptionCleanupLevel) {
+                    ForEach(TranscriptionCleanupLevel.allCases) { level in
+                        Text(level.displayName).tag(level)
+                    }
+                } label: {
+                    HStack(spacing: 4) {
+                        Text("Cleanup")
+                        InfoTip("Raw keeps the model transcript mostly intact. Light keeps dictated punctuation and formatting commands. Polished also removes fillers, false starts, and repeated phrases.")
+                    }
+                }
+                .pickerStyle(.segmented)
+
                 Toggle(isOn: $isTextFormattingEnabled) {
                     HStack(spacing: 4) {
                         Text("Paragraph breaks")
@@ -91,7 +116,9 @@ struct ModelSettingsView: View {
                 }
                 .toggleStyle(.switch)
 
-                FillerWordsSettingsView()
+                if (TranscriptionCleanupLevel(rawValue: transcriptionCleanupLevelRaw) ?? .polished) == .polished {
+                    FillerWordsSettingsView()
+                }
             } header: {
                 Text("Transcript Formatting")
             }

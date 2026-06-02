@@ -187,6 +187,9 @@ enum BackupImporter {
         if let textFormattingEnabled = general.isTextFormattingEnabled {
             UserDefaults.standard.set(textFormattingEnabled, forKey: keyIsTextFormattingEnabled)
         }
+        if let transcriptionCleanupLevel = general.transcriptionCleanupLevel {
+            TranscriptionCleanupLevel.setCurrent(transcriptionCleanupLevel)
+        }
         if let punctuationCleanupMode = general.punctuationCleanupMode {
             PunctuationCleanupMode.setCurrent(punctuationCleanupMode)
         } else if let removePunctuation = general.removePunctuation {

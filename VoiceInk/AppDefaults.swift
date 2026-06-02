@@ -23,6 +23,7 @@ enum AppDefaults {
 
             // Recording & Transcription
             "IsTextFormattingEnabled": true,
+            TranscriptionCleanupLevel.userDefaultsKey: TranscriptionCleanupLevel.polished.rawValue,
             "IsVADEnabled": true,
             "RemoveFillerWords": true,
             "RemovePunctuation": false,

@@ -180,6 +180,7 @@ class ImportExportService {
             isSystemMuteEnabled: mediaController.isSystemMuteEnabled,
             isPauseMediaEnabled: playbackController.isPauseMediaEnabled,
             audioResumptionDelay: mediaController.audioResumptionDelay,
+            transcriptionCleanupLevel: TranscriptionCleanupLevel.current(),
             isTextFormattingEnabled: UserDefaults.standard.bool(forKey: keyIsTextFormattingEnabled),
             punctuationCleanupMode: punctuationCleanupMode,
             removePunctuation: punctuationCleanupMode == .removeAll,

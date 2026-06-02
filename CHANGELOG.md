@@ -4,6 +4,7 @@
 
 - Added a thin `RomaWindowsAgent` entrypoint for Windows dictation through the shared `RomaCore` runtime.
 - Improved final dictation cleanup for mid-sentence fragments, stray bracket wrappers, pause sounds, repeated words, obvious self-corrections, and spoken formatting/punctuation commands.
+- Added Raw, Light, and Polished cleanup levels so users can keep dictation more literal or use full post-STT polish.
 - Improved cleanup for hyphenated pause sounds such as "mm-hmm" and "uh-huh".
 - Removed punctuated discourse fillers such as ", like," and ", you know." without dropping meaningful uses.
 - Collapsed obvious repeated short sentences from dictated output.

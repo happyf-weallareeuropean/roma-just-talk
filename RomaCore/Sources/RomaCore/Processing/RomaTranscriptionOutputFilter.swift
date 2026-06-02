@@ -45,6 +45,14 @@ public enum RomaPunctuationCleanupMode: String, Codable, CaseIterable, Identifia
     }
 }
 
+public enum RomaTranscriptionCleanupLevel: String, Codable, CaseIterable, Identifiable, Sendable {
+    case raw = "raw"
+    case light = "light"
+    case polished = "polished"
+
+    public var id: String { rawValue }
+}
+
 public struct RomaTranscriptionOutputFilter {
     public struct TextInsertionContext: Equatable, Hashable, Sendable {
         public let precedingText: String
@@ -358,6 +366,7 @@ public struct RomaTranscriptionOutputFilter {
 
     public static func filter(
         _ text: String,
+        cleanupLevel: RomaTranscriptionCleanupLevel = .polished,
         removesFillerWords: Bool = false,
         fillerWords: [String] = Self.defaultFillerWords
     ) -> String {
@@ -374,11 +383,17 @@ public struct RomaTranscriptionOutputFilter {
 
         filteredText = removeASRBoilerplate(from: filteredText)
 
-        if removesFillerWords {
+        guard cleanupLevel != .raw else {
+            return normalizeWhitespace(filteredText)
+        }
+
+        if cleanupLevel == .polished && removesFillerWords {
             filteredText = removeFillerWords(from: filteredText, fillerWords: fillerWords)
         }
 
-        filteredText = applyBacktrackingCorrections(in: filteredText)
+        if cleanupLevel == .polished {
+            filteredText = applyBacktrackingCorrections(in: filteredText)
+        }
         filteredText = applySpokenFormattingCommands(in: filteredText)
         filteredText = applySpokenEnclosureCommands(in: filteredText)
         filteredText = applySpokenURLCommands(in: filteredText)
@@ -388,9 +403,11 @@ public struct RomaTranscriptionOutputFilter {
         filteredText = applySpokenSymbolCommands(in: filteredText)
         filteredText = applySpokenCodeCaseCommands(in: filteredText)
         filteredText = applySpokenMarkdownCommands(in: filteredText)
-        filteredText = collapseAdjacentRepeatedWords(in: filteredText)
-        filteredText = collapseRepeatedShortClauses(in: filteredText)
-        filteredText = collapseRepeatedShortSentences(in: filteredText)
+        if cleanupLevel == .polished {
+            filteredText = collapseAdjacentRepeatedWords(in: filteredText)
+            filteredText = collapseRepeatedShortClauses(in: filteredText)
+            filteredText = collapseRepeatedShortSentences(in: filteredText)
+        }
 
         // Clean whitespace
         filteredText = normalizeWhitespace(filteredText)

@@ -47,6 +47,39 @@ enum PunctuationCleanupMode: String, Codable, CaseIterable, Identifiable {
     }
 }
 
+enum TranscriptionCleanupLevel: String, Codable, CaseIterable, Identifiable {
+    case raw = "raw"
+    case light = "light"
+    case polished = "polished"
+
+    static let userDefaultsKey = "TranscriptionCleanupLevel"
+
+    var id: String { rawValue }
+
+    var displayName: String {
+        switch self {
+        case .raw:
+            return "Raw"
+        case .light:
+            return "Light"
+        case .polished:
+            return "Polished"
+        }
+    }
+
+    static func current(in defaults: UserDefaults = .standard) -> TranscriptionCleanupLevel {
+        guard let rawValue = defaults.string(forKey: userDefaultsKey),
+              let level = TranscriptionCleanupLevel(rawValue: rawValue) else {
+            return .polished
+        }
+        return level
+    }
+
+    static func setCurrent(_ level: TranscriptionCleanupLevel, in defaults: UserDefaults = .standard) {
+        defaults.set(level.rawValue, forKey: userDefaultsKey)
+    }
+}
+
 struct TranscriptionOutputFilter {
     typealias TextInsertionContext = RomaTranscriptionOutputFilter.TextInsertionContext
 
@@ -56,6 +89,7 @@ struct TranscriptionOutputFilter {
     static func filter(_ text: String) -> String {
         RomaTranscriptionOutputFilter.filter(
             text,
+            cleanupLevel: romaCleanupLevel(for: TranscriptionCleanupLevel.current()),
             removesFillerWords: FillerWordManager.shared.isEnabled,
             fillerWords: FillerWordManager.shared.fillerWords
         )
@@ -197,6 +231,17 @@ struct TranscriptionOutputFilter {
             return .removeAll
         case .removeTrailingPeriod:
             return .removeTrailingPeriod
+        }
+    }
+
+    private static func romaCleanupLevel(for level: TranscriptionCleanupLevel) -> RomaTranscriptionCleanupLevel {
+        switch level {
+        case .raw:
+            return .raw
+        case .light:
+            return .light
+        case .polished:
+            return .polished
         }
     }
 }
