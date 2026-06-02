@@ -108,11 +108,13 @@ struct TranscriptionOutputFilterTests {
         #expect(TranscriptionOutputFilter.filter("hmm... Hello comma world. Hello comma world.") == "hmm... Hello comma world. Hello comma world.")
         #expect(TranscriptionOutputFilter.filter("I can apostrophe t go.") == "I can apostrophe t go.")
         #expect(TranscriptionOutputFilter.filter("Felix apostrophe s laptop.") == "Felix apostrophe s laptop.")
+        #expect(TranscriptionOutputFilter.filter("Wrong phrase scratch that. Right phrase.") == "Wrong phrase scratch that. Right phrase.")
 
         TranscriptionCleanupLevel.setCurrent(.light)
         #expect(TranscriptionOutputFilter.filter("hmm... Hello comma world.") == "hmm... Hello, world.")
         #expect(TranscriptionOutputFilter.filter("I can apostrophe t go.") == "I can't go.")
         #expect(TranscriptionOutputFilter.filter("Felix apostrophe s laptop.") == "Felix's laptop.")
+        #expect(TranscriptionOutputFilter.filter("Wrong phrase scratch that. Right phrase.") == "Wrong phrase scratch that. Right phrase.")
         #expect(TranscriptionOutputFilter.filter("Let's meet at two, wait no, three.") == "Let's meet at two, wait no, three.")
         #expect(TranscriptionOutputFilter.filter("I think I think this works.") == "I think I think this works.")
         #expect(TranscriptionOutputFilter.filter("I think this works, I think this works.") == "I think this works, I think this works.")
@@ -136,6 +138,13 @@ struct TranscriptionOutputFilterTests {
         #expect(TranscriptionOutputFilter.filter("I actually think this works.") == "I actually think this works.")
         #expect(TranscriptionOutputFilter.filter("I mean this is wrong wait no right.") == "I mean this is right.")
         #expect(TranscriptionOutputFilter.filter("Never mind what I said.") == "Never mind what I said.")
+        #expect(TranscriptionOutputFilter.filter("Wrong phrase scratch that. Right phrase.") == "Right phrase.")
+        #expect(TranscriptionOutputFilter.filter("Keep this. Wrong phrase scratch that. Next sentence.") == "Keep this. Next sentence.")
+        #expect(TranscriptionOutputFilter.filter("Wrong phrase delete that. Right phrase.") == "Right phrase.")
+        #expect(TranscriptionOutputFilter.filter("Use model scratch that modules.") == "Use modules.")
+        #expect(TranscriptionOutputFilter.filter("Delete that file.") == "Delete that file.")
+        #expect(TranscriptionOutputFilter.filter("Scratch that itch.") == "Scratch that itch.")
+        #expect(TranscriptionOutputFilter.filter("Scratch that.") == "Scratch that.")
     }
 
     @Test func transcriptionFilterAppliesSpokenFormattingCommands() async throws {

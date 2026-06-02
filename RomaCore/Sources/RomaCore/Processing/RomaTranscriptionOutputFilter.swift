@@ -237,11 +237,13 @@ public struct RomaTranscriptionOutputFilter {
         )
         \s*[,;:]?\s+
         """#
+    private static let scratchThatCommandPattern = #"(?i)(?<![\p{L}\p{N}])(?:scratch|delete|remove|erase)\s+that(?:\s*[.!?,;:…]+|(?=\s*$|\s*\n))"#
     private static let phraseBoundaryPunctuation = CharacterSet(charactersIn: ".,!?;:…")
     private static let softPhrasePunctuation = CharacterSet(charactersIn: ",;:…")
     private static let wordConnectorCharacters = CharacterSet(charactersIn: "'’ʼ-")
     private static let compactTokenConnectors = CharacterSet(charactersIn: "@._-/\\")
     private static let maxBacktrackingCorrectionWords = 4
+    private static let maxScratchThatWords = 12
     private static let openQuotePlaceholder = "__VOICEINK_OPEN_QUOTE__"
     private static let closeQuotePlaceholder = "__VOICEINK_CLOSE_QUOTE__"
     private static let openParenthesisPlaceholder = "__VOICEINK_OPEN_PAREN__"
@@ -2186,7 +2188,7 @@ public struct RomaTranscriptionOutputFilter {
             rewriteCount += 1
         }
 
-        return correctedText
+        return applyScratchThatCommands(in: correctedText)
     }
 
     private static func rewriteBacktrackingMatch(in text: String, markerRange: Range<String.Index>) -> String? {
@@ -2201,6 +2203,68 @@ public struct RomaTranscriptionOutputFilter {
         let correctionText = String(afterMarker[correction.range])
         let suffix = String(afterMarker[correction.range.upperBound...])
         return normalizeBacktrackingWhitespace(join(prefix, correctionText, suffix))
+    }
+
+    private static func applyScratchThatCommands(in text: String) -> String {
+        guard let regex = try? NSRegularExpression(pattern: scratchThatCommandPattern) else {
+            return text
+        }
+
+        var correctedText = text
+        var rewriteCount = 0
+
+        while rewriteCount < 8 {
+            let fullRange = NSRange(correctedText.startIndex..., in: correctedText)
+            guard let match = regex.firstMatch(in: correctedText, range: fullRange),
+                  let markerRange = Range(match.range, in: correctedText),
+                  let rewrittenText = rewriteScratchThatCommand(in: correctedText, markerRange: markerRange),
+                  rewrittenText != correctedText else {
+                break
+            }
+
+            correctedText = rewrittenText
+            rewriteCount += 1
+        }
+
+        return correctedText
+    }
+
+    private static func rewriteScratchThatCommand(in text: String, markerRange: Range<String.Index>) -> String? {
+        let beforeMarker = String(text[..<markerRange.lowerBound])
+        let afterMarker = String(text[markerRange.upperBound...])
+
+        guard let prefix = removeTrailingScratchPhrase(from: beforeMarker) else {
+            return nil
+        }
+
+        return normalizeBacktrackingWhitespace(join(prefix, "", afterMarker))
+    }
+
+    private static func removeTrailingScratchPhrase(from text: String) -> String? {
+        let endIndex = indexBeforeTrailingNoise(in: text, from: text.endIndex)
+        guard endIndex > text.startIndex else { return nil }
+
+        var phraseStart = endIndex
+        while phraseStart > text.startIndex {
+            let previousIndex = text.index(before: phraseStart)
+            let previousCharacter = text[previousIndex]
+            if previousCharacter == "\n" || character(previousCharacter, isIn: phraseBoundaryPunctuation) {
+                break
+            }
+            phraseStart = previousIndex
+        }
+
+        let phrase = String(text[phraseStart..<endIndex])
+        let removedWordCount = wordCount(in: phrase)
+        guard removedWordCount > 0,
+              removedWordCount <= maxScratchThatWords else {
+            return nil
+        }
+
+        var prefix = String(text[..<phraseStart])
+        prefix = prefix.trimmingCharacters(in: .whitespacesAndNewlines)
+        prefix = prefix.trimmingCharacters(in: softPhrasePunctuation)
+        return prefix
     }
 
     private static func leadingCorrectionPhrase(in text: String) -> (range: Range<String.Index>, wordCount: Int)? {
