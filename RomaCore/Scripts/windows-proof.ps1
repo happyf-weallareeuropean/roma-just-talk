@@ -55,6 +55,21 @@ function Assert-FileWithBytes {
     Write-Host "bytes=$($item.Length)"
 }
 
+function Assert-OutputContains {
+    param(
+        [Parameter(Mandatory = $true)]
+        [string]$Output,
+        [Parameter(Mandatory = $true)]
+        [string]$Expected
+    )
+
+    if (!$Output.Contains($Expected)) {
+        throw "Expected command output to contain '$Expected'"
+    }
+
+    Write-Host "asserted_output=$Expected"
+}
+
 $packageRoot = Resolve-Path "$PSScriptRoot\.."
 $OutputDir = $ExecutionContext.SessionState.Path.GetUnresolvedProviderPathFromPSPath($OutputDir)
 New-Item -ItemType Directory -Force -Path $OutputDir | Out-Null
@@ -100,6 +115,25 @@ try {
 
     Invoke-Step "transcription doctor" {
         swift run RomaProofAgent transcribe-proof-doctor
+    }
+
+    $pipelineProof = Join-Path $OutputDir "pipeline-proof.wav"
+    Invoke-Step "dictation pipeline cleanup proof" {
+        $pipelineOutput = swift run RomaProofAgent dictation-pipeline-proof `
+            --out $pipelineProof `
+            --text "hmm... just talk." `
+            --replace "just talk=roma-just-talk" 2>&1 | Out-String
+        if ($LASTEXITCODE -ne 0) {
+            Write-Host $pipelineOutput
+            throw "dictation-pipeline-proof failed"
+        }
+        Write-Host $pipelineOutput
+        Assert-FileWithBytes -Path $pipelineProof
+        Assert-OutputContains -Output $pipelineOutput -Expected "raw_transcript_text=hmm... just talk."
+        Assert-OutputContains -Output $pipelineOutput -Expected "processed_transcript_text=roma-just-talk"
+        Assert-OutputContains -Output $pipelineOutput -Expected "word_replacements=1"
+        Assert-OutputContains -Output $pipelineOutput -Expected "fake_paste_text=roma-just-talk"
+        Assert-OutputContains -Output $pipelineOutput -Expected "paste_text_source=processed_transcript"
     }
 
     $transcribeAudioPath = $TranscribeAudio

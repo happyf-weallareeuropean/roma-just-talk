@@ -193,7 +193,7 @@ CI proof:
 
 - `.github/workflows/romacore.yml` builds `RomaCore` on macOS and Windows.
 - The Windows job verifies Visual Studio C++ tools, installs the official Swift toolchain with `winget install --id Swift.Toolchain`, then runs `windows-proof.ps1 -SkipMic`.
-- CI is noninteractive, so it proves Windows compilation, PowerShell parse validity, pre-roll/WAV output, DPAPI secret round-trip, stored-key transcription against a local mock STT endpoint, and hotkey/paste doctor paths. It does not prove real microphone permission, real hotkey delivery, or paste into Notepad.
+- CI is noninteractive, so it proves Windows compilation, PowerShell parse validity, pre-roll/WAV output, shared cleanup/replacement/paste text processing, DPAPI secret round-trip, stored-key transcription against a local mock STT endpoint, and hotkey/paste doctor paths. It does not prove real microphone permission, real hotkey delivery, or paste into Notepad.
 
 Raw command sequence:
 
@@ -206,6 +206,7 @@ swift run RomaProofAgent pre-roll-proof --out core-proof.wav
 swift run RomaProofAgent miniaudio-capture-doctor
 swift run RomaProofAgent miniaudio-record-proof --out mic-proof.wav --seconds 2
 swift run RomaProofAgent transcribe-proof-doctor
+swift run RomaProofAgent dictation-pipeline-proof --out pipeline-proof.wav --text "hmm... just talk." --replace "just talk=roma-just-talk"
 swift run RomaProofAgent transcribe-proof --audio mic-proof.wav --endpoint https://api.groq.com/openai/v1/audio/transcriptions --model whisper-large-v3-turbo --api-key-env GROQ_API_KEY
 swift run RomaProofAgent windows-hotkey-doctor
 swift run RomaProofAgent windows-hotkey-proof

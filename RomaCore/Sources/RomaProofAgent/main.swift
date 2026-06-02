@@ -31,6 +31,8 @@ struct RomaProofAgent {
             try runWindowsSecretSaveFromEnv(arguments: Array(arguments.dropFirst()))
         case "windows-dictation-proof":
             try await runWindowsDictationProof(arguments: Array(arguments.dropFirst()))
+        case "dictation-pipeline-proof":
+            try await runDictationPipelineProof(arguments: Array(arguments.dropFirst()))
         case "miniaudio-capture-doctor":
             printMiniaudioCaptureDoctor()
         case "miniaudio-record-proof":
@@ -303,6 +305,46 @@ struct RomaProofAgent {
         #else
         throw AgentError.unsupportedPlatform("windows-dictation-proof requires Windows")
         #endif
+    }
+
+    private static func runDictationPipelineProof(arguments: [String]) async throws {
+        let outputURL = URL(fileURLWithPath: try value(after: "--out", in: arguments))
+        let rawText = optionalValue(after: "--text", in: arguments) ?? "hmm... just talk."
+        let wordReplacements = try replacementRules(from: arguments)
+        let recorder = ProofRecorder()
+        let textInsertion = ProofTextInsertion()
+        let service = ProofTranscriptionService(text: rawText)
+        let model = TranscriptionModelDescriptor(
+            name: "proof-transcriber",
+            displayName: "Proof Transcriber",
+            provider: .custom
+        )
+        let pipeline = DictationPipeline(
+            recorder: recorder,
+            transcriptionService: service,
+            textInsertion: textInsertion
+        )
+
+        try await recorder.startPreRollBuffering()
+        let result = try await pipeline.runRecordingWindow(
+            DictationPipelineRequest(
+                outputURL: outputURL,
+                model: model,
+                shouldInsertTranscription: true,
+                textProcessing: DictationTextProcessingConfiguration(
+                    wordReplacements: wordReplacements
+                )
+            )
+        ) {}
+
+        print("wrote=\(result.session.recordedAudio.fileURL.path)")
+        print("raw_transcript_length=\(rawText.count)")
+        print("raw_transcript_text=\(oneLine(rawText))")
+        print("processed_transcript_length=\(result.processedText.count)")
+        print("processed_transcript_text=\(oneLine(result.processedText))")
+        print("word_replacements=\(wordReplacements.count)")
+        print("fake_paste_text=\(oneLine(await textInsertion.pastedText ?? ""))")
+        print("paste_text_source=processed_transcript")
     }
 
     private static func printMiniaudioCaptureDoctor() {
@@ -582,6 +624,7 @@ struct RomaProofAgent {
         print("  RomaProofAgent windows-dictation-proof --out proof.wav --seconds 2 --endpoint https://api.example.com/v1/audio/transcriptions --model whisper-large-v3-turbo --api-key-env OPENAI_API_KEY [--replace \"original=replacement\"] [--paste]")
         print("  RomaProofAgent windows-dictation-proof --out proof.wav --hold-hook --timeout 15 --endpoint https://api.example.com/v1/audio/transcriptions --model whisper-large-v3-turbo --api-key-env OPENAI_API_KEY [--paste]")
         print("  RomaProofAgent windows-dictation-proof --out proof.wav --seconds 2 --endpoint https://api.example.com/v1/audio/transcriptions --model whisper-large-v3-turbo --api-key-name groq --secret-dir C:\\tmp\\roma-secrets [--paste]")
+        print("  RomaProofAgent dictation-pipeline-proof --out proof.wav --text \"hmm... just talk.\" --replace \"just talk=roma-just-talk\"")
         print("  RomaProofAgent miniaudio-capture-doctor")
         print("  RomaProofAgent miniaudio-record-proof --out proof.wav --seconds 2")
         print("  RomaProofAgent transcribe-proof-doctor")
@@ -684,5 +727,56 @@ private enum APIKeySource {
             }
             return apiKey
         }
+    }
+}
+
+private final class ProofRecorder: RollingRecorder, @unchecked Sendable {
+    var onAudioChunk: (@Sendable (Data) -> Void)?
+    let preRollConfiguration = PreRollConfiguration()
+    private var outputURL: URL?
+
+    func startPreRollBuffering() async throws {}
+
+    func startRecording(toOutputFile url: URL) async throws {
+        outputURL = url
+    }
+
+    func finishRecording() async throws -> RecordedAudio {
+        guard let outputURL else {
+            throw AgentError.invalidOptionValue("--out")
+        }
+
+        let samples = Array(repeating: Int16(0), count: preRollConfiguration.outputFormat.sampleRate / 10)
+        try PCM16WAVFile.write(
+            samples: samples,
+            to: outputURL,
+            format: preRollConfiguration.outputFormat
+        )
+        return RecordedAudio(
+            fileURL: outputURL,
+            format: preRollConfiguration.outputFormat,
+            durationSeconds: 0.1,
+            includedPreRollSeconds: preRollConfiguration.durationSeconds
+        )
+    }
+
+    func stopCapture() async {
+        outputURL = nil
+    }
+}
+
+private struct ProofTranscriptionService: TranscriptionService {
+    var text: String
+
+    func transcribe(_ request: TranscriptionRequest) async throws -> TranscriptionResult {
+        TranscriptionResult(text: text)
+    }
+}
+
+private actor ProofTextInsertion: TextInsertion {
+    private(set) var pastedText: String?
+
+    func pasteAtCursor(_ text: String) async throws {
+        pastedText = text
     }
 }
