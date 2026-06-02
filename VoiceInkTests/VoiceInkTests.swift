@@ -168,6 +168,13 @@ struct VoiceInkTests {
         #expect(TranscriptionOutputFilter.filter("I mean this is wrong wait no right.") == "I mean this is right.")
     }
 
+    @Test func transcriptionFilterAppliesSpokenFormattingCommands() async throws {
+        #expect(TranscriptionOutputFilter.filter("First line new line second line.") == "First line\nsecond line.")
+        #expect(TranscriptionOutputFilter.filter("Intro new paragraph Details.") == "Intro\n\nDetails.")
+        #expect(TranscriptionOutputFilter.filter("Todo new line bullet point first item new line bullet point second item.") == "Todo\n- first item\n- second item.")
+        #expect(TranscriptionOutputFilter.filter("This newlineish word should stay.") == "This newlineish word should stay.")
+    }
+
     @Test func modifierOnlyShortcutsUseNSEventMonitorPath() async throws {
         let monitor = ShortcutMonitor()
         var keyDownCount = 0

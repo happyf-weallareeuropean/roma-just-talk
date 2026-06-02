@@ -102,6 +102,13 @@ struct TranscriptionOutputFilter {
     private static let softPhrasePunctuation = CharacterSet(charactersIn: ",;:…")
     private static let wordConnectorCharacters = CharacterSet(charactersIn: "'’ʼ-")
     private static let maxBacktrackingCorrectionWords = 4
+    private static let spokenFormattingCommands: [(pattern: String, replacement: String)] = [
+        (#"(?i)(?<![\p{L}\p{N}])(?:new|next)\s+paragraph(?![\p{L}\p{N}])"#, "\n\n"),
+        (#"(?i)(?<![\p{L}\p{N}])(?:new|next)\s+line(?![\p{L}\p{N}])"#, "\n"),
+        (#"(?i)(?<![\p{L}\p{N}])line\s+break(?![\p{L}\p{N}])"#, "\n"),
+        (#"(?i)(?<![\p{L}\p{N}])newline(?![\p{L}\p{N}])"#, "\n"),
+        (#"(?i)(?<![\p{L}\p{N}])(?:new\s+bullet|bullet\s+point|bullet)(?![\p{L}\p{N}])"#, "\n- ")
+    ]
 
     static func filter(_ text: String) -> String {
         var filteredText = unwrapBracketedWholeOutput(text)
@@ -127,6 +134,7 @@ struct TranscriptionOutputFilter {
         }
 
         filteredText = applyBacktrackingCorrections(in: filteredText)
+        filteredText = applySpokenFormattingCommands(in: filteredText)
         filteredText = collapseAdjacentRepeatedWords(in: filteredText)
 
         // Clean whitespace
@@ -240,6 +248,41 @@ struct TranscriptionOutputFilter {
         }
 
         return filteredText
+    }
+
+    private static func applySpokenFormattingCommands(in text: String) -> String {
+        var formattedText = text
+
+        for command in spokenFormattingCommands {
+            guard let regex = try? NSRegularExpression(pattern: command.pattern) else {
+                continue
+            }
+
+            let range = NSRange(formattedText.startIndex..., in: formattedText)
+            formattedText = regex.stringByReplacingMatches(
+                in: formattedText,
+                options: [],
+                range: range,
+                withTemplate: command.replacement
+            )
+        }
+
+        return normalizeSpokenFormattingSpacing(formattedText)
+    }
+
+    private static func normalizeSpokenFormattingSpacing(_ text: String) -> String {
+        let formattedText = text
+            .replacingOccurrences(of: #"[ \t]*\n[ \t]*"#, with: "\n", options: .regularExpression)
+            .replacingOccurrences(of: #"\n{2,}(?=- )"#, with: "\n", options: .regularExpression)
+            .replacingOccurrences(of: #"\n{3,}"#, with: "\n\n", options: .regularExpression)
+            .replacingOccurrences(of: #"\n-\s*"#, with: "\n- ", options: .regularExpression)
+            .replacingOccurrences(of: #"^\s*-\s*"#, with: "- ", options: .regularExpression)
+
+        return formattedText.replacingOccurrences(
+            of: #"(?m)^(-\s+\S+(?:\s+\S+){0,2})\.$"#,
+            with: "$1",
+            options: .regularExpression
+        )
     }
 
     private static func applyBacktrackingCorrections(in text: String) -> String {
