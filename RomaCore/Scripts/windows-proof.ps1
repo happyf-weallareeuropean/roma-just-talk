@@ -9,6 +9,7 @@ param(
     [string]$TranscribeApiKeyName = "",
     [string]$TranscribeLanguage = "",
     [string]$TranscribePrompt = "",
+    [string[]]$WordReplacement = @(),
     [switch]$SkipMic,
     [switch]$RunInteractiveHotkey,
     [switch]$RunInteractiveKeyboardHook,
@@ -242,6 +243,11 @@ try {
             }
             if (![string]::IsNullOrWhiteSpace($TranscribePrompt)) {
                 $dictationArgs += @("--prompt", $TranscribePrompt)
+            }
+            foreach ($replacement in $WordReplacement) {
+                if (![string]::IsNullOrWhiteSpace($replacement)) {
+                    $dictationArgs += @("--replace", $replacement)
+                }
             }
             if ($PasteDictation) {
                 $dictationArgs += "--paste"

@@ -44,6 +44,7 @@ public struct DictationPipelineResult: Equatable, Hashable, Sendable {
 public struct DictationTextProcessingConfiguration: Equatable, Hashable, Sendable {
     public var removesFillerWords: Bool
     public var fillerWords: [String]
+    public var wordReplacements: [RomaWordReplacementRule]
     public var punctuationMode: RomaPunctuationCleanupMode
     public var shouldLowercase: Bool
     public var insertionContext: TextInsertionContext?
@@ -51,12 +52,14 @@ public struct DictationTextProcessingConfiguration: Equatable, Hashable, Sendabl
     public init(
         removesFillerWords: Bool = true,
         fillerWords: [String] = RomaTranscriptionOutputFilter.defaultFillerWords,
+        wordReplacements: [RomaWordReplacementRule] = [],
         punctuationMode: RomaPunctuationCleanupMode = .keep,
         shouldLowercase: Bool = false,
         insertionContext: TextInsertionContext? = nil
     ) {
         self.removesFillerWords = removesFillerWords
         self.fillerWords = fillerWords
+        self.wordReplacements = wordReplacements
         self.punctuationMode = punctuationMode
         self.shouldLowercase = shouldLowercase
         self.insertionContext = insertionContext
@@ -148,8 +151,12 @@ public final class DictationPipeline: @unchecked Sendable {
             removesFillerWords: configuration.removesFillerWords,
             fillerWords: configuration.fillerWords
         )
+        let replacedText = RomaWordReplacementProcessor.apply(
+            configuration.wordReplacements,
+            to: filteredText.trimmingCharacters(in: .whitespacesAndNewlines)
+        )
         let cleanedText = RomaTranscriptionOutputFilter.applyCleanupPreferences(
-            filteredText.trimmingCharacters(in: .whitespacesAndNewlines),
+            replacedText,
             punctuationMode: configuration.punctuationMode,
             shouldLowercase: configuration.shouldLowercase
         )

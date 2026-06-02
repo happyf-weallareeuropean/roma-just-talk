@@ -10,6 +10,7 @@ struct RomaCoreChecks {
         try checkMiniaudioRecorderUsesSpeechPCMContract()
         try checkOpenAICompatibleMultipartBody()
         try checkTranscriptionOutputFilter()
+        try checkWordReplacementProcessor()
         try checkWindowsHotKeyProofDescriptor()
         try checkWindowsLowLevelKeyboardHookProofDescriptor()
         try checkWindowsClipboardPayloadIsCFUnicodeText()
@@ -184,6 +185,38 @@ struct RomaCoreChecks {
         )
     }
 
+    private static func checkWordReplacementProcessor() throws {
+        let rules = [
+            RomaWordReplacementRule(originalText: "model context protocol", replacementText: "MCP"),
+            RomaWordReplacementRule(originalText: "model", replacementText: "ignored-shorter"),
+            RomaWordReplacementRule(originalText: "roma, just talk", replacementText: "roma-just-talk"),
+            RomaWordReplacementRule(originalText: "disabled", replacementText: "enabled", isEnabled: false)
+        ]
+
+        let replacementOutput = RomaWordReplacementProcessor.apply(
+            rules,
+            to: "Use model context protocol with just talk, not disabled."
+        )
+        try require(
+            replacementOutput == "Use MCP with roma-just-talk, not disabled.",
+            "word replacements should apply enabled longest-first comma variants; output=\(replacementOutput)"
+        )
+        try require(
+            RomaWordReplacementProcessor.apply(
+                [RomaWordReplacementRule(originalText: "cat", replacementText: "dog")],
+                to: "cat scatter cat."
+            ) == "dog scatter dog.",
+            "spaced-script replacements should respect word boundaries"
+        )
+        try require(
+            RomaWordReplacementProcessor.apply(
+                [RomaWordReplacementRule(originalText: "東京", replacementText: "Tokyo")],
+                to: "東京駅"
+            ) == "Tokyo駅",
+            "non-spaced-script replacements should fall back to substring replacement"
+        )
+    }
+
     private static func checkWindowsHotKeyProofDescriptor() throws {
         let hotKey = WindowsHotKey.proofToggle
 
@@ -352,6 +385,9 @@ struct RomaCoreChecks {
             shouldInsertTranscription: true,
             textProcessing: DictationTextProcessingConfiguration(
                 removesFillerWords: true,
+                wordReplacements: [
+                    RomaWordReplacementRule(originalText: "model", replacementText: "roma")
+                ],
                 insertionContext: TextInsertionContext(precedingText: "Use")
             )
         )
@@ -360,9 +396,9 @@ struct RomaCoreChecks {
         let cleanupResult = try await cleanupPipeline.runRecordingWindow(cleanupRequest) {}
 
         try require(cleanupResult.session.rawText == "hmm... Model.", "pipeline should preserve raw STT text")
-        try require(cleanupResult.processedText == " model", "pipeline should clean and space inserted text")
-        try require(cleanupResult.session.insertedText == " model", "pipeline session should store processed inserted text")
-        try require(await cleanupInserter.pastedText == " model", "pipeline should paste processed text")
+        try require(cleanupResult.processedText == " roma", "pipeline should clean, replace, and space inserted text")
+        try require(cleanupResult.session.insertedText == " roma", "pipeline session should store processed inserted text")
+        try require(await cleanupInserter.pastedText == " roma", "pipeline should paste processed text")
 
         let missingInserterPipeline = DictationPipeline(
             recorder: FakeRecorder(),

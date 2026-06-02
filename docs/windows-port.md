@@ -54,6 +54,7 @@ Reusable now:
 - `OpenAICompatibleTranscriptionService` now lives in `RomaCore` as a Foundation-only multipart HTTP proof path for OpenAI-compatible cloud STT.
 - `DictationPipeline` now lives in `RomaCore` as the shared record -> transcribe -> shared cleanup -> optional paste orchestration.
 - `RomaTranscriptionOutputFilter` now lives in `RomaCore` as the shared Foundation-only post-STT cleanup and insertion-polish path.
+- `RomaWordReplacementProcessor` now lives in `RomaCore` as the shared dictionary replacement matching path.
 - `WindowsHotKey.proofToggle` and the Windows-only `WindowsRegisterHotKeyProof` source define the first `RegisterHotKey` toggle proof path.
 - `WindowsLowLevelKeyboardHookProof` now defines the first `WH_KEYBOARD_LL` hold-to-talk keydown/keyup proof path.
 - `WindowsClipboardPayload` and the Windows-only `WindowsPasteProof` source define the first `CF_UNICODETEXT` plus `SendInput` paste proof path.
@@ -182,6 +183,7 @@ Useful script options:
 - `-TranscribeApiKeyName groq` stores `-TranscribeApiKeyEnv` into DPAPI and uses the stored key for transcription.
 - `-TranscribeAudio C:\tmp\proof.wav` uses an existing WAV for transcription, useful with `-SkipMic`.
 - `-TranscribeLanguage en` and `-TranscribePrompt "roma just talk"` pass optional STT hints.
+- `-WordReplacement "just talk=roma-just-talk"` adds a proof-time dictionary replacement before optional paste.
 - `-RunInteractiveDictation` waits for `Ctrl+Shift+R`, records with pre-roll, transcribes, and writes `dictation-proof.wav`.
 - `-UseHoldHook` makes interactive dictation use `WH_KEYBOARD_LL`: recording starts on `Ctrl+Shift+R` keydown and stops on keyup.
 - `-HoldTimeoutSeconds 15` changes the keydown/keyup wait timeout for hold-hook dictation.
@@ -215,7 +217,7 @@ swift run RomaProofAgent windows-secret-doctor
 swift run RomaProofAgent windows-secret-proof --dir C:\tmp\roma-secrets
 swift run RomaProofAgent windows-secret-save-from-env --dir C:\tmp\roma-secrets --key groq --value-env GROQ_API_KEY
 swift run RomaProofAgent transcribe-proof --audio mic-proof.wav --endpoint https://api.groq.com/openai/v1/audio/transcriptions --model whisper-large-v3-turbo --api-key-name groq --secret-dir C:\tmp\roma-secrets
-swift run RomaProofAgent windows-dictation-proof --out dictation-proof.wav --seconds 2 --endpoint https://api.groq.com/openai/v1/audio/transcriptions --model whisper-large-v3-turbo --api-key-env GROQ_API_KEY --paste
+swift run RomaProofAgent windows-dictation-proof --out dictation-proof.wav --seconds 2 --endpoint https://api.groq.com/openai/v1/audio/transcriptions --model whisper-large-v3-turbo --api-key-env GROQ_API_KEY --replace "just talk=roma-just-talk" --paste
 swift run RomaProofAgent windows-dictation-proof --out hold-dictation-proof.wav --hold-hook --timeout 15 --endpoint https://api.groq.com/openai/v1/audio/transcriptions --model whisper-large-v3-turbo --api-key-env GROQ_API_KEY --paste
 ```
 

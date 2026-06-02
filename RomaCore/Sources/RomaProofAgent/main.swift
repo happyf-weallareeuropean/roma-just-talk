@@ -58,6 +58,7 @@ struct RomaProofAgent {
         print("miniaudio_capture_adapter_source=true")
         print("openai_compatible_transcription_source=true")
         print("transcription_output_filter_source=true")
+        print("word_replacement_processor_source=true")
         print("windows_dictation_proof_source=true")
     }
 
@@ -215,6 +216,7 @@ struct RomaProofAgent {
         let apiKeySource = try makeAPIKeySource(arguments: arguments)
         let shouldPaste = arguments.contains("--paste")
         let shouldUseHoldHook = arguments.contains("--hold-hook")
+        let wordReplacements = try replacementRules(from: arguments)
         let hotKey = WindowsHotKey.proofToggle
         let chord = WindowsLowLevelKeyboardHookChord.proofHold
         let recorder = MiniaudioCaptureRecorder()
@@ -237,7 +239,10 @@ struct RomaProofAgent {
             model: model,
             language: optionalValue(after: "--language", in: arguments),
             prompt: optionalValue(after: "--prompt", in: arguments),
-            shouldInsertTranscription: shouldPaste
+            shouldInsertTranscription: shouldPaste,
+            textProcessing: DictationTextProcessingConfiguration(
+                wordReplacements: wordReplacements
+            )
         )
 
         do {
@@ -287,6 +292,7 @@ struct RomaProofAgent {
             )
             print("processed_transcript_length=\(result.processedText.count)")
             print("processed_transcript_text=\(oneLine(result.processedText))")
+            print("word_replacements=\(wordReplacements.count)")
 
             print("paste_sent=\(shouldPaste)")
             print("paste_text_source=processed_transcript")
@@ -479,6 +485,26 @@ struct RomaProofAgent {
         throw AgentError.missingOption("--api-key-env or --api-key-name")
     }
 
+    private static func replacementRules(from arguments: [String]) throws -> [RomaWordReplacementRule] {
+        try values(after: "--replace", in: arguments).map { value in
+            let pieces = value.split(separator: "=", maxSplits: 1, omittingEmptySubsequences: false)
+            guard pieces.count == 2 else {
+                throw AgentError.invalidOptionValue("--replace")
+            }
+
+            let original = pieces[0].trimmingCharacters(in: .whitespacesAndNewlines)
+            let replacement = pieces[1].trimmingCharacters(in: .whitespacesAndNewlines)
+            guard !original.isEmpty, !replacement.isEmpty else {
+                throw AgentError.invalidOptionValue("--replace")
+            }
+
+            return RomaWordReplacementRule(
+                originalText: original,
+                replacementText: replacement
+            )
+        }
+    }
+
     private static func value(after option: String, in arguments: [String]) throws -> String {
         guard let index = arguments.firstIndex(of: option),
               arguments.indices.contains(index + 1) else {
@@ -495,6 +521,24 @@ struct RomaProofAgent {
 
         let trimmed = arguments[index + 1].trimmingCharacters(in: .whitespacesAndNewlines)
         return trimmed.isEmpty ? nil : trimmed
+    }
+
+    private static func values(after option: String, in arguments: [String]) throws -> [String] {
+        var values: [String] = []
+        var index = arguments.startIndex
+        while index < arguments.endIndex {
+            defer { index = arguments.index(after: index) }
+            guard arguments[index] == option else { continue }
+
+            let valueIndex = arguments.index(after: index)
+            guard valueIndex < arguments.endIndex else {
+                throw AgentError.missingOption(option)
+            }
+
+            values.append(arguments[valueIndex])
+            index = valueIndex
+        }
+        return values
     }
 
     private static func doubleValue(after option: String, in arguments: [String], default defaultValue: Double) throws -> Double {
@@ -535,7 +579,7 @@ struct RomaProofAgent {
         print("  RomaProofAgent windows-secret-doctor")
         print("  RomaProofAgent windows-secret-proof --dir C:\\tmp\\roma-secrets")
         print("  RomaProofAgent windows-secret-save-from-env --dir C:\\tmp\\roma-secrets --key groq --value-env GROQ_API_KEY")
-        print("  RomaProofAgent windows-dictation-proof --out proof.wav --seconds 2 --endpoint https://api.example.com/v1/audio/transcriptions --model whisper-large-v3-turbo --api-key-env OPENAI_API_KEY [--paste]")
+        print("  RomaProofAgent windows-dictation-proof --out proof.wav --seconds 2 --endpoint https://api.example.com/v1/audio/transcriptions --model whisper-large-v3-turbo --api-key-env OPENAI_API_KEY [--replace \"original=replacement\"] [--paste]")
         print("  RomaProofAgent windows-dictation-proof --out proof.wav --hold-hook --timeout 15 --endpoint https://api.example.com/v1/audio/transcriptions --model whisper-large-v3-turbo --api-key-env OPENAI_API_KEY [--paste]")
         print("  RomaProofAgent windows-dictation-proof --out proof.wav --seconds 2 --endpoint https://api.example.com/v1/audio/transcriptions --model whisper-large-v3-turbo --api-key-name groq --secret-dir C:\\tmp\\roma-secrets [--paste]")
         print("  RomaProofAgent miniaudio-capture-doctor")
