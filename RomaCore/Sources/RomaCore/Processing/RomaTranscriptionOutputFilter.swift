@@ -237,7 +237,7 @@ public struct RomaTranscriptionOutputFilter {
         )
         \s*[,;:]?\s+
         """#
-    private static let scratchThatCommandPattern = #"(?i)(?<![\p{L}\p{N}])(?:scratch|delete|remove|erase)\s+that(?:\s*[.!?,;:…]+|(?=\s*$|\s*\n))"#
+    private static let scratchThatCommandPattern = #"(?i)(?<![\p{L}\p{N}])(?:scratch|strike|delete|remove|erase|undo)\s+that(?:\s*[.!?,;:…]+|(?=\s*$|\s*\n))"#
     private static let phraseBoundaryPunctuation = CharacterSet(charactersIn: ".,!?;:…")
     private static let softPhrasePunctuation = CharacterSet(charactersIn: ",;:…")
     private static let wordConnectorCharacters = CharacterSet(charactersIn: "'’ʼ-")

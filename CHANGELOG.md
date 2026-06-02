@@ -2,6 +2,7 @@
 
 ## v1.81 - Unreleased
 
+- Let the packaged Windows-agent smoke script populate a stored DPAPI key from an environment variable.
 - Required `swiftCore.dll` in the packaged Windows agent artifact on Windows.
 - Copied Swift runtime DLLs into the Windows agent artifact when the runtime is available on `PATH`.
 - Added a packaged Windows-agent smoke script for artifact-level doctor/config/dictation proof.
