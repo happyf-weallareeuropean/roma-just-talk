@@ -131,6 +131,7 @@ struct RomaProofAgent {
         print("clipboard_payload_bytes=\(payload.count)")
         print("input_api=SendInput")
         print("paste_chord=Ctrl+V")
+        print("clipboard_restore=text_only_after_delay")
         print("permission_prompt=false")
         print("integrity_limit=equal_or_lower")
         #if os(Windows)
@@ -201,8 +202,9 @@ struct RomaProofAgent {
         let text = try value(after: "--text", in: arguments)
 
         #if os(Windows)
-        try WindowsPasteProof.pasteText(text)
+        let result = try WindowsPasteProof.pasteText(text)
         print("paste_sent=true")
+        print("clipboard_restore=\(result.restoreStatus.rawValue)")
         print("text_utf16_bytes=\(WindowsClipboardPayload.cfUnicodeTextData(for: text).count)")
         #else
         throw AgentError.unsupportedPlatform("windows-paste-proof requires Windows")

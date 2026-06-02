@@ -6,6 +6,7 @@ public enum WindowsPasteProofError: Error, Equatable, CustomStringConvertible {
     case noConsoleWindow
     case globalAllocFailed(errorCode: UInt32)
     case globalLockFailed(errorCode: UInt32)
+    case globalSizeFailed(errorCode: UInt32)
     case openClipboardFailed(errorCode: UInt32)
     case emptyClipboardFailed(errorCode: UInt32)
     case setClipboardDataFailed(errorCode: UInt32)
@@ -19,6 +20,8 @@ public enum WindowsPasteProofError: Error, Equatable, CustomStringConvertible {
             return "GlobalAlloc failed with GetLastError=\(errorCode)"
         case .globalLockFailed(let errorCode):
             return "GlobalLock failed with GetLastError=\(errorCode)"
+        case .globalSizeFailed(let errorCode):
+            return "GlobalSize failed with GetLastError=\(errorCode)"
         case .openClipboardFailed(let errorCode):
             return "OpenClipboard failed with GetLastError=\(errorCode)"
         case .emptyClipboardFailed(let errorCode):
@@ -31,14 +34,55 @@ public enum WindowsPasteProofError: Error, Equatable, CustomStringConvertible {
     }
 }
 
+public struct WindowsPasteOptions: Equatable, Hashable, Sendable {
+    public var restoreClipboard: Bool
+    public var restoreDelaySeconds: TimeInterval
+
+    public init(
+        restoreClipboard: Bool = true,
+        restoreDelaySeconds: TimeInterval = 2
+    ) {
+        self.restoreClipboard = restoreClipboard
+        self.restoreDelaySeconds = restoreDelaySeconds
+    }
+}
+
+public struct WindowsPasteResult: Equatable, Hashable, Sendable {
+    public var restoreStatus: WindowsClipboardRestoreStatus
+
+    public init(restoreStatus: WindowsClipboardRestoreStatus) {
+        self.restoreStatus = restoreStatus
+    }
+}
+
+public enum WindowsClipboardRestoreStatus: String, Equatable, Hashable, Sendable {
+    case disabled
+    case restoredText = "restored_text"
+    case clearedInsertedText = "cleared_inserted_text"
+    case skippedBecauseClipboardChanged = "skipped_clipboard_changed"
+}
+
 public enum WindowsPasteProof {
-    public static func pasteText(_ text: String) throws {
+    @discardableResult
+    public static func pasteText(
+        _ text: String,
+        options: WindowsPasteOptions = WindowsPasteOptions()
+    ) throws -> WindowsPasteResult {
+        let previousText = options.restoreClipboard ? try currentClipboardText() : nil
         try setClipboardText(text)
         try sendControlV()
+        let restoreStatus = options.restoreClipboard
+            ? try restoreClipboardText(previousText, insertedText: text, delaySeconds: options.restoreDelaySeconds)
+            : .disabled
+        return WindowsPasteResult(restoreStatus: restoreStatus)
     }
 
     public static func setClipboardText(_ text: String) throws {
         let payload = WindowsClipboardPayload.cfUnicodeTextData(for: text)
+        try setClipboardPayload(payload)
+    }
+
+    private static func setClipboardPayload(_ payload: Data) throws {
         guard let memory = GlobalAlloc(UINT(GMEM_MOVEABLE), SIZE_T(payload.count)) else {
             throw WindowsPasteProofError.globalAllocFailed(errorCode: GetLastError())
         }
@@ -74,6 +118,73 @@ public enum WindowsPasteProof {
             throw WindowsPasteProofError.setClipboardDataFailed(errorCode: GetLastError())
         }
         memoryTransferredToClipboard = true
+    }
+
+    private static func currentClipboardText() throws -> String? {
+        guard let ownerWindow = GetConsoleWindow() else {
+            throw WindowsPasteProofError.noConsoleWindow
+        }
+        guard OpenClipboard(ownerWindow) else {
+            throw WindowsPasteProofError.openClipboardFailed(errorCode: GetLastError())
+        }
+        defer { CloseClipboard() }
+
+        guard IsClipboardFormatAvailable(UINT(CF_UNICODETEXT)) else {
+            return nil
+        }
+        guard let memory = GetClipboardData(UINT(CF_UNICODETEXT)) else {
+            return nil
+        }
+
+        let byteCount = Int(GlobalSize(memory))
+        guard byteCount > 0 else {
+            throw WindowsPasteProofError.globalSizeFailed(errorCode: GetLastError())
+        }
+        guard let lockedMemory = GlobalLock(memory) else {
+            throw WindowsPasteProofError.globalLockFailed(errorCode: GetLastError())
+        }
+        defer { GlobalUnlock(memory) }
+
+        let data = Data(bytes: lockedMemory, count: byteCount)
+        return WindowsClipboardPayload.text(fromCFUnicodeTextData: data)
+    }
+
+    private static func restoreClipboardText(
+        _ previousText: String?,
+        insertedText: String,
+        delaySeconds: TimeInterval
+    ) throws -> WindowsClipboardRestoreStatus {
+        let delayMilliseconds = min(max(delaySeconds, 0) * 1_000, Double(UInt32.max))
+        let milliseconds = DWORD(delayMilliseconds)
+        if milliseconds > 0 {
+            Sleep(milliseconds)
+        }
+
+        guard try currentClipboardText() == insertedText else {
+            return .skippedBecauseClipboardChanged
+        }
+
+        if let previousText {
+            try setClipboardText(previousText)
+            return .restoredText
+        }
+
+        try clearClipboard()
+        return .clearedInsertedText
+    }
+
+    private static func clearClipboard() throws {
+        guard let ownerWindow = GetConsoleWindow() else {
+            throw WindowsPasteProofError.noConsoleWindow
+        }
+        guard OpenClipboard(ownerWindow) else {
+            throw WindowsPasteProofError.openClipboardFailed(errorCode: GetLastError())
+        }
+        defer { CloseClipboard() }
+
+        guard EmptyClipboard() else {
+            throw WindowsPasteProofError.emptyClipboardFailed(errorCode: GetLastError())
+        }
     }
 
     public static func sendControlV() throws {

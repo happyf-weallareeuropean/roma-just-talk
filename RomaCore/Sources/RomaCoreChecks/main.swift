@@ -593,6 +593,20 @@ struct RomaCoreChecks {
             Array(decodedCodeUnits.dropLast()) == Array("roma proof".utf16),
             "payload should round-trip the original UTF-16 code units"
         )
+        try require(
+            WindowsClipboardPayload.text(fromCFUnicodeTextData: data) == "roma proof",
+            "CF_UNICODETEXT payload should decode for clipboard restore"
+        )
+
+        let emojiText = "roma \u{1F399}"
+        try require(
+            WindowsClipboardPayload.text(fromCFUnicodeTextData: WindowsClipboardPayload.cfUnicodeTextData(for: emojiText)) == emojiText,
+            "CF_UNICODETEXT decoding should preserve surrogate pairs"
+        )
+        try require(
+            WindowsClipboardPayload.text(fromCFUnicodeTextData: Data([0x72])) == nil,
+            "CF_UNICODETEXT decoding should reject unaligned data"
+        )
     }
 
     private static func checkWindowsDPAPISecretStoreContract() throws {
