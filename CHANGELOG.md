@@ -2,6 +2,7 @@
 
 ## v1.81 - Unreleased
 
+- Added a no-admin Windows agent install script that smokes the installed artifact copy.
 - Let the packaged Windows-agent smoke script populate a stored DPAPI key from an environment variable.
 - Required `swiftCore.dll` in the packaged Windows agent artifact on Windows.
 - Copied Swift runtime DLLs into the Windows agent artifact when the runtime is available on `PATH`.

@@ -225,6 +225,8 @@ public struct RomaTranscriptionOutputFilter {
         (?:
             (?:[,;:…]|\.\.\.)\s*actually |
             sorry\s+not\s+that\s*[,;:]?\s+actually |
+            replace\s+that\s+with |
+            change\s+that\s+to |
             scratch\s+that |
             wait\s+no |
             never\s*mind |
@@ -244,6 +246,12 @@ public struct RomaTranscriptionOutputFilter {
     private static let compactTokenConnectors = CharacterSet(charactersIn: "@._-/\\")
     private static let maxBacktrackingCorrectionWords = 4
     private static let maxScratchThatWords = 12
+    private static let blockedPreviousWordsForReplaceThat: Set<String> = [
+        "command", "commands", "phrase", "phrases", "say", "saying", "word", "words"
+    ]
+    private static let blockedFirstCorrectionWordsForReplaceThat: Set<String> = [
+        "is", "means"
+    ]
     private static let openQuotePlaceholder = "__VOICEINK_OPEN_QUOTE__"
     private static let closeQuotePlaceholder = "__VOICEINK_CLOSE_QUOTE__"
     private static let openParenthesisPlaceholder = "__VOICEINK_OPEN_PAREN__"
@@ -2120,6 +2128,22 @@ public struct RomaTranscriptionOutputFilter {
         return String(text[wordStart..<endIndex]).lowercased()
     }
 
+    private static func firstWord(in text: String) -> String? {
+        var index = text.startIndex
+        while index < text.endIndex, !isWordCharacter(text[index]) {
+            index = text.index(after: index)
+        }
+
+        guard index < text.endIndex else { return nil }
+
+        let wordStart = index
+        while index < text.endIndex, isWordCharacter(text[index]) {
+            index = text.index(after: index)
+        }
+
+        return String(text[wordStart..<index]).lowercased()
+    }
+
     private static func nextWord(in text: String) -> String? {
         var index = text.startIndex
         while index < text.endIndex {
@@ -2195,14 +2219,51 @@ public struct RomaTranscriptionOutputFilter {
         let beforeMarker = String(text[..<markerRange.lowerBound])
         let afterMarker = String(text[markerRange.upperBound...])
 
-        guard let correction = leadingCorrectionPhrase(in: afterMarker),
-              let prefix = removeTrailingWords(correction.wordCount, from: beforeMarker) else {
+        guard let correction = leadingCorrectionPhrase(in: afterMarker) else {
             return nil
         }
 
         let correctionText = String(afterMarker[correction.range])
+        guard shouldApplyBacktrackingMarker(
+            String(text[markerRange]),
+            beforeMarker: beforeMarker,
+            correctionText: correctionText
+        ),
+              let prefix = removeTrailingWords(correction.wordCount, from: beforeMarker) else {
+            return nil
+        }
+
         let suffix = String(afterMarker[correction.range.upperBound...])
         return normalizeBacktrackingWhitespace(join(prefix, correctionText, suffix))
+    }
+
+    private static func shouldApplyBacktrackingMarker(
+        _ markerText: String,
+        beforeMarker: String,
+        correctionText: String
+    ) -> Bool {
+        guard isReplaceThatBacktrackingMarker(markerText) else {
+            return true
+        }
+
+        if let previousWord = previousWord(in: beforeMarker),
+           blockedPreviousWordsForReplaceThat.contains(previousWord) {
+            return false
+        }
+
+        if let firstCorrectionWord = firstWord(in: correctionText),
+           blockedFirstCorrectionWordsForReplaceThat.contains(firstCorrectionWord) {
+            return false
+        }
+
+        return true
+    }
+
+    private static func isReplaceThatBacktrackingMarker(_ markerText: String) -> Bool {
+        let normalizedMarker = normalizeWhitespace(markerText)
+            .trimmingCharacters(in: CharacterSet(charactersIn: ",;: "))
+            .lowercased()
+        return normalizedMarker == "replace that with" || normalizedMarker == "change that to"
     }
 
     private static func applyScratchThatCommands(in text: String) -> String {
