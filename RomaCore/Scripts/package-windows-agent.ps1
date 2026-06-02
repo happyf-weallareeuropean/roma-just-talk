@@ -20,21 +20,6 @@ function Invoke-Step {
     & $Command
 }
 
-function Assert-OutputContains {
-    param(
-        [Parameter(Mandatory = $true)]
-        [string]$Output,
-        [Parameter(Mandatory = $true)]
-        [string]$Expected
-    )
-
-    if (!$Output.Contains($Expected)) {
-        throw "Expected command output to contain '$Expected'"
-    }
-
-    Write-Host "asserted_output=$Expected"
-}
-
 function Resolve-AgentExecutable {
     param(
         [Parameter(Mandatory = $true)]
@@ -68,7 +53,6 @@ function Resolve-AgentExecutable {
 
 $packageRoot = Resolve-Path "$PSScriptRoot\.."
 $OutputDir = $ExecutionContext.SessionState.Path.GetUnresolvedProviderPathFromPSPath($OutputDir)
-$isWindowsHost = [System.Environment]::OSVersion.Platform -eq [System.PlatformID]::Win32NT
 New-Item -ItemType Directory -Force -Path $OutputDir | Out-Null
 
 Push-Location $packageRoot
@@ -80,6 +64,9 @@ try {
     $buildDirectory = Join-Path $packageRoot ".build"
     $agentSource = Resolve-AgentExecutable -BuildDirectory $buildDirectory -Configuration $Configuration
     $agentOutput = Join-Path $OutputDir "RomaWindowsAgent.exe"
+    $smokeScriptSource = Join-Path $PSScriptRoot "smoke-windows-agent.ps1"
+    $smokeScriptOutput = Join-Path $OutputDir "smoke-windows-agent.ps1"
+    $configPath = Join-Path $OutputDir "sample-windows-agent.json"
 
     Invoke-Step "copy agent executable" {
         Copy-Item -LiteralPath $agentSource.FullName -Destination $agentOutput -Force
@@ -96,41 +83,16 @@ try {
             Copy-Item -LiteralPath $pdbSource -Destination $pdbOutput -Force
             Write-Host "agent_pdb=$pdbOutput"
         }
+
+        Copy-Item -LiteralPath $smokeScriptSource -Destination $smokeScriptOutput -Force
+        Write-Host "smoke_script=$smokeScriptOutput"
     }
 
-    Invoke-Step "agent doctor" {
-        $doctorOutput = & $agentOutput doctor 2>&1 | Out-String
-        if ($LASTEXITCODE -ne 0) {
-            Write-Host $doctorOutput
-            throw "packaged RomaWindowsAgent doctor failed"
-        }
-        Write-Host $doctorOutput
-        Assert-OutputContains -Output $doctorOutput -Expected "agent=roma-windows-agent"
-        if ($isWindowsHost) {
-            Assert-OutputContains -Output $doctorOutput -Expected "runtime_available=true"
-        }
-    }
-
-    $configPath = Join-Path $OutputDir "sample-windows-agent.json"
-    Invoke-Step "agent config sample" {
-        $configOutput = & $agentOutput write-config `
-            --config $configPath `
-            --endpoint "http://127.0.0.1:1/v1/audio/transcriptions" `
-            --model "mock-whisper" `
-            --api-key-env "PATH" `
-            --hold-hook `
-            --paste `
-            --replace "just talk=roma-just-talk" 2>&1 | Out-String
-        if ($LASTEXITCODE -ne 0) {
-            Write-Host $configOutput
-            throw "packaged RomaWindowsAgent write-config failed"
-        }
-        Write-Host $configOutput
-        Assert-OutputContains -Output $configOutput -Expected "written=true"
-        Assert-OutputContains -Output $configOutput -Expected "config=$configPath"
-        if (!(Test-Path -LiteralPath $configPath)) {
-            throw "sample Windows agent config was not created: $configPath"
-        }
+    Invoke-Step "packaged agent smoke" {
+        & $smokeScriptOutput `
+            -AgentPath $agentOutput `
+            -OutputDir $OutputDir `
+            -ConfigPath $configPath
     }
 
     $manifestPath = Join-Path $OutputDir "manifest.txt"
@@ -141,6 +103,7 @@ try {
         "source=$($agentSource.FullName)",
         "output=$agentOutput",
         "sample_config=$configPath",
+        "smoke_script=$smokeScriptOutput",
         "bytes=$($agentFile.Length)"
     ) | Set-Content -LiteralPath $manifestPath -Encoding UTF8
 
