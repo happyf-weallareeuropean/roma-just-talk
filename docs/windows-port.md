@@ -127,7 +127,7 @@ Minimum Windows MVP permission surface: microphone + shortcut + clipboard/paste.
 
 ## First Implementation Plan
 
-1. Add `RomaCore` as a SwiftPM package or internal package folder. The initial package now exists under `RomaCore/` with portable interfaces for recorder, shortcut, paste, permissions, secrets, settings, and transcription services, plus shared pre-roll PCM buffering and PCM16 WAV output.
+1. Add `RomaCore` as a SwiftPM package or internal package folder. The initial package now exists under `RomaCore/` with portable interfaces for recorder, shortcut, paste, permissions, secrets, settings, and transcription services, plus shared pre-roll PCM buffering, PCM16 WAV output, and a portable `RomaProofAgent` executable.
 2. Move only pure types and services first:
    - `TranscriptionService`
    - model/provider types that do not import SwiftData/AppKit
@@ -154,6 +154,8 @@ Run on a Windows laptop or Windows CI runner with audio loopback/mock where poss
 ```powershell
 swift --version
 swift test
+swift run RomaProofAgent doctor
+swift run RomaProofAgent pre-roll-proof --out core-proof.wav
 roma-agent.exe doctor
 roma-agent.exe record-proof --seconds-before-hotkey 2 --seconds-after-hotkey 2 --out proof.wav
 roma-agent.exe transcribe-proof --audio proof.wav

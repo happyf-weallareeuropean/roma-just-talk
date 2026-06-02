@@ -12,12 +12,20 @@ let package = Package(
         .executable(
             name: "RomaCoreChecks",
             targets: ["RomaCoreChecks"]
+        ),
+        .executable(
+            name: "RomaProofAgent",
+            targets: ["RomaProofAgent"]
         )
     ],
     targets: [
         .target(name: "RomaCore"),
         .executableTarget(
             name: "RomaCoreChecks",
+            dependencies: ["RomaCore"]
+        ),
+        .executableTarget(
+            name: "RomaProofAgent",
             dependencies: ["RomaCore"]
         )
     ]
