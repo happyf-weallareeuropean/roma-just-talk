@@ -110,6 +110,11 @@ struct TranscriptionOutputFilter {
         let style: SpokenCodeCaseStyle
     }
 
+    private enum SpokenMarkdownTaskState {
+        case unchecked
+        case checked
+    }
+
     private static let lowercaseTranscriptionKey = "LowercaseTranscription"
     private static let maxInsertionContextCharacters = 512
     private static let apostropheLikeCharacters = CharacterSet(charactersIn: "'’‘ʼ＇")
@@ -162,6 +167,11 @@ struct TranscriptionOutputFilter {
         (#"(?i)[,;:…]\s+(?:you\s+know|like)[,;:…]+(?=\s)"#, " ")
     ]
     private static let inlineNumberedListMarkerPattern = #"(?<![\p{L}\p{N}])\d{1,2}\.\s+(?=\S)"#
+    private static let markdownHeadingPattern = #"(?im)(^|\n)[ \t]*(?:heading|header)[ \t]+(one|two|three|1|2|3)[ \t]+([^\n]+)"#
+    private static let uncheckedMarkdownTaskPattern = #"(?im)(^|\n)[ \t]*(?:todo|to[ \t]+do|checkbox|check[ \t]+box|unchecked[ \t]+(?:task|checkbox|check[ \t]+box))[ \t]+([^\n]+)"#
+    private static let checkedMarkdownTaskPattern = #"(?im)(^|\n)[ \t]*(?:(?:checked|done|completed)[ \t]+(?:task|checkbox|check[ \t]+box))[ \t]+([^\n]+)"#
+    private static let openCodeBlockPattern = #"(?im)(^|\n)[ \t]*(?:open|start)[ \t]+code[ \t]+block(?:[ \t]+([A-Za-z0-9_+#.-]+))?[ \t]*(?=\n|$)"#
+    private static let closeCodeBlockPattern = #"(?im)(^|\n)[ \t]*(?:close|end)[ \t]+code[ \t]+block[ \t]*(?=\n|$)"#
     private static let backtrackingMarkerPattern = #"""
         (?ix)
         \s*
@@ -329,6 +339,7 @@ struct TranscriptionOutputFilter {
         filteredText = formatInlineNumberedLists(in: filteredText)
         filteredText = applySpokenSymbolCommands(in: filteredText)
         filteredText = applySpokenCodeCaseCommands(in: filteredText)
+        filteredText = applySpokenMarkdownCommands(in: filteredText)
         filteredText = collapseAdjacentRepeatedWords(in: filteredText)
         filteredText = collapseRepeatedShortSentences(in: filteredText)
 
@@ -934,6 +945,166 @@ struct TranscriptionOutputFilter {
     private static func capitalizedCodeCaseWord(_ word: String) -> String {
         guard let firstCharacter = word.first else { return word }
         return String(firstCharacter).uppercased() + word.dropFirst()
+    }
+
+    private static func applySpokenMarkdownCommands(in text: String) -> String {
+        var formattedText = applySpokenMarkdownHeadings(in: text)
+        formattedText = applySpokenMarkdownTasks(in: formattedText)
+        formattedText = applySpokenMarkdownCodeBlocks(in: formattedText)
+        return formattedText
+    }
+
+    private static func applySpokenMarkdownHeadings(in text: String) -> String {
+        guard let regex = try? NSRegularExpression(pattern: markdownHeadingPattern) else {
+            return text
+        }
+
+        var formattedText = text
+        let matches = regex.matches(in: formattedText, range: NSRange(formattedText.startIndex..., in: formattedText))
+
+        for match in matches.reversed() {
+            guard match.numberOfRanges >= 4,
+                  let fullRange = Range(match.range(at: 0), in: formattedText),
+                  let prefixRange = Range(match.range(at: 1), in: formattedText),
+                  let levelRange = Range(match.range(at: 2), in: formattedText),
+                  let titleRange = Range(match.range(at: 3), in: formattedText) else {
+                continue
+            }
+
+            let prefix = String(formattedText[prefixRange])
+            let marker = String(repeating: "#", count: markdownHeadingLevel(from: String(formattedText[levelRange])))
+            let title = markdownLineContent(String(formattedText[titleRange]))
+            guard !title.isEmpty,
+                  shouldApplySpokenMarkdownLineCommand(to: title) else {
+                continue
+            }
+
+            formattedText.replaceSubrange(fullRange, with: "\(prefix)\(marker) \(title)")
+        }
+
+        return formattedText
+    }
+
+    private static func markdownHeadingLevel(from text: String) -> Int {
+        switch text.lowercased() {
+        case "one", "1": return 1
+        case "two", "2": return 2
+        default: return 3
+        }
+    }
+
+    private static func applySpokenMarkdownTasks(in text: String) -> String {
+        let checkedText = applySpokenMarkdownTaskCommand(
+            in: text,
+            pattern: checkedMarkdownTaskPattern,
+            state: .checked
+        )
+        return applySpokenMarkdownTaskCommand(
+            in: checkedText,
+            pattern: uncheckedMarkdownTaskPattern,
+            state: .unchecked
+        )
+    }
+
+    private static func applySpokenMarkdownTaskCommand(
+        in text: String,
+        pattern: String,
+        state: SpokenMarkdownTaskState
+    ) -> String {
+        guard let regex = try? NSRegularExpression(pattern: pattern) else {
+            return text
+        }
+
+        var formattedText = text
+        let matches = regex.matches(in: formattedText, range: NSRange(formattedText.startIndex..., in: formattedText))
+
+        for match in matches.reversed() {
+            guard match.numberOfRanges >= 3,
+                  let fullRange = Range(match.range(at: 0), in: formattedText),
+                  let prefixRange = Range(match.range(at: 1), in: formattedText),
+                  let contentRange = Range(match.range(at: 2), in: formattedText) else {
+                continue
+            }
+
+            let prefix = String(formattedText[prefixRange])
+            let checkbox = state == .checked ? "[x]" : "[ ]"
+            let content = markdownLineContent(String(formattedText[contentRange]))
+            guard !content.isEmpty,
+                  shouldApplySpokenMarkdownLineCommand(to: content) else {
+                continue
+            }
+
+            formattedText.replaceSubrange(fullRange, with: "\(prefix)- \(checkbox) \(content)")
+        }
+
+        return formattedText
+    }
+
+    private static func applySpokenMarkdownCodeBlocks(in text: String) -> String {
+        var formattedText = replaceCodeBlockCommand(
+            in: text,
+            pattern: openCodeBlockPattern,
+            isOpeningFence: true
+        )
+        formattedText = replaceCodeBlockCommand(
+            in: formattedText,
+            pattern: closeCodeBlockPattern,
+            isOpeningFence: false
+        )
+        return formattedText
+    }
+
+    private static func replaceCodeBlockCommand(
+        in text: String,
+        pattern: String,
+        isOpeningFence: Bool
+    ) -> String {
+        guard let regex = try? NSRegularExpression(pattern: pattern) else {
+            return text
+        }
+
+        var formattedText = text
+        let matches = regex.matches(in: formattedText, range: NSRange(formattedText.startIndex..., in: formattedText))
+
+        for match in matches.reversed() {
+            guard match.numberOfRanges >= 2,
+                  let fullRange = Range(match.range(at: 0), in: formattedText),
+                  let prefixRange = Range(match.range(at: 1), in: formattedText) else {
+                continue
+            }
+
+            let prefix = String(formattedText[prefixRange])
+            let language = codeBlockLanguage(in: formattedText, match: match)
+            let fence = isOpeningFence ? "```\(language)" : "```"
+            formattedText.replaceSubrange(fullRange, with: "\(prefix)\(fence)")
+        }
+
+        return formattedText
+    }
+
+    private static func codeBlockLanguage(in text: String, match: NSTextCheckingResult) -> String {
+        guard match.numberOfRanges >= 3,
+              let languageRange = Range(match.range(at: 2), in: text) else {
+            return ""
+        }
+
+        let language = String(text[languageRange])
+            .trimmingCharacters(in: .whitespacesAndNewlines)
+            .lowercased()
+        return language.isEmpty ? "" : language
+    }
+
+    private static func markdownLineContent(_ text: String) -> String {
+        let normalizedText = normalizeWhitespace(text)
+        return removeTrailingFragmentPunctuation(from: normalizedText)
+    }
+
+    private static func shouldApplySpokenMarkdownLineCommand(to content: String) -> Bool {
+        guard let firstWord = codeCaseWords(in: content).first else {
+            return false
+        }
+
+        return !blockedFirstWordsForSpokenCodeCase.contains(firstWord)
     }
 
     private static func applySpokenPunctuationCommands(in text: String) -> String {

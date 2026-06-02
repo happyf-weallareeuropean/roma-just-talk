@@ -87,6 +87,13 @@ struct TranscriptionOutputFilterTests {
         #expect(TranscriptionOutputFilter.filter("Shopping list 1. Apples 2. Bananas 3. Oranges.") == "Shopping list\n1. Apples\n2. Bananas\n3. Oranges.")
         #expect(TranscriptionOutputFilter.filter("Rank 1. Apples only.") == "Rank 1. Apples only.")
         #expect(TranscriptionOutputFilter.filter("Use version 1.2.3 today.") == "Use version 1.2.3 today.")
+        #expect(TranscriptionOutputFilter.filter("Heading one project status.") == "# project status")
+        #expect(TranscriptionOutputFilter.filter("Intro new line heading two details.") == "Intro\n## details")
+        #expect(TranscriptionOutputFilter.filter("Todo buy milk.") == "- [ ] buy milk")
+        #expect(TranscriptionOutputFilter.filter("Checked checkbox send email.") == "- [x] send email")
+        #expect(TranscriptionOutputFilter.filter("Open code block swift new line let x equals one new line close code block") == "```swift\nlet x equals one\n```")
+        #expect(TranscriptionOutputFilter.filter("Task force meeting.") == "Task force meeting.")
+        #expect(TranscriptionOutputFilter.filter("Heading one is common.") == "Heading one is common.")
         #expect(TranscriptionOutputFilter.filter("This newlineish word should stay.") == "This newlineish word should stay.")
     }
 
