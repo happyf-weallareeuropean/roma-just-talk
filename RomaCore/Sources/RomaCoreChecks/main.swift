@@ -257,9 +257,44 @@ struct RomaCoreChecks {
                 "replace command prose guard"
             ),
             (
+                "The command change that to is useful.",
+                "The command change that to is useful.",
+                "change command prose guard"
+            ),
+            (
+                "Delete that file.",
+                "Delete that file.",
+                "delete command prose guard"
+            ),
+            (
+                "Scratch that itch.",
+                "Scratch that itch.",
+                "scratch command prose guard"
+            ),
+            (
                 "New York New York is the title.",
                 "New York New York is the title.",
                 "intentional repeated phrase guard"
+            ),
+            (
+                "Use dot notation.",
+                "Use dot notation.",
+                "dot command prose guard"
+            ),
+            (
+                "I lost twenty pounds.",
+                "I lost twenty pounds.",
+                "currency cleanup weight guard"
+            ),
+            (
+                "This is a trial period",
+                "This is a trial period",
+                "period command prose guard"
+            ),
+            (
+                "Use the Oxford comma",
+                "Use the Oxford comma",
+                "comma command prose guard"
             )
         ]
 
