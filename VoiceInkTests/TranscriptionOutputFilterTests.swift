@@ -143,6 +143,8 @@ struct TranscriptionOutputFilterTests {
         #expect(TranscriptionOutputFilter.filter("Use kebab case user id.") == "Use user-id.")
         #expect(TranscriptionOutputFilter.filter("Use pascal case user profile.") == "Use UserProfile.")
         #expect(TranscriptionOutputFilter.filter("Use camel case API key.") == "Use apiKey.")
+        #expect(TranscriptionOutputFilter.filter("Use camel case user id in the request.") == "Use userId in the request.")
+        #expect(TranscriptionOutputFilter.filter("Set variable snake case user id for the payload.") == "Set variable user_id for the payload.")
         #expect(TranscriptionOutputFilter.filter("Camel case is common.") == "Camel case is common.")
         #expect(TranscriptionOutputFilter.filter("Use camel case for variable names.") == "Use camel case for variable names.")
         #expect(TranscriptionOutputFilter.filter("I prefer snake case user id.") == "I prefer snake case user id.")

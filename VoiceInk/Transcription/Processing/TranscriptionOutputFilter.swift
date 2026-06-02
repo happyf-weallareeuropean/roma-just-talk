@@ -271,19 +271,19 @@ struct TranscriptionOutputFilter {
     ]
     private static let spokenCodeCaseCommands = [
         SpokenCodeCaseCommand(
-            pattern: #"(?i)(?<![\p{L}\p{N}])camel\s*case\s+((?:[\p{L}\p{N}]+\s*){1,5})(?=[.!?,;:]|$)"#,
+            pattern: #"(?i)(?<![\p{L}\p{N}])camel\s*case\s+((?:(?!for\b|from\b|in\b|into\b|on\b|to\b|with\b)[\p{L}\p{N}]+\s*){1,5})(?=\s+(?:for|from|in|into|on|to|with)\b|[.!?,;:]|$)"#,
             style: .camel
         ),
         SpokenCodeCaseCommand(
-            pattern: #"(?i)(?<![\p{L}\p{N}])snake\s*case\s+((?:[\p{L}\p{N}]+\s*){1,5})(?=[.!?,;:]|$)"#,
+            pattern: #"(?i)(?<![\p{L}\p{N}])snake\s*case\s+((?:(?!for\b|from\b|in\b|into\b|on\b|to\b|with\b)[\p{L}\p{N}]+\s*){1,5})(?=\s+(?:for|from|in|into|on|to|with)\b|[.!?,;:]|$)"#,
             style: .snake
         ),
         SpokenCodeCaseCommand(
-            pattern: #"(?i)(?<![\p{L}\p{N}])(?:kebab|dash|hyphen)\s*case\s+((?:[\p{L}\p{N}]+\s*){1,5})(?=[.!?,;:]|$)"#,
+            pattern: #"(?i)(?<![\p{L}\p{N}])(?:kebab|dash|hyphen)\s*case\s+((?:(?!for\b|from\b|in\b|into\b|on\b|to\b|with\b)[\p{L}\p{N}]+\s*){1,5})(?=\s+(?:for|from|in|into|on|to|with)\b|[.!?,;:]|$)"#,
             style: .kebab
         ),
         SpokenCodeCaseCommand(
-            pattern: #"(?i)(?<![\p{L}\p{N}])pascal\s*case\s+((?:[\p{L}\p{N}]+\s*){1,5})(?=[.!?,;:]|$)"#,
+            pattern: #"(?i)(?<![\p{L}\p{N}])pascal\s*case\s+((?:(?!for\b|from\b|in\b|into\b|on\b|to\b|with\b)[\p{L}\p{N}]+\s*){1,5})(?=\s+(?:for|from|in|into|on|to|with)\b|[.!?,;:]|$)"#,
             style: .pascal
         )
     ]
