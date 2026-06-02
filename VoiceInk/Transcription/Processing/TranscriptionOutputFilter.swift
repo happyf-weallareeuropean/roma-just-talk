@@ -136,6 +136,10 @@ struct TranscriptionOutputFilter {
             ""
         )
     ]
+    private static let punctuatedDiscourseFillerPatterns: [(pattern: String, replacement: String)] = [
+        (#"(?i)[,;:…]\s+(?:you\s+know|like)[,;:…]*([.!?])\s*$"#, "$1"),
+        (#"(?i)[,;:…]\s+(?:you\s+know|like)[,;:…]+(?=\s)"#, " ")
+    ]
     private static let backtrackingMarkerPattern = #"""
         (?ix)
         \s*
@@ -492,6 +496,8 @@ struct TranscriptionOutputFilter {
     private static func removeFillerWords(from text: String) -> String {
         var filteredText = text
 
+        filteredText = removePunctuatedDiscourseFillers(from: filteredText)
+
         let joinedPausePattern = #"(?i)(?<![\p{L}\p{N}])(?:m+h+m+|m+[\s-]+h+m+|u+h+[\s-]+h*u+h+|u+h+[\s-]+u+h+|u+m+[\s-]+h+m+)(?:[.,;:!?…]+)?(?![\p{L}\p{N}])"#
         if let regex = try? NSRegularExpression(pattern: joinedPausePattern) {
             let range = NSRange(filteredText.startIndex..., in: filteredText)
@@ -516,6 +522,26 @@ struct TranscriptionOutputFilter {
                 let range = NSRange(filteredText.startIndex..., in: filteredText)
                 filteredText = regex.stringByReplacingMatches(in: filteredText, options: [], range: range, withTemplate: "")
             }
+        }
+
+        return filteredText
+    }
+
+    private static func removePunctuatedDiscourseFillers(from text: String) -> String {
+        var filteredText = text
+
+        for pattern in punctuatedDiscourseFillerPatterns {
+            guard let regex = try? NSRegularExpression(pattern: pattern.pattern) else {
+                continue
+            }
+
+            let range = NSRange(filteredText.startIndex..., in: filteredText)
+            filteredText = regex.stringByReplacingMatches(
+                in: filteredText,
+                options: [],
+                range: range,
+                withTemplate: pattern.replacement
+            )
         }
 
         return filteredText

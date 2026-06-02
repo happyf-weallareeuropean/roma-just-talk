@@ -4,6 +4,7 @@
 
 - Improved final dictation cleanup for mid-sentence fragments, stray bracket wrappers, pause sounds, repeated words, obvious self-corrections, and spoken formatting/punctuation commands.
 - Improved cleanup for hyphenated pause sounds such as "mm-hmm" and "uh-huh".
+- Removed punctuated discourse fillers such as ", like," and ", you know." without dropping meaningful uses.
 - Collapsed obvious repeated short sentences from dictated output.
 - Added spoken quote and parenthesis formatting commands.
 - Preserved dictated quote and parenthesis fragments through final insertion cleanup.
