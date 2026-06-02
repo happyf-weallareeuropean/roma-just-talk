@@ -192,6 +192,14 @@ struct VoiceInkTests {
         #expect(TranscriptionOutputFilter.filter("The quote field stays.") == "The quote field stays.")
     }
 
+    @Test func transcriptionFilterAppliesGuardedSpokenSymbolCommands() async throws {
+        #expect(TranscriptionOutputFilter.filter("Use api slash users.") == "Use api/users.")
+        #expect(TranscriptionOutputFilter.filter("Use model hyphen beta.") == "Use model-beta.")
+        #expect(TranscriptionOutputFilter.filter("Use path backslash temp.") == "Use path\\temp.")
+        #expect(TranscriptionOutputFilter.filter("Use the slash command.") == "Use the slash command.")
+        #expect(TranscriptionOutputFilter.filter("Add a dash of salt.") == "Add a dash of salt.")
+    }
+
     @Test func transcriptionFilterRemovesCommonASRBoilerplate() async throws {
         #expect(TranscriptionOutputFilter.filter("Thank you for watching.") == "")
         #expect(TranscriptionOutputFilter.filter("Okay. Thank you for watching.") == "Okay.")

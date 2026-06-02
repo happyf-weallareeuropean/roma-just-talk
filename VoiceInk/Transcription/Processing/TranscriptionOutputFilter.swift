@@ -76,6 +76,25 @@ struct TranscriptionOutputFilter {
         }
     }
 
+    private struct SpokenSymbolCommand {
+        let pattern: String
+        let output: String
+        let blockedPreviousWords: Set<String>
+        let blockedNextWords: Set<String>
+
+        init(
+            pattern: String,
+            output: String,
+            blockedPreviousWords: Set<String> = [],
+            blockedNextWords: Set<String> = []
+        ) {
+            self.pattern = pattern
+            self.output = output
+            self.blockedPreviousWords = blockedPreviousWords
+            self.blockedNextWords = blockedNextWords
+        }
+    }
+
     private static let lowercaseTranscriptionKey = "LowercaseTranscription"
     private static let maxInsertionContextCharacters = 512
     private static let apostropheLikeCharacters = CharacterSet(charactersIn: "'’‘ʼ＇")
@@ -148,6 +167,23 @@ struct TranscriptionOutputFilter {
         (#"(?i)(?<![\p{L}\p{N}])(?:close|end)\s+(?:quote|quotation\s+marks?)(?![\p{L}\p{N}])"#, closeQuotePlaceholder),
         (#"(?i)(?<![\p{L}\p{N}])(?:open|left)\s+(?:paren|parenthesis|parentheses)(?![\p{L}\p{N}])"#, openParenthesisPlaceholder),
         (#"(?i)(?<![\p{L}\p{N}])(?:close|right)\s+(?:paren|parenthesis|parentheses)(?![\p{L}\p{N}])"#, closeParenthesisPlaceholder)
+    ]
+    private static let spokenSymbolCommands = [
+        SpokenSymbolCommand(
+            pattern: #"(?i)(?<![\p{L}\p{N}])(?:forward\s+slash|slash)(?![\p{L}\p{N}])"#,
+            output: "/",
+            blockedNextWords: ["command", "commands"]
+        ),
+        SpokenSymbolCommand(
+            pattern: #"(?i)(?<![\p{L}\p{N}])(?:back\s+slash|backslash)(?![\p{L}\p{N}])"#,
+            output: "\\"
+        ),
+        SpokenSymbolCommand(
+            pattern: #"(?i)(?<![\p{L}\p{N}])(?:dash|hyphen)(?![\p{L}\p{N}])"#,
+            output: "-",
+            blockedPreviousWords: ["a"],
+            blockedNextWords: ["of"]
+        )
     ]
     private static let spokenPunctuationCommands = [
         SpokenPunctuationCommand(
@@ -226,6 +262,7 @@ struct TranscriptionOutputFilter {
         filteredText = applyBacktrackingCorrections(in: filteredText)
         filteredText = applySpokenFormattingCommands(in: filteredText)
         filteredText = applySpokenEnclosureCommands(in: filteredText)
+        filteredText = applySpokenSymbolCommands(in: filteredText)
         filteredText = applySpokenPunctuationCommands(in: filteredText)
         filteredText = collapseAdjacentRepeatedWords(in: filteredText)
         filteredText = collapseRepeatedShortSentences(in: filteredText)
@@ -481,6 +518,71 @@ struct TranscriptionOutputFilter {
             .replacingOccurrences(of: closeQuotePlaceholder, with: "\"")
             .replacingOccurrences(of: openParenthesisPlaceholder, with: "(")
             .replacingOccurrences(of: closeParenthesisPlaceholder, with: ")")
+    }
+
+    private static func applySpokenSymbolCommands(in text: String) -> String {
+        var symbolizedText = text
+
+        for command in spokenSymbolCommands {
+            guard let regex = try? NSRegularExpression(pattern: command.pattern) else {
+                continue
+            }
+
+            let fullRange = NSRange(symbolizedText.startIndex..., in: symbolizedText)
+            let matches = regex.matches(in: symbolizedText, range: fullRange).reversed()
+
+            for match in matches {
+                guard let range = Range(match.range, in: symbolizedText),
+                      shouldApplySpokenSymbolCommand(command, in: symbolizedText, commandRange: range) else {
+                    continue
+                }
+
+                symbolizedText = replaceSpokenSymbolCommand(command, in: symbolizedText, commandRange: range)
+            }
+        }
+
+        return symbolizedText
+    }
+
+    private static func shouldApplySpokenSymbolCommand(
+        _ command: SpokenSymbolCommand,
+        in text: String,
+        commandRange: Range<String.Index>
+    ) -> Bool {
+        let beforeCommand = String(text[..<commandRange.lowerBound])
+        let afterCommand = String(text[commandRange.upperBound...])
+
+        guard let previousWord = previousWord(in: beforeCommand),
+              let nextWord = nextWord(in: afterCommand) else {
+            return false
+        }
+
+        if command.blockedPreviousWords.contains(previousWord) {
+            return false
+        }
+
+        if command.blockedNextWords.contains(nextWord) {
+            return false
+        }
+
+        return true
+    }
+
+    private static func replaceSpokenSymbolCommand(
+        _ command: SpokenSymbolCommand,
+        in text: String,
+        commandRange: Range<String.Index>
+    ) -> String {
+        let prefix = String(text[..<commandRange.lowerBound])
+            .trimmingCharacters(in: .whitespacesAndNewlines)
+        let suffix = String(text[commandRange.upperBound...])
+            .trimmingCharacters(in: .whitespacesAndNewlines)
+
+        guard !prefix.isEmpty && !suffix.isEmpty else {
+            return text
+        }
+
+        return "\(prefix)\(command.output)\(suffix)"
     }
 
     private static func applySpokenPunctuationCommands(in text: String) -> String {
