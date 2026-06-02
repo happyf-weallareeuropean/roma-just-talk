@@ -98,6 +98,18 @@ struct TranscriptionOutputFilter {
         }
     }
 
+    private enum SpokenCodeCaseStyle {
+        case camel
+        case snake
+        case kebab
+        case pascal
+    }
+
+    private struct SpokenCodeCaseCommand {
+        let pattern: String
+        let style: SpokenCodeCaseStyle
+    }
+
     private static let lowercaseTranscriptionKey = "LowercaseTranscription"
     private static let maxInsertionContextCharacters = 512
     private static let apostropheLikeCharacters = CharacterSet(charactersIn: "'’‘ʼ＇")
@@ -108,6 +120,15 @@ struct TranscriptionOutputFilter {
     ]
     private static let preservedRepeatedWords: Set<String> = [
         "ha", "haha", "no", "ok", "okay", "really", "so", "very", "yes"
+    ]
+    private static let allowedPreviousWordsForSpokenCodeCase: Set<String> = [
+        "argument", "branch", "call", "called", "class", "constant", "enum",
+        "field", "file", "folder", "function", "identifier", "key", "method",
+        "named", "parameter", "property", "set", "struct", "to", "use",
+        "using", "variable"
+    ]
+    private static let blockedFirstWordsForSpokenCodeCase: Set<String> = [
+        "a", "an", "as", "for", "in", "is", "means", "style", "the", "with"
     ]
     private static let likelyLowercaseFragments: Set<String> = [
         "a", "about", "after", "again", "all", "also", "an", "and", "any", "are",
@@ -215,6 +236,24 @@ struct TranscriptionOutputFilter {
             blockedNextWords: ["of"]
         )
     ]
+    private static let spokenCodeCaseCommands = [
+        SpokenCodeCaseCommand(
+            pattern: #"(?i)(?<![\p{L}\p{N}])camel\s*case\s+((?:[\p{L}\p{N}]+\s*){1,5})(?=[.!?,;:]|$)"#,
+            style: .camel
+        ),
+        SpokenCodeCaseCommand(
+            pattern: #"(?i)(?<![\p{L}\p{N}])snake\s*case\s+((?:[\p{L}\p{N}]+\s*){1,5})(?=[.!?,;:]|$)"#,
+            style: .snake
+        ),
+        SpokenCodeCaseCommand(
+            pattern: #"(?i)(?<![\p{L}\p{N}])(?:kebab|dash|hyphen)\s*case\s+((?:[\p{L}\p{N}]+\s*){1,5})(?=[.!?,;:]|$)"#,
+            style: .kebab
+        ),
+        SpokenCodeCaseCommand(
+            pattern: #"(?i)(?<![\p{L}\p{N}])pascal\s*case\s+((?:[\p{L}\p{N}]+\s*){1,5})(?=[.!?,;:]|$)"#,
+            style: .pascal
+        )
+    ]
     private static let spokenPunctuationCommands = [
         SpokenPunctuationCommand(
             pattern: #"(?i)(?<![\p{L}\p{N}])question\s+mark(?![\p{L}\p{N}])"#,
@@ -289,6 +328,7 @@ struct TranscriptionOutputFilter {
         filteredText = applySpokenPunctuationCommands(in: filteredText)
         filteredText = formatInlineNumberedLists(in: filteredText)
         filteredText = applySpokenSymbolCommands(in: filteredText)
+        filteredText = applySpokenCodeCaseCommands(in: filteredText)
         filteredText = collapseAdjacentRepeatedWords(in: filteredText)
         filteredText = collapseRepeatedShortSentences(in: filteredText)
 
@@ -806,6 +846,94 @@ struct TranscriptionOutputFilter {
         }
 
         return "\(prefix)\(command.output)\(suffix)"
+    }
+
+    private static func applySpokenCodeCaseCommands(in text: String) -> String {
+        var formattedText = text
+
+        for command in spokenCodeCaseCommands {
+            guard let regex = try? NSRegularExpression(pattern: command.pattern) else {
+                continue
+            }
+
+            let fullRange = NSRange(formattedText.startIndex..., in: formattedText)
+            let matches = regex.matches(in: formattedText, range: fullRange).reversed()
+
+            for match in matches {
+                guard match.numberOfRanges >= 2,
+                      let commandRange = Range(match.range(at: 0), in: formattedText),
+                      let phraseRange = Range(match.range(at: 1), in: formattedText),
+                      shouldApplySpokenCodeCaseCommand(in: formattedText, commandRange: commandRange, phraseRange: phraseRange) else {
+                    continue
+                }
+
+                let phrase = String(formattedText[phraseRange])
+                let replacement = formatSpokenCodeCasePhrase(phrase, style: command.style)
+                formattedText.replaceSubrange(commandRange.lowerBound..<phraseRange.upperBound, with: replacement)
+            }
+        }
+
+        return formattedText
+    }
+
+    private static func shouldApplySpokenCodeCaseCommand(
+        in text: String,
+        commandRange: Range<String.Index>,
+        phraseRange: Range<String.Index>
+    ) -> Bool {
+        let phraseWords = codeCaseWords(in: String(text[phraseRange]))
+        guard let firstWord = phraseWords.first,
+              !blockedFirstWordsForSpokenCodeCase.contains(firstWord),
+              phraseWords.count <= 5 else {
+            return false
+        }
+
+        let beforeCommand = String(text[..<commandRange.lowerBound])
+            .trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !beforeCommand.isEmpty else {
+            return true
+        }
+
+        if let previousCharacter = beforeCommand.last,
+           ".!?([{:\n".contains(previousCharacter) {
+            return true
+        }
+
+        guard let previousWord = previousWord(in: beforeCommand) else {
+            return false
+        }
+        return allowedPreviousWordsForSpokenCodeCase.contains(previousWord)
+    }
+
+    private static func formatSpokenCodeCasePhrase(_ phrase: String, style: SpokenCodeCaseStyle) -> String {
+        let words = codeCaseWords(in: phrase)
+        guard !words.isEmpty else { return normalizeWhitespace(phrase) }
+
+        switch style {
+        case .camel:
+            return words.enumerated()
+                .map { index, word in
+                    index == 0 ? word : capitalizedCodeCaseWord(word)
+                }
+                .joined()
+        case .snake:
+            return words.joined(separator: "_")
+        case .kebab:
+            return words.joined(separator: "-")
+        case .pascal:
+            return words.map(capitalizedCodeCaseWord).joined()
+        }
+    }
+
+    private static func codeCaseWords(in phrase: String) -> [String] {
+        phrase
+            .split { !$0.isLetter && !$0.isNumber }
+            .map { String($0).lowercased() }
+    }
+
+    private static func capitalizedCodeCaseWord(_ word: String) -> String {
+        guard let firstCharacter = word.first else { return word }
+        return String(firstCharacter).uppercased() + word.dropFirst()
     }
 
     private static func applySpokenPunctuationCommands(in text: String) -> String {

@@ -114,6 +114,17 @@ struct TranscriptionOutputFilterTests {
         #expect(TranscriptionOutputFilter.filter("Use the underscore command.") == "Use the underscore command.")
     }
 
+    @Test func transcriptionFilterAppliesGuardedCodeCaseCommands() async throws {
+        #expect(TranscriptionOutputFilter.filter("Use camel case user id.") == "Use userId.")
+        #expect(TranscriptionOutputFilter.filter("Set variable snake case user id.") == "Set variable user_id.")
+        #expect(TranscriptionOutputFilter.filter("Use kebab case user id.") == "Use user-id.")
+        #expect(TranscriptionOutputFilter.filter("Use pascal case user profile.") == "Use UserProfile.")
+        #expect(TranscriptionOutputFilter.filter("Use camel case API key.") == "Use apiKey.")
+        #expect(TranscriptionOutputFilter.filter("Camel case is common.") == "Camel case is common.")
+        #expect(TranscriptionOutputFilter.filter("Use camel case for variable names.") == "Use camel case for variable names.")
+        #expect(TranscriptionOutputFilter.filter("I prefer snake case user id.") == "I prefer snake case user id.")
+    }
+
     @Test func transcriptionFilterRemovesCommonASRBoilerplate() async throws {
         #expect(TranscriptionOutputFilter.filter("Thank you for watching.") == "")
         #expect(TranscriptionOutputFilter.filter("Okay. Thank you for watching.") == "Okay.")
