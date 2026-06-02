@@ -116,7 +116,7 @@ jobs:
 
       - name: Parse Windows proof script
         run: |
-          foreach ($script in @(".\Scripts\windows-proof.ps1", ".\Scripts\package-windows-agent.ps1", ".\Scripts\smoke-windows-agent.ps1")) {
+          foreach ($script in @(".\Scripts\windows-proof.ps1", ".\Scripts\package-windows-agent.ps1", ".\Scripts\smoke-windows-agent.ps1", ".\Scripts\install-windows-agent.ps1")) {
             $errors = $null
             [System.Management.Automation.PSParser]::Tokenize(
               (Get-Content -Raw $script),

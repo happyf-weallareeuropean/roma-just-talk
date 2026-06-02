@@ -138,6 +138,8 @@ try {
     $agentOutput = Join-Path $OutputDir "RomaWindowsAgent.exe"
     $smokeScriptSource = Join-Path $PSScriptRoot "smoke-windows-agent.ps1"
     $smokeScriptOutput = Join-Path $OutputDir "smoke-windows-agent.ps1"
+    $installScriptSource = Join-Path $PSScriptRoot "install-windows-agent.ps1"
+    $installScriptOutput = Join-Path $OutputDir "install-windows-agent.ps1"
     $configPath = Join-Path $OutputDir "sample-windows-agent.json"
 
     Invoke-Step "copy agent executable" {
@@ -158,6 +160,8 @@ try {
 
         Copy-Item -LiteralPath $smokeScriptSource -Destination $smokeScriptOutput -Force
         Write-Host "smoke_script=$smokeScriptOutput"
+        Copy-Item -LiteralPath $installScriptSource -Destination $installScriptOutput -Force
+        Write-Host "install_script=$installScriptOutput"
     }
 
     $swiftRuntime = @{}
@@ -173,6 +177,13 @@ try {
             -ConfigPath $configPath
     }
 
+    Invoke-Step "packaged agent install smoke" {
+        & $installScriptOutput `
+            -PackageDir $OutputDir `
+            -InstallDir (Join-Path $OutputDir "install-proof") `
+            -ConfigPath (Join-Path $OutputDir "install-proof\windows-agent.json")
+    }
+
     $manifestPath = Join-Path $OutputDir "manifest.txt"
     $agentFile = Get-Item -LiteralPath $agentOutput
     @(
@@ -182,6 +193,7 @@ try {
         "output=$agentOutput",
         "sample_config=$configPath",
         "smoke_script=$smokeScriptOutput",
+        "install_script=$installScriptOutput",
         "swift_runtime_dir=$($swiftRuntime.Directory)",
         "swift_runtime_dlls=$($swiftRuntime.DllCount)",
         "bytes=$($agentFile.Length)"

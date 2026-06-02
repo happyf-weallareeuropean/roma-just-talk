@@ -170,6 +170,7 @@ cd RomaCore
 powershell -ExecutionPolicy Bypass -File .\Scripts\windows-proof.ps1
 powershell -ExecutionPolicy Bypass -File .\Scripts\package-windows-agent.ps1 -OutputDir C:\tmp\roma-windows-agent
 powershell -ExecutionPolicy Bypass -File C:\tmp\roma-windows-agent\smoke-windows-agent.ps1 -PackageDir C:\tmp\roma-windows-agent
+powershell -ExecutionPolicy Bypass -File C:\tmp\roma-windows-agent\install-windows-agent.ps1 -PackageDir C:\tmp\roma-windows-agent
 ```
 
 For the foreground-dependent proofs:
@@ -207,6 +208,15 @@ The first command proves the packaged `RomaWindowsAgent.exe doctor` and `write-c
 
 `package-windows-agent.ps1` copies Swift runtime DLLs from the PATH directory containing `swiftCore.dll` into the artifact. On Windows, packaging fails if no runtime DLLs are copied or if `swiftCore.dll` is missing from the artifact; that keeps CI from passing only because the runner has Swift on `PATH`.
 
+No-admin install proof:
+
+```powershell
+powershell -ExecutionPolicy Bypass -File C:\tmp\roma-windows-agent\install-windows-agent.ps1 -PackageDir C:\tmp\roma-windows-agent
+powershell -ExecutionPolicy Bypass -File C:\tmp\roma-windows-agent\install-windows-agent.ps1 -PackageDir C:\tmp\roma-windows-agent -Endpoint https://api.groq.com/openai/v1/audio/transcriptions -Model whisper-large-v3-turbo -ApiKeyEnv GROQ_API_KEY -ApiKeyName groq -RunDictation -PasteDictation
+```
+
+By default this installs into `%LOCALAPPDATA%\roma-just-talk\agent`, stores config at `%APPDATA%\roma-just-talk\windows-agent.json`, and smokes the installed copy. Pass `-InstallDir` and `-ConfigPath` to prove a temp install path in CI.
+
 Windows agent config:
 
 ```powershell
@@ -222,7 +232,7 @@ CI proof:
 - `.github/workflows/romacore.yml` builds `RomaCore` on macOS and Windows.
 - The Windows job verifies Visual Studio C++ tools, installs the official Swift toolchain with `winget install --id Swift.Toolchain`, then runs `windows-proof.ps1 -SkipMic`.
 - CI is noninteractive, so it proves Windows compilation, PowerShell parse validity, pre-roll/WAV output, shared cleanup/replacement/paste text processing, DPAPI secret round-trip, stored-key transcription against a local mock STT endpoint, reusable `RomaWindowsAgent` config writing, and hotkey/paste doctor paths. It does not prove real microphone permission, real hotkey delivery, or paste into Notepad.
-- CI also runs `package-windows-agent.ps1`, requires Swift runtime DLLs in the artifact, verifies the packaged `RomaWindowsAgent.exe` through `smoke-windows-agent.ps1`, and uploads a `roma-windows-agent` artifact for laptop smoke tests.
+- CI also runs `package-windows-agent.ps1`, requires Swift runtime DLLs in the artifact, verifies the packaged `RomaWindowsAgent.exe` through `smoke-windows-agent.ps1`, proves no-admin install into a temp directory, and uploads a `roma-windows-agent` artifact for laptop smoke tests.
 
 Raw command sequence:
 
