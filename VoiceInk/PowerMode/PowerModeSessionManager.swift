@@ -9,6 +9,7 @@ struct ApplicationState: Codable {
     var selectedAIModel: String?
     var selectedLanguage: String?
     var transcriptionModelName: String?
+    var transcriptionCleanupLevel: TranscriptionCleanupLevel?
     var isTextFormattingEnabled: Bool?
     var punctuationCleanupMode: PunctuationCleanupMode?
     var removePunctuation: Bool?
@@ -57,6 +58,7 @@ class PowerModeSessionManager {
                 selectedAIModel: enhancementService.getAIService()?.currentModel,
                 selectedLanguage: UserDefaults.standard.string(forKey: "SelectedLanguage"),
                 transcriptionModelName: stateProvider.currentTranscriptionModel?.name,
+                transcriptionCleanupLevel: TranscriptionCleanupLevel.current(),
                 isTextFormattingEnabled: UserDefaults.standard.bool(forKey: "IsTextFormattingEnabled"),
                 punctuationCleanupMode: punctuationCleanupMode,
                 removePunctuation: punctuationCleanupMode == .removeAll,
@@ -111,6 +113,7 @@ class PowerModeSessionManager {
             selectedAIModel: enhancementService.getAIService()?.currentModel,
             selectedLanguage: UserDefaults.standard.string(forKey: "SelectedLanguage"),
             transcriptionModelName: stateProvider.currentTranscriptionModel?.name,
+            transcriptionCleanupLevel: TranscriptionCleanupLevel.current(),
             isTextFormattingEnabled: UserDefaults.standard.bool(forKey: "IsTextFormattingEnabled"),
             punctuationCleanupMode: punctuationCleanupMode,
             removePunctuation: punctuationCleanupMode == .removeAll,
@@ -144,6 +147,7 @@ class PowerModeSessionManager {
                 }
             }
 
+            TranscriptionCleanupLevel.setCurrent(config.transcriptionCleanupLevel)
             UserDefaults.standard.set(config.isTextFormattingEnabled, forKey: "IsTextFormattingEnabled")
             PunctuationCleanupMode.setCurrent(config.punctuationCleanupMode)
             UserDefaults.standard.set(config.lowercaseTranscription, forKey: "LowercaseTranscription")
@@ -182,6 +186,9 @@ class PowerModeSessionManager {
                 }
             }
 
+            if let transcriptionCleanupLevel = state.transcriptionCleanupLevel {
+                TranscriptionCleanupLevel.setCurrent(transcriptionCleanupLevel)
+            }
             if let isTextFormattingEnabled = state.isTextFormattingEnabled {
                 UserDefaults.standard.set(isTextFormattingEnabled, forKey: "IsTextFormattingEnabled")
             }

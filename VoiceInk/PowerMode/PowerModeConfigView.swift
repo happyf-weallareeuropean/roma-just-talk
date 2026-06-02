@@ -17,6 +17,7 @@ struct ConfigurationView: View {
     @State private var selectedPromptId: UUID?
     @State private var selectedTranscriptionModelName: String?
     @State private var selectedLanguage: String?
+    @State private var transcriptionCleanupLevel: TranscriptionCleanupLevel = .polished
     @State private var isTextFormattingEnabled = false
     @State private var punctuationCleanupMode: PunctuationCleanupMode = .keep
     @State private var lowercaseTranscription = false
@@ -82,6 +83,7 @@ struct ConfigurationView: View {
             _selectedPromptId = State(initialValue: nil)
             _selectedTranscriptionModelName = State(initialValue: nil)
             _selectedLanguage = State(initialValue: nil)
+            _transcriptionCleanupLevel = State(initialValue: .polished)
             _isTextFormattingEnabled = State(initialValue: false)
             _punctuationCleanupMode = State(initialValue: .keep)
             _lowercaseTranscription = State(initialValue: false)
@@ -102,6 +104,7 @@ struct ConfigurationView: View {
             _selectedPromptId = State(initialValue: latestConfig.selectedPrompt.flatMap { UUID(uuidString: $0) })
             _selectedTranscriptionModelName = State(initialValue: latestConfig.selectedTranscriptionModelName)
             _selectedLanguage = State(initialValue: latestConfig.selectedLanguage)
+            _transcriptionCleanupLevel = State(initialValue: latestConfig.transcriptionCleanupLevel)
             _isTextFormattingEnabled = State(initialValue: latestConfig.isTextFormattingEnabled)
             _punctuationCleanupMode = State(initialValue: latestConfig.punctuationCleanupMode)
             _lowercaseTranscription = State(initialValue: latestConfig.lowercaseTranscription)
@@ -114,7 +117,7 @@ struct ConfigurationView: View {
             _isDefault = State(initialValue: latestConfig.isDefault)
             _selectedAIProvider = State(initialValue: latestConfig.selectedAIProvider)
             _selectedAIModel = State(initialValue: latestConfig.selectedAIModel)
-            _isTranscriptFormattingExpanded = State(initialValue: latestConfig.isTextFormattingEnabled || latestConfig.punctuationCleanupMode != .keep || latestConfig.lowercaseTranscription)
+            _isTranscriptFormattingExpanded = State(initialValue: latestConfig.transcriptionCleanupLevel != .polished || latestConfig.isTextFormattingEnabled || latestConfig.punctuationCleanupMode != .keep || latestConfig.lowercaseTranscription)
         }
     }
 
@@ -363,6 +366,18 @@ struct ConfigurationView: View {
 
                     if isTranscriptFormattingExpanded {
                         VStack(alignment: .leading, spacing: 10) {
+                            Picker(selection: $transcriptionCleanupLevel) {
+                                ForEach(TranscriptionCleanupLevel.allCases) { level in
+                                    Text(level.displayName).tag(level)
+                                }
+                            } label: {
+                                HStack(spacing: 4) {
+                                    Text("Cleanup")
+                                    InfoTip("Raw keeps the transcript mostly intact. Light keeps dictated punctuation and formatting commands. Polished also removes fillers, false starts, and repeated phrases.")
+                                }
+                            }
+                            .pickerStyle(.segmented)
+
                             Toggle(isOn: $isTextFormattingEnabled) {
                                 HStack(spacing: 4) {
                                     Text("Paragraph breaks")
@@ -633,6 +648,7 @@ struct ConfigurationView: View {
                 selectedTranscriptionModelName: selectedTranscriptionModelName,
                 selectedLanguage: selectedLanguage,
                 useScreenCapture: useScreenCapture,
+                transcriptionCleanupLevel: transcriptionCleanupLevel,
                 isTextFormattingEnabled: isTextFormattingEnabled,
                 punctuationCleanupMode: punctuationCleanupMode,
                 lowercaseTranscription: lowercaseTranscription,
@@ -649,6 +665,7 @@ struct ConfigurationView: View {
             updatedConfig.selectedPrompt = selectedPromptId?.uuidString
             updatedConfig.selectedTranscriptionModelName = selectedTranscriptionModelName
             updatedConfig.selectedLanguage = selectedLanguage
+            updatedConfig.transcriptionCleanupLevel = transcriptionCleanupLevel
             updatedConfig.isTextFormattingEnabled = isTextFormattingEnabled
             updatedConfig.punctuationCleanupMode = punctuationCleanupMode
             updatedConfig.lowercaseTranscription = lowercaseTranscription
