@@ -75,6 +75,7 @@ You can build the app yourself by following [BUILDING.md](BUILDING.md).
 ## Documentation
 
 - [Building from Source](BUILDING.md) - Detailed instructions for building the project
+- [Windows Port Direction](docs/windows-port.md) - Least-redundant path toward Windows support
 - [Contributing Guidelines](CONTRIBUTING.md) - Original upstream contribution notes
 - [Code of Conduct](CODE_OF_CONDUCT.md) - Our community standards
 
@@ -122,4 +123,3 @@ roma-just-talk is built on top of [VoiceInk](https://github.com/Beingpax/VoiceIn
 ---
 
 Built from VoiceInk, then pointed at speak-before-hotkey dictation.
-
