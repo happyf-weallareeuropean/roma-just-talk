@@ -50,6 +50,7 @@ Reusable now:
 - `TranscriptionOutputFilter`, formatter, prompt detection, word replacements, and dictionary behavior are product logic.
 - `PCMPreRollBuffer` now lives in `RomaCore` as Foundation-only circular PCM storage.
 - `PCM16WAVFile` now lives in `RomaCore` as Foundation-only PCM16 WAV output for proof recordings.
+- `MiniaudioCaptureRecorder` now lives in `RomaCore` and feeds miniaudio capture frames into the shared pre-roll/WAV path.
 - `WindowsHotKey.proofToggle` and the Windows-only `WindowsRegisterHotKeyProof` source define the first `RegisterHotKey` toggle proof path.
 - `WindowsClipboardPayload` and the Windows-only `WindowsPasteProof` source define the first `CF_UNICODETEXT` plus `SendInput` paste proof path.
 - `CoreAudioRecorder` already outputs the right streaming shape: 16 kHz mono Int16 PCM chunks and a WAV file with a 3 second pre-roll buffer, and now reuses `RomaCore.PCMPreRollBuffer`.
@@ -106,7 +107,7 @@ These are the lowest-redo candidates because they map directly to the behavior a
 
 | Need | Windows path | Why |
 | --- | --- | --- |
-| Rolling mic capture | miniaudio first, raw WASAPI second | miniaudio is single-file C, supports capture, WASAPI, Core Audio, conversion, and ring buffers. This can also reduce macOS recorder duplication later. |
+| Rolling mic capture | miniaudio first, raw WASAPI second | miniaudio is single-file C, supports capture, WASAPI, Core Audio, conversion, and ring buffers. `RomaProofAgent miniaudio-record-proof` is the first source path for this. |
 | Local Whisper | whisper.cpp C API or CLI/DLL | Current app already uses whisper.cpp; upstream supports Windows with MSVC/MinGW and CPU/GPU paths. |
 | Cloud STT | Existing provider logic behind a portable API-key store and vocabulary source | Low native surface; fastest proof if local model packaging is not ready. |
 | Global shortcut | `RegisterHotKey` for toggle proof | Simple system-wide hotkey, enough for MVP toggle mode. `RomaProofAgent windows-hotkey-proof` is the first source path for this. |
@@ -129,7 +130,7 @@ Minimum Windows MVP permission surface: microphone + shortcut + clipboard/paste.
 
 ## First Implementation Plan
 
-1. Add `RomaCore` as a SwiftPM package or internal package folder. The initial package now exists under `RomaCore/` with portable interfaces for recorder, shortcut, paste, permissions, secrets, settings, and transcription services, plus shared pre-roll PCM buffering, PCM16 WAV output, Windows hotkey/paste proof metadata, and a portable `RomaProofAgent` executable.
+1. Add `RomaCore` as a SwiftPM package or internal package folder. The initial package now exists under `RomaCore/` with portable interfaces for recorder, shortcut, paste, permissions, secrets, settings, and transcription services, plus shared pre-roll PCM buffering, PCM16 WAV output, miniaudio capture, Windows hotkey/paste proof metadata, and a portable `RomaProofAgent` executable.
 2. Move only pure types and services first:
    - `TranscriptionService`
    - model/provider types that do not import SwiftData/AppKit
@@ -158,6 +159,8 @@ swift --version
 swift test
 swift run RomaProofAgent doctor
 swift run RomaProofAgent pre-roll-proof --out core-proof.wav
+swift run RomaProofAgent miniaudio-capture-doctor
+swift run RomaProofAgent miniaudio-record-proof --out mic-proof.wav --seconds 2
 swift run RomaProofAgent windows-hotkey-doctor
 swift run RomaProofAgent windows-hotkey-proof
 swift run RomaProofAgent windows-paste-doctor

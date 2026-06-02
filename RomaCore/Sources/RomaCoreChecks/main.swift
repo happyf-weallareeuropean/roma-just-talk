@@ -7,6 +7,7 @@ struct RomaCoreChecks {
         try checkDefaultPreRollContract()
         try checkPreRollBufferKeepsChronologicalSamples()
         try checkPCM16WAVFileWritesCanonicalHeader()
+        try checkMiniaudioRecorderUsesSpeechPCMContract()
         try checkWindowsHotKeyProofDescriptor()
         try checkWindowsClipboardPayloadIsCFUnicodeText()
         try checkTranscriptionRequestMetadata()
@@ -96,6 +97,17 @@ struct RomaCoreChecks {
         } catch PCM16WAVFile.WriteError.pcmDataNotInt16Aligned(let byteCount) {
             try require(byteCount == 1, "unaligned PCM error should report byte count")
         }
+    }
+
+    private static func checkMiniaudioRecorderUsesSpeechPCMContract() throws {
+        let recorder = MiniaudioCaptureRecorder()
+
+        try require(MiniaudioCaptureRecorder.miniaudioVersion == "0.11.25", "miniaudio version should be pinned")
+        try require(recorder.preRollConfiguration.durationSeconds == 3, "miniaudio recorder should keep 3 second pre-roll")
+        try require(
+            recorder.preRollConfiguration.outputFormat == .speechPCM16kMono,
+            "miniaudio recorder should capture the shared speech PCM contract"
+        )
     }
 
     private static func checkWindowsHotKeyProofDescriptor() throws {

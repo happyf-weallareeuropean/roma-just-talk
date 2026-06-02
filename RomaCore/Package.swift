@@ -4,6 +4,9 @@ import PackageDescription
 
 let package = Package(
     name: "RomaCore",
+    platforms: [
+        .macOS(.v10_15)
+    ],
     products: [
         .library(
             name: "RomaCore",
@@ -19,7 +22,14 @@ let package = Package(
         )
     ],
     targets: [
-        .target(name: "RomaCore"),
+        .target(
+            name: "CMiniaudio",
+            publicHeadersPath: "include"
+        ),
+        .target(
+            name: "RomaCore",
+            dependencies: ["CMiniaudio"]
+        ),
         .executableTarget(
             name: "RomaCoreChecks",
             dependencies: ["RomaCore"]

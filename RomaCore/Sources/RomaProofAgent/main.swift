@@ -3,7 +3,7 @@ import RomaCore
 
 @main
 struct RomaProofAgent {
-    static func main() throws {
+    static func main() async throws {
         let arguments = Array(CommandLine.arguments.dropFirst())
 
         switch arguments.first {
@@ -19,6 +19,10 @@ struct RomaProofAgent {
             printWindowsPasteDoctor()
         case "windows-paste-proof":
             try runWindowsPasteProof(arguments: Array(arguments.dropFirst()))
+        case "miniaudio-capture-doctor":
+            printMiniaudioCaptureDoctor()
+        case "miniaudio-record-proof":
+            try await runMiniaudioRecordProof(arguments: Array(arguments.dropFirst()))
         default:
             printUsage()
         }
@@ -33,6 +37,7 @@ struct RomaProofAgent {
         print("native_windows_adapters=false")
         print("windows_register_hotkey_adapter_source=true")
         print("windows_paste_adapter_source=true")
+        print("miniaudio_capture_adapter_source=true")
     }
 
     private static func printWindowsHotKeyDoctor() {
@@ -93,6 +98,39 @@ struct RomaProofAgent {
         #endif
     }
 
+    private static func printMiniaudioCaptureDoctor() {
+        let recorder = MiniaudioCaptureRecorder()
+        let format = recorder.preRollConfiguration.outputFormat
+        print("platform=\(platformName)")
+        print("library=miniaudio")
+        print("library_version=\(MiniaudioCaptureRecorder.miniaudioVersion)")
+        print("capture_format=pcm16")
+        print("sample_rate=\(format.sampleRate)")
+        print("channels=\(format.channelCount)")
+        print("pre_roll_seconds=\(recorder.preRollConfiguration.durationSeconds)")
+        print("native_capture_adapter=true")
+        print("requires_microphone_access=true")
+    }
+
+    private static func runMiniaudioRecordProof(arguments: [String]) async throws {
+        let outputURL = URL(fileURLWithPath: try value(after: "--out", in: arguments))
+        let seconds = try doubleValue(after: "--seconds", in: arguments, default: 2)
+        let recorder = MiniaudioCaptureRecorder()
+
+        try await recorder.startPreRollBuffering()
+        try await sleep(seconds: 1)
+        try await recorder.startRecording(toOutputFile: outputURL)
+        try await sleep(seconds: seconds)
+        let audio = try await recorder.finishRecording()
+        await recorder.stopCapture()
+
+        print("wrote=\(audio.fileURL.path)")
+        print("duration_seconds=\(String(format: "%.3f", audio.durationSeconds ?? 0))")
+        print("included_pre_roll_seconds=\(audio.includedPreRollSeconds ?? 0)")
+        print("sample_rate=\(audio.format.sampleRate)")
+        print("channels=\(audio.format.channelCount)")
+    }
+
     private static func writePreRollProof(arguments: [String]) throws {
         let outputURL = URL(fileURLWithPath: try value(after: "--out", in: arguments))
         let format = AudioChunkFormat.speechPCM16kMono
@@ -123,6 +161,22 @@ struct RomaProofAgent {
         return arguments[index + 1]
     }
 
+    private static func doubleValue(after option: String, in arguments: [String], default defaultValue: Double) throws -> Double {
+        guard let index = arguments.firstIndex(of: option) else {
+            return defaultValue
+        }
+        guard arguments.indices.contains(index + 1),
+              let value = Double(arguments[index + 1]) else {
+            throw AgentError.invalidOptionValue(option)
+        }
+        return value
+    }
+
+    private static func sleep(seconds: Double) async throws {
+        let nanoseconds = UInt64(max(seconds, 0) * 1_000_000_000)
+        try await Task.sleep(nanoseconds: nanoseconds)
+    }
+
     private static func tone(frequency: Double, seconds: Double, sampleRate: Int) -> [Int16] {
         let sampleCount = Int(Double(sampleRate) * seconds)
         return (0..<sampleCount).map { index in
@@ -140,6 +194,8 @@ struct RomaProofAgent {
         print("  RomaProofAgent windows-hotkey-proof")
         print("  RomaProofAgent windows-paste-doctor")
         print("  RomaProofAgent windows-paste-proof --text \"roma just talk proof\"")
+        print("  RomaProofAgent miniaudio-capture-doctor")
+        print("  RomaProofAgent miniaudio-record-proof --out proof.wav --seconds 2")
     }
 
     private static var platformName: String {
@@ -157,12 +213,15 @@ struct RomaProofAgent {
 
 private enum AgentError: Error, CustomStringConvertible {
     case missingOption(String)
+    case invalidOptionValue(String)
     case unsupportedPlatform(String)
 
     var description: String {
         switch self {
         case .missingOption(let option):
             return "missing required option \(option)"
+        case .invalidOptionValue(let option):
+            return "invalid value for option \(option)"
         case .unsupportedPlatform(let message):
             return message
         }
