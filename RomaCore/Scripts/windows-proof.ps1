@@ -71,6 +71,69 @@ function Assert-OutputContains {
     Write-Host "asserted_output=$Expected"
 }
 
+function Assert-NonEmptyFile {
+    param(
+        [Parameter(Mandatory = $true)]
+        [string]$Path
+    )
+
+    if (!(Test-Path -LiteralPath $Path)) {
+        throw "Expected file was not created: $Path"
+    }
+
+    $item = Get-Item -LiteralPath $Path
+    if ($item.Length -le 0) {
+        throw "Expected non-empty file: $Path"
+    }
+
+    Write-Host "file=$Path"
+    Write-Host "bytes=$($item.Length)"
+}
+
+function New-WindowsAgentConfigArgs {
+    param(
+        [Parameter(Mandatory = $true)]
+        [string]$ConfigPath,
+        [string]$OutputPath = ""
+    )
+
+    $configArgs = @(
+        "run", "RomaWindowsAgent", "write-config",
+        "--config", $ConfigPath,
+        "--endpoint", $TranscribeEndpoint,
+        "--model", $TranscribeModel
+    )
+    if (![string]::IsNullOrWhiteSpace($OutputPath)) {
+        $configArgs += @("--out", $OutputPath)
+    }
+    if ($UseHoldHook) {
+        $configArgs += @("--hold-hook", "--timeout", "$HoldTimeoutSeconds")
+    } else {
+        $configArgs += @("--toggle", "--seconds", "$RecordSeconds")
+    }
+    if (![string]::IsNullOrWhiteSpace($TranscribeApiKeyName)) {
+        $configArgs += @("--api-key-name", $TranscribeApiKeyName, "--secret-dir", $secretProofDir)
+    } else {
+        $configArgs += @("--api-key-env", $TranscribeApiKeyEnv)
+    }
+    if (![string]::IsNullOrWhiteSpace($TranscribeLanguage)) {
+        $configArgs += @("--language", $TranscribeLanguage)
+    }
+    if (![string]::IsNullOrWhiteSpace($TranscribePrompt)) {
+        $configArgs += @("--prompt", $TranscribePrompt)
+    }
+    foreach ($replacement in $WordReplacement) {
+        if (![string]::IsNullOrWhiteSpace($replacement)) {
+            $configArgs += @("--replace", $replacement)
+        }
+    }
+    if ($PasteDictation) {
+        $configArgs += "--paste"
+    }
+
+    return $configArgs
+}
+
 $packageRoot = Resolve-Path "$PSScriptRoot\.."
 $OutputDir = $ExecutionContext.SessionState.Path.GetUnresolvedProviderPathFromPSPath($OutputDir)
 New-Item -ItemType Directory -Force -Path $OutputDir | Out-Null
@@ -234,6 +297,28 @@ try {
         swift run RomaProofAgent windows-secret-proof --dir $secretProofDir
     }
 
+    $agentConfig = Join-Path $OutputDir "windows-agent.json"
+    if (![string]::IsNullOrWhiteSpace($TranscribeEndpoint) -and
+        ![string]::IsNullOrWhiteSpace($TranscribeModel) -and
+        $hasTranscriptionKey) {
+        Invoke-Step "windows agent config proof" {
+            $agentConfigArgs = New-WindowsAgentConfigArgs -ConfigPath $agentConfig
+            $configOutput = swift @agentConfigArgs 2>&1 | Out-String
+            if ($LASTEXITCODE -ne 0) {
+                Write-Host $configOutput
+                throw "RomaWindowsAgent write-config failed"
+            }
+            Write-Host $configOutput
+            Assert-OutputContains -Output $configOutput -Expected "written=true"
+            Assert-OutputContains -Output $configOutput -Expected "config=$agentConfig"
+            Assert-NonEmptyFile -Path $agentConfig
+        }
+    } else {
+        Write-Host ""
+        Write-Host "== windows agent config proof skipped =="
+        Write-Host "pass -TranscribeEndpoint, -TranscribeModel, and -TranscribeApiKeyEnv or -TranscribeApiKeyName to prove reusable agent config"
+    }
+
     if ($RunInteractivePaste) {
         Invoke-Step "windows paste proof" {
             Write-Host "Focus Notepad or another normal-integrity text field before this step."
@@ -317,36 +402,20 @@ try {
             if ($PasteDictation) {
                 Write-Host "Focus Notepad or another normal-integrity text field before transcription completes."
             }
+            $agentConfigArgs = New-WindowsAgentConfigArgs -ConfigPath $agentConfig -OutputPath $agentProof
+            $configOutput = swift @agentConfigArgs 2>&1 | Out-String
+            if ($LASTEXITCODE -ne 0) {
+                Write-Host $configOutput
+                throw "RomaWindowsAgent write-config failed"
+            }
+            Write-Host $configOutput
+            Assert-OutputContains -Output $configOutput -Expected "written=true"
+            Assert-NonEmptyFile -Path $agentConfig
+
             $agentArgs = @(
                 "run", "RomaWindowsAgent", "dictate",
-                "--out", $agentProof,
-                "--endpoint", $TranscribeEndpoint,
-                "--model", $TranscribeModel
+                "--config", $agentConfig
             )
-            if ($UseHoldHook) {
-                $agentArgs += @("--hold-hook", "--timeout", "$HoldTimeoutSeconds")
-            } else {
-                $agentArgs += @("--seconds", "$RecordSeconds")
-            }
-            if (![string]::IsNullOrWhiteSpace($TranscribeApiKeyName)) {
-                $agentArgs += @("--api-key-name", $TranscribeApiKeyName, "--secret-dir", $secretProofDir)
-            } else {
-                $agentArgs += @("--api-key-env", $TranscribeApiKeyEnv)
-            }
-            if (![string]::IsNullOrWhiteSpace($TranscribeLanguage)) {
-                $agentArgs += @("--language", $TranscribeLanguage)
-            }
-            if (![string]::IsNullOrWhiteSpace($TranscribePrompt)) {
-                $agentArgs += @("--prompt", $TranscribePrompt)
-            }
-            foreach ($replacement in $WordReplacement) {
-                if (![string]::IsNullOrWhiteSpace($replacement)) {
-                    $agentArgs += @("--replace", $replacement)
-                }
-            }
-            if ($PasteDictation) {
-                $agentArgs += "--paste"
-            }
             swift @agentArgs
             Assert-FileWithBytes -Path $agentProof
         }

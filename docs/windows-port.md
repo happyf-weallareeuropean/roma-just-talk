@@ -189,7 +189,7 @@ Useful script options:
 - `-TranscribeLanguage en` and `-TranscribePrompt "roma just talk"` pass optional STT hints.
 - `-WordReplacement "just talk=roma-just-talk"` adds a proof-time dictionary replacement before optional paste.
 - `-RunInteractiveDictation` waits for `Ctrl+Shift+R`, records with pre-roll, transcribes, and writes `dictation-proof.wav`.
-- `-RunInteractiveWindowsAgent` runs the user-facing `RomaWindowsAgent dictate` command with the same transcription options and writes `windows-agent-dictation.wav`.
+- `-RunInteractiveWindowsAgent` writes `windows-agent.json`, then runs the user-facing `RomaWindowsAgent dictate --config windows-agent.json` command and writes `windows-agent-dictation.wav`.
 - `-UseHoldHook` makes interactive dictation use `WH_KEYBOARD_LL`: recording starts on `Ctrl+Shift+R` keydown and stops on keyup.
 - `-HoldTimeoutSeconds 15` changes the keydown/keyup wait timeout for hold-hook dictation.
 - `-PasteDictation` adds the final paste step to the interactive dictation proof.
@@ -208,8 +208,8 @@ CI proof:
 
 - `.github/workflows/romacore.yml` builds `RomaCore` on macOS and Windows.
 - The Windows job verifies Visual Studio C++ tools, installs the official Swift toolchain with `winget install --id Swift.Toolchain`, then runs `windows-proof.ps1 -SkipMic`.
-- CI is noninteractive, so it proves Windows compilation, PowerShell parse validity, pre-roll/WAV output, shared cleanup/replacement/paste text processing, DPAPI secret round-trip, stored-key transcription against a local mock STT endpoint, and hotkey/paste doctor paths. It does not prove real microphone permission, real hotkey delivery, or paste into Notepad.
-- CI also runs `package-windows-agent.ps1`, verifies the packaged `RomaWindowsAgent.exe doctor` output, and uploads a `roma-windows-agent` artifact for laptop smoke tests.
+- CI is noninteractive, so it proves Windows compilation, PowerShell parse validity, pre-roll/WAV output, shared cleanup/replacement/paste text processing, DPAPI secret round-trip, stored-key transcription against a local mock STT endpoint, reusable `RomaWindowsAgent` config writing, and hotkey/paste doctor paths. It does not prove real microphone permission, real hotkey delivery, or paste into Notepad.
+- CI also runs `package-windows-agent.ps1`, verifies the packaged `RomaWindowsAgent.exe doctor` and `write-config` output, and uploads a `roma-windows-agent` artifact for laptop smoke tests.
 
 Raw command sequence:
 

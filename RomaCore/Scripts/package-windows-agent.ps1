@@ -111,6 +111,28 @@ try {
         }
     }
 
+    $configPath = Join-Path $OutputDir "sample-windows-agent.json"
+    Invoke-Step "agent config sample" {
+        $configOutput = & $agentOutput write-config `
+            --config $configPath `
+            --endpoint "http://127.0.0.1:1/v1/audio/transcriptions" `
+            --model "mock-whisper" `
+            --api-key-env "PATH" `
+            --hold-hook `
+            --paste `
+            --replace "just talk=roma-just-talk" 2>&1 | Out-String
+        if ($LASTEXITCODE -ne 0) {
+            Write-Host $configOutput
+            throw "packaged RomaWindowsAgent write-config failed"
+        }
+        Write-Host $configOutput
+        Assert-OutputContains -Output $configOutput -Expected "written=true"
+        Assert-OutputContains -Output $configOutput -Expected "config=$configPath"
+        if (!(Test-Path -LiteralPath $configPath)) {
+            throw "sample Windows agent config was not created: $configPath"
+        }
+    }
+
     $manifestPath = Join-Path $OutputDir "manifest.txt"
     $agentFile = Get-Item -LiteralPath $agentOutput
     @(
@@ -118,6 +140,7 @@ try {
         "configuration=$Configuration",
         "source=$($agentSource.FullName)",
         "output=$agentOutput",
+        "sample_config=$configPath",
         "bytes=$($agentFile.Length)"
     ) | Set-Content -LiteralPath $manifestPath -Encoding UTF8
 
