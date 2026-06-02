@@ -1,0 +1,122 @@
+name: RomaCore
+
+on:
+  workflow_dispatch:
+  pull_request:
+    paths:
+      - ".github/workflows/romacore.yml"
+      - "RomaCore/**"
+      - "docs/windows-port.md"
+  push:
+    branches:
+      - main
+    paths:
+      - ".github/workflows/romacore.yml"
+      - "RomaCore/**"
+      - "docs/windows-port.md"
+
+jobs:
+  macos:
+    name: RomaCore macOS
+    runs-on: macos-26
+    timeout-minutes: 20
+
+    defaults:
+      run:
+        working-directory: RomaCore
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Show Swift version
+        run: swift --version
+
+      - name: Build
+        run: swift build
+
+      - name: Run core checks
+        run: swift run RomaCoreChecks
+
+      - name: Run noninteractive proof checks
+        run: |
+          swift run RomaProofAgent doctor
+          swift run RomaProofAgent pre-roll-proof --out "$RUNNER_TEMP/roma-core-proof.wav"
+          test -s "$RUNNER_TEMP/roma-core-proof.wav"
+          swift run RomaProofAgent miniaudio-capture-doctor
+          swift run RomaProofAgent transcribe-proof-doctor
+          swift run RomaProofAgent windows-hotkey-doctor
+          swift run RomaProofAgent windows-paste-doctor
+
+  windows:
+    name: RomaCore Windows
+    runs-on: windows-2022
+    timeout-minutes: 90
+
+    defaults:
+      run:
+        shell: pwsh
+        working-directory: RomaCore
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Verify Visual Studio C++ tools
+        working-directory: .
+        run: |
+          $vswhere = "${env:ProgramFiles(x86)}\Microsoft Visual Studio\Installer\vswhere.exe"
+          if (!(Test-Path -LiteralPath $vswhere)) {
+            throw "vswhere.exe was not found"
+          }
+          $vsInstall = & $vswhere -latest -products * -requires Microsoft.VisualStudio.Component.VC.Tools.x86.x64 -property installationPath
+          if ([string]::IsNullOrWhiteSpace($vsInstall)) {
+            throw "Visual Studio C++ x64/x86 tools were not found"
+          }
+          Write-Host "vs_install=$vsInstall"
+
+      - name: Install Swift toolchain
+        working-directory: .
+        run: |
+          winget source update
+          winget install --id Swift.Toolchain -e --source winget --accept-source-agreements --accept-package-agreements --disable-interactivity
+          $swiftRoots = @(
+            "$env:LOCALAPPDATA\Programs\Swift",
+            "$env:ProgramFiles\Swift",
+            "$env:SystemDrive\Library\Developer"
+          )
+          $toolchainDirs = $swiftRoots |
+            ForEach-Object { Join-Path $_ "Toolchains" } |
+            Where-Object { Test-Path -LiteralPath $_ }
+          if (!$toolchainDirs) {
+            throw "Swift toolchain directory was not found"
+          }
+          $toolchainRoot = Get-ChildItem -Path $toolchainDirs -Directory |
+            Sort-Object LastWriteTime -Descending |
+            Select-Object -First 1
+          $swiftBin = Join-Path $toolchainRoot.FullName "usr\bin"
+          Add-Content -Path $env:GITHUB_PATH -Value $swiftBin
+
+          $runtimeDirs = $swiftRoots |
+            ForEach-Object { Join-Path $_ "Runtimes" } |
+            Where-Object { Test-Path -LiteralPath $_ }
+          if ($runtimeDirs) {
+            $runtimeRoot = Get-ChildItem -Path $runtimeDirs -Directory |
+              Sort-Object LastWriteTime -Descending |
+              Select-Object -First 1
+            $runtimeBin = Join-Path $runtimeRoot.FullName "usr\bin"
+            Add-Content -Path $env:GITHUB_PATH -Value $runtimeBin
+          }
+
+      - name: Show Swift version
+        run: swift --version
+
+      - name: Run noninteractive Windows proof
+        run: .\Scripts\windows-proof.ps1 -SkipMic -OutputDir "$env:RUNNER_TEMP\roma-proof"
+
+      - name: Upload proof artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: romacore-windows-proof
+          path: ${{ runner.temp }}\roma-proof
+          if-no-files-found: error

@@ -9,6 +9,7 @@ on:
       - ".github/workflows/voiceink-build.yml"
       - "LocalBuild.xcconfig"
       - "Makefile"
+      - "RomaCore/**"
       - "VoiceInk/**"
       - "VoiceInk.xcodeproj/**"
 

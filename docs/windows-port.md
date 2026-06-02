@@ -179,6 +179,12 @@ Useful script options:
 - `-RunInteractiveDictation` waits for `Ctrl+Shift+R`, records with pre-roll, transcribes, and writes `dictation-proof.wav`.
 - `-PasteDictation` adds the final paste step to the interactive dictation proof.
 
+CI proof:
+
+- `.github/workflows/romacore.yml` builds `RomaCore` on macOS and Windows.
+- The Windows job verifies Visual Studio C++ tools, installs the official Swift toolchain with `winget install --id Swift.Toolchain`, then runs `windows-proof.ps1 -SkipMic`.
+- CI is noninteractive, so it proves Windows compilation plus pre-roll/WAV/transcription/hotkey/paste doctor paths. It does not prove real microphone permission, real hotkey delivery, or paste into Notepad.
+
 Raw command sequence:
 
 ```powershell
