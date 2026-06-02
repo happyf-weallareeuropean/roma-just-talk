@@ -6,6 +6,7 @@ struct RomaCoreChecks {
     static func main() async throws {
         try checkDefaultPreRollContract()
         try checkPreRollBufferKeepsChronologicalSamples()
+        try checkPCM16WAVFileWritesCanonicalHeader()
         try checkTranscriptionRequestMetadata()
         try await checkFakeAdaptersSatisfyCorePorts()
         try checkSourcesDoNotImportApplePlatformFrameworks()
@@ -54,6 +55,45 @@ struct RomaCoreChecks {
         buffer.clear()
         try require(buffer.availableSampleCount == 0, "clear should reset available samples")
         try require(buffer.snapshotSamples().isEmpty, "clear should reset snapshot")
+    }
+
+    private static func checkPCM16WAVFileWritesCanonicalHeader() throws {
+        let samples: [Int16] = [0, 32_767, -32_768, 42]
+        let format = AudioChunkFormat(sampleRate: 8_000, channelCount: 1, sampleFormat: .signedInteger16)
+        let wavData = try PCM16WAVFile.makeData(samples: samples, format: format)
+
+        try require(wavData.count == 52, "WAV data should include 44 byte header plus sample bytes")
+        try require(try asciiString(wavData, offset: 0, count: 4) == "RIFF", "WAV should start with RIFF")
+        try require(try readUInt32LittleEndian(wavData, offset: 4) == 44, "RIFF chunk size should include payload")
+        try require(try asciiString(wavData, offset: 8, count: 4) == "WAVE", "WAV should identify WAVE format")
+        try require(try asciiString(wavData, offset: 12, count: 4) == "fmt ", "WAV should include fmt chunk")
+        try require(try readUInt32LittleEndian(wavData, offset: 16) == 16, "fmt chunk should be PCM size")
+        try require(try readUInt16LittleEndian(wavData, offset: 20) == 1, "audio format should be PCM")
+        try require(try readUInt16LittleEndian(wavData, offset: 22) == 1, "channel count should be mono")
+        try require(try readUInt32LittleEndian(wavData, offset: 24) == 8_000, "sample rate should be encoded")
+        try require(try readUInt32LittleEndian(wavData, offset: 28) == 16_000, "byte rate should be encoded")
+        try require(try readUInt16LittleEndian(wavData, offset: 32) == 2, "block align should be encoded")
+        try require(try readUInt16LittleEndian(wavData, offset: 34) == 16, "bits per sample should be Int16")
+        try require(try asciiString(wavData, offset: 36, count: 4) == "data", "WAV should include data chunk")
+        try require(try readUInt32LittleEndian(wavData, offset: 40) == 8, "data chunk size should match PCM bytes")
+        try require(
+            try decodeInt16LittleEndian(wavData.subdata(in: 44..<wavData.count)) == samples,
+            "WAV payload should be little-endian Int16 PCM"
+        )
+
+        let outputURL = FileManager.default.temporaryDirectory
+            .appendingPathComponent("roma-core-wav-\(UUID().uuidString).wav")
+        defer { try? FileManager.default.removeItem(at: outputURL) }
+
+        try PCM16WAVFile.write(samples: samples, to: outputURL, format: format)
+        try require(try Data(contentsOf: outputURL) == wavData, "WAV file write should round-trip bytes")
+
+        do {
+            _ = try PCM16WAVFile.makeData(pcmData: Data([0]), format: format)
+            throw CheckFailure("unaligned PCM should be rejected")
+        } catch PCM16WAVFile.WriteError.pcmDataNotInt16Aligned(let byteCount) {
+            try require(byteCount == 1, "unaligned PCM error should report byte count")
+        }
     }
 
     private static func checkTranscriptionRequestMetadata() throws {
@@ -157,6 +197,31 @@ struct RomaCoreChecks {
         }
     }
 
+    private static func asciiString(_ data: Data, offset: Int, count: Int) throws -> String {
+        try require(offset >= 0, "offset should be nonnegative")
+        try require(count >= 0, "count should be nonnegative")
+        try require(offset + count <= data.count, "ASCII read should stay inside data")
+
+        return String(decoding: data[offset..<(offset + count)], as: UTF8.self)
+    }
+
+    private static func readUInt16LittleEndian(_ data: Data, offset: Int) throws -> UInt16 {
+        try require(offset >= 0, "offset should be nonnegative")
+        try require(offset + 2 <= data.count, "UInt16 read should stay inside data")
+
+        return UInt16(data[offset]) | (UInt16(data[offset + 1]) << 8)
+    }
+
+    private static func readUInt32LittleEndian(_ data: Data, offset: Int) throws -> UInt32 {
+        try require(offset >= 0, "offset should be nonnegative")
+        try require(offset + 4 <= data.count, "UInt32 read should stay inside data")
+
+        return UInt32(data[offset])
+            | (UInt32(data[offset + 1]) << 8)
+            | (UInt32(data[offset + 2]) << 16)
+            | (UInt32(data[offset + 3]) << 24)
+    }
+
     private static func decodeInt16LittleEndian(_ data: Data) throws -> [Int16] {
         try require(data.count.isMultiple(of: MemoryLayout<Int16>.size), "PCM data should be Int16-aligned")
 
@@ -167,8 +232,8 @@ struct RomaCoreChecks {
         }
     }
 
-    fileprivate static func require(_ condition: @autoclosure () -> Bool, _ message: String) throws {
-        guard condition() else { throw CheckFailure(message) }
+    fileprivate static func require(_ condition: Bool, _ message: String) throws {
+        guard condition else { throw CheckFailure(message) }
     }
 }
 
