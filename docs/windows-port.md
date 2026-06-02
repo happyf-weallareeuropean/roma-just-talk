@@ -125,7 +125,7 @@ Minimum Windows MVP permission surface: microphone + shortcut + clipboard/paste.
 
 ## First Implementation Plan
 
-1. Add `RomaCore` as a SwiftPM package or internal package folder.
+1. Add `RomaCore` as a SwiftPM package or internal package folder. The initial package now exists under `RomaCore/` with portable interfaces for recorder, shortcut, paste, permissions, secrets, settings, and transcription services.
 2. Move only pure types and services first:
    - `TranscriptionService`
    - model/provider types that do not import SwiftData/AppKit

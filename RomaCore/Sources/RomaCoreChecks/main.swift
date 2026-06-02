@@ -1,0 +1,177 @@
+import Foundation
+import RomaCore
+
+@main
+struct RomaCoreChecks {
+    static func main() async throws {
+        try checkDefaultPreRollContract()
+        try checkTranscriptionRequestMetadata()
+        try await checkFakeAdaptersSatisfyCorePorts()
+        try checkSourcesDoNotImportApplePlatformFrameworks()
+    }
+
+    private static func checkDefaultPreRollContract() throws {
+        let configuration = PreRollConfiguration()
+
+        try require(configuration.durationSeconds == 3, "default pre-roll should stay at 3 seconds")
+        try require(configuration.outputFormat == .speechPCM16kMono, "default format should be speechPCM16kMono")
+        try require(configuration.outputFormat.sampleRate == 16_000, "sample rate should be 16 kHz")
+        try require(configuration.outputFormat.channelCount == 1, "channel count should be mono")
+        try require(configuration.outputFormat.sampleFormat == .signedInteger16, "sample format should be Int16")
+    }
+
+    private static func checkTranscriptionRequestMetadata() throws {
+        let model = TranscriptionModelDescriptor(
+            name: "ggml-base.en",
+            displayName: "Whisper Base English",
+            provider: .whisper,
+            supportedLanguages: ["en": "English"]
+        )
+        let request = TranscriptionRequest(
+            audioURL: URL(fileURLWithPath: "/tmp/proof.wav"),
+            model: model,
+            language: "en",
+            prompt: "short dictation",
+            customVocabulary: ["roma"]
+        )
+
+        try require(request.model.provider == .whisper, "request should carry provider")
+        try require(request.language == "en", "request should carry language")
+        try require(request.customVocabulary == ["roma"], "request should carry vocabulary")
+    }
+
+    private static func checkFakeAdaptersSatisfyCorePorts() async throws {
+        let recorder = FakeRecorder()
+        let inserter = FakeTextInsertion()
+        let transcriber = FakeTranscriptionService()
+
+        try await recorder.startPreRollBuffering()
+        try await recorder.startRecording(toOutputFile: URL(fileURLWithPath: "/tmp/proof.wav"))
+        let recordedAudio = try await recorder.finishRecording()
+
+        let model = TranscriptionModelDescriptor(
+            name: "cloud-proof",
+            displayName: "Cloud Proof",
+            provider: .custom
+        )
+        let result = try await transcriber.transcribe(
+            TranscriptionRequest(audioURL: recordedAudio.fileURL, model: model)
+        )
+        try await inserter.pasteAtCursor(result.text)
+
+        try require(recordedAudio.includedPreRollSeconds == 3, "recorded audio should report pre-roll")
+        try require(result.text == "roma just talk proof", "transcription should return proof text")
+        let pastedText = await inserter.pastedText
+        try require(pastedText == "roma just talk proof", "text insertion should receive proof text")
+    }
+
+    private static func checkSourcesDoNotImportApplePlatformFrameworks() throws {
+        let packageRoot = URL(fileURLWithPath: #filePath)
+            .deletingLastPathComponent()
+            .deletingLastPathComponent()
+            .deletingLastPathComponent()
+        let sourcesRoot = packageRoot.appendingPathComponent("Sources/RomaCore")
+        let bannedImports = [
+            "AppKit",
+            "ApplicationServices",
+            "AudioToolbox",
+            "AVFoundation",
+            "Carbon",
+            "Charts",
+            "Cocoa",
+            "CoreAudio",
+            "CoreGraphics",
+            "CoreML",
+            "FluidAudio",
+            "IOKit",
+            "LaunchAtLogin",
+            "MediaRemoteAdapter",
+            "NaturalLanguage",
+            "PermissionFlow",
+            "ScreenCaptureKit",
+            "Security",
+            "SelectedTextKit",
+            "Sparkle",
+            "Speech",
+            "SwiftData",
+            "SwiftUI",
+            "UniformTypeIdentifiers",
+            "Vision",
+            "whisper"
+        ]
+
+        guard let enumerator = FileManager.default.enumerator(at: sourcesRoot, includingPropertiesForKeys: nil) else {
+            throw CheckFailure("could not enumerate \(sourcesRoot.path)")
+        }
+
+        let swiftFiles = enumerator
+            .compactMap { $0 as? URL }
+            .filter { $0.pathExtension == "swift" }
+
+        try require(!swiftFiles.isEmpty, "RomaCore should contain Swift sources")
+
+        for file in swiftFiles {
+            let source = try String(contentsOf: file, encoding: .utf8)
+            for bannedImport in bannedImports {
+                try require(
+                    !source.contains("import \(bannedImport)"),
+                    "\(file.path) imports \(bannedImport), which blocks Windows portability"
+                )
+            }
+        }
+    }
+
+    fileprivate static func require(_ condition: @autoclosure () -> Bool, _ message: String) throws {
+        guard condition() else { throw CheckFailure(message) }
+    }
+}
+
+private struct CheckFailure: Error, CustomStringConvertible {
+    var description: String
+
+    init(_ description: String) {
+        self.description = description
+    }
+}
+
+private enum FakeRecorderError: Error {
+    case missingOutputFile
+}
+
+private final class FakeRecorder: RollingRecorder, @unchecked Sendable {
+    var onAudioChunk: (@Sendable (Data) -> Void)?
+    let preRollConfiguration = PreRollConfiguration()
+    private var outputFile: URL?
+
+    func startPreRollBuffering() async throws {}
+
+    func startRecording(toOutputFile url: URL) async throws {
+        outputFile = url
+    }
+
+    func finishRecording() async throws -> RecordedAudio {
+        guard let outputFile else { throw FakeRecorderError.missingOutputFile }
+        return RecordedAudio(
+            fileURL: outputFile,
+            durationSeconds: 5,
+            includedPreRollSeconds: preRollConfiguration.durationSeconds
+        )
+    }
+
+    func stopCapture() async {}
+}
+
+private actor FakeTextInsertion: TextInsertion {
+    private(set) var pastedText: String?
+
+    func pasteAtCursor(_ text: String) async throws {
+        pastedText = text
+    }
+}
+
+private struct FakeTranscriptionService: TranscriptionService {
+    func transcribe(_ request: TranscriptionRequest) async throws -> TranscriptionResult {
+        try RomaCoreChecks.require(request.audioURL.lastPathComponent == "proof.wav", "request should carry proof.wav")
+        return TranscriptionResult(text: "roma just talk proof")
+    }
+}
