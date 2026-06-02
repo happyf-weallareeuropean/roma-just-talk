@@ -200,9 +200,10 @@ Packaged artifact smoke test:
 ```powershell
 powershell -ExecutionPolicy Bypass -File C:\tmp\roma-windows-agent\smoke-windows-agent.ps1 -PackageDir C:\tmp\roma-windows-agent
 powershell -ExecutionPolicy Bypass -File C:\tmp\roma-windows-agent\smoke-windows-agent.ps1 -PackageDir C:\tmp\roma-windows-agent -Endpoint https://api.groq.com/openai/v1/audio/transcriptions -Model whisper-large-v3-turbo -ApiKeyEnv GROQ_API_KEY -RunDictation -PasteDictation
+powershell -ExecutionPolicy Bypass -File C:\tmp\roma-windows-agent\smoke-windows-agent.ps1 -PackageDir C:\tmp\roma-windows-agent -Endpoint https://api.groq.com/openai/v1/audio/transcriptions -Model whisper-large-v3-turbo -ApiKeyEnv GROQ_API_KEY -ApiKeyName groq -RunDictation -PasteDictation
 ```
 
-The first command proves the packaged `RomaWindowsAgent.exe doctor` and `write-config` path without SwiftPM. The second command is the laptop proof: hold `Ctrl+Shift+R`, speak, release, transcribe, and optionally paste through the same config path.
+The first command proves the packaged `RomaWindowsAgent.exe doctor` and `write-config` path without SwiftPM. The second command is the laptop proof: hold `Ctrl+Shift+R`, speak, release, transcribe, and optionally paste through the same config path. The third command first saves `GROQ_API_KEY` into the packaged agent's DPAPI secret store as `groq`, then writes config using the stored key name.
 
 `package-windows-agent.ps1` copies Swift runtime DLLs from the PATH directory containing `swiftCore.dll` into the artifact. On Windows, packaging fails if no runtime DLLs are copied or if `swiftCore.dll` is missing from the artifact; that keeps CI from passing only because the runner has Swift on `PATH`.
 

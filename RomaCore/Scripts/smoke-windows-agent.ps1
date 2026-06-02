@@ -128,11 +128,17 @@ if (!(Test-Path -LiteralPath $AgentPath)) {
     throw "RomaWindowsAgent.exe was not found: $AgentPath"
 }
 
-if ($RunDictation -and [string]::IsNullOrWhiteSpace($ApiKeyName)) {
-    $apiKeyValue = [Environment]::GetEnvironmentVariable($ApiKeyEnv)
-    if ([string]::IsNullOrWhiteSpace($apiKeyValue)) {
-        throw "RunDictation requires $ApiKeyEnv to be set, or pass -ApiKeyName with a saved key"
-    }
+$hasExplicitApiKeyEnv = $PSBoundParameters.ContainsKey("ApiKeyEnv")
+$apiKeyEnvValue = if ([string]::IsNullOrWhiteSpace($ApiKeyEnv)) {
+    ""
+} else {
+    [Environment]::GetEnvironmentVariable($ApiKeyEnv)
+}
+
+if ($RunDictation -and
+    [string]::IsNullOrWhiteSpace($ApiKeyName) -and
+    (!$hasExplicitApiKeyEnv -or [string]::IsNullOrWhiteSpace($apiKeyEnvValue))) {
+    throw "RunDictation requires -ApiKeyEnv with a set environment variable, or pass -ApiKeyName with a saved key"
 }
 
 $isWindowsHost = [System.Environment]::OSVersion.Platform -eq [System.PlatformID]::Win32NT
@@ -150,6 +156,31 @@ Invoke-Step "agent doctor" {
     if ($isWindowsHost) {
         Assert-OutputContains -Output $doctorOutput -Expected "runtime_available=true"
     }
+}
+
+if (![string]::IsNullOrWhiteSpace($ApiKeyName) -and
+    $hasExplicitApiKeyEnv -and
+    ![string]::IsNullOrWhiteSpace($apiKeyEnvValue)) {
+    Invoke-Step "agent save key" {
+        $saveKeyArgs = @(
+            "save-key-from-env",
+            "--key", $ApiKeyName,
+            "--value-env", $ApiKeyEnv,
+            "--secret-dir", $SecretDir
+        )
+        $saveKeyOutput = & $AgentPath @saveKeyArgs 2>&1 | Out-String
+        if ($LASTEXITCODE -ne 0) {
+            Write-Host $saveKeyOutput
+            throw "RomaWindowsAgent save-key-from-env failed"
+        }
+        Write-Host $saveKeyOutput
+        Assert-OutputContains -Output $saveKeyOutput -Expected "stored=true"
+        Assert-OutputContains -Output $saveKeyOutput -Expected "key=$ApiKeyName"
+    }
+} elseif ($RunDictation -and ![string]::IsNullOrWhiteSpace($ApiKeyName)) {
+    Write-Host ""
+    Write-Host "== agent save key skipped =="
+    Write-Host "using existing stored key '$ApiKeyName' from $SecretDir"
 }
 
 Invoke-Step "agent config" {
@@ -222,5 +253,9 @@ if ($RunDictation) {
 Write-Host ""
 Write-Host "agent_exe=$AgentPath"
 Write-Host "config=$ConfigPath"
+if (![string]::IsNullOrWhiteSpace($ApiKeyName)) {
+    Write-Host "secret_dir=$SecretDir"
+    Write-Host "api_key_name=$ApiKeyName"
+}
 Write-Host "smoke_artifacts=$OutputDir"
 Write-Host "run_dictation=$($RunDictation.IsPresent)"
