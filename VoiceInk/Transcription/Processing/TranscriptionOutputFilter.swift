@@ -330,7 +330,8 @@ struct TranscriptionOutputFilter {
     }
 
     private static func isContinuingSentence(after precedingText: String) -> Bool {
-        let trimmedText = precedingText.trimmingCharacters(in: .whitespacesAndNewlines)
+        let linePrefix = currentLinePrefix(in: precedingText)
+        let trimmedText = linePrefix.trimmingCharacters(in: .whitespaces)
         guard let lastCharacter = trimmedText.last else { return false }
 
         if ".!?。！？".contains(lastCharacter) {
@@ -338,6 +339,14 @@ struct TranscriptionOutputFilter {
         }
 
         return true
+    }
+
+    private static func currentLinePrefix(in text: String) -> String {
+        guard let lastNewlineIndex = text.lastIndex(where: \.isNewline) else {
+            return text
+        }
+
+        return String(text[text.index(after: lastNewlineIndex)...])
     }
 
     private static func lowercaseInitialWordIfSafe(in text: String, force: Bool) -> String {

@@ -149,10 +149,12 @@ struct VoiceInkTests {
     @Test func insertionPolishUsesCursorContextForMidSentenceFragments() async throws {
         let midSentenceContext = TranscriptionOutputFilter.TextInsertionContext(precedingText: "...so this")
         let sentenceStartContext = TranscriptionOutputFilter.TextInsertionContext(precedingText: "Done. ")
+        let newLineContext = TranscriptionOutputFilter.TextInsertionContext(precedingText: "Done\n")
 
         #expect(TranscriptionOutputFilter.applyInsertionPolish("Model.", context: midSentenceContext) == "model")
         #expect(TranscriptionOutputFilter.applyInsertionSpacing("model", context: midSentenceContext) == " model")
         #expect(TranscriptionOutputFilter.applyInsertionPolish("Model.", context: sentenceStartContext) == "Model")
+        #expect(TranscriptionOutputFilter.applyInsertionPolish("Model.", context: newLineContext) == "Model")
         #expect(TranscriptionOutputFilter.applyInsertionPolish("Model.", context: nil) == "model")
         #expect(TranscriptionOutputFilter.applyInsertionPolish("VoiceInk.", context: nil) == "VoiceInk")
     }
