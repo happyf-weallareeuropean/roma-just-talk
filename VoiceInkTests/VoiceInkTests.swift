@@ -185,6 +185,13 @@ struct VoiceInkTests {
         #expect(TranscriptionOutputFilter.filter("This newlineish word should stay.") == "This newlineish word should stay.")
     }
 
+    @Test func transcriptionFilterAppliesSpokenEnclosureCommands() async throws {
+        #expect(TranscriptionOutputFilter.filter("She said open quote hello close quote.") == "She said \"hello\".")
+        #expect(TranscriptionOutputFilter.filter("Open quote hello comma world close quote.") == "\"hello, world\".")
+        #expect(TranscriptionOutputFilter.filter("Use open parenthesis model close parenthesis now.") == "Use (model) now.")
+        #expect(TranscriptionOutputFilter.filter("The quote field stays.") == "The quote field stays.")
+    }
+
     @Test func transcriptionFilterRemovesCommonASRBoilerplate() async throws {
         #expect(TranscriptionOutputFilter.filter("Thank you for watching.") == "")
         #expect(TranscriptionOutputFilter.filter("Okay. Thank you for watching.") == "Okay.")

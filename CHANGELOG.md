@@ -5,6 +5,7 @@
 - Improved final dictation cleanup for mid-sentence fragments, stray bracket wrappers, pause sounds, repeated words, obvious self-corrections, and spoken formatting/punctuation commands.
 - Improved cleanup for hyphenated pause sounds such as "mm-hmm" and "uh-huh".
 - Collapsed obvious repeated short sentences from dictated output.
+- Added spoken quote and parenthesis formatting commands.
 - Added cursor-aware cleanup for standalone spoken punctuation fragments such as "comma" and "question mark".
 - Removed common ASR boilerplate such as video/subtitle closing phrases from dictated output.
 - Improved cursor-context lookup for rich editors that expose focused text ranges without exposing the full field value.

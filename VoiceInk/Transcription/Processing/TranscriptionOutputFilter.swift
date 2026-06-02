@@ -132,12 +132,22 @@ struct TranscriptionOutputFilter {
     private static let softPhrasePunctuation = CharacterSet(charactersIn: ",;:…")
     private static let wordConnectorCharacters = CharacterSet(charactersIn: "'’ʼ-")
     private static let maxBacktrackingCorrectionWords = 4
+    private static let openQuotePlaceholder = "__VOICEINK_OPEN_QUOTE__"
+    private static let closeQuotePlaceholder = "__VOICEINK_CLOSE_QUOTE__"
+    private static let openParenthesisPlaceholder = "__VOICEINK_OPEN_PAREN__"
+    private static let closeParenthesisPlaceholder = "__VOICEINK_CLOSE_PAREN__"
     private static let spokenFormattingCommands: [(pattern: String, replacement: String)] = [
         (#"(?i)(?<![\p{L}\p{N}])(?:new|next)\s+paragraph(?![\p{L}\p{N}])"#, "\n\n"),
         (#"(?i)(?<![\p{L}\p{N}])(?:new|next)\s+line(?![\p{L}\p{N}])"#, "\n"),
         (#"(?i)(?<![\p{L}\p{N}])line\s+break(?![\p{L}\p{N}])"#, "\n"),
         (#"(?i)(?<![\p{L}\p{N}])newline(?![\p{L}\p{N}])"#, "\n"),
         (#"(?i)(?<![\p{L}\p{N}])(?:new\s+bullet|bullet\s+point|bullet)(?![\p{L}\p{N}])"#, "\n- ")
+    ]
+    private static let spokenEnclosureCommands: [(pattern: String, replacement: String)] = [
+        (#"(?i)(?<![\p{L}\p{N}])(?:open|start)\s+(?:quote|quotation\s+marks?)(?![\p{L}\p{N}])"#, openQuotePlaceholder),
+        (#"(?i)(?<![\p{L}\p{N}])(?:close|end)\s+(?:quote|quotation\s+marks?)(?![\p{L}\p{N}])"#, closeQuotePlaceholder),
+        (#"(?i)(?<![\p{L}\p{N}])(?:open|left)\s+(?:paren|parenthesis|parentheses)(?![\p{L}\p{N}])"#, openParenthesisPlaceholder),
+        (#"(?i)(?<![\p{L}\p{N}])(?:close|right)\s+(?:paren|parenthesis|parentheses)(?![\p{L}\p{N}])"#, closeParenthesisPlaceholder)
     ]
     private static let spokenPunctuationCommands = [
         SpokenPunctuationCommand(
@@ -215,6 +225,7 @@ struct TranscriptionOutputFilter {
 
         filteredText = applyBacktrackingCorrections(in: filteredText)
         filteredText = applySpokenFormattingCommands(in: filteredText)
+        filteredText = applySpokenEnclosureCommands(in: filteredText)
         filteredText = applySpokenPunctuationCommands(in: filteredText)
         filteredText = collapseAdjacentRepeatedWords(in: filteredText)
         filteredText = collapseRepeatedShortSentences(in: filteredText)
@@ -438,6 +449,38 @@ struct TranscriptionOutputFilter {
         }
 
         return normalizeSpokenFormattingSpacing(formattedText)
+    }
+
+    private static func applySpokenEnclosureCommands(in text: String) -> String {
+        var enclosedText = text
+
+        for command in spokenEnclosureCommands {
+            guard let regex = try? NSRegularExpression(pattern: command.pattern) else {
+                continue
+            }
+
+            let range = NSRange(enclosedText.startIndex..., in: enclosedText)
+            enclosedText = regex.stringByReplacingMatches(
+                in: enclosedText,
+                options: [],
+                range: range,
+                withTemplate: command.replacement
+            )
+        }
+
+        return normalizeSpokenEnclosureSpacing(enclosedText)
+    }
+
+    private static func normalizeSpokenEnclosureSpacing(_ text: String) -> String {
+        text
+            .replacingOccurrences(of: "\(openQuotePlaceholder)\\s+", with: openQuotePlaceholder, options: .regularExpression)
+            .replacingOccurrences(of: "\\s+\(closeQuotePlaceholder)", with: closeQuotePlaceholder, options: .regularExpression)
+            .replacingOccurrences(of: "\(openParenthesisPlaceholder)\\s+", with: openParenthesisPlaceholder, options: .regularExpression)
+            .replacingOccurrences(of: "\\s+\(closeParenthesisPlaceholder)", with: closeParenthesisPlaceholder, options: .regularExpression)
+            .replacingOccurrences(of: openQuotePlaceholder, with: "\"")
+            .replacingOccurrences(of: closeQuotePlaceholder, with: "\"")
+            .replacingOccurrences(of: openParenthesisPlaceholder, with: "(")
+            .replacingOccurrences(of: closeParenthesisPlaceholder, with: ")")
     }
 
     private static func applySpokenPunctuationCommands(in text: String) -> String {
