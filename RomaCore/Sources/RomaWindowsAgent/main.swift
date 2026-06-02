@@ -44,21 +44,22 @@ struct RomaWindowsAgent {
     }
 
     private static func runDictation(arguments: [String]) async throws {
-        let outputURL = URL(fileURLWithPath: optionalValue(after: "--out", in: arguments) ?? defaultOutputPath())
-        let endpointText = try value(after: "--endpoint", in: arguments)
-        let modelName = try value(after: "--model", in: arguments)
-        let apiKeySource = try makeAPIKeySource(arguments: arguments)
-        let shouldPaste = arguments.contains("--paste")
-        let shouldUseHoldHook = arguments.contains("--hold-hook")
-        let seconds = try doubleValue(after: "--seconds", in: arguments, default: 2)
-        let timeoutMilliseconds = UInt32(try doubleValue(after: "--timeout", in: arguments, default: 15) * 1_000)
-        let wordReplacements = try replacementRules(from: arguments)
+        let options = RomaCommandLineOptions(arguments)
+        let outputURL = URL(fileURLWithPath: options.optionalValue(after: "--out") ?? defaultOutputPath())
+        let endpointText = try options.value(after: "--endpoint")
+        let modelName = try options.value(after: "--model")
+        let apiKeySource = try TranscriptionAPIKeySource.make(from: options)
+        let shouldPaste = options.contains("--paste")
+        let shouldUseHoldHook = options.contains("--hold-hook")
+        let seconds = try options.doubleValue(after: "--seconds", default: 2)
+        let timeoutMilliseconds = UInt32(try options.doubleValue(after: "--timeout", default: 15) * 1_000)
+        let wordReplacements = try RomaCommandLineText.wordReplacementRules(from: options)
         let trigger: WindowsDictationTrigger = shouldUseHoldHook
             ? .hold(timeoutMilliseconds: timeoutMilliseconds)
             : .toggle(recordSeconds: seconds)
 
         guard let endpointURL = URL(string: endpointText), endpointURL.scheme != nil else {
-            throw AgentError.invalidOptionValue("--endpoint")
+            throw RomaCommandLineOptionsError.invalidOptionValue("--endpoint")
         }
 
         let service = OpenAICompatibleTranscriptionService(
@@ -83,8 +84,8 @@ struct RomaWindowsAgent {
             WindowsDictationRuntimeRequest(
                 outputURL: outputURL,
                 model: model,
-                language: optionalValue(after: "--language", in: arguments),
-                prompt: optionalValue(after: "--prompt", in: arguments),
+                language: options.optionalValue(after: "--language"),
+                prompt: options.optionalValue(after: "--prompt"),
                 shouldPaste: shouldPaste,
                 textProcessing: DictationTextProcessingConfiguration(
                     wordReplacements: wordReplacements
@@ -110,22 +111,23 @@ struct RomaWindowsAgent {
         }
         print("raw_transcript_length=\(result.transcription.text.count)")
         print("processed_transcript_length=\(result.processedText.count)")
-        print("processed_transcript_text=\(oneLine(result.processedText))")
+        print("processed_transcript_text=\(RomaCommandLineText.oneLine(result.processedText))")
         print("word_replacements=\(wordReplacements.count)")
         print("paste_sent=\(result.session.insertedText != nil)")
     }
 
     private static func saveKeyFromEnvironment(arguments: [String]) throws {
-        let key = try value(after: "--key", in: arguments)
-        let environmentName = try value(after: "--value-env", in: arguments)
-        let directoryPath = optionalValue(after: "--secret-dir", in: arguments)
+        let options = RomaCommandLineOptions(arguments)
+        let key = try options.value(after: "--key")
+        let environmentName = try options.value(after: "--value-env")
+        let directoryPath = options.optionalValue(after: "--secret-dir")
             ?? WindowsDPAPISecretStore.defaultDirectoryURL().path
 
-        guard isValidEnvironmentName(environmentName) else {
-            throw AgentError.invalidOptionValue("--value-env")
+        guard RomaCommandLineText.isValidEnvironmentName(environmentName) else {
+            throw RomaCommandLineOptionsError.invalidOptionValue("--value-env")
         }
         guard let secret = ProcessInfo.processInfo.environment[environmentName], !secret.isEmpty else {
-            throw AgentError.missingEnvironmentValue(environmentName)
+            throw TranscriptionAPIKeySourceError.missingEnvironmentValue(environmentName)
         }
 
         let directoryURL = URL(fileURLWithPath: directoryPath, isDirectory: true)
@@ -155,98 +157,6 @@ struct RomaWindowsAgent {
         }
     }
 
-    private static func makeAPIKeySource(arguments: [String]) throws -> TranscriptionAPIKeySource {
-        let environmentName = optionalValue(after: "--api-key-env", in: arguments)
-        let storedKeyName = optionalValue(after: "--api-key-name", in: arguments)
-
-        if environmentName != nil, storedKeyName != nil {
-            throw AgentError.conflictingOptions("--api-key-env and --api-key-name")
-        }
-        if let environmentName {
-            guard isValidEnvironmentName(environmentName) else {
-                throw AgentError.invalidOptionValue("--api-key-env")
-            }
-            return .environment(name: environmentName)
-        }
-        if let storedKeyName {
-            let directoryPath = optionalValue(after: "--secret-dir", in: arguments)
-                ?? WindowsDPAPISecretStore.defaultDirectoryURL().path
-            return .stored(
-                key: storedKeyName,
-                directoryURL: URL(fileURLWithPath: directoryPath, isDirectory: true)
-            )
-        }
-
-        throw AgentError.missingOption("--api-key-env or --api-key-name")
-    }
-
-    private static func replacementRules(from arguments: [String]) throws -> [RomaWordReplacementRule] {
-        try values(after: "--replace", in: arguments).map { value in
-            let pieces = value.split(separator: "=", maxSplits: 1, omittingEmptySubsequences: false)
-            guard pieces.count == 2 else {
-                throw AgentError.invalidOptionValue("--replace")
-            }
-
-            let original = pieces[0].trimmingCharacters(in: .whitespacesAndNewlines)
-            let replacement = pieces[1].trimmingCharacters(in: .whitespacesAndNewlines)
-            guard !original.isEmpty, !replacement.isEmpty else {
-                throw AgentError.invalidOptionValue("--replace")
-            }
-
-            return RomaWordReplacementRule(
-                originalText: original,
-                replacementText: replacement
-            )
-        }
-    }
-
-    private static func value(after option: String, in arguments: [String]) throws -> String {
-        guard let index = arguments.firstIndex(of: option),
-              arguments.indices.contains(index + 1) else {
-            throw AgentError.missingOption(option)
-        }
-        return arguments[index + 1]
-    }
-
-    private static func optionalValue(after option: String, in arguments: [String]) -> String? {
-        guard let index = arguments.firstIndex(of: option),
-              arguments.indices.contains(index + 1) else {
-            return nil
-        }
-
-        let trimmed = arguments[index + 1].trimmingCharacters(in: .whitespacesAndNewlines)
-        return trimmed.isEmpty ? nil : trimmed
-    }
-
-    private static func values(after option: String, in arguments: [String]) throws -> [String] {
-        var values: [String] = []
-        var index = arguments.startIndex
-        while index < arguments.endIndex {
-            defer { index = arguments.index(after: index) }
-            guard arguments[index] == option else { continue }
-
-            let valueIndex = arguments.index(after: index)
-            guard valueIndex < arguments.endIndex else {
-                throw AgentError.missingOption(option)
-            }
-
-            values.append(arguments[valueIndex])
-            index = valueIndex
-        }
-        return values
-    }
-
-    private static func doubleValue(after option: String, in arguments: [String], default defaultValue: Double) throws -> Double {
-        guard let index = arguments.firstIndex(of: option) else {
-            return defaultValue
-        }
-        guard arguments.indices.contains(index + 1),
-              let value = Double(arguments[index + 1]) else {
-            throw AgentError.invalidOptionValue(option)
-        }
-        return value
-    }
-
     private static func defaultOutputPath() -> String {
         FileManager.default.temporaryDirectory
             .appendingPathComponent("roma-just-talk-\(Int(Date().timeIntervalSince1970)).wav")
@@ -263,23 +173,6 @@ struct RomaWindowsAgent {
         #else
         return "unknown"
         #endif
-    }
-
-    private static func isValidEnvironmentName(_ value: String) -> Bool {
-        guard let first = value.unicodeScalars.first,
-              first == "_" || CharacterSet.letters.contains(first) else {
-            return false
-        }
-
-        return value.unicodeScalars.dropFirst().allSatisfy {
-            $0 == "_" || CharacterSet.alphanumerics.contains($0)
-        }
-    }
-
-    private static func oneLine(_ text: String) -> String {
-        text
-            .split(whereSeparator: \.isNewline)
-            .joined(separator: " ")
     }
 
     private static func printUsage() {
@@ -299,27 +192,7 @@ struct RomaWindowsAgent {
             description = String(describing: error)
         }
 
-        let line = "error=\(oneLine(description))\n"
+        let line = "error=\(RomaCommandLineText.oneLine(description))\n"
         FileHandle.standardError.write(Data(line.utf8))
-    }
-}
-
-private enum AgentError: Error, CustomStringConvertible {
-    case missingOption(String)
-    case invalidOptionValue(String)
-    case missingEnvironmentValue(String)
-    case conflictingOptions(String)
-
-    var description: String {
-        switch self {
-        case .missingOption(let option):
-            return "missing required option \(option)"
-        case .invalidOptionValue(let option):
-            return "invalid value for option \(option)"
-        case .missingEnvironmentValue(let name):
-            return "missing environment value \(name)"
-        case .conflictingOptions(let message):
-            return "conflicting options: \(message)"
-        }
     }
 }

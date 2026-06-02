@@ -11,6 +11,7 @@ struct RomaCoreChecks {
         try checkOpenAICompatibleMultipartBody()
         try checkTranscriptionOutputFilter()
         try checkWordReplacementProcessor()
+        try checkCommandLineOptions()
         try checkWindowsHotKeyProofDescriptor()
         try checkWindowsLowLevelKeyboardHookProofDescriptor()
         try await checkWindowsDictationRuntimeDescriptor()
@@ -216,6 +217,56 @@ struct RomaCoreChecks {
             ) == "Tokyo駅",
             "non-spaced-script replacements should fall back to substring replacement"
         )
+    }
+
+    private static func checkCommandLineOptions() throws {
+        let options = RomaCommandLineOptions([
+            "--seconds", "2.5",
+            "--replace", "just talk=roma-just-talk",
+            "--replace", "model context protocol=MCP",
+            "--api-key-env", "ROMA_KEY"
+        ])
+
+        try require(options.contains("--seconds"), "options should detect present flags")
+        try require(!options.contains("--paste"), "options should detect absent flags")
+        try require(try options.doubleValue(after: "--seconds", default: 1) == 2.5, "options should parse doubles")
+        try require(try options.doubleValue(after: "--missing", default: 7) == 7, "options should use numeric defaults")
+        try require(options.optionalValue(after: "--missing") == nil, "missing optional values should be nil")
+
+        let rules = try RomaCommandLineText.wordReplacementRules(from: options)
+        try require(
+            rules == [
+                RomaWordReplacementRule(originalText: "just talk", replacementText: "roma-just-talk"),
+                RomaWordReplacementRule(originalText: "model context protocol", replacementText: "MCP")
+            ],
+            "command-line replacement rules should parse repeated --replace values"
+        )
+        try require(
+            RomaCommandLineText.isValidEnvironmentName("ROMA_KEY_1"),
+            "environment names should allow letters, underscores, and digits after the first character"
+        )
+        try require(
+            !RomaCommandLineText.isValidEnvironmentName("1ROMA_KEY"),
+            "environment names should reject leading digits"
+        )
+
+        let keySource = try TranscriptionAPIKeySource.make(from: options)
+        try require(keySource == .environment(name: "ROMA_KEY"), "api key source should parse environment options")
+
+        do {
+            _ = try TranscriptionAPIKeySource.make(from: RomaCommandLineOptions([
+                "--api-key-env", "ROMA_KEY",
+                "--api-key-name", "groq"
+            ]))
+            throw CheckFailure("api key parser should reject conflicting key sources")
+        } catch RomaCommandLineOptionsError.conflictingOptions {
+        }
+
+        do {
+            _ = try RomaCommandLineText.wordReplacementRule(from: "missing equals")
+            throw CheckFailure("replacement parser should reject malformed values")
+        } catch RomaCommandLineOptionsError.invalidOptionValue {
+        }
     }
 
     private static func checkWindowsHotKeyProofDescriptor() throws {

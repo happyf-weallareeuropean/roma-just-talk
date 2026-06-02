@@ -480,95 +480,27 @@ struct RomaProofAgent {
     }
 
     private static func makeAPIKeySource(arguments: [String]) throws -> TranscriptionAPIKeySource {
-        let environmentName = optionalValue(after: "--api-key-env", in: arguments)
-        let storedKeyName = optionalValue(after: "--api-key-name", in: arguments)
-
-        if environmentName != nil, storedKeyName != nil {
-            throw AgentError.conflictingOptions("--api-key-env and --api-key-name")
-        }
-        if let environmentName {
-            guard isValidEnvironmentName(environmentName) else {
-                throw AgentError.invalidOptionValue("--api-key-env")
-            }
-            return .environment(name: environmentName)
-        }
-        if let storedKeyName {
-            let directoryPath = optionalValue(after: "--secret-dir", in: arguments)
-                ?? WindowsDPAPISecretStore.defaultDirectoryURL().path
-            return .stored(
-                key: storedKeyName,
-                directoryURL: URL(fileURLWithPath: directoryPath, isDirectory: true)
-            )
-        }
-
-        throw AgentError.missingOption("--api-key-env or --api-key-name")
+        try TranscriptionAPIKeySource.make(from: RomaCommandLineOptions(arguments))
     }
 
     private static func replacementRules(from arguments: [String]) throws -> [RomaWordReplacementRule] {
-        try values(after: "--replace", in: arguments).map { value in
-            let pieces = value.split(separator: "=", maxSplits: 1, omittingEmptySubsequences: false)
-            guard pieces.count == 2 else {
-                throw AgentError.invalidOptionValue("--replace")
-            }
-
-            let original = pieces[0].trimmingCharacters(in: .whitespacesAndNewlines)
-            let replacement = pieces[1].trimmingCharacters(in: .whitespacesAndNewlines)
-            guard !original.isEmpty, !replacement.isEmpty else {
-                throw AgentError.invalidOptionValue("--replace")
-            }
-
-            return RomaWordReplacementRule(
-                originalText: original,
-                replacementText: replacement
-            )
-        }
+        try RomaCommandLineText.wordReplacementRules(from: RomaCommandLineOptions(arguments))
     }
 
     private static func value(after option: String, in arguments: [String]) throws -> String {
-        guard let index = arguments.firstIndex(of: option),
-              arguments.indices.contains(index + 1) else {
-            throw AgentError.missingOption(option)
-        }
-        return arguments[index + 1]
+        try RomaCommandLineOptions(arguments).value(after: option)
     }
 
     private static func optionalValue(after option: String, in arguments: [String]) -> String? {
-        guard let index = arguments.firstIndex(of: option),
-              arguments.indices.contains(index + 1) else {
-            return nil
-        }
-
-        let trimmed = arguments[index + 1].trimmingCharacters(in: .whitespacesAndNewlines)
-        return trimmed.isEmpty ? nil : trimmed
+        RomaCommandLineOptions(arguments).optionalValue(after: option)
     }
 
     private static func values(after option: String, in arguments: [String]) throws -> [String] {
-        var values: [String] = []
-        var index = arguments.startIndex
-        while index < arguments.endIndex {
-            defer { index = arguments.index(after: index) }
-            guard arguments[index] == option else { continue }
-
-            let valueIndex = arguments.index(after: index)
-            guard valueIndex < arguments.endIndex else {
-                throw AgentError.missingOption(option)
-            }
-
-            values.append(arguments[valueIndex])
-            index = valueIndex
-        }
-        return values
+        try RomaCommandLineOptions(arguments).values(after: option)
     }
 
     private static func doubleValue(after option: String, in arguments: [String], default defaultValue: Double) throws -> Double {
-        guard let index = arguments.firstIndex(of: option) else {
-            return defaultValue
-        }
-        guard arguments.indices.contains(index + 1),
-              let value = Double(arguments[index + 1]) else {
-            throw AgentError.invalidOptionValue(option)
-        }
-        return value
+        try RomaCommandLineOptions(arguments).doubleValue(after: option, default: defaultValue)
     }
 
     private static func sleep(seconds: Double) async throws {
@@ -622,20 +554,11 @@ struct RomaProofAgent {
     }
 
     private static func isValidEnvironmentName(_ value: String) -> Bool {
-        guard let first = value.unicodeScalars.first,
-              first == "_" || CharacterSet.letters.contains(first) else {
-            return false
-        }
-
-        return value.unicodeScalars.dropFirst().allSatisfy {
-            $0 == "_" || CharacterSet.alphanumerics.contains($0)
-        }
+        RomaCommandLineText.isValidEnvironmentName(value)
     }
 
     private static func oneLine(_ text: String) -> String {
-        text
-            .split(whereSeparator: \.isNewline)
-            .joined(separator: " ")
+        RomaCommandLineText.oneLine(text)
     }
 }
 

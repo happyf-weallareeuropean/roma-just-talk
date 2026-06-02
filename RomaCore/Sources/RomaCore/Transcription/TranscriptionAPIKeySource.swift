@@ -51,4 +51,32 @@ public enum TranscriptionAPIKeySource: Equatable, Hashable, Sendable {
             return apiKey
         }
     }
+
+    public static func make(
+        from options: RomaCommandLineOptions,
+        defaultSecretDirectoryURL: URL = WindowsDPAPISecretStore.defaultDirectoryURL()
+    ) throws -> TranscriptionAPIKeySource {
+        let environmentName = options.optionalValue(after: "--api-key-env")
+        let storedKeyName = options.optionalValue(after: "--api-key-name")
+
+        if environmentName != nil, storedKeyName != nil {
+            throw RomaCommandLineOptionsError.conflictingOptions("--api-key-env and --api-key-name")
+        }
+        if let environmentName {
+            guard RomaCommandLineText.isValidEnvironmentName(environmentName) else {
+                throw RomaCommandLineOptionsError.invalidOptionValue("--api-key-env")
+            }
+            return .environment(name: environmentName)
+        }
+        if let storedKeyName {
+            let directoryPath = options.optionalValue(after: "--secret-dir")
+                ?? defaultSecretDirectoryURL.path
+            return .stored(
+                key: storedKeyName,
+                directoryURL: URL(fileURLWithPath: directoryPath, isDirectory: true)
+            )
+        }
+
+        throw RomaCommandLineOptionsError.missingOption("--api-key-env or --api-key-name")
+    }
 }
