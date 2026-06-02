@@ -77,6 +77,7 @@ struct TranscriptionOutputFilter {
     }
 
     private static let lowercaseTranscriptionKey = "LowercaseTranscription"
+    private static let maxInsertionContextCharacters = 512
     private static let apostropheLikeCharacters = CharacterSet(charactersIn: "'’‘ʼ＇")
     private static let removableTrailingFragmentPunctuation = CharacterSet(charactersIn: ".,;:…")
     private static let nonSpeechBracketContents: Set<String> = [
@@ -217,12 +218,6 @@ struct TranscriptionOutputFilter {
 
         let element = focusedElement as! AXUIElement
 
-        var value: CFTypeRef?
-        guard AXUIElementCopyAttributeValue(element, kAXValueAttribute as CFString, &value) == .success,
-              let fullText = value as? String else {
-            return nil
-        }
-
         var selectedText: String?
         var selectedTextValue: CFTypeRef?
         if AXUIElementCopyAttributeValue(
@@ -249,6 +244,49 @@ struct TranscriptionOutputFilter {
             return nil
         }
 
+        if let precedingText = precedingTextFromParameterizedRange(
+            in: element,
+            cursorOffset: selectedRange.location
+        ) {
+            return TextInsertionContext(precedingText: precedingText, selectedText: selectedText)
+        }
+
+        var value: CFTypeRef?
+        guard AXUIElementCopyAttributeValue(element, kAXValueAttribute as CFString, &value) == .success,
+              let fullText = value as? String else {
+            return nil
+        }
+
+        return insertionContext(fromFullText: fullText, selectedRange: selectedRange, selectedText: selectedText)
+    }
+
+    private static func precedingTextFromParameterizedRange(in element: AXUIElement, cursorOffset: Int) -> String? {
+        guard cursorOffset > 0 else { return "" }
+
+        let prefixStart = max(0, cursorOffset - maxInsertionContextCharacters)
+        var prefixRange = CFRange(location: prefixStart, length: cursorOffset - prefixStart)
+        guard let axRange = AXValueCreate(.cfRange, &prefixRange) else {
+            return nil
+        }
+
+        var prefixValue: CFTypeRef?
+        guard AXUIElementCopyParameterizedAttributeValue(
+            element,
+            kAXStringForRangeParameterizedAttribute as CFString,
+            axRange,
+            &prefixValue
+        ) == .success else {
+            return nil
+        }
+
+        return prefixValue as? String
+    }
+
+    private static func insertionContext(
+        fromFullText fullText: String,
+        selectedRange: CFRange,
+        selectedText: String?
+    ) -> TextInsertionContext {
         let cursorOffset = max(0, min(selectedRange.location, fullText.count))
         let cursorIndex = fullText.index(fullText.startIndex, offsetBy: cursorOffset)
         return TextInsertionContext(

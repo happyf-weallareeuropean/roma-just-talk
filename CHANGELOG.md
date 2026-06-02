@@ -3,6 +3,7 @@
 ## v1.81 - Unreleased
 
 - Improved final dictation cleanup for mid-sentence fragments, stray bracket wrappers, pause sounds, repeated words, obvious self-corrections, and spoken formatting/punctuation commands.
+- Improved cursor-context lookup for rich editors that expose focused text ranges without exposing the full field value.
 
 ## v1.80 - 2026-06-01
 
