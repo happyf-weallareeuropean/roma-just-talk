@@ -162,6 +162,10 @@ public struct RomaTranscriptionOutputFilter {
     private static let poundWeightContextWords: Set<String> = [
         "dropped", "gain", "gained", "lose", "losing", "lost", "shed", "weigh", "weighed", "weighs"
     ]
+    private static let blockedNextWordsForSpokenPossessive: Set<String> = [
+        "character", "characters", "is", "mark", "marks", "means", "meaning", "suffix", "symbol", "symbols"
+    ]
+    private static let spokenPossessivePattern = #"(?i)(?<![\p{L}\p{N}])([\p{L}\p{N}][\p{L}\p{N}'’ʼ-]{0,63})\s+apostrophe\s+s(?=\s+[\p{L}\p{N}])"#
     private static let likelyLowercaseFragments: Set<String> = [
         "a", "about", "after", "again", "all", "also", "an", "and", "any", "are",
         "as", "at", "back", "be", "because", "but", "by", "can", "case", "code",
@@ -455,6 +459,7 @@ public struct RomaTranscriptionOutputFilter {
         filteredText = formatInlineNumberedLists(in: filteredText)
         filteredText = applySpokenSymbolCommands(in: filteredText)
         filteredText = applySpokenContractionCommands(in: filteredText)
+        filteredText = applySpokenPossessiveCommands(in: filteredText)
         filteredText = applySpokenCodeCaseCommands(in: filteredText)
         filteredText = applySpokenMarkdownCommands(in: filteredText)
         if cleanupLevel == .polished {
@@ -747,6 +752,38 @@ public struct RomaTranscriptionOutputFilter {
         }
 
         return replacement.prefix(1).uppercased() + String(replacement.dropFirst())
+    }
+
+    private static func applySpokenPossessiveCommands(in text: String) -> String {
+        guard let regex = try? NSRegularExpression(pattern: spokenPossessivePattern) else {
+            return text
+        }
+
+        var possessiveText = text
+        let fullRange = NSRange(possessiveText.startIndex..., in: possessiveText)
+        let matches = regex.matches(in: possessiveText, range: fullRange).reversed()
+
+        for match in matches {
+            guard let range = Range(match.range, in: possessiveText),
+                  let ownerRange = Range(match.range(at: 1), in: possessiveText),
+                  shouldApplySpokenPossessive(in: possessiveText, commandRange: range) else {
+                continue
+            }
+
+            possessiveText.replaceSubrange(range, with: "\(possessiveText[ownerRange])'s")
+        }
+
+        return possessiveText
+    }
+
+    private static func shouldApplySpokenPossessive(in text: String, commandRange: Range<String.Index>) -> Bool {
+        let afterCommand = String(text[commandRange.upperBound...])
+
+        guard let nextWord = nextWord(in: afterCommand) else {
+            return false
+        }
+
+        return !blockedNextWordsForSpokenPossessive.contains(nextWord)
     }
 
     private static func shouldApplySpokenSymbolCommand(

@@ -107,10 +107,12 @@ struct TranscriptionOutputFilterTests {
         TranscriptionCleanupLevel.setCurrent(.raw)
         #expect(TranscriptionOutputFilter.filter("hmm... Hello comma world. Hello comma world.") == "hmm... Hello comma world. Hello comma world.")
         #expect(TranscriptionOutputFilter.filter("I can apostrophe t go.") == "I can apostrophe t go.")
+        #expect(TranscriptionOutputFilter.filter("Felix apostrophe s laptop.") == "Felix apostrophe s laptop.")
 
         TranscriptionCleanupLevel.setCurrent(.light)
         #expect(TranscriptionOutputFilter.filter("hmm... Hello comma world.") == "hmm... Hello, world.")
         #expect(TranscriptionOutputFilter.filter("I can apostrophe t go.") == "I can't go.")
+        #expect(TranscriptionOutputFilter.filter("Felix apostrophe s laptop.") == "Felix's laptop.")
         #expect(TranscriptionOutputFilter.filter("Let's meet at two, wait no, three.") == "Let's meet at two, wait no, three.")
         #expect(TranscriptionOutputFilter.filter("I think I think this works.") == "I think I think this works.")
         #expect(TranscriptionOutputFilter.filter("I think this works, I think this works.") == "I think this works, I think this works.")
@@ -210,6 +212,16 @@ struct TranscriptionOutputFilterTests {
         #expect(TranscriptionOutputFilter.filter("She apostrophe ll approve.") == "She'll approve.")
         #expect(TranscriptionOutputFilter.filter("Let apostrophe s ship.") == "Let's ship.")
         #expect(TranscriptionOutputFilter.filter("The word apostrophe is here.") == "The word apostrophe is here.")
+    }
+
+    @Test func transcriptionFilterAppliesGuardedSpokenPossessives() async throws {
+        TranscriptionCleanupLevel.setCurrent(.polished)
+        #expect(TranscriptionOutputFilter.filter("Felix apostrophe s laptop is ready.") == "Felix's laptop is ready.")
+        #expect(TranscriptionOutputFilter.filter("The project apostrophe s status changed.") == "The project's status changed.")
+        #expect(TranscriptionOutputFilter.filter("Use API apostrophe s response.") == "Use API's response.")
+        #expect(TranscriptionOutputFilter.filter("Apostrophe s is a suffix.") == "Apostrophe s is a suffix.")
+        #expect(TranscriptionOutputFilter.filter("The suffix apostrophe s is common.") == "The suffix apostrophe s is common.")
+        #expect(TranscriptionOutputFilter.filter("Use apostrophe s symbol.") == "Use apostrophe s symbol.")
     }
 
     @Test func transcriptionFilterAppliesGuardedCodeCaseCommands() async throws {
