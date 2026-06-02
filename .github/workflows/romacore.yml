@@ -148,7 +148,7 @@ jobs:
                 $bodyBytesRead = 0
                 $sawHeaders = $false
 
-                while ($true) {
+                :readRequest while ($true) {
                   $read = $stream.Read($buffer, 0, $buffer.Length)
                   if ($read -le 0) {
                     break
@@ -173,7 +173,7 @@ jobs:
                   }
 
                   if ($sawHeaders -and $bodyBytesRead -ge $contentLength) {
-                    break
+                    break readRequest
                   }
                 }
 
