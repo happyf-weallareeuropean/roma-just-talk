@@ -135,6 +135,12 @@ struct TranscriptionOutputFilter {
     private static let blockedFirstWordsForSpokenCodeCase: Set<String> = [
         "a", "an", "as", "for", "in", "is", "means", "style", "the", "with"
     ]
+    private static let dateContextWords: Set<String> = [
+        "after", "before", "by", "due", "from", "on", "since", "through", "until"
+    ]
+    private static let poundWeightContextWords: Set<String> = [
+        "dropped", "gain", "gained", "lose", "losing", "lost", "shed", "weigh", "weighed", "weighs"
+    ]
     private static let likelyLowercaseFragments: Set<String> = [
         "a", "about", "after", "again", "all", "also", "an", "and", "any", "are",
         "as", "at", "back", "be", "because", "but", "by", "can", "case", "code",
@@ -955,7 +961,8 @@ struct TranscriptionOutputFilter {
             }
 
             let rawMonth = String(dateText[monthRange])
-            guard shouldFormatSpokenMonth(rawMonth) else { continue }
+            let beforeDate = String(dateText[..<fullRange.lowerBound])
+            guard shouldFormatSpokenMonth(rawMonth, precedingText: beforeDate) else { continue }
 
             let month = normalizedMonthName(rawMonth)
             let year = optionalMatchText(in: dateText, match: match, rangeIndex: 3)
@@ -1028,6 +1035,14 @@ struct TranscriptionOutputFilter {
                 continue
             }
 
+            guard shouldFormatCurrencyAmount(
+                currencyWord: String(currencyText[currencyRange]),
+                beforeAmount: String(currencyText[..<fullRange.lowerBound]),
+                afterAmount: String(currencyText[fullRange.upperBound...])
+            ) else {
+                continue
+            }
+
             currencyText.replaceSubrange(fullRange, with: "\(symbol)\(currencyText[amountRange])")
         }
 
@@ -1070,9 +1085,16 @@ struct TranscriptionOutputFilter {
         return String(firstCharacter).uppercased() + lowercasedText.dropFirst()
     }
 
-    private static func shouldFormatSpokenMonth(_ text: String) -> Bool {
-        guard text.lowercased() == "may" else { return true }
-        return text.first?.isUppercase == true
+    private static func shouldFormatSpokenMonth(_ text: String, precedingText: String) -> Bool {
+        if text.first?.isUppercase == true {
+            return true
+        }
+
+        guard let previousWord = previousWord(in: precedingText) else {
+            return false
+        }
+
+        return dateContextWords.contains(previousWord)
     }
 
     private static func ordinalDayNumber(_ text: String) -> Int? {
@@ -1110,6 +1132,27 @@ struct TranscriptionOutputFilter {
         default:
             return nil
         }
+    }
+
+    private static func shouldFormatCurrencyAmount(
+        currencyWord: String,
+        beforeAmount: String,
+        afterAmount: String
+    ) -> Bool {
+        guard ["pound", "pounds"].contains(currencyWord.lowercased()) else {
+            return true
+        }
+
+        if let previousWord = previousWord(in: beforeAmount),
+           poundWeightContextWords.contains(previousWord) {
+            return false
+        }
+
+        if nextWord(in: afterAmount) == "of" {
+            return false
+        }
+
+        return true
     }
 
     private static func containsSpokenDomainSuffix(_ text: String) -> Bool {

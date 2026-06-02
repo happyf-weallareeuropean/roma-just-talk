@@ -147,6 +147,7 @@ struct TranscriptionOutputFilterTests {
 
     @Test func transcriptionFilterAppliesGuardedValueFormatting() async throws {
         #expect(TranscriptionOutputFilter.filter("Meet on June second 2026.") == "Meet on June 2, 2026.")
+        #expect(TranscriptionOutputFilter.filter("Meet on june second.") == "Meet on June 2.")
         #expect(TranscriptionOutputFilter.filter("Meet on September twenty first.") == "Meet on September 21.")
         #expect(TranscriptionOutputFilter.filter("Meet on May second.") == "Meet on May 2.")
         #expect(TranscriptionOutputFilter.filter("Call at 9 30 a m.") == "Call at 9:30 AM.")
@@ -157,6 +158,9 @@ struct TranscriptionOutputFilterTests {
         #expect(TranscriptionOutputFilter.filter("Progress is 85 percent done.") == "Progress is 85% done.")
         #expect(TranscriptionOutputFilter.filter("The dollar sign is confusing.") == "The dollar sign is confusing.")
         #expect(TranscriptionOutputFilter.filter("I may second that idea.") == "I may second that idea.")
+        #expect(TranscriptionOutputFilter.filter("We march first then rest.") == "We march first then rest.")
+        #expect(TranscriptionOutputFilter.filter("I lost 20 pounds.") == "I lost 20 pounds.")
+        #expect(TranscriptionOutputFilter.filter("Use 20 pounds of flour.") == "Use 20 pounds of flour.")
         #expect(TranscriptionOutputFilter.filter("Use 13 99 p m as a test.") == "Use 13 99 p m as a test.")
     }
 
