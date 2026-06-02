@@ -2,6 +2,7 @@
 
 ## v1.81 - Unreleased
 
+- Added reusable Windows-agent configuration for endpoint/model/key and dictation defaults.
 - Added a thin `RomaWindowsAgent` entrypoint for Windows dictation through the shared `RomaCore` runtime.
 - Improved final dictation cleanup for mid-sentence fragments, stray bracket wrappers, pause sounds, repeated words, obvious self-corrections, and spoken formatting/punctuation commands.
 - Added Raw, Light, and Polished cleanup levels so users can keep dictation more literal or use full post-STT polish.

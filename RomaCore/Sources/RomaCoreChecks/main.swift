@@ -12,6 +12,7 @@ struct RomaCoreChecks {
         try checkTranscriptionOutputFilter()
         try checkWordReplacementProcessor()
         try checkCommandLineOptions()
+        try checkWindowsAgentConfiguration()
         try checkWindowsHotKeyProofDescriptor()
         try checkWindowsLowLevelKeyboardHookProofDescriptor()
         try await checkWindowsDictationRuntimeDescriptor()
@@ -266,6 +267,60 @@ struct RomaCoreChecks {
             _ = try RomaCommandLineText.wordReplacementRule(from: "missing equals")
             throw CheckFailure("replacement parser should reject malformed values")
         } catch RomaCommandLineOptionsError.invalidOptionValue {
+        }
+    }
+
+    private static func checkWindowsAgentConfiguration() throws {
+        let base = RomaWindowsAgentConfiguration(
+            endpoint: "https://api.example.com/v1/audio/transcriptions",
+            model: "base-model",
+            apiKeyName: "groq",
+            shouldPaste: false,
+            usesHoldHook: false,
+            recordSeconds: 2,
+            wordReplacements: [
+                RomaWordReplacementRule(originalText: "base", replacementText: "BASE")
+            ]
+        )
+        let merged = try base.applyingOverrides(from: RomaCommandLineOptions([
+            "--model", "override-model",
+            "--api-key-env", "ROMA_KEY",
+            "--hold-hook",
+            "--paste",
+            "--timeout", "22",
+            "--replace", "just talk=roma-just-talk"
+        ]))
+
+        try require(try merged.requireEndpoint() == "https://api.example.com/v1/audio/transcriptions", "config should keep endpoint")
+        try require(try merged.requireModel() == "override-model", "CLI should override model")
+        try require(merged.apiKeyEnvironment == "ROMA_KEY", "CLI env key should override stored key")
+        try require(merged.apiKeyName == nil, "CLI env key should clear stored key name")
+        try require(merged.shouldPaste == true, "CLI paste flag should enable paste")
+        try require(merged.usesHoldHook == true, "CLI hold flag should enable hold mode")
+        try require(merged.holdTimeoutSeconds == 22, "CLI timeout should override hold timeout")
+        try require(
+            merged.wordReplacements == [
+                RomaWordReplacementRule(originalText: "just talk", replacementText: "roma-just-talk")
+            ],
+            "CLI replacement values should override config replacements"
+        )
+        try require(
+            try merged.apiKeySource() == .environment(name: "ROMA_KEY"),
+            "merged config should resolve env key source"
+        )
+
+        let url = URL(fileURLWithPath: "/tmp/roma-windows-agent-config-check.json")
+        try merged.write(to: url)
+        let loaded = try RomaWindowsAgentConfiguration.load(from: url)
+        try require(loaded == merged, "config should round-trip through JSON")
+
+        do {
+            _ = try RomaWindowsAgentConfiguration(
+                apiKeyEnvironment: "ROMA_KEY",
+                apiKeyName: "groq"
+            ).apiKeySource()
+            throw CheckFailure("config should reject conflicting api key sources")
+        } catch RomaCommandLineOptionsError.conflictingOptions {
         }
     }
 

@@ -22,6 +22,8 @@ struct RomaWindowsAgent {
             try await runDictation(arguments: Array(arguments.dropFirst()))
         case "save-key-from-env":
             try saveKeyFromEnvironment(arguments: Array(arguments.dropFirst()))
+        case "write-config":
+            try writeConfiguration(arguments: Array(arguments.dropFirst()))
         default:
             printUsage()
         }
@@ -39,21 +41,24 @@ struct RomaWindowsAgent {
         print("hold_hook=WH_KEYBOARD_LL Ctrl+Shift+R")
         print("paste=win32_clipboard_sendinput")
         print("secret_store=dpapi")
+        print("config_default=\(RomaWindowsAgentConfiguration.defaultURL().path)")
         print("minimum_permission_surface=microphone,hotkey,clipboard")
         print("screen_capture=false")
     }
 
     private static func runDictation(arguments: [String]) async throws {
         let options = RomaCommandLineOptions(arguments)
-        let outputURL = URL(fileURLWithPath: options.optionalValue(after: "--out") ?? defaultOutputPath())
-        let endpointText = try options.value(after: "--endpoint")
-        let modelName = try options.value(after: "--model")
-        let apiKeySource = try TranscriptionAPIKeySource.make(from: options)
-        let shouldPaste = options.contains("--paste")
-        let shouldUseHoldHook = options.contains("--hold-hook")
-        let seconds = try options.doubleValue(after: "--seconds", default: 2)
-        let timeoutMilliseconds = UInt32(try options.doubleValue(after: "--timeout", default: 15) * 1_000)
-        let wordReplacements = try RomaCommandLineText.wordReplacementRules(from: options)
+        let configuration = try loadConfiguration(from: options)
+            .applyingOverrides(from: options)
+        let outputURL = URL(fileURLWithPath: configuration.outputPath ?? defaultOutputPath())
+        let endpointText = try configuration.requireEndpoint()
+        let modelName = try configuration.requireModel()
+        let apiKeySource = try configuration.apiKeySource()
+        let shouldPaste = configuration.shouldPaste ?? false
+        let shouldUseHoldHook = configuration.usesHoldHook ?? false
+        let seconds = configuration.recordSeconds ?? 2
+        let timeoutMilliseconds = UInt32((configuration.holdTimeoutSeconds ?? 15) * 1_000)
+        let wordReplacements = configuration.wordReplacements
         let trigger: WindowsDictationTrigger = shouldUseHoldHook
             ? .hold(timeoutMilliseconds: timeoutMilliseconds)
             : .toggle(recordSeconds: seconds)
@@ -84,8 +89,8 @@ struct RomaWindowsAgent {
             WindowsDictationRuntimeRequest(
                 outputURL: outputURL,
                 model: model,
-                language: options.optionalValue(after: "--language"),
-                prompt: options.optionalValue(after: "--prompt"),
+                language: configuration.language,
+                prompt: configuration.prompt,
                 shouldPaste: shouldPaste,
                 textProcessing: DictationTextProcessingConfiguration(
                     wordReplacements: wordReplacements
@@ -140,6 +145,27 @@ struct RomaWindowsAgent {
         print("stored=true")
     }
 
+    private static func writeConfiguration(arguments: [String]) throws {
+        let options = RomaCommandLineOptions(arguments)
+        let url = RomaWindowsAgentConfiguration.url(from: options)
+        let configuration = try loadConfiguration(from: options, allowMissing: true)
+            .applyingOverrides(from: options)
+
+        _ = try configuration.requireEndpoint()
+        _ = try configuration.requireModel()
+        _ = try configuration.apiKeySource()
+        try configuration.write(to: url)
+
+        print("config=\(url.path)")
+        print("endpoint=\(try configuration.requireEndpoint())")
+        print("model=\(try configuration.requireModel())")
+        print("api_key_source=\(try configuration.apiKeySource().kind)")
+        print("paste=\(configuration.shouldPaste ?? false)")
+        print("recording_mode=\((configuration.usesHoldHook ?? false) ? "hold" : "toggle")")
+        print("word_replacements=\(configuration.wordReplacements.count)")
+        print("written=true")
+    }
+
     private static func printEvent(_ event: WindowsDictationRuntimeEvent) {
         switch event {
         case .preRollBuffering:
@@ -163,6 +189,20 @@ struct RomaWindowsAgent {
             .path
     }
 
+    private static func loadConfiguration(
+        from options: RomaCommandLineOptions,
+        allowMissing: Bool = true
+    ) throws -> RomaWindowsAgentConfiguration {
+        let url = RomaWindowsAgentConfiguration.url(from: options)
+        guard FileManager.default.fileExists(atPath: url.path) else {
+            if allowMissing {
+                return RomaWindowsAgentConfiguration()
+            }
+            throw RomaCommandLineOptionsError.missingOption("--config")
+        }
+        return try RomaWindowsAgentConfiguration.load(from: url)
+    }
+
     private static var platformName: String {
         #if os(Windows)
         return "windows"
@@ -179,7 +219,8 @@ struct RomaWindowsAgent {
         print("usage:")
         print("  RomaWindowsAgent doctor")
         print("  RomaWindowsAgent save-key-from-env --key groq --value-env GROQ_API_KEY [--secret-dir C:\\tmp\\roma-secrets]")
-        print("  RomaWindowsAgent dictate --endpoint https://api.example.com/v1/audio/transcriptions --model whisper-large-v3-turbo --api-key-env OPENAI_API_KEY [--out proof.wav] [--seconds 2] [--replace \"just talk=roma-just-talk\"] [--paste]")
+        print("  RomaWindowsAgent write-config --endpoint https://api.example.com/v1/audio/transcriptions --model whisper-large-v3-turbo --api-key-name groq [--config C:\\tmp\\roma-agent.json] [--hold-hook] [--paste]")
+        print("  RomaWindowsAgent dictate [--config C:\\tmp\\roma-agent.json] [--endpoint https://api.example.com/v1/audio/transcriptions --model whisper-large-v3-turbo --api-key-env OPENAI_API_KEY] [--out proof.wav] [--seconds 2] [--replace \"just talk=roma-just-talk\"] [--paste]")
         print("  RomaWindowsAgent dictate --hold-hook --timeout 15 --endpoint https://api.example.com/v1/audio/transcriptions --model whisper-large-v3-turbo --api-key-name groq [--paste]")
     }
 

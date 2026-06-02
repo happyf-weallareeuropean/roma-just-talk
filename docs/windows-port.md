@@ -57,6 +57,7 @@ Reusable now:
 - `RomaWordReplacementProcessor` now lives in `RomaCore` as the shared dictionary replacement matching path.
 - `WindowsDictationRuntime` now lives in `RomaCore` as the reusable Windows hotkey/hook -> miniaudio -> STT -> cleanup/replacement -> optional paste composition.
 - `RomaWindowsAgent` is the first user-facing Windows executable. It stays thin and calls `WindowsDictationRuntime` instead of duplicating recorder/STT/paste orchestration.
+- `RomaWindowsAgentConfiguration` now lives in `RomaCore` as the reusable JSON settings shape for endpoint, model, key source, trigger mode, paste, language/prompt, and replacement defaults.
 - `WindowsHotKey.proofToggle` and the Windows-only `WindowsRegisterHotKeyProof` source define the first `RegisterHotKey` toggle proof path.
 - `WindowsLowLevelKeyboardHookProof` now defines the first `WH_KEYBOARD_LL` hold-to-talk keydown/keyup proof path.
 - `WindowsClipboardPayload` and the Windows-only `WindowsPasteProof` source define the first `CF_UNICODETEXT` plus `SendInput` paste proof path.
@@ -193,6 +194,16 @@ Useful script options:
 - `-HoldTimeoutSeconds 15` changes the keydown/keyup wait timeout for hold-hook dictation.
 - `-PasteDictation` adds the final paste step to the interactive dictation proof.
 
+Windows agent config:
+
+```powershell
+swift run RomaWindowsAgent save-key-from-env --key groq --value-env GROQ_API_KEY
+swift run RomaWindowsAgent write-config --endpoint https://api.groq.com/openai/v1/audio/transcriptions --model whisper-large-v3-turbo --api-key-name groq --hold-hook --paste --replace "just talk=roma-just-talk"
+swift run RomaWindowsAgent dictate
+```
+
+Use `--config C:\tmp\roma-agent.json` on `write-config` and `dictate` when you want an explicit config path instead of `%APPDATA%\roma-just-talk\windows-agent.json`.
+
 CI proof:
 
 - `.github/workflows/romacore.yml` builds `RomaCore` on macOS and Windows.
@@ -224,6 +235,8 @@ swift run RomaProofAgent windows-secret-doctor
 swift run RomaProofAgent windows-secret-proof --dir C:\tmp\roma-secrets
 swift run RomaProofAgent windows-secret-save-from-env --dir C:\tmp\roma-secrets --key groq --value-env GROQ_API_KEY
 swift run RomaWindowsAgent save-key-from-env --key groq --value-env GROQ_API_KEY
+swift run RomaWindowsAgent write-config --endpoint https://api.groq.com/openai/v1/audio/transcriptions --model whisper-large-v3-turbo --api-key-name groq --hold-hook --paste --replace "just talk=roma-just-talk"
+swift run RomaWindowsAgent dictate
 swift run RomaWindowsAgent dictate --hold-hook --endpoint https://api.groq.com/openai/v1/audio/transcriptions --model whisper-large-v3-turbo --api-key-name groq --paste
 swift run RomaProofAgent transcribe-proof --audio mic-proof.wav --endpoint https://api.groq.com/openai/v1/audio/transcriptions --model whisper-large-v3-turbo --api-key-name groq --secret-dir C:\tmp\roma-secrets
 swift run RomaProofAgent windows-dictation-proof --out dictation-proof.wav --seconds 2 --endpoint https://api.groq.com/openai/v1/audio/transcriptions --model whisper-large-v3-turbo --api-key-env GROQ_API_KEY --replace "just talk=roma-just-talk" --paste
