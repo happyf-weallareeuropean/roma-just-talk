@@ -124,39 +124,47 @@ struct RomaProofAgent {
             try WindowsRegisterHotKeyProof.waitForSingleTrigger(hotKey: hotKey)
             print("hotkey_received=true")
 
-            try await recorder.startRecording(toOutputFile: outputURL)
-            try await sleep(seconds: seconds)
-            let audio = try await recorder.finishRecording()
-            await recorder.stopCapture()
+            let service = try makeTranscriptionService(
+                endpointText: endpointText,
+                apiKeyEnvironmentName: apiKeyEnvironmentName
+            )
+            let model = TranscriptionModelDescriptor(
+                name: modelName,
+                displayName: modelName,
+                provider: .custom
+            )
+            let pipeline = DictationPipeline(
+                recorder: recorder,
+                transcriptionService: service,
+                textInsertion: shouldPaste ? WindowsClipboardTextInsertion() : nil
+            )
+            let result = try await pipeline.runRecordingWindow(
+                DictationPipelineRequest(
+                    outputURL: outputURL,
+                    model: model,
+                    language: optionalValue(after: "--language", in: arguments),
+                    prompt: optionalValue(after: "--prompt", in: arguments),
+                    shouldInsertTranscription: shouldPaste
+                )
+            ) {
+                try await sleep(seconds: seconds)
+            }
+            let audio = result.session.recordedAudio
 
             print("wrote=\(audio.fileURL.path)")
             print("duration_seconds=\(String(format: "%.3f", audio.durationSeconds ?? 0))")
             print("included_pre_roll_seconds=\(audio.includedPreRollSeconds ?? 0)")
             print("sample_rate=\(audio.format.sampleRate)")
             print("channels=\(audio.format.channelCount)")
-
-            let result = try await transcribeAudio(
-                audioURL: audio.fileURL,
-                endpointText: endpointText,
-                modelName: modelName,
-                apiKeyEnvironmentName: apiKeyEnvironmentName,
-                language: optionalValue(after: "--language", in: arguments),
-                prompt: optionalValue(after: "--prompt", in: arguments)
-            )
             printTranscriptionResult(
-                result,
+                result.transcription,
                 endpointText: endpointText,
                 modelName: modelName,
                 apiKeyEnvironmentName: apiKeyEnvironmentName,
                 audioURL: audio.fileURL
             )
 
-            if shouldPaste {
-                try WindowsPasteProof.pasteText(result.text)
-                print("paste_sent=true")
-            } else {
-                print("paste_sent=false")
-            }
+            print("paste_sent=\(shouldPaste)")
         } catch {
             await recorder.stopCapture()
             throw error
@@ -273,11 +281,9 @@ struct RomaProofAgent {
             throw AgentError.missingEnvironmentValue(apiKeyEnvironmentName)
         }
 
-        let service = OpenAICompatibleTranscriptionService(
-            configuration: OpenAICompatibleTranscriptionConfiguration(
-                endpointURL: endpointURL,
-                apiKey: apiKey
-            )
+        let service = try makeTranscriptionService(
+            endpointText: endpointText,
+            apiKeyEnvironmentName: apiKeyEnvironmentName
         )
         let model = TranscriptionModelDescriptor(
             name: modelName,
@@ -290,6 +296,29 @@ struct RomaProofAgent {
                 model: model,
                 language: language,
                 prompt: prompt
+            )
+        )
+    }
+
+    private static func makeTranscriptionService(
+        endpointText: String,
+        apiKeyEnvironmentName: String
+    ) throws -> OpenAICompatibleTranscriptionService {
+        guard isValidEnvironmentName(apiKeyEnvironmentName) else {
+            throw AgentError.invalidOptionValue("--api-key-env")
+        }
+        guard let endpointURL = URL(string: endpointText), endpointURL.scheme != nil else {
+            throw AgentError.invalidOptionValue("--endpoint")
+        }
+        guard let apiKey = ProcessInfo.processInfo.environment[apiKeyEnvironmentName],
+              !apiKey.isEmpty else {
+            throw AgentError.missingEnvironmentValue(apiKeyEnvironmentName)
+        }
+
+        return OpenAICompatibleTranscriptionService(
+            configuration: OpenAICompatibleTranscriptionConfiguration(
+                endpointURL: endpointURL,
+                apiKey: apiKey
             )
         )
     }

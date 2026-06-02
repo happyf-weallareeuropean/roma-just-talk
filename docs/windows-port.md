@@ -52,6 +52,7 @@ Reusable now:
 - `PCM16WAVFile` now lives in `RomaCore` as Foundation-only PCM16 WAV output for proof recordings.
 - `MiniaudioCaptureRecorder` now lives in `RomaCore` and feeds miniaudio capture frames into the shared pre-roll/WAV path.
 - `OpenAICompatibleTranscriptionService` now lives in `RomaCore` as a Foundation-only multipart HTTP proof path for OpenAI-compatible cloud STT.
+- `DictationPipeline` now lives in `RomaCore` as the shared record -> transcribe -> optional paste orchestration.
 - `WindowsHotKey.proofToggle` and the Windows-only `WindowsRegisterHotKeyProof` source define the first `RegisterHotKey` toggle proof path.
 - `WindowsClipboardPayload` and the Windows-only `WindowsPasteProof` source define the first `CF_UNICODETEXT` plus `SendInput` paste proof path.
 - `CoreAudioRecorder` already outputs the right streaming shape: 16 kHz mono Int16 PCM chunks and a WAV file with a 3 second pre-roll buffer, and now reuses `RomaCore.PCMPreRollBuffer`.
@@ -143,14 +144,15 @@ Minimum Windows MVP permission surface: microphone + shortcut + clipboard/paste.
    - settings instead of `UserDefaults`
    - paste instead of `CursorPaster`
    - notifications instead of `NotificationManager`
-4. Add macOS adapters that call the current implementations. This proves extraction without behavior change.
-5. Add a Windows proof target:
+4. Route command-line proof flows through `DictationPipeline` before building UI. This keeps Windows from growing a second orchestration path.
+5. Add macOS adapters that call the current implementations. This proves extraction without behavior change.
+6. Add a Windows proof target:
    - miniaudio recorder shim emits 16 kHz mono Int16 PCM and WAV
    - `RegisterHotKey` toggles start/stop
    - cloud STT first, or whisper.cpp CLI/DLL if model packaging is ready
    - Win32 clipboard + `SendInput` pastes text
    - `windows-dictation-proof` composes those pieces into one hotkey -> pre-roll WAV -> STT -> optional paste proof
-6. Only after the proof target works, build tray/settings UI.
+7. Only after the proof target works, build tray/settings UI.
 
 ## Windows Proof Checklist
 

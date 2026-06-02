@@ -12,6 +12,7 @@ struct RomaCoreChecks {
         try checkWindowsHotKeyProofDescriptor()
         try checkWindowsClipboardPayloadIsCFUnicodeText()
         try checkTranscriptionRequestMetadata()
+        try await checkDictationPipelineTranscribesAndInserts()
         try await checkFakeAdaptersSatisfyCorePorts()
         try checkSourcesDoNotImportApplePlatformFrameworks()
     }
@@ -185,6 +186,50 @@ struct RomaCoreChecks {
         try require(request.customVocabulary == ["roma"], "request should carry vocabulary")
     }
 
+    private static func checkDictationPipelineTranscribesAndInserts() async throws {
+        let recorder = FakeRecorder()
+        let inserter = FakeTextInsertion()
+        let transcriber = FakeTranscriptionService(expectedFileName: "pipeline-proof.wav")
+        let pipeline = DictationPipeline(
+            recorder: recorder,
+            transcriptionService: transcriber,
+            textInsertion: inserter
+        )
+        let model = TranscriptionModelDescriptor(
+            name: "cloud-proof",
+            displayName: "Cloud Proof",
+            provider: .custom
+        )
+        let request = DictationPipelineRequest(
+            outputURL: URL(fileURLWithPath: "/tmp/pipeline-proof.wav"),
+            model: model,
+            language: "en",
+            prompt: "roma",
+            shouldInsertTranscription: true
+        )
+
+        try await recorder.startPreRollBuffering()
+        let result = try await pipeline.runRecordingWindow(request) {}
+
+        try require(result.session.status == .completed, "pipeline session should complete")
+        try require(result.session.recordedAudio.fileURL.path == "/tmp/pipeline-proof.wav", "pipeline should record to requested output")
+        try require(result.session.rawText == "roma just talk proof", "pipeline should store raw transcript")
+        try require(result.session.insertedText == "roma just talk proof", "pipeline should store inserted transcript")
+        try require(result.transcription.text == "roma just talk proof", "pipeline should return transcription result")
+        try require(await inserter.pastedText == "roma just talk proof", "pipeline should paste through injected text insertion")
+        try require(recorder.stopCaptureCallCount == 1, "pipeline should stop capture after success")
+
+        let missingInserterPipeline = DictationPipeline(
+            recorder: FakeRecorder(),
+            transcriptionService: transcriber
+        )
+        do {
+            _ = try await missingInserterPipeline.runRecordingWindow(request) {}
+            throw CheckFailure("pipeline should reject insertion without text insertion adapter")
+        } catch DictationPipelineError.missingTextInsertion {
+        }
+    }
+
     private static func checkFakeAdaptersSatisfyCorePorts() async throws {
         let recorder = FakeRecorder()
         let inserter = FakeTextInsertion()
@@ -329,6 +374,7 @@ private enum FakeRecorderError: Error {
 private final class FakeRecorder: RollingRecorder, @unchecked Sendable {
     var onAudioChunk: (@Sendable (Data) -> Void)?
     let preRollConfiguration = PreRollConfiguration()
+    private(set) var stopCaptureCallCount = 0
     private var outputFile: URL?
 
     func startPreRollBuffering() async throws {}
@@ -346,7 +392,9 @@ private final class FakeRecorder: RollingRecorder, @unchecked Sendable {
         )
     }
 
-    func stopCapture() async {}
+    func stopCapture() async {
+        stopCaptureCallCount += 1
+    }
 }
 
 private actor FakeTextInsertion: TextInsertion {
@@ -358,8 +406,13 @@ private actor FakeTextInsertion: TextInsertion {
 }
 
 private struct FakeTranscriptionService: TranscriptionService {
+    var expectedFileName = "proof.wav"
+
     func transcribe(_ request: TranscriptionRequest) async throws -> TranscriptionResult {
-        try RomaCoreChecks.require(request.audioURL.lastPathComponent == "proof.wav", "request should carry proof.wav")
+        try RomaCoreChecks.require(
+            request.audioURL.lastPathComponent == expectedFileName,
+            "request should carry \(expectedFileName)"
+        )
         return TranscriptionResult(text: "roma just talk proof")
     }
 }
