@@ -390,6 +390,12 @@ struct TranscriptionOutputFilter {
     private static func removeFillerWords(from text: String) -> String {
         var filteredText = text
 
+        let joinedPausePattern = #"(?i)(?<![\p{L}\p{N}])(?:m+h+m+|m+[\s-]+h+m+|u+h+[\s-]+h*u+h+|u+h+[\s-]+u+h+|u+m+[\s-]+h+m+)(?:[.,;:!?…]+)?(?![\p{L}\p{N}])"#
+        if let regex = try? NSRegularExpression(pattern: joinedPausePattern) {
+            let range = NSRange(filteredText.startIndex..., in: filteredText)
+            filteredText = regex.stringByReplacingMatches(in: filteredText, options: [], range: range, withTemplate: "")
+        }
+
         let spokenPausePattern = #"(?i)(?<![\p{L}\p{N}])(?:u+h+|u+m+|h+m+|m+h+|m{2,}|e+h+|e+r+|a+h+|h+uh+)(?:[.,;:!?…]+)?(?![\p{L}\p{N}])"#
         if let regex = try? NSRegularExpression(pattern: spokenPausePattern) {
             let range = NSRange(filteredText.startIndex..., in: filteredText)

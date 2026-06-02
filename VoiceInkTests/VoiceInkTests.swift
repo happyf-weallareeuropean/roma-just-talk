@@ -143,6 +143,9 @@ struct VoiceInkTests {
 
         #expect(TranscriptionOutputFilter.filter("[Model.]") == "Model.")
         #expect(TranscriptionOutputFilter.filter("hmm.... eh... I I think think this this works.") == "I think this works.")
+        #expect(TranscriptionOutputFilter.filter("mm-hmm... uh-huh, I think so.") == "I think so.")
+        #expect(TranscriptionOutputFilter.filter("uh-uh... not that.") == "not that.")
+        #expect(TranscriptionOutputFilter.filter("mhmm, this works.") == "this works.")
         #expect(TranscriptionOutputFilter.filter("no no this is fine") == "no no this is fine")
     }
 
