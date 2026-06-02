@@ -140,7 +140,7 @@ public struct RomaTranscriptionOutputFilter {
         "ha", "haha", "no", "ok", "okay", "really", "so", "very", "yes"
     ]
     private static let preservedRepeatedClauses: Set<String> = [
-        "i know", "you know"
+        "i know", "new york", "you know"
     ]
     private static let allowedPreviousWordsForSpokenCodeCase: Set<String> = [
         "argument", "branch", "call", "called", "class", "constant", "enum",
@@ -405,6 +405,7 @@ public struct RomaTranscriptionOutputFilter {
         filteredText = applySpokenMarkdownCommands(in: filteredText)
         if cleanupLevel == .polished {
             filteredText = collapseAdjacentRepeatedWords(in: filteredText)
+            filteredText = collapseRepeatedShortPhrases(in: filteredText)
             filteredText = collapseRepeatedShortClauses(in: filteredText)
             filteredText = collapseRepeatedShortSentences(in: filteredText)
         }
@@ -2274,6 +2275,50 @@ public struct RomaTranscriptionOutputFilter {
                 collapsedText.replaceSubrange(
                     fullRange,
                     with: String(collapsedText[prefixRange]) + sentence
+                )
+                didRewrite = true
+            }
+
+            guard didRewrite else { break }
+            rewriteCount += 1
+        }
+
+        return collapsedText
+    }
+
+    private static func collapseRepeatedShortPhrases(in text: String) -> String {
+        guard let regex = try? NSRegularExpression(
+            pattern: #"(?i)(^|(?<=[.!?])\s+|\n)((?:[^\s,;:.!?\n]+[ \t]+){1,4}[^\s,;:.!?\n]+)[ \t]+\2(?=[ \t]+[^\s,;:.!?\n]+|[.!?]|\s*$)"#
+        ) else {
+            return text
+        }
+
+        var collapsedText = text
+        var rewriteCount = 0
+
+        while rewriteCount < 4 {
+            let range = NSRange(collapsedText.startIndex..., in: collapsedText)
+            let matches = regex.matches(in: collapsedText, range: range).reversed()
+            var didRewrite = false
+
+            for match in matches {
+                guard match.numberOfRanges >= 3,
+                      let fullRange = Range(match.range, in: collapsedText),
+                      let prefixRange = Range(match.range(at: 1), in: collapsedText),
+                      let phraseRange = Range(match.range(at: 2), in: collapsedText) else {
+                    continue
+                }
+
+                let phrase = String(collapsedText[phraseRange]).trimmingCharacters(in: .whitespacesAndNewlines)
+                let phraseWordCount = wordCount(in: phrase)
+                guard phraseWordCount >= 2 && phraseWordCount <= 5,
+                      !preservedRepeatedClauses.contains(normalizedRepeatedClause(phrase)) else {
+                    continue
+                }
+
+                collapsedText.replaceSubrange(
+                    fullRange,
+                    with: String(collapsedText[prefixRange]) + phrase
                 )
                 didRewrite = true
             }

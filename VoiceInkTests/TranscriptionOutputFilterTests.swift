@@ -38,10 +38,13 @@ struct TranscriptionOutputFilterTests {
         #expect(TranscriptionOutputFilter.filter("no no this is fine") == "no no this is fine")
         #expect(TranscriptionOutputFilter.filter("I think this works. I think this works.") == "I think this works.")
         #expect(TranscriptionOutputFilter.filter("Ship the model. ship the model.") == "Ship the model.")
+        #expect(TranscriptionOutputFilter.filter("I think I think this works.") == "I think this works.")
+        #expect(TranscriptionOutputFilter.filter("We should ship we should ship this.") == "We should ship this.")
         #expect(TranscriptionOutputFilter.filter("I think this works, I think this works.") == "I think this works.")
         #expect(TranscriptionOutputFilter.filter("Ship the model; ship the model.") == "Ship the model.")
         #expect(TranscriptionOutputFilter.filter("Okay. Okay.") == "Okay. Okay.")
         #expect(TranscriptionOutputFilter.filter("I know, I know.") == "I know, I know.")
+        #expect(TranscriptionOutputFilter.filter("New York New York is the title.") == "New York New York is the title.")
     }
 
     @Test func insertionPolishUsesCursorContextForMidSentenceFragments() async throws {
@@ -107,11 +110,13 @@ struct TranscriptionOutputFilterTests {
         TranscriptionCleanupLevel.setCurrent(.light)
         #expect(TranscriptionOutputFilter.filter("hmm... Hello comma world.") == "hmm... Hello, world.")
         #expect(TranscriptionOutputFilter.filter("Let's meet at two, wait no, three.") == "Let's meet at two, wait no, three.")
+        #expect(TranscriptionOutputFilter.filter("I think I think this works.") == "I think I think this works.")
         #expect(TranscriptionOutputFilter.filter("I think this works, I think this works.") == "I think this works, I think this works.")
 
         TranscriptionCleanupLevel.setCurrent(.polished)
         #expect(TranscriptionOutputFilter.filter("hmm... Hello comma world.") == "Hello, world.")
         #expect(TranscriptionOutputFilter.filter("Let's meet at two, wait no, three.") == "Let's meet at three.")
+        #expect(TranscriptionOutputFilter.filter("I think I think this works.") == "I think this works.")
         #expect(TranscriptionOutputFilter.filter("I think this works, I think this works.") == "I think this works.")
     }
 
