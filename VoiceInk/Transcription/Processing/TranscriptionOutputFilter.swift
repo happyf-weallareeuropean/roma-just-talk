@@ -118,10 +118,10 @@ struct TranscriptionOutputFilter {
         "yeah", "you"
     ]
     
-    private static let hallucinationPatterns = [
-        #"\[.*?\]"#,     // []
-        #"\(.*?\)"#,     // ()
-        #"\{.*?\}"#      // {}
+    private static let nonSpeechBracketPatterns = [
+        #"\[\s*([^\[\]]{1,80})\s*\]"#,
+        #"\(\s*([^\(\)]{1,80})\s*\)"#,
+        #"\{\s*([^\{\}]{1,80})\s*\}"#
     ]
     private static let asrBoilerplatePatterns: [(pattern: String, replacement: String)] = [
         (
@@ -262,13 +262,7 @@ struct TranscriptionOutputFilter {
             filteredText = regex.stringByReplacingMatches(in: filteredText, options: [], range: range, withTemplate: "")
         }
 
-        // Remove bracketed hallucinations
-        for pattern in hallucinationPatterns {
-            if let regex = try? NSRegularExpression(pattern: pattern) {
-                let range = NSRange(filteredText.startIndex..., in: filteredText)
-                filteredText = regex.stringByReplacingMatches(in: filteredText, options: [], range: range, withTemplate: "")
-            }
-        }
+        filteredText = removeNonSpeechBracketedContent(from: filteredText)
 
         filteredText = removeASRBoilerplate(from: filteredText)
 
@@ -401,6 +395,40 @@ struct TranscriptionOutputFilter {
         }
 
         return filteredText
+    }
+
+    private static func removeNonSpeechBracketedContent(from text: String) -> String {
+        var filteredText = text
+
+        for pattern in nonSpeechBracketPatterns {
+            guard let regex = try? NSRegularExpression(pattern: pattern) else {
+                continue
+            }
+
+            let matches = regex
+                .matches(in: filteredText, range: NSRange(filteredText.startIndex..., in: filteredText))
+                .reversed()
+
+            for match in matches {
+                guard match.numberOfRanges >= 2,
+                      let fullRange = Range(match.range(at: 0), in: filteredText),
+                      let innerRange = Range(match.range(at: 1), in: filteredText),
+                      isNonSpeechBracketContent(String(filteredText[innerRange])) else {
+                    continue
+                }
+
+                filteredText.replaceSubrange(fullRange, with: "")
+            }
+        }
+
+        return filteredText
+    }
+
+    private static func isNonSpeechBracketContent(_ text: String) -> Bool {
+        let normalizedText = text
+            .trimmingCharacters(in: CharacterSet(charactersIn: ".!?,;:… ").union(.whitespacesAndNewlines))
+            .lowercased()
+        return nonSpeechBracketContents.contains(normalizedText)
     }
 
     static func applyInsertionPolish(_ text: String, context: TextInsertionContext?) -> String {
