@@ -81,17 +81,20 @@ struct TranscriptionOutputFilter {
         let output: String
         let blockedPreviousWords: Set<String>
         let blockedNextWords: Set<String>
+        let requiresCompactContext: Bool
 
         init(
             pattern: String,
             output: String,
             blockedPreviousWords: Set<String> = [],
-            blockedNextWords: Set<String> = []
+            blockedNextWords: Set<String> = [],
+            requiresCompactContext: Bool = false
         ) {
             self.pattern = pattern
             self.output = output
             self.blockedPreviousWords = blockedPreviousWords
             self.blockedNextWords = blockedNextWords
+            self.requiresCompactContext = requiresCompactContext
         }
     }
 
@@ -150,6 +153,7 @@ struct TranscriptionOutputFilter {
     private static let phraseBoundaryPunctuation = CharacterSet(charactersIn: ".,!?;:…")
     private static let softPhrasePunctuation = CharacterSet(charactersIn: ",;:…")
     private static let wordConnectorCharacters = CharacterSet(charactersIn: "'’ʼ-")
+    private static let compactTokenConnectors = CharacterSet(charactersIn: "@._-/\\")
     private static let maxBacktrackingCorrectionWords = 4
     private static let openQuotePlaceholder = "__VOICEINK_OPEN_QUOTE__"
     private static let closeQuotePlaceholder = "__VOICEINK_CLOSE_QUOTE__"
@@ -182,19 +186,22 @@ struct TranscriptionOutputFilter {
             pattern: #"(?i)(?<![\p{L}\p{N}])at\s+sign(?![\p{L}\p{N}])"#,
             output: "@",
             blockedPreviousWords: ["a", "an", "the"],
-            blockedNextWords: ["symbol"]
+            blockedNextWords: ["symbol"],
+            requiresCompactContext: true
         ),
         SpokenSymbolCommand(
             pattern: #"(?i)(?<![\p{L}\p{N}])dot(?![\p{L}\p{N}])"#,
             output: ".",
             blockedPreviousWords: ["a", "an", "the"],
-            blockedNextWords: ["matrix", "plot", "product"]
+            blockedNextWords: ["matrix", "notation", "plot", "product"],
+            requiresCompactContext: true
         ),
         SpokenSymbolCommand(
             pattern: #"(?i)(?<![\p{L}\p{N}])underscore(?![\p{L}\p{N}])"#,
             output: "_",
             blockedPreviousWords: ["a", "an", "the"],
-            blockedNextWords: ["command", "commands", "symbol"]
+            blockedNextWords: ["command", "commands", "symbol"],
+            requiresCompactContext: true
         ),
         SpokenSymbolCommand(
             pattern: #"(?i)(?<![\p{L}\p{N}])(?:dash|hyphen)(?![\p{L}\p{N}])"#,
@@ -611,7 +618,149 @@ struct TranscriptionOutputFilter {
             return false
         }
 
+        if command.requiresCompactContext,
+           !hasCompactSymbolContext(command: command, before: beforeCommand, after: afterCommand) {
+            return false
+        }
+
         return true
+    }
+
+    private static func hasCompactSymbolContext(
+        command: SpokenSymbolCommand,
+        before: String,
+        after: String
+    ) -> Bool {
+        switch command.output {
+        case "@":
+            return hasAtSignSymbolContext(before: before, after: after)
+        case ".":
+            return hasDotSymbolContext(before: before, after: after)
+        case "_":
+            return hasUnderscoreSymbolContext(before: before, after: after)
+        default:
+            return hasGenericCompactSymbolContext(before: before, after: after)
+        }
+    }
+
+    private static func hasAtSignSymbolContext(before: String, after: String) -> Bool {
+        guard let previousToken = trailingToken(in: before),
+              let nextToken = leadingToken(in: after) else {
+            return false
+        }
+
+        return previousToken.count <= 64 && (3...63).contains(nextToken.count)
+    }
+
+    private static func hasDotSymbolContext(before: String, after: String) -> Bool {
+        guard let previousToken = trailingToken(in: before),
+              let nextToken = leadingToken(in: after) else {
+            return false
+        }
+
+        if isCommonTopLevelDomain(nextToken) || containsSpokenDomainSuffix(after) {
+            return true
+        }
+
+        if previousToken.unicodeScalars.contains(where: { compactTokenConnectors.contains($0) }) ||
+            nextToken.unicodeScalars.contains(where: { compactTokenConnectors.contains($0) }) {
+            return true
+        }
+
+        return previousToken.contains(where: \.isNumber) || nextToken.contains(where: \.isNumber)
+    }
+
+    private static func hasUnderscoreSymbolContext(before: String, after: String) -> Bool {
+        guard let previousToken = trailingToken(in: before),
+              let nextToken = leadingToken(in: after) else {
+            return false
+        }
+
+        if previousToken.unicodeScalars.contains(where: { compactTokenConnectors.contains($0) }) ||
+            nextToken.unicodeScalars.contains(where: { compactTokenConnectors.contains($0) }) {
+            return true
+        }
+
+        if previousToken.contains(where: \.isNumber) || nextToken.contains(where: \.isNumber) {
+            return true
+        }
+
+        return previousToken.count <= 32 && nextToken.count <= 4
+    }
+
+    private static func hasGenericCompactSymbolContext(before: String, after: String) -> Bool {
+        guard let previousToken = trailingToken(in: before),
+              let nextToken = leadingToken(in: after) else {
+            return false
+        }
+
+        if isCommonTopLevelDomain(nextToken) {
+            return true
+        }
+
+        if previousToken.unicodeScalars.contains(where: { compactTokenConnectors.contains($0) }) ||
+            nextToken.unicodeScalars.contains(where: { compactTokenConnectors.contains($0) }) {
+            return true
+        }
+
+        if previousToken.contains(where: \.isNumber) || nextToken.contains(where: \.isNumber) {
+            return true
+        }
+
+        return previousToken.count <= 12 && nextToken.count <= 4
+    }
+
+    private static func containsSpokenDomainSuffix(_ text: String) -> Bool {
+        guard let regex = try? NSRegularExpression(
+            pattern: #"(?i)^\s+[\p{L}\p{N}-]+\s+dot\s+(ai|app|co|com|dev|edu|gov|io|net|org)(?:[^\p{L}\p{N}]|$)"#
+        ) else {
+            return false
+        }
+
+        return regex.firstMatch(in: text, range: NSRange(text.startIndex..., in: text)) != nil
+    }
+
+    private static func isCommonTopLevelDomain(_ text: String) -> Bool {
+        let commonTopLevelDomains: Set<String> = [
+            "ai", "app", "co", "com", "dev", "edu", "gov", "io", "net", "org"
+        ]
+        return commonTopLevelDomains.contains(text.lowercased())
+    }
+
+    private static func trailingToken(in text: String) -> String? {
+        let trimmedText = text.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !trimmedText.isEmpty else { return nil }
+
+        var tokenStart = trimmedText.endIndex
+        while tokenStart > trimmedText.startIndex {
+            let previousIndex = trimmedText.index(before: tokenStart)
+            let character = trimmedText[previousIndex]
+            guard isCompactTokenCharacter(character) else { break }
+            tokenStart = previousIndex
+        }
+
+        guard tokenStart < trimmedText.endIndex else { return nil }
+        return String(trimmedText[tokenStart...])
+    }
+
+    private static func leadingToken(in text: String) -> String? {
+        let trimmedText = text.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !trimmedText.isEmpty else { return nil }
+
+        var tokenEnd = trimmedText.startIndex
+        while tokenEnd < trimmedText.endIndex,
+              isCompactTokenCharacter(trimmedText[tokenEnd]) {
+            tokenEnd = trimmedText.index(after: tokenEnd)
+        }
+
+        guard trimmedText.startIndex < tokenEnd else { return nil }
+        return String(trimmedText[..<tokenEnd])
+    }
+
+    private static func isCompactTokenCharacter(_ character: Character) -> Bool {
+        character.isLetter ||
+            character.isNumber ||
+            character.unicodeScalars.allSatisfy { compactTokenConnectors.contains($0) }
     }
 
     private static func replaceSpokenSymbolCommand(

@@ -91,10 +91,14 @@ struct TranscriptionOutputFilterTests {
         #expect(TranscriptionOutputFilter.filter("Use path backslash temp.") == "Use path\\temp.")
         #expect(TranscriptionOutputFilter.filter("Email felix at sign example dot com.") == "Email felix@example.com.")
         #expect(TranscriptionOutputFilter.filter("Set user underscore id.") == "Set user_id.")
+        #expect(TranscriptionOutputFilter.filter("Open docs dot example dot com.") == "Open docs.example.com.")
         #expect(TranscriptionOutputFilter.filter("Use the slash command.") == "Use the slash command.")
         #expect(TranscriptionOutputFilter.filter("Add a dash of salt.") == "Add a dash of salt.")
         #expect(TranscriptionOutputFilter.filter("Use the at sign symbol.") == "Use the at sign symbol.")
         #expect(TranscriptionOutputFilter.filter("Use the dot product.") == "Use the dot product.")
+        #expect(TranscriptionOutputFilter.filter("Use dot notation.") == "Use dot notation.")
+        #expect(TranscriptionOutputFilter.filter("Show dot file behavior.") == "Show dot file behavior.")
+        #expect(TranscriptionOutputFilter.filter("Please at sign up tomorrow.") == "Please at sign up tomorrow.")
         #expect(TranscriptionOutputFilter.filter("Use the underscore command.") == "Use the underscore command.")
     }
 

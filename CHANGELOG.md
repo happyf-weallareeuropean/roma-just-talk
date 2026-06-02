@@ -7,6 +7,7 @@
 - Collapsed obvious repeated short sentences from dictated output.
 - Added spoken quote and parenthesis formatting commands.
 - Added guarded spoken slash, backslash, dash, hyphen, at sign, dot, and underscore formatting commands.
+- Tightened compact symbol cleanup so prose such as "dot notation" stays unchanged.
 - Added cursor-aware cleanup for standalone spoken punctuation fragments such as "comma" and "question mark".
 - Improved cursor insertion spacing after punctuation and before dictated opening quotes or parentheses.
 - Preserved meaningful bracketed or parenthesized dictated text while still removing known non-speech labels.
