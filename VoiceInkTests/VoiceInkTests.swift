@@ -153,7 +153,11 @@ struct VoiceInkTests {
 
         #expect(TranscriptionOutputFilter.applyInsertionPolish("Model.", context: midSentenceContext) == "model")
         #expect(TranscriptionOutputFilter.applyInsertionSpacing("model", context: midSentenceContext) == " model")
+        #expect(TranscriptionOutputFilter.applyInsertionPolish("Comma.", context: midSentenceContext) == ",")
+        #expect(TranscriptionOutputFilter.applyInsertionSpacing(",", context: midSentenceContext) == ",")
+        #expect(TranscriptionOutputFilter.applyInsertionPolish("Question mark.", context: midSentenceContext) == "?")
         #expect(TranscriptionOutputFilter.applyInsertionPolish("Model.", context: sentenceStartContext) == "Model")
+        #expect(TranscriptionOutputFilter.applyInsertionPolish("Comma.", context: sentenceStartContext) == "Comma")
         #expect(TranscriptionOutputFilter.applyInsertionPolish("Model.", context: newLineContext) == "Model")
         #expect(TranscriptionOutputFilter.applyInsertionPolish("Model.", context: nil) == "model")
         #expect(TranscriptionOutputFilter.applyInsertionPolish("VoiceInk.", context: nil) == "VoiceInk")

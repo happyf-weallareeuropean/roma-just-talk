@@ -177,6 +177,16 @@ struct TranscriptionOutputFilter {
             output: ":"
         )
     ]
+    private static let standaloneSpokenPunctuationOutputs = [
+        "comma": ",",
+        "period": ".",
+        "full stop": ".",
+        "question mark": "?",
+        "exclamation mark": "!",
+        "exclamation point": "!",
+        "semicolon": ";",
+        "colon": ":"
+    ]
 
     static func filter(_ text: String) -> String {
         var filteredText = unwrapBracketedWholeOutput(text)
@@ -335,6 +345,12 @@ struct TranscriptionOutputFilter {
             polishedText = removeTrailingFragmentPunctuation(from: polishedText)
         }
 
+        if let context,
+           let punctuation = standaloneSpokenPunctuationOutput(in: polishedText),
+           canAttachStandalonePunctuation(after: context.precedingText) {
+            return punctuation
+        }
+
         if let context {
             guard isContinuingSentence(after: context.precedingText) else {
                 return polishedText
@@ -343,6 +359,26 @@ struct TranscriptionOutputFilter {
         }
 
         return lowercaseInitialWordIfSafe(in: polishedText, force: false)
+    }
+
+    private static func standaloneSpokenPunctuationOutput(in text: String) -> String? {
+        let normalizedText = normalizeWhitespace(text)
+            .trimmingCharacters(in: .punctuationCharacters.union(.whitespacesAndNewlines))
+            .lowercased()
+            .replacingOccurrences(of: #"\s+"#, with: " ", options: .regularExpression)
+
+        return standaloneSpokenPunctuationOutputs[normalizedText]
+    }
+
+    private static func canAttachStandalonePunctuation(after precedingText: String) -> Bool {
+        let trimmedText = currentLinePrefix(in: precedingText).trimmingCharacters(in: .whitespaces)
+        guard let previousCharacter = trimmedText.last else { return false }
+
+        if previousCharacter.isLetter || previousCharacter.isNumber {
+            return true
+        }
+
+        return ")]}\"'".contains(previousCharacter)
     }
 
     static func applyInsertionSpacing(_ text: String, context: TextInsertionContext?) -> String {
