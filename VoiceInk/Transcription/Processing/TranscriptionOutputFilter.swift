@@ -260,7 +260,7 @@ struct TranscriptionOutputFilter {
     ]
 
     static func filter(_ text: String) -> String {
-        var filteredText = unwrapBracketedWholeOutput(text)
+        var filteredText = unwrapSquareBracketedWholeOutput(text)
 
         // Remove <TAG>...</TAG> blocks
         let tagBlockPattern = #"<([A-Za-z][A-Za-z0-9:_-]*)[^>]*>[\s\S]*?</\1>"#
@@ -1075,12 +1075,12 @@ struct TranscriptionOutputFilter {
             .replacingOccurrences(of: #"([([{])\s+"#, with: "$1", options: .regularExpression)
     }
 
-    private static func unwrapBracketedWholeOutput(_ text: String) -> String {
+    private static func unwrapSquareBracketedWholeOutput(_ text: String) -> String {
         let trimmedText = text.trimmingCharacters(in: .whitespacesAndNewlines)
         guard let first = trimmedText.first,
               let last = trimmedText.last,
-              let expectedClosing = matchingClosingBracket(for: first),
-              expectedClosing == last else {
+              first == "[",
+              last == "]" else {
             return text
         }
 
@@ -1098,15 +1098,6 @@ struct TranscriptionOutputFilter {
         }
 
         return innerText
-    }
-
-    private static func matchingClosingBracket(for opening: Character) -> Character? {
-        switch opening {
-        case "[": return "]"
-        case "(": return ")"
-        case "{": return "}"
-        default: return nil
-        }
     }
 
     private static func collapseAdjacentRepeatedWords(in text: String) -> String {
@@ -1191,12 +1182,44 @@ struct TranscriptionOutputFilter {
     }
 
     private static func stripBoundaryNoise(from text: String) -> String {
-        var strippedText = unwrapBracketedWholeOutput(text)
+        var strippedText = unwrapSquareBracketedWholeOutput(text)
         guard isShortFragment(strippedText) else { return strippedText }
+
+        if hasPreservedBalancedBoundary(strippedText) ||
+            hasPreservedBalancedBoundary(removeTrailingFragmentPunctuation(from: strippedText)) {
+            return normalizeWhitespace(strippedText)
+        }
 
         let boundaryCharacters = CharacterSet(charactersIn: #"[]{}()"“”‘’'"`"#)
         strippedText = strippedText.trimmingCharacters(in: boundaryCharacters.union(.whitespacesAndNewlines))
         return normalizeWhitespace(strippedText)
+    }
+
+    private static func hasPreservedBalancedBoundary(_ text: String) -> Bool {
+        let trimmedText = text.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard let first = trimmedText.first,
+              let last = trimmedText.last,
+              let expectedClosing = preservedClosingBoundary(for: first),
+              expectedClosing == last else {
+            return false
+        }
+
+        let innerStart = trimmedText.index(after: trimmedText.startIndex)
+        let innerEnd = trimmedText.index(before: trimmedText.endIndex)
+        return !trimmedText[innerStart..<innerEnd]
+            .trimmingCharacters(in: .whitespacesAndNewlines)
+            .isEmpty
+    }
+
+    private static func preservedClosingBoundary(for opening: Character) -> Character? {
+        switch opening {
+        case "\"": return "\""
+        case "'": return "'"
+        case "“": return "”"
+        case "‘": return "’"
+        case "(": return ")"
+        default: return nil
+        }
     }
 
     private static func removeTrailingFragmentPunctuation(from text: String) -> String {

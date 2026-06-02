@@ -6,6 +6,7 @@
 - Improved cleanup for hyphenated pause sounds such as "mm-hmm" and "uh-huh".
 - Collapsed obvious repeated short sentences from dictated output.
 - Added spoken quote and parenthesis formatting commands.
+- Preserved dictated quote and parenthesis fragments through final insertion cleanup.
 - Added guarded spoken slash, backslash, dash, hyphen, at sign, dot, and underscore formatting commands.
 - Tightened compact symbol cleanup so prose such as "dot notation" stays unchanged.
 - Added cursor-aware cleanup for standalone spoken punctuation fragments such as "comma" and "question mark".
