@@ -37,6 +37,7 @@ public final class MiniaudioCaptureRecorder: RollingRecorder, @unchecked Sendabl
     private var isRecording = false
     private var outputFile: URL?
     private var recordedSamples: [Int16] = []
+    private var recordingPreRollSampleCount = 0
     private var _onAudioChunk: (@Sendable (Data) -> Void)?
 
     public let preRollConfiguration: PreRollConfiguration
@@ -100,7 +101,7 @@ public final class MiniaudioCaptureRecorder: RollingRecorder, @unchecked Sendabl
     }
 
     public func finishRecording() async throws -> RecordedAudio {
-        let (outputFile, samples) = try takeFinishedRecording()
+        let (outputFile, samples, preRollSampleCount) = try takeFinishedRecording()
 
         try PCM16WAVFile.write(
             samples: samples,
@@ -108,13 +109,11 @@ public final class MiniaudioCaptureRecorder: RollingRecorder, @unchecked Sendabl
             format: preRollConfiguration.outputFormat
         )
 
-        let frameCount = samples.count / max(preRollConfiguration.outputFormat.channelCount, 1)
-        let duration = TimeInterval(frameCount) / TimeInterval(preRollConfiguration.outputFormat.sampleRate)
         return RecordedAudio(
             fileURL: outputFile,
             format: preRollConfiguration.outputFormat,
-            durationSeconds: duration,
-            includedPreRollSeconds: preRollConfiguration.durationSeconds
+            sampleCount: samples.count,
+            includedPreRollSampleCount: preRollSampleCount
         )
     }
 
@@ -130,6 +129,7 @@ public final class MiniaudioCaptureRecorder: RollingRecorder, @unchecked Sendabl
         }
         preRollBuffer.clear()
         recordedSamples.removeAll(keepingCapacity: true)
+        recordingPreRollSampleCount = 0
         isRecording = false
         outputFile = nil
         lock.unlock()
@@ -152,13 +152,14 @@ public final class MiniaudioCaptureRecorder: RollingRecorder, @unchecked Sendabl
         }
         self.outputFile = outputFile
         recordedSamples = preRollSamples
+        recordingPreRollSampleCount = preRollSamples.count
         isRecording = true
         let callback = _onAudioChunk
         lock.unlock()
         return callback
     }
 
-    private func takeFinishedRecording() throws -> (URL, [Int16]) {
+    private func takeFinishedRecording() throws -> (URL, [Int16], Int) {
         lock.lock()
         guard isRecording else {
             lock.unlock()
@@ -169,11 +170,13 @@ public final class MiniaudioCaptureRecorder: RollingRecorder, @unchecked Sendabl
             throw MiniaudioCaptureRecorderError.missingOutputFile
         }
         let samples = recordedSamples
+        let preRollSampleCount = recordingPreRollSampleCount
         recordedSamples.removeAll(keepingCapacity: true)
+        recordingPreRollSampleCount = 0
         isRecording = false
         self.outputFile = nil
         lock.unlock()
-        return (outputFile, samples)
+        return (outputFile, samples, preRollSampleCount)
     }
 
     fileprivate func handleCapturedSamples(_ samples: UnsafePointer<Int16>, sampleCount: Int) {
@@ -200,6 +203,7 @@ public final class MiniaudioCaptureRecorder: RollingRecorder, @unchecked Sendabl
         isRecording = false
         outputFile = nil
         recordedSamples.removeAll(keepingCapacity: true)
+        recordingPreRollSampleCount = 0
         lock.unlock()
 
         guard let currentDevice else { return }

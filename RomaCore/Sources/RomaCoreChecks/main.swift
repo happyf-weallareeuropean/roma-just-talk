@@ -5,6 +5,7 @@ import RomaCore
 struct RomaCoreChecks {
     static func main() async throws {
         try checkDefaultPreRollContract()
+        try checkAudioDurationReporting()
         try checkPreRollBufferKeepsChronologicalSamples()
         try checkPCM16WAVFileWritesCanonicalHeader()
         try checkMiniaudioRecorderUsesSpeechPCMContract()
@@ -33,6 +34,30 @@ struct RomaCoreChecks {
         try require(configuration.outputFormat.sampleRate == 16_000, "sample rate should be 16 kHz")
         try require(configuration.outputFormat.channelCount == 1, "channel count should be mono")
         try require(configuration.outputFormat.sampleFormat == .signedInteger16, "sample format should be Int16")
+    }
+
+    private static func checkAudioDurationReporting() throws {
+        let mono = AudioChunkFormat(sampleRate: 16_000, channelCount: 1, sampleFormat: .signedInteger16)
+        try require(mono.durationSeconds(sampleCount: 0) == 0, "empty PCM should be zero seconds")
+        try require(mono.durationSeconds(sampleCount: 8_000) == 0.5, "mono PCM duration should derive from samples")
+
+        let stereo = AudioChunkFormat(sampleRate: 48_000, channelCount: 2, sampleFormat: .signedInteger16)
+        try require(
+            stereo.durationSeconds(sampleCount: 96_000) == 1,
+            "interleaved PCM duration should divide samples by channel count"
+        )
+
+        let recording = RecordedAudio(
+            fileURL: URL(fileURLWithPath: "/tmp/roma-duration-proof.wav"),
+            format: mono,
+            sampleCount: 32_000,
+            includedPreRollSampleCount: 8_000
+        )
+        try require(recording.durationSeconds == 2, "recording duration should derive from captured samples")
+        try require(
+            recording.includedPreRollSeconds == 0.5,
+            "reported pre-roll should derive from captured pre-roll samples"
+        )
     }
 
     private static func checkPreRollBufferKeepsChronologicalSamples() throws {

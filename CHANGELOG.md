@@ -2,6 +2,7 @@
 
 ## v1.81 - Unreleased
 
+- Report the actual captured pre-roll duration in the Windows miniaudio recorder instead of the configured maximum.
 - Added a no-admin Windows launcher script and optional user Start Menu shortcut.
 - Added a no-admin Windows agent install script that smokes the installed artifact copy.
 - Let the packaged Windows-agent smoke script populate a stored DPAPI key from an environment variable.
