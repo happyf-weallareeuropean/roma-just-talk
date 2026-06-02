@@ -4,6 +4,7 @@
 
 - Removed terminal discourse fillers such as "you know" when they are throwaway speech tails, while preserving meaningful uses.
 - Fixed cursor-context fallback around emoji and non-ASCII text so insertion cleanup still lowercases and spaces mid-sentence dictation correctly.
+- Restored the previous text clipboard after Windows paste proof sessions when the clipboard still contains the dictated text.
 - Report the actual captured pre-roll duration in the Windows miniaudio recorder instead of the configured maximum.
 - Added a no-admin Windows launcher script and optional user Start Menu shortcut.
 - Added a no-admin Windows agent install script that smokes the installed artifact copy.
