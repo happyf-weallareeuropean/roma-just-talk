@@ -177,6 +177,7 @@ Useful script options:
 - `-RecordSeconds 5` changes the live mic capture window.
 - `-OutputDir C:\tmp\roma-proof` writes proof WAVs somewhere explicit.
 - `-TranscribeEndpoint https://api.groq.com/openai/v1/audio/transcriptions -TranscribeModel whisper-large-v3-turbo -TranscribeApiKeyEnv GROQ_API_KEY` runs the OpenAI-compatible transcription proof.
+- `-TranscribeApiKeyName groq` stores `-TranscribeApiKeyEnv` into DPAPI and uses the stored key for transcription.
 - `-TranscribeAudio C:\tmp\proof.wav` uses an existing WAV for transcription, useful with `-SkipMic`.
 - `-TranscribeLanguage en` and `-TranscribePrompt "roma just talk"` pass optional STT hints.
 - `-RunInteractiveDictation` waits for `Ctrl+Shift+R`, records with pre-roll, transcribes, and writes `dictation-proof.wav`.
@@ -206,6 +207,8 @@ swift run RomaProofAgent windows-paste-doctor
 swift run RomaProofAgent windows-paste-proof --text "roma just talk proof"
 swift run RomaProofAgent windows-secret-doctor
 swift run RomaProofAgent windows-secret-proof --dir C:\tmp\roma-secrets
+swift run RomaProofAgent windows-secret-save-from-env --dir C:\tmp\roma-secrets --key groq --value-env GROQ_API_KEY
+swift run RomaProofAgent transcribe-proof --audio mic-proof.wav --endpoint https://api.groq.com/openai/v1/audio/transcriptions --model whisper-large-v3-turbo --api-key-name groq --secret-dir C:\tmp\roma-secrets
 swift run RomaProofAgent windows-dictation-proof --out dictation-proof.wav --seconds 2 --endpoint https://api.groq.com/openai/v1/audio/transcriptions --model whisper-large-v3-turbo --api-key-env GROQ_API_KEY --paste
 ```
 

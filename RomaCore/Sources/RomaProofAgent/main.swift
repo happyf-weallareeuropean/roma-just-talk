@@ -23,6 +23,8 @@ struct RomaProofAgent {
             printWindowsSecretDoctor()
         case "windows-secret-proof":
             try runWindowsSecretProof(arguments: Array(arguments.dropFirst()))
+        case "windows-secret-save-from-env":
+            try runWindowsSecretSaveFromEnv(arguments: Array(arguments.dropFirst()))
         case "windows-dictation-proof":
             try await runWindowsDictationProof(arguments: Array(arguments.dropFirst()))
         case "miniaudio-capture-doctor":
@@ -109,6 +111,30 @@ struct RomaProofAgent {
         print("dpapi_runtime=\(WindowsDPAPIProtectedData.isRuntimeAvailable)")
     }
 
+    private static func runWindowsSecretSaveFromEnv(arguments: [String]) throws {
+        let directoryURL = URL(fileURLWithPath: try value(after: "--dir", in: arguments), isDirectory: true)
+        let key = try value(after: "--key", in: arguments)
+        let valueEnvironmentName = try value(after: "--value-env", in: arguments)
+
+        guard isValidEnvironmentName(valueEnvironmentName) else {
+            throw AgentError.invalidOptionValue("--value-env")
+        }
+        guard let secret = ProcessInfo.processInfo.environment[valueEnvironmentName],
+              !secret.isEmpty else {
+            throw AgentError.missingEnvironmentValue(valueEnvironmentName)
+        }
+
+        let store = WindowsDPAPISecretStore(directoryURL: directoryURL)
+        try store.save(secret, forKey: key)
+
+        print("secret_store=dpapi")
+        print("directory=\(directoryURL.path)")
+        print("key=\(key)")
+        print("key_file=\(try WindowsDPAPISecretStore.fileName(forKey: key))")
+        print("value_env=\(valueEnvironmentName)")
+        print("stored=true")
+    }
+
     private static func runWindowsSecretProof(arguments: [String]) throws {
         let directoryURL = URL(fileURLWithPath: try value(after: "--dir", in: arguments), isDirectory: true)
         let key = "proof-api-key"
@@ -150,7 +176,7 @@ struct RomaProofAgent {
         let seconds = try doubleValue(after: "--seconds", in: arguments, default: 2)
         let endpointText = try value(after: "--endpoint", in: arguments)
         let modelName = try value(after: "--model", in: arguments)
-        let apiKeyEnvironmentName = try value(after: "--api-key-env", in: arguments)
+        let apiKeySource = try makeAPIKeySource(arguments: arguments)
         let shouldPaste = arguments.contains("--paste")
         let hotKey = WindowsHotKey.proofToggle
         let recorder = MiniaudioCaptureRecorder()
@@ -164,7 +190,7 @@ struct RomaProofAgent {
 
             let service = try makeTranscriptionService(
                 endpointText: endpointText,
-                apiKeyEnvironmentName: apiKeyEnvironmentName
+                apiKeySource: apiKeySource
             )
             let model = TranscriptionModelDescriptor(
                 name: modelName,
@@ -198,7 +224,7 @@ struct RomaProofAgent {
                 result.transcription,
                 endpointText: endpointText,
                 modelName: modelName,
-                apiKeyEnvironmentName: apiKeyEnvironmentName,
+                apiKeySource: apiKeySource,
                 audioURL: audio.fileURL
             )
 
@@ -232,7 +258,7 @@ struct RomaProofAgent {
         print("request_format=multipart/form-data")
         print("audio_field=file")
         print("response_field=text")
-        print("api_key_source=environment")
+        print("api_key_source=environment_or_dpapi")
         print("network_required=true")
     }
 
@@ -281,13 +307,13 @@ struct RomaProofAgent {
         let audioURL = URL(fileURLWithPath: try value(after: "--audio", in: arguments))
         let endpointText = try value(after: "--endpoint", in: arguments)
         let modelName = try value(after: "--model", in: arguments)
-        let apiKeyEnvironmentName = try value(after: "--api-key-env", in: arguments)
+        let apiKeySource = try makeAPIKeySource(arguments: arguments)
 
         let result = try await transcribeAudio(
             audioURL: audioURL,
             endpointText: endpointText,
             modelName: modelName,
-            apiKeyEnvironmentName: apiKeyEnvironmentName,
+            apiKeySource: apiKeySource,
             language: optionalValue(after: "--language", in: arguments),
             prompt: optionalValue(after: "--prompt", in: arguments)
         )
@@ -295,7 +321,7 @@ struct RomaProofAgent {
             result,
             endpointText: endpointText,
             modelName: modelName,
-            apiKeyEnvironmentName: apiKeyEnvironmentName,
+            apiKeySource: apiKeySource,
             audioURL: audioURL
         )
     }
@@ -304,24 +330,13 @@ struct RomaProofAgent {
         audioURL: URL,
         endpointText: String,
         modelName: String,
-        apiKeyEnvironmentName: String,
+        apiKeySource: APIKeySource,
         language: String?,
         prompt: String?
     ) async throws -> TranscriptionResult {
-        guard isValidEnvironmentName(apiKeyEnvironmentName) else {
-            throw AgentError.invalidOptionValue("--api-key-env")
-        }
-        guard let endpointURL = URL(string: endpointText), endpointURL.scheme != nil else {
-            throw AgentError.invalidOptionValue("--endpoint")
-        }
-        guard let apiKey = ProcessInfo.processInfo.environment[apiKeyEnvironmentName],
-              !apiKey.isEmpty else {
-            throw AgentError.missingEnvironmentValue(apiKeyEnvironmentName)
-        }
-
         let service = try makeTranscriptionService(
             endpointText: endpointText,
-            apiKeyEnvironmentName: apiKeyEnvironmentName
+            apiKeySource: apiKeySource
         )
         let model = TranscriptionModelDescriptor(
             name: modelName,
@@ -340,18 +355,12 @@ struct RomaProofAgent {
 
     private static func makeTranscriptionService(
         endpointText: String,
-        apiKeyEnvironmentName: String
+        apiKeySource: APIKeySource
     ) throws -> OpenAICompatibleTranscriptionService {
-        guard isValidEnvironmentName(apiKeyEnvironmentName) else {
-            throw AgentError.invalidOptionValue("--api-key-env")
-        }
         guard let endpointURL = URL(string: endpointText), endpointURL.scheme != nil else {
             throw AgentError.invalidOptionValue("--endpoint")
         }
-        guard let apiKey = ProcessInfo.processInfo.environment[apiKeyEnvironmentName],
-              !apiKey.isEmpty else {
-            throw AgentError.missingEnvironmentValue(apiKeyEnvironmentName)
-        }
+        let apiKey = try apiKeySource.resolve()
 
         return OpenAICompatibleTranscriptionService(
             configuration: OpenAICompatibleTranscriptionConfiguration(
@@ -365,13 +374,14 @@ struct RomaProofAgent {
         _ result: TranscriptionResult,
         endpointText: String,
         modelName: String,
-        apiKeyEnvironmentName: String,
+        apiKeySource: APIKeySource,
         audioURL: URL
     ) {
         print("provider=openai-compatible")
         print("endpoint=\(endpointText)")
         print("model=\(modelName)")
-        print("api_key_env=\(apiKeyEnvironmentName)")
+        print("api_key_source=\(apiKeySource.kind)")
+        print("api_key_ref=\(apiKeySource.reference)")
         print("audio=\(audioURL.path)")
         if let language = result.language {
             print("language=\(language)")
@@ -381,6 +391,31 @@ struct RomaProofAgent {
         }
         print("transcript_length=\(result.text.count)")
         print("transcript_text=\(oneLine(result.text))")
+    }
+
+    private static func makeAPIKeySource(arguments: [String]) throws -> APIKeySource {
+        let environmentName = optionalValue(after: "--api-key-env", in: arguments)
+        let storedKeyName = optionalValue(after: "--api-key-name", in: arguments)
+
+        if environmentName != nil, storedKeyName != nil {
+            throw AgentError.conflictingOptions("--api-key-env and --api-key-name")
+        }
+        if let environmentName {
+            guard isValidEnvironmentName(environmentName) else {
+                throw AgentError.invalidOptionValue("--api-key-env")
+            }
+            return .environment(name: environmentName)
+        }
+        if let storedKeyName {
+            let directoryPath = optionalValue(after: "--secret-dir", in: arguments)
+                ?? WindowsDPAPISecretStore.defaultDirectoryURL().path
+            return .stored(
+                key: storedKeyName,
+                directoryURL: URL(fileURLWithPath: directoryPath, isDirectory: true)
+            )
+        }
+
+        throw AgentError.missingOption("--api-key-env or --api-key-name")
     }
 
     private static func value(after option: String, in arguments: [String]) throws -> String {
@@ -436,11 +471,14 @@ struct RomaProofAgent {
         print("  RomaProofAgent windows-paste-proof --text \"roma just talk proof\"")
         print("  RomaProofAgent windows-secret-doctor")
         print("  RomaProofAgent windows-secret-proof --dir C:\\tmp\\roma-secrets")
+        print("  RomaProofAgent windows-secret-save-from-env --dir C:\\tmp\\roma-secrets --key groq --value-env GROQ_API_KEY")
         print("  RomaProofAgent windows-dictation-proof --out proof.wav --seconds 2 --endpoint https://api.example.com/v1/audio/transcriptions --model whisper-large-v3-turbo --api-key-env OPENAI_API_KEY [--paste]")
+        print("  RomaProofAgent windows-dictation-proof --out proof.wav --seconds 2 --endpoint https://api.example.com/v1/audio/transcriptions --model whisper-large-v3-turbo --api-key-name groq --secret-dir C:\\tmp\\roma-secrets [--paste]")
         print("  RomaProofAgent miniaudio-capture-doctor")
         print("  RomaProofAgent miniaudio-record-proof --out proof.wav --seconds 2")
         print("  RomaProofAgent transcribe-proof-doctor")
         print("  RomaProofAgent transcribe-proof --audio proof.wav --endpoint https://api.example.com/v1/audio/transcriptions --model whisper-large-v3-turbo --api-key-env OPENAI_API_KEY")
+        print("  RomaProofAgent transcribe-proof --audio proof.wav --endpoint https://api.example.com/v1/audio/transcriptions --model whisper-large-v3-turbo --api-key-name groq --secret-dir C:\\tmp\\roma-secrets")
     }
 
     private static var platformName: String {
@@ -477,6 +515,8 @@ private enum AgentError: Error, CustomStringConvertible {
     case missingOption(String)
     case invalidOptionValue(String)
     case missingEnvironmentValue(String)
+    case missingStoredSecret(String)
+    case conflictingOptions(String)
     case secretProofFailed(String)
     case unsupportedPlatform(String)
 
@@ -488,10 +528,53 @@ private enum AgentError: Error, CustomStringConvertible {
             return "invalid value for option \(option)"
         case .missingEnvironmentValue(let name):
             return "missing environment value \(name)"
+        case .missingStoredSecret(let key):
+            return "missing stored secret \(key)"
+        case .conflictingOptions(let message):
+            return "conflicting options: \(message)"
         case .secretProofFailed(let message):
             return message
         case .unsupportedPlatform(let message):
             return message
+        }
+    }
+}
+
+private enum APIKeySource {
+    case environment(name: String)
+    case stored(key: String, directoryURL: URL)
+
+    var kind: String {
+        switch self {
+        case .environment:
+            return "environment"
+        case .stored:
+            return "dpapi"
+        }
+    }
+
+    var reference: String {
+        switch self {
+        case .environment(let name):
+            return name
+        case .stored(let key, let directoryURL):
+            return "\(key)@\(directoryURL.path)"
+        }
+    }
+
+    func resolve() throws -> String {
+        switch self {
+        case .environment(let name):
+            guard let apiKey = ProcessInfo.processInfo.environment[name], !apiKey.isEmpty else {
+                throw AgentError.missingEnvironmentValue(name)
+            }
+            return apiKey
+        case .stored(let key, let directoryURL):
+            let store = WindowsDPAPISecretStore(directoryURL: directoryURL)
+            guard let apiKey = try store.get(key), !apiKey.isEmpty else {
+                throw AgentError.missingStoredSecret(key)
+            }
+            return apiKey
         }
     }
 }

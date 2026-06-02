@@ -6,6 +6,7 @@ param(
     [string]$TranscribeEndpoint = "",
     [string]$TranscribeModel = "",
     [string]$TranscribeApiKeyEnv = "OPENAI_API_KEY",
+    [string]$TranscribeApiKeyName = "",
     [string]$TranscribeLanguage = "",
     [string]$TranscribePrompt = "",
     [switch]$SkipMic,
@@ -102,18 +103,39 @@ try {
         $transcribeAudioPath = $micProof
     }
 
+    $secretProofDir = Join-Path $OutputDir "secrets"
+    $hasTranscriptionKey = ![string]::IsNullOrWhiteSpace($TranscribeApiKeyEnv) -or
+        ![string]::IsNullOrWhiteSpace($TranscribeApiKeyName)
+
+    $transcribeApiKeyEnvValue = if ([string]::IsNullOrWhiteSpace($TranscribeApiKeyEnv)) {
+        ""
+    } else {
+        [Environment]::GetEnvironmentVariable($TranscribeApiKeyEnv)
+    }
+
+    if (![string]::IsNullOrWhiteSpace($TranscribeApiKeyName) -and
+        ![string]::IsNullOrWhiteSpace($transcribeApiKeyEnvValue)) {
+        Invoke-Step "store transcription api key" {
+            swift run RomaProofAgent windows-secret-save-from-env --dir $secretProofDir --key $TranscribeApiKeyName --value-env $TranscribeApiKeyEnv
+        }
+    }
+
     if (![string]::IsNullOrWhiteSpace($TranscribeEndpoint) -and
         ![string]::IsNullOrWhiteSpace($TranscribeModel) -and
-        ![string]::IsNullOrWhiteSpace($TranscribeApiKeyEnv) -and
+        $hasTranscriptionKey -and
         ![string]::IsNullOrWhiteSpace($transcribeAudioPath)) {
         Invoke-Step "transcription proof" {
             $transcribeArgs = @(
                 "run", "RomaProofAgent", "transcribe-proof",
                 "--audio", $transcribeAudioPath,
                 "--endpoint", $TranscribeEndpoint,
-                "--model", $TranscribeModel,
-                "--api-key-env", $TranscribeApiKeyEnv
+                "--model", $TranscribeModel
             )
+            if (![string]::IsNullOrWhiteSpace($TranscribeApiKeyName)) {
+                $transcribeArgs += @("--api-key-name", $TranscribeApiKeyName, "--secret-dir", $secretProofDir)
+            } else {
+                $transcribeArgs += @("--api-key-env", $TranscribeApiKeyEnv)
+            }
             if (![string]::IsNullOrWhiteSpace($TranscribeLanguage)) {
                 $transcribeArgs += @("--language", $TranscribeLanguage)
             }
@@ -125,7 +147,7 @@ try {
     } else {
         Write-Host ""
         Write-Host "== transcription proof skipped =="
-        Write-Host "pass -TranscribeEndpoint, -TranscribeModel, and -TranscribeApiKeyEnv; use -TranscribeAudio when -SkipMic is set"
+        Write-Host "pass -TranscribeEndpoint, -TranscribeModel, and -TranscribeApiKeyEnv or -TranscribeApiKeyName; use -TranscribeAudio when -SkipMic is set"
     }
 
     Invoke-Step "windows hotkey doctor" {
@@ -151,7 +173,6 @@ try {
         swift run RomaProofAgent windows-secret-doctor
     }
 
-    $secretProofDir = Join-Path $OutputDir "secrets"
     Invoke-Step "windows secret proof" {
         swift run RomaProofAgent windows-secret-proof --dir $secretProofDir
     }
@@ -170,8 +191,8 @@ try {
     if ($RunInteractiveDictation) {
         if ([string]::IsNullOrWhiteSpace($TranscribeEndpoint) -or
             [string]::IsNullOrWhiteSpace($TranscribeModel) -or
-            [string]::IsNullOrWhiteSpace($TranscribeApiKeyEnv)) {
-            throw "RunInteractiveDictation requires -TranscribeEndpoint, -TranscribeModel, and -TranscribeApiKeyEnv"
+            !$hasTranscriptionKey) {
+            throw "RunInteractiveDictation requires -TranscribeEndpoint, -TranscribeModel, and -TranscribeApiKeyEnv or -TranscribeApiKeyName"
         }
 
         $dictationProof = Join-Path $OutputDir "dictation-proof.wav"
@@ -185,9 +206,13 @@ try {
                 "--out", $dictationProof,
                 "--seconds", "$RecordSeconds",
                 "--endpoint", $TranscribeEndpoint,
-                "--model", $TranscribeModel,
-                "--api-key-env", $TranscribeApiKeyEnv
+                "--model", $TranscribeModel
             )
+            if (![string]::IsNullOrWhiteSpace($TranscribeApiKeyName)) {
+                $dictationArgs += @("--api-key-name", $TranscribeApiKeyName, "--secret-dir", $secretProofDir)
+            } else {
+                $dictationArgs += @("--api-key-env", $TranscribeApiKeyEnv)
+            }
             if (![string]::IsNullOrWhiteSpace($TranscribeLanguage)) {
                 $dictationArgs += @("--language", $TranscribeLanguage)
             }
