@@ -7,6 +7,7 @@
 - Removed punctuated discourse fillers such as ", like," and ", you know." without dropping meaningful uses.
 - Collapsed obvious repeated short sentences from dictated output.
 - Added spoken quote and parenthesis formatting commands.
+- Added spoken square bracket and brace formatting commands.
 - Preserved dictated quote and parenthesis fragments through final insertion cleanup.
 - Formatted inline numbered-list dictation with multiple markers onto separate lines.
 - Preserved dotted numeric text such as version numbers during punctuation cleanup.

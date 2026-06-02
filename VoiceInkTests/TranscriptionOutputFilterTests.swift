@@ -58,6 +58,7 @@ struct TranscriptionOutputFilterTests {
         #expect(TranscriptionOutputFilter.applyInsertionSpacing("/users", context: wordBeforeParenthesisContext) == "/users")
         #expect(TranscriptionOutputFilter.applyInsertionPolish("\"Model\".", context: midSentenceContext) == "\"model\"")
         #expect(TranscriptionOutputFilter.applyInsertionPolish("(Model).", context: midSentenceContext) == "(model)")
+        #expect(TranscriptionOutputFilter.applyInsertionPolish("{Model}.", context: midSentenceContext) == "{model}")
         #expect(TranscriptionOutputFilter.applyInsertionPolish("[Model.]", context: nil) == "model")
         #expect(TranscriptionOutputFilter.applyInsertionPolish(TranscriptionOutputFilter.filter("Open quote model close quote."), context: midSentenceContext) == "\"model\"")
         #expect(TranscriptionOutputFilter.applyInsertionPolish(TranscriptionOutputFilter.filter("Open parenthesis model close parenthesis."), context: midSentenceContext) == "(model)")
@@ -107,6 +108,8 @@ struct TranscriptionOutputFilterTests {
         #expect(TranscriptionOutputFilter.filter("She said open quote hello close quote.") == "She said \"hello\".")
         #expect(TranscriptionOutputFilter.filter("Open quote hello comma world close quote.") == "\"hello, world\".")
         #expect(TranscriptionOutputFilter.filter("Use open parenthesis model close parenthesis now.") == "Use (model) now.")
+        #expect(TranscriptionOutputFilter.filter("Use open bracket model close bracket now.") == "Use [model] now.")
+        #expect(TranscriptionOutputFilter.filter("Use open brace user id colon one close brace now.") == "Use {user id: one} now.")
         #expect(TranscriptionOutputFilter.filter("The quote field stays.") == "The quote field stays.")
     }
 

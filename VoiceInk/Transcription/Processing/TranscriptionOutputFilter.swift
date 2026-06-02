@@ -210,6 +210,10 @@ struct TranscriptionOutputFilter {
     private static let closeQuotePlaceholder = "__VOICEINK_CLOSE_QUOTE__"
     private static let openParenthesisPlaceholder = "__VOICEINK_OPEN_PAREN__"
     private static let closeParenthesisPlaceholder = "__VOICEINK_CLOSE_PAREN__"
+    private static let openBracketPlaceholder = "__VOICEINK_OPEN_BRACKET__"
+    private static let closeBracketPlaceholder = "__VOICEINK_CLOSE_BRACKET__"
+    private static let openBracePlaceholder = "__VOICEINK_OPEN_BRACE__"
+    private static let closeBracePlaceholder = "__VOICEINK_CLOSE_BRACE__"
     private static let spokenFormattingCommands: [(pattern: String, replacement: String)] = [
         (#"(?i)(?<![\p{L}\p{N}])(?:new|next)\s+paragraph(?![\p{L}\p{N}])"#, "\n\n"),
         (#"(?i)(?<![\p{L}\p{N}])(?:new|next)\s+line(?![\p{L}\p{N}])"#, "\n"),
@@ -221,7 +225,11 @@ struct TranscriptionOutputFilter {
         (#"(?i)(?<![\p{L}\p{N}])(?:open|start)\s+(?:quote|quotation\s+marks?)(?![\p{L}\p{N}])"#, openQuotePlaceholder),
         (#"(?i)(?<![\p{L}\p{N}])(?:close|end)\s+(?:quote|quotation\s+marks?)(?![\p{L}\p{N}])"#, closeQuotePlaceholder),
         (#"(?i)(?<![\p{L}\p{N}])(?:open|left)\s+(?:paren|parenthesis|parentheses)(?![\p{L}\p{N}])"#, openParenthesisPlaceholder),
-        (#"(?i)(?<![\p{L}\p{N}])(?:close|right)\s+(?:paren|parenthesis|parentheses)(?![\p{L}\p{N}])"#, closeParenthesisPlaceholder)
+        (#"(?i)(?<![\p{L}\p{N}])(?:close|right)\s+(?:paren|parenthesis|parentheses)(?![\p{L}\p{N}])"#, closeParenthesisPlaceholder),
+        (#"(?i)(?<![\p{L}\p{N}])(?:open|left)\s+(?:square\s+)?bracket(?![\p{L}\p{N}])"#, openBracketPlaceholder),
+        (#"(?i)(?<![\p{L}\p{N}])(?:close|right)\s+(?:square\s+)?bracket(?![\p{L}\p{N}])"#, closeBracketPlaceholder),
+        (#"(?i)(?<![\p{L}\p{N}])(?:open|left)\s+(?:curly\s+)?brace(?![\p{L}\p{N}])"#, openBracePlaceholder),
+        (#"(?i)(?<![\p{L}\p{N}])(?:close|right)\s+(?:curly\s+)?brace(?![\p{L}\p{N}])"#, closeBracePlaceholder)
     ]
     private static let spokenSymbolCommands = [
         SpokenSymbolCommand(
@@ -664,10 +672,18 @@ struct TranscriptionOutputFilter {
             .replacingOccurrences(of: "\\s+\(closeQuotePlaceholder)", with: closeQuotePlaceholder, options: .regularExpression)
             .replacingOccurrences(of: "\(openParenthesisPlaceholder)\\s+", with: openParenthesisPlaceholder, options: .regularExpression)
             .replacingOccurrences(of: "\\s+\(closeParenthesisPlaceholder)", with: closeParenthesisPlaceholder, options: .regularExpression)
+            .replacingOccurrences(of: "\(openBracketPlaceholder)\\s+", with: openBracketPlaceholder, options: .regularExpression)
+            .replacingOccurrences(of: "\\s+\(closeBracketPlaceholder)", with: closeBracketPlaceholder, options: .regularExpression)
+            .replacingOccurrences(of: "\(openBracePlaceholder)\\s+", with: openBracePlaceholder, options: .regularExpression)
+            .replacingOccurrences(of: "\\s+\(closeBracePlaceholder)", with: closeBracePlaceholder, options: .regularExpression)
             .replacingOccurrences(of: openQuotePlaceholder, with: "\"")
             .replacingOccurrences(of: closeQuotePlaceholder, with: "\"")
             .replacingOccurrences(of: openParenthesisPlaceholder, with: "(")
             .replacingOccurrences(of: closeParenthesisPlaceholder, with: ")")
+            .replacingOccurrences(of: openBracketPlaceholder, with: "[")
+            .replacingOccurrences(of: closeBracketPlaceholder, with: "]")
+            .replacingOccurrences(of: openBracePlaceholder, with: "{")
+            .replacingOccurrences(of: closeBracePlaceholder, with: "}")
     }
 
     private static func applySpokenSymbolCommands(in text: String) -> String {
@@ -2173,6 +2189,7 @@ struct TranscriptionOutputFilter {
         case "“": return "”"
         case "‘": return "’"
         case "(": return ")"
+        case "{": return "}"
         default: return nil
         }
     }
