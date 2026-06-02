@@ -9,6 +9,7 @@ struct RomaCoreChecks {
         try checkPCM16WAVFileWritesCanonicalHeader()
         try checkMiniaudioRecorderUsesSpeechPCMContract()
         try checkOpenAICompatibleMultipartBody()
+        try checkTranscriptionOutputFilter()
         try checkWindowsHotKeyProofDescriptor()
         try checkWindowsLowLevelKeyboardHookProofDescriptor()
         try checkWindowsClipboardPayloadIsCFUnicodeText()
@@ -139,6 +140,48 @@ struct RomaCoreChecks {
         try require(body.contains("name=\"prompt\"\r\n\r\nroma vocabulary"), "multipart should include prompt")
         try require(multipart.data.range(of: audioData) != nil, "multipart should preserve raw audio bytes")
         try require(body.hasSuffix("--Boundary-RomaProof--\r\n"), "multipart should close the boundary")
+    }
+
+    private static func checkTranscriptionOutputFilter() throws {
+        let midSentenceContext = RomaTranscriptionOutputFilter.TextInsertionContext(precedingText: "...so this")
+        let sentenceStartContext = RomaTranscriptionOutputFilter.TextInsertionContext(precedingText: "Done. ")
+
+        try require(
+            RomaTranscriptionOutputFilter.filter(
+                "hmm.... eh... I I think think this this works.",
+                removesFillerWords: true
+            ) == "I think this works.",
+            "shared filter should remove pause noise and repeated words"
+        )
+        try require(
+            RomaTranscriptionOutputFilter.filter("Open quote hello comma world close quote.") == "\"hello, world\".",
+            "shared filter should apply spoken enclosure and punctuation commands"
+        )
+        try require(
+            RomaTranscriptionOutputFilter.filter("Open https colon slash slash docs dot example dot com slash api.") ==
+                "Open https://docs.example.com/api",
+            "shared filter should apply guarded spoken URL cleanup"
+        )
+        try require(
+            RomaTranscriptionOutputFilter.applyInsertionPolish("Model.", context: midSentenceContext) == "model",
+            "shared insertion polish should lowercase mid-sentence fragments"
+        )
+        try require(
+            RomaTranscriptionOutputFilter.applyInsertionSpacing("model", context: midSentenceContext) == " model",
+            "shared insertion spacing should add a leading space after words"
+        )
+        try require(
+            RomaTranscriptionOutputFilter.applyInsertionPolish("Model.", context: sentenceStartContext) == "Model",
+            "shared insertion polish should preserve sentence-start casing"
+        )
+        try require(
+            RomaTranscriptionOutputFilter.applyCleanupPreferences(
+                "Model.",
+                punctuationMode: .removeTrailingPeriod,
+                shouldLowercase: true
+            ) == "model",
+            "shared cleanup preferences should remove a trailing period and lowercase"
+        )
     }
 
     private static func checkWindowsHotKeyProofDescriptor() throws {

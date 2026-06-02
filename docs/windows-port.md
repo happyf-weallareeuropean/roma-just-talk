@@ -53,6 +53,7 @@ Reusable now:
 - `MiniaudioCaptureRecorder` now lives in `RomaCore` and feeds miniaudio capture frames into the shared pre-roll/WAV path.
 - `OpenAICompatibleTranscriptionService` now lives in `RomaCore` as a Foundation-only multipart HTTP proof path for OpenAI-compatible cloud STT.
 - `DictationPipeline` now lives in `RomaCore` as the shared record -> transcribe -> optional paste orchestration.
+- `RomaTranscriptionOutputFilter` now lives in `RomaCore` as the shared Foundation-only post-STT cleanup and insertion-polish path.
 - `WindowsHotKey.proofToggle` and the Windows-only `WindowsRegisterHotKeyProof` source define the first `RegisterHotKey` toggle proof path.
 - `WindowsLowLevelKeyboardHookProof` now defines the first `WH_KEYBOARD_LL` hold-to-talk keydown/keyup proof path.
 - `WindowsClipboardPayload` and the Windows-only `WindowsPasteProof` source define the first `CF_UNICODETEXT` plus `SendInput` paste proof path.

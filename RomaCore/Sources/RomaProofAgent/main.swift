@@ -57,6 +57,7 @@ struct RomaProofAgent {
         print("windows_dpapi_secret_store_source=true")
         print("miniaudio_capture_adapter_source=true")
         print("openai_compatible_transcription_source=true")
+        print("transcription_output_filter_source=true")
         print("windows_dictation_proof_source=true")
     }
 
