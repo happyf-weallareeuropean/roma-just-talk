@@ -174,6 +174,8 @@ struct TranscriptionOutputFilter {
     private static let markdownLinkPattern = #"(?im)(^|\n)[ \t]*(?:markdown[ \t]+)?link[ \t]+([^\n]{1,80}?)[ \t]+to[ \t]+([^ \t\n]+)[ \t]*[.!?]?(?=\n|$)"#
     private static let openCodeBlockPattern = #"(?im)(^|\n)[ \t]*(?:open|start)[ \t]+code[ \t]+block(?:[ \t]+([A-Za-z0-9_+#.-]+))?[ \t]*(?=\n|$)"#
     private static let closeCodeBlockPattern = #"(?im)(^|\n)[ \t]*(?:close|end)[ \t]+code[ \t]+block[ \t]*(?=\n|$)"#
+    private static let spokenSchemeURLPattern = #"(?i)(?<![\p{L}\p{N}])((?:h[ \t]+t[ \t]+t[ \t]+p[ \t]+s?)|https?)\s*(?:colon|:)\s+(?:slash\s+slash|forward\s+slash\s+forward\s+slash)\s+([^\n.!?]{3,160})([.!?])?(?=\s|$|\n)"#
+    private static let spokenWWWURLPattern = #"(?i)(?<![\p{L}\p{N}])www\s+dot\s+([^\n.!?]{3,160})([.!?])?(?=\s|$|\n)"#
     private static let backtrackingMarkerPattern = #"""
         (?ix)
         \s*
@@ -301,7 +303,8 @@ struct TranscriptionOutputFilter {
         ),
         SpokenPunctuationCommand(
             pattern: #"(?i)(?<![\p{L}\p{N}])colon(?![\p{L}\p{N}])"#,
-            output: ":"
+            output: ":",
+            blockedPreviousWords: ["http", "https"]
         )
     ]
     private static let standaloneSpokenPunctuationOutputs = [
@@ -337,6 +340,7 @@ struct TranscriptionOutputFilter {
         filteredText = applyBacktrackingCorrections(in: filteredText)
         filteredText = applySpokenFormattingCommands(in: filteredText)
         filteredText = applySpokenEnclosureCommands(in: filteredText)
+        filteredText = applySpokenURLCommands(in: filteredText)
         filteredText = applySpokenPunctuationCommands(in: filteredText)
         filteredText = formatInlineNumberedLists(in: filteredText)
         filteredText = applySpokenSymbolCommands(in: filteredText)
@@ -789,6 +793,133 @@ struct TranscriptionOutputFilter {
         }
 
         return previousToken.count <= 12 && nextToken.count <= 4
+    }
+
+    private static func applySpokenURLCommands(in text: String) -> String {
+        var urlText = replaceSpokenSchemeURLs(in: text)
+        urlText = replaceSpokenWWWURLs(in: urlText)
+        return urlText
+    }
+
+    private static func replaceSpokenSchemeURLs(in text: String) -> String {
+        guard let regex = try? NSRegularExpression(pattern: spokenSchemeURLPattern) else {
+            return text
+        }
+
+        var urlText = text
+        let matches = regex.matches(in: urlText, range: NSRange(urlText.startIndex..., in: urlText))
+
+        for match in matches.reversed() {
+            guard match.numberOfRanges >= 3,
+                  let fullRange = Range(match.range(at: 0), in: urlText),
+                  let schemeRange = Range(match.range(at: 1), in: urlText),
+                  let targetRange = Range(match.range(at: 2), in: urlText) else {
+                continue
+            }
+
+            let scheme = spokenURLScheme(String(urlText[schemeRange]))
+            guard let target = spokenURLTarget(String(urlText[targetRange]), allowLocalhost: true) else {
+                continue
+            }
+
+            urlText.replaceSubrange(fullRange, with: "\(scheme)://\(target)")
+        }
+
+        return urlText
+    }
+
+    private static func replaceSpokenWWWURLs(in text: String) -> String {
+        guard let regex = try? NSRegularExpression(pattern: spokenWWWURLPattern) else {
+            return text
+        }
+
+        var urlText = text
+        let matches = regex.matches(in: urlText, range: NSRange(urlText.startIndex..., in: urlText))
+
+        for match in matches.reversed() {
+            guard match.numberOfRanges >= 2,
+                  let fullRange = Range(match.range(at: 0), in: urlText),
+                  let targetRange = Range(match.range(at: 1), in: urlText),
+                  let target = spokenURLTarget(String(urlText[targetRange]), allowLocalhost: false) else {
+                continue
+            }
+
+            urlText.replaceSubrange(fullRange, with: "www.\(target)")
+        }
+
+        return urlText
+    }
+
+    private static func spokenURLScheme(_ text: String) -> String {
+        text.replacingOccurrences(of: #"\s+"#, with: "", options: .regularExpression)
+            .lowercased()
+    }
+
+    private static func spokenURLTarget(_ text: String, allowLocalhost: Bool) -> String? {
+        let tokens = spokenURLTokens(in: text)
+        guard !tokens.isEmpty else { return nil }
+
+        var target = ""
+        var index = tokens.startIndex
+        while index < tokens.endIndex {
+            let token = tokens[index]
+
+            switch token {
+            case "dot":
+                target += "."
+            case "slash":
+                target += "/"
+            case "forward" where tokens.index(after: index) < tokens.endIndex && tokens[tokens.index(after: index)] == "slash":
+                target += "/"
+                index = tokens.index(after: index)
+            case "dash", "hyphen":
+                target += "-"
+            case "underscore":
+                target += "_"
+            case "colon":
+                target += ":"
+            default:
+                guard isURLWordToken(token) else { return nil }
+                target += token
+            }
+
+            index = tokens.index(after: index)
+        }
+
+        let normalizedTarget = target.trimmingCharacters(in: CharacterSet(charactersIn: "/._-:"))
+        guard isLikelyURLTarget(normalizedTarget, allowLocalhost: allowLocalhost) else {
+            return nil
+        }
+        return normalizedTarget
+    }
+
+    private static func spokenURLTokens(in text: String) -> [String] {
+        text
+            .split { !$0.isLetter && !$0.isNumber }
+            .map { String($0).lowercased() }
+    }
+
+    private static func isURLWordToken(_ token: String) -> Bool {
+        token.range(of: #"^[a-z0-9][a-z0-9-]{0,63}$"#, options: .regularExpression) != nil
+    }
+
+    private static func isLikelyURLTarget(_ text: String, allowLocalhost: Bool) -> Bool {
+        let host = text.split(separator: "/", maxSplits: 1).first?
+            .split(separator: ":", maxSplits: 1).first
+            .map(String.init) ?? ""
+        guard !host.isEmpty else { return false }
+
+        if allowLocalhost && host == "localhost" {
+            return true
+        }
+
+        let hostParts = host.split(separator: ".").map(String.init)
+        guard hostParts.count >= 2,
+              let topLevelDomain = hostParts.last else {
+            return false
+        }
+
+        return isCommonTopLevelDomain(topLevelDomain)
     }
 
     private static func containsSpokenDomainSuffix(_ text: String) -> Bool {
@@ -1395,16 +1526,50 @@ struct TranscriptionOutputFilter {
     }
 
     private static func normalizePunctuationSpacing(_ text: String) -> String {
-        let spacedText = text
+        let protectedText = protectURLSpans(in: text)
+        let spacedText = protectedText.text
             .replacingOccurrences(of: #"\s+([,.;:!?])"#, with: "$1", options: .regularExpression)
             .replacingOccurrences(of: #"([,.;:!?])([^\s,.;:!?\]\)}])"#, with: "$1 $2", options: .regularExpression)
             .replacingOccurrences(of: #"\s+([)\]\}])"#, with: "$1", options: .regularExpression)
 
-        return spacedText.replacingOccurrences(
+        let normalizedText = spacedText.replacingOccurrences(
             of: #"(\d)\.\s+(?=\d)"#,
             with: "$1.",
             options: .regularExpression
         )
+
+        return restoreProtectedURLSpans(in: normalizedText, urls: protectedText.urls)
+    }
+
+    private static func protectURLSpans(in text: String) -> (text: String, urls: [String]) {
+        guard let regex = try? NSRegularExpression(
+            pattern: #"(?i)\b(?:https?://|www\.)[A-Za-z0-9._~:/?#\[\]@!$&'()*+,;=%-]+"#
+        ) else {
+            return (text, [])
+        }
+
+        var protectedText = text
+        var urls: [String] = []
+        let matches = regex.matches(in: protectedText, range: NSRange(protectedText.startIndex..., in: protectedText))
+
+        for match in matches.reversed() {
+            guard let range = Range(match.range, in: protectedText) else {
+                continue
+            }
+
+            urls.append(String(protectedText[range]))
+            protectedText.replaceSubrange(range, with: "__VOICEINK_URL_\(urls.count - 1)__")
+        }
+
+        return (protectedText, urls)
+    }
+
+    private static func restoreProtectedURLSpans(in text: String, urls: [String]) -> String {
+        var restoredText = text
+        for (index, url) in urls.enumerated() {
+            restoredText = restoredText.replacingOccurrences(of: "__VOICEINK_URL_\(index)__", with: url)
+        }
+        return restoredText
     }
 
     private static func previousWord(in text: String) -> String? {

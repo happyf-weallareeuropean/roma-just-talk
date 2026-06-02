@@ -117,6 +117,9 @@ struct TranscriptionOutputFilterTests {
         #expect(TranscriptionOutputFilter.filter("Email felix at sign example dot com.") == "Email felix@example.com.")
         #expect(TranscriptionOutputFilter.filter("Set user underscore id.") == "Set user_id.")
         #expect(TranscriptionOutputFilter.filter("Open docs dot example dot com.") == "Open docs.example.com.")
+        #expect(TranscriptionOutputFilter.filter("Open https colon slash slash docs dot example dot com slash api.") == "Open https://docs.example.com/api")
+        #expect(TranscriptionOutputFilter.filter("Use h t t p colon slash slash localhost colon 3000 slash api.") == "Use http://localhost:3000/api")
+        #expect(TranscriptionOutputFilter.filter("Open www dot example dot com.") == "Open www.example.com")
         #expect(TranscriptionOutputFilter.filter("Use the slash command.") == "Use the slash command.")
         #expect(TranscriptionOutputFilter.filter("Add a dash of salt.") == "Add a dash of salt.")
         #expect(TranscriptionOutputFilter.filter("Use the at sign symbol.") == "Use the at sign symbol.")
@@ -125,6 +128,8 @@ struct TranscriptionOutputFilterTests {
         #expect(TranscriptionOutputFilter.filter("Show dot file behavior.") == "Show dot file behavior.")
         #expect(TranscriptionOutputFilter.filter("Please at sign up tomorrow.") == "Please at sign up tomorrow.")
         #expect(TranscriptionOutputFilter.filter("Use the underscore command.") == "Use the underscore command.")
+        #expect(TranscriptionOutputFilter.filter("We discussed http colon syntax today.") == "We discussed http colon syntax today.")
+        #expect(TranscriptionOutputFilter.filter("Say www dot matrix is old.") == "Say www dot matrix is old.")
     }
 
     @Test func transcriptionFilterAppliesGuardedCodeCaseCommands() async throws {
