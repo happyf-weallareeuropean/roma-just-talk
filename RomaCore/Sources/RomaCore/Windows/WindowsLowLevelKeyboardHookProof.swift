@@ -75,11 +75,54 @@ public enum WindowsLowLevelKeyboardHookProof {
         chord: WindowsLowLevelKeyboardHookChord = .proofHold,
         timeoutMilliseconds: UInt32 = 15_000
     ) throws -> WindowsLowLevelKeyboardHookResult {
+        try waitForEvent(
+            chord: chord,
+            targetEvent: UInt32(ROMA_WINDOWS_KEYBOARD_EVENT_KEY_DOWN | ROMA_WINDOWS_KEYBOARD_EVENT_KEY_UP),
+            timeoutMilliseconds: timeoutMilliseconds,
+            requireKeyDown: true,
+            requireKeyUp: true
+        )
+    }
+
+    public static func waitForKeyDown(
+        chord: WindowsLowLevelKeyboardHookChord = .proofHold,
+        timeoutMilliseconds: UInt32 = 15_000
+    ) throws -> WindowsLowLevelKeyboardHookResult {
+        try waitForEvent(
+            chord: chord,
+            targetEvent: UInt32(ROMA_WINDOWS_KEYBOARD_EVENT_KEY_DOWN),
+            timeoutMilliseconds: timeoutMilliseconds,
+            requireKeyDown: true,
+            requireKeyUp: false
+        )
+    }
+
+    public static func waitForKeyUp(
+        chord: WindowsLowLevelKeyboardHookChord = .proofHold,
+        timeoutMilliseconds: UInt32 = 15_000
+    ) throws -> WindowsLowLevelKeyboardHookResult {
+        try waitForEvent(
+            chord: chord,
+            targetEvent: UInt32(ROMA_WINDOWS_KEYBOARD_EVENT_KEY_UP),
+            timeoutMilliseconds: timeoutMilliseconds,
+            requireKeyDown: false,
+            requireKeyUp: true
+        )
+    }
+
+    private static func waitForEvent(
+        chord: WindowsLowLevelKeyboardHookChord,
+        targetEvent: UInt32,
+        timeoutMilliseconds: UInt32,
+        requireKeyDown: Bool,
+        requireKeyUp: Bool
+    ) throws -> WindowsLowLevelKeyboardHookResult {
         var observedEvents: UInt32 = 0
         var lastError: UInt32 = 0
-        let status = roma_windows_keyboard_wait_for_hold(
+        let status = roma_windows_keyboard_wait_for_event(
             chord.virtualKeyCode,
             chord.requiredModifiers,
+            targetEvent,
             timeoutMilliseconds,
             &observedEvents,
             &lastError
@@ -88,7 +131,8 @@ public enum WindowsLowLevelKeyboardHookProof {
         switch status {
         case ROMA_WINDOWS_KEYBOARD_OK:
             let result = WindowsLowLevelKeyboardHookResult(observedEvents: observedEvents)
-            guard result.observedKeyDown, result.observedKeyUp else {
+            guard (!requireKeyDown || result.observedKeyDown),
+                  (!requireKeyUp || result.observedKeyUp) else {
                 throw WindowsLowLevelKeyboardHookError.invalidResult(observedEvents: observedEvents)
             }
             return result

@@ -35,6 +35,15 @@ roma_windows_keyboard_status_t roma_windows_keyboard_wait_for_hold(
     uint32_t *last_error
 );
 
+roma_windows_keyboard_status_t roma_windows_keyboard_wait_for_event(
+    uint32_t virtual_key,
+    uint32_t required_modifiers,
+    uint32_t target_event,
+    uint32_t timeout_milliseconds,
+    uint32_t *observed_events,
+    uint32_t *last_error
+);
+
 #ifdef __cplusplus
 }
 #endif

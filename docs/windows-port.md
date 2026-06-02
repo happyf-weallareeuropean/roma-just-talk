@@ -182,6 +182,8 @@ Useful script options:
 - `-TranscribeAudio C:\tmp\proof.wav` uses an existing WAV for transcription, useful with `-SkipMic`.
 - `-TranscribeLanguage en` and `-TranscribePrompt "roma just talk"` pass optional STT hints.
 - `-RunInteractiveDictation` waits for `Ctrl+Shift+R`, records with pre-roll, transcribes, and writes `dictation-proof.wav`.
+- `-UseHoldHook` makes interactive dictation use `WH_KEYBOARD_LL`: recording starts on `Ctrl+Shift+R` keydown and stops on keyup.
+- `-HoldTimeoutSeconds 15` changes the keydown/keyup wait timeout for hold-hook dictation.
 - `-PasteDictation` adds the final paste step to the interactive dictation proof.
 
 CI proof:
@@ -213,15 +215,15 @@ swift run RomaProofAgent windows-secret-proof --dir C:\tmp\roma-secrets
 swift run RomaProofAgent windows-secret-save-from-env --dir C:\tmp\roma-secrets --key groq --value-env GROQ_API_KEY
 swift run RomaProofAgent transcribe-proof --audio mic-proof.wav --endpoint https://api.groq.com/openai/v1/audio/transcriptions --model whisper-large-v3-turbo --api-key-name groq --secret-dir C:\tmp\roma-secrets
 swift run RomaProofAgent windows-dictation-proof --out dictation-proof.wav --seconds 2 --endpoint https://api.groq.com/openai/v1/audio/transcriptions --model whisper-large-v3-turbo --api-key-env GROQ_API_KEY --paste
+swift run RomaProofAgent windows-dictation-proof --out hold-dictation-proof.wav --hold-hook --timeout 15 --endpoint https://api.groq.com/openai/v1/audio/transcriptions --model whisper-large-v3-turbo --api-key-env GROQ_API_KEY --paste
 ```
 
 Manual proof:
 
 - Start the agent.
 - Say "before hotkey".
-- Press the configured shortcut.
-- Say "after hotkey".
-- Stop recording.
+- Toggle proof: press the configured shortcut, say "after hotkey", and wait for the configured duration.
+- Hold proof: hold the configured shortcut while speaking, then release it.
 - Verify `proof.wav` contains both phrases.
 - Verify transcription contains both phrases.
 - Verify paste lands in Notepad.

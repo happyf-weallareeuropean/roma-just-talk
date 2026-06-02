@@ -11,6 +11,7 @@
 typedef struct roma_keyboard_state {
     uint32_t virtual_key;
     uint32_t required_modifiers;
+    uint32_t target_event;
     uint32_t observed_events;
     uint32_t modifier_state;
     int target_is_down;
@@ -83,8 +84,17 @@ static LRESULT CALLBACK roma_windows_keyboard_proc(int code, WPARAM w_param, LPA
             if (roma_windows_keyboard_is_key_down_message(w_param) && required_modifiers_down) {
                 g_keyboard_state.target_is_down = 1;
                 g_keyboard_state.observed_events |= ROMA_WINDOWS_KEYBOARD_EVENT_KEY_DOWN;
+                if (g_keyboard_state.target_event == ROMA_WINDOWS_KEYBOARD_EVENT_KEY_DOWN) {
+                    PostThreadMessageA(g_keyboard_state.thread_id, ROMA_KEYBOARD_DONE_MESSAGE, 0, 0);
+                }
             } else if (roma_windows_keyboard_is_key_up_message(w_param) && g_keyboard_state.target_is_down) {
                 g_keyboard_state.target_is_down = 0;
+                g_keyboard_state.observed_events |= ROMA_WINDOWS_KEYBOARD_EVENT_KEY_UP;
+                if ((g_keyboard_state.target_event & ROMA_WINDOWS_KEYBOARD_EVENT_KEY_UP) != 0) {
+                    PostThreadMessageA(g_keyboard_state.thread_id, ROMA_KEYBOARD_DONE_MESSAGE, 0, 0);
+                }
+            } else if (roma_windows_keyboard_is_key_up_message(w_param)
+                && g_keyboard_state.target_event == ROMA_WINDOWS_KEYBOARD_EVENT_KEY_UP) {
                 g_keyboard_state.observed_events |= ROMA_WINDOWS_KEYBOARD_EVENT_KEY_UP;
                 PostThreadMessageA(g_keyboard_state.thread_id, ROMA_KEYBOARD_DONE_MESSAGE, 0, 0);
             }
@@ -94,9 +104,10 @@ static LRESULT CALLBACK roma_windows_keyboard_proc(int code, WPARAM w_param, LPA
     return CallNextHookEx(g_keyboard_state.hook, code, w_param, l_param);
 }
 
-roma_windows_keyboard_status_t roma_windows_keyboard_wait_for_hold(
+static roma_windows_keyboard_status_t roma_windows_keyboard_wait_for_event_internal(
     uint32_t virtual_key,
     uint32_t required_modifiers,
+    uint32_t target_event,
     uint32_t timeout_milliseconds,
     uint32_t *observed_events,
     uint32_t *last_error
@@ -108,6 +119,7 @@ roma_windows_keyboard_status_t roma_windows_keyboard_wait_for_hold(
 
     g_keyboard_state.virtual_key = virtual_key;
     g_keyboard_state.required_modifiers = required_modifiers;
+    g_keyboard_state.target_event = target_event;
     g_keyboard_state.observed_events = 0;
     g_keyboard_state.modifier_state = 0;
     g_keyboard_state.target_is_down = 0;
@@ -159,6 +171,41 @@ roma_windows_keyboard_status_t roma_windows_keyboard_wait_for_hold(
     return status;
 }
 
+roma_windows_keyboard_status_t roma_windows_keyboard_wait_for_hold(
+    uint32_t virtual_key,
+    uint32_t required_modifiers,
+    uint32_t timeout_milliseconds,
+    uint32_t *observed_events,
+    uint32_t *last_error
+) {
+    return roma_windows_keyboard_wait_for_event_internal(
+        virtual_key,
+        required_modifiers,
+        ROMA_WINDOWS_KEYBOARD_EVENT_KEY_DOWN | ROMA_WINDOWS_KEYBOARD_EVENT_KEY_UP,
+        timeout_milliseconds,
+        observed_events,
+        last_error
+    );
+}
+
+roma_windows_keyboard_status_t roma_windows_keyboard_wait_for_event(
+    uint32_t virtual_key,
+    uint32_t required_modifiers,
+    uint32_t target_event,
+    uint32_t timeout_milliseconds,
+    uint32_t *observed_events,
+    uint32_t *last_error
+) {
+    return roma_windows_keyboard_wait_for_event_internal(
+        virtual_key,
+        required_modifiers,
+        target_event,
+        timeout_milliseconds,
+        observed_events,
+        last_error
+    );
+}
+
 #else
 
 static void roma_windows_keyboard_set_error(uint32_t *last_error, uint32_t value) {
@@ -176,6 +223,25 @@ roma_windows_keyboard_status_t roma_windows_keyboard_wait_for_hold(
 ) {
     (void)virtual_key;
     (void)required_modifiers;
+    (void)timeout_milliseconds;
+    if (observed_events != NULL) {
+        *observed_events = 0;
+    }
+    roma_windows_keyboard_set_error(last_error, 0);
+    return ROMA_WINDOWS_KEYBOARD_UNSUPPORTED;
+}
+
+roma_windows_keyboard_status_t roma_windows_keyboard_wait_for_event(
+    uint32_t virtual_key,
+    uint32_t required_modifiers,
+    uint32_t target_event,
+    uint32_t timeout_milliseconds,
+    uint32_t *observed_events,
+    uint32_t *last_error
+) {
+    (void)virtual_key;
+    (void)required_modifiers;
+    (void)target_event;
     (void)timeout_milliseconds;
     if (observed_events != NULL) {
         *observed_events = 0;

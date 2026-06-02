@@ -208,44 +208,67 @@ struct RomaProofAgent {
         #if os(Windows)
         let outputURL = URL(fileURLWithPath: try value(after: "--out", in: arguments))
         let seconds = try doubleValue(after: "--seconds", in: arguments, default: 2)
+        let timeoutMilliseconds = UInt32(try doubleValue(after: "--timeout", in: arguments, default: 15) * 1_000)
         let endpointText = try value(after: "--endpoint", in: arguments)
         let modelName = try value(after: "--model", in: arguments)
         let apiKeySource = try makeAPIKeySource(arguments: arguments)
         let shouldPaste = arguments.contains("--paste")
+        let shouldUseHoldHook = arguments.contains("--hold-hook")
         let hotKey = WindowsHotKey.proofToggle
+        let chord = WindowsLowLevelKeyboardHookChord.proofHold
         let recorder = MiniaudioCaptureRecorder()
+        let service = try makeTranscriptionService(
+            endpointText: endpointText,
+            apiKeySource: apiKeySource
+        )
+        let model = TranscriptionModelDescriptor(
+            name: modelName,
+            displayName: modelName,
+            provider: .custom
+        )
+        let pipeline = DictationPipeline(
+            recorder: recorder,
+            transcriptionService: service,
+            textInsertion: shouldPaste ? WindowsClipboardTextInsertion() : nil
+        )
+        let request = DictationPipelineRequest(
+            outputURL: outputURL,
+            model: model,
+            language: optionalValue(after: "--language", in: arguments),
+            prompt: optionalValue(after: "--prompt", in: arguments),
+            shouldInsertTranscription: shouldPaste
+        )
 
         do {
             try await recorder.startPreRollBuffering()
             print("pre_roll_buffering=true")
-            print("waiting_for=\(hotKey.displayName)")
-            try WindowsRegisterHotKeyProof.waitForSingleTrigger(hotKey: hotKey)
-            print("hotkey_received=true")
 
-            let service = try makeTranscriptionService(
-                endpointText: endpointText,
-                apiKeySource: apiKeySource
-            )
-            let model = TranscriptionModelDescriptor(
-                name: modelName,
-                displayName: modelName,
-                provider: .custom
-            )
-            let pipeline = DictationPipeline(
-                recorder: recorder,
-                transcriptionService: service,
-                textInsertion: shouldPaste ? WindowsClipboardTextInsertion() : nil
-            )
-            let result = try await pipeline.runRecordingWindow(
-                DictationPipelineRequest(
-                    outputURL: outputURL,
-                    model: model,
-                    language: optionalValue(after: "--language", in: arguments),
-                    prompt: optionalValue(after: "--prompt", in: arguments),
-                    shouldInsertTranscription: shouldPaste
+            let result: DictationPipelineResult
+            if shouldUseHoldHook {
+                print("recording_mode=hold")
+                print("waiting_for_key_down=\(chord.displayName)")
+                _ = try WindowsLowLevelKeyboardHookProof.waitForKeyDown(
+                    chord: chord,
+                    timeoutMilliseconds: timeoutMilliseconds
                 )
-            ) {
-                try await sleep(seconds: seconds)
+                print("hold_key_down=true")
+
+                result = try await pipeline.runRecordingWindow(request) {
+                    _ = try WindowsLowLevelKeyboardHookProof.waitForKeyUp(
+                        chord: chord,
+                        timeoutMilliseconds: timeoutMilliseconds
+                    )
+                    print("hold_key_up=true")
+                }
+            } else {
+                print("recording_mode=toggle")
+                print("waiting_for=\(hotKey.displayName)")
+                try WindowsRegisterHotKeyProof.waitForSingleTrigger(hotKey: hotKey)
+                print("hotkey_received=true")
+
+                result = try await pipeline.runRecordingWindow(request) {
+                    try await sleep(seconds: seconds)
+                }
             }
             let audio = result.session.recordedAudio
 
@@ -509,6 +532,7 @@ struct RomaProofAgent {
         print("  RomaProofAgent windows-secret-proof --dir C:\\tmp\\roma-secrets")
         print("  RomaProofAgent windows-secret-save-from-env --dir C:\\tmp\\roma-secrets --key groq --value-env GROQ_API_KEY")
         print("  RomaProofAgent windows-dictation-proof --out proof.wav --seconds 2 --endpoint https://api.example.com/v1/audio/transcriptions --model whisper-large-v3-turbo --api-key-env OPENAI_API_KEY [--paste]")
+        print("  RomaProofAgent windows-dictation-proof --out proof.wav --hold-hook --timeout 15 --endpoint https://api.example.com/v1/audio/transcriptions --model whisper-large-v3-turbo --api-key-env OPENAI_API_KEY [--paste]")
         print("  RomaProofAgent windows-dictation-proof --out proof.wav --seconds 2 --endpoint https://api.example.com/v1/audio/transcriptions --model whisper-large-v3-turbo --api-key-name groq --secret-dir C:\\tmp\\roma-secrets [--paste]")
         print("  RomaProofAgent miniaudio-capture-doctor")
         print("  RomaProofAgent miniaudio-record-proof --out proof.wav --seconds 2")

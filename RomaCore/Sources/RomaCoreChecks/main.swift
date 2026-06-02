@@ -176,6 +176,16 @@ struct RomaCoreChecks {
                 throw CheckFailure("low-level hook should be unsupported off Windows")
             } catch WindowsLowLevelKeyboardHookError.unsupported {
             }
+            do {
+                _ = try WindowsLowLevelKeyboardHookProof.waitForKeyDown(timeoutMilliseconds: 1)
+                throw CheckFailure("low-level hook keydown wait should be unsupported off Windows")
+            } catch WindowsLowLevelKeyboardHookError.unsupported {
+            }
+            do {
+                _ = try WindowsLowLevelKeyboardHookProof.waitForKeyUp(timeoutMilliseconds: 1)
+                throw CheckFailure("low-level hook keyup wait should be unsupported off Windows")
+            } catch WindowsLowLevelKeyboardHookError.unsupported {
+            }
         }
     }
 

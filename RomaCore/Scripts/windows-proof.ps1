@@ -14,6 +14,8 @@ param(
     [switch]$RunInteractiveKeyboardHook,
     [switch]$RunInteractivePaste,
     [switch]$RunInteractiveDictation,
+    [switch]$UseHoldHook,
+    [int]$HoldTimeoutSeconds = 15,
     [switch]$PasteDictation
 )
 
@@ -212,7 +214,11 @@ try {
 
         $dictationProof = Join-Path $OutputDir "dictation-proof.wav"
         Invoke-Step "windows dictation proof" {
-            Write-Host "Say a phrase before Ctrl+Shift+R, press Ctrl+Shift+R, then say a phrase after it."
+            if ($UseHoldHook) {
+                Write-Host "Say a phrase before Ctrl+Shift+R, hold Ctrl+Shift+R while speaking, then release it."
+            } else {
+                Write-Host "Say a phrase before Ctrl+Shift+R, press Ctrl+Shift+R, then say a phrase after it."
+            }
             if ($PasteDictation) {
                 Write-Host "Focus Notepad or another normal-integrity text field before transcription completes."
             }
@@ -223,6 +229,9 @@ try {
                 "--endpoint", $TranscribeEndpoint,
                 "--model", $TranscribeModel
             )
+            if ($UseHoldHook) {
+                $dictationArgs += @("--hold-hook", "--timeout", "$HoldTimeoutSeconds")
+            }
             if (![string]::IsNullOrWhiteSpace($TranscribeApiKeyName)) {
                 $dictationArgs += @("--api-key-name", $TranscribeApiKeyName, "--secret-dir", $secretProofDir)
             } else {
