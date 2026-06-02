@@ -155,6 +155,26 @@ Minimum Windows MVP permission surface: microphone + shortcut + clipboard/paste.
 Run on a Windows laptop or Windows CI runner with audio loopback/mock where possible:
 
 ```powershell
+cd RomaCore
+powershell -ExecutionPolicy Bypass -File .\Scripts\windows-proof.ps1
+```
+
+For the foreground-dependent proofs:
+
+```powershell
+powershell -ExecutionPolicy Bypass -File .\Scripts\windows-proof.ps1 -RunInteractiveHotkey
+powershell -ExecutionPolicy Bypass -File .\Scripts\windows-proof.ps1 -RunInteractivePaste
+```
+
+Useful script options:
+
+- `-SkipMic` skips real microphone capture when Windows microphone access is not ready.
+- `-RecordSeconds 5` changes the live mic capture window.
+- `-OutputDir C:\tmp\roma-proof` writes proof WAVs somewhere explicit.
+
+Raw command sequence:
+
+```powershell
 swift --version
 swift test
 swift run RomaProofAgent doctor
