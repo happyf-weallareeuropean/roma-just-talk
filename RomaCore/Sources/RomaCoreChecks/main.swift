@@ -232,6 +232,11 @@ struct RomaCoreChecks {
                 "terminal discourse filler"
             ),
             (
+                "This works you know what I mean.",
+                "This works.",
+                "long terminal discourse filler"
+            ),
+            (
                 "I think this works. I think this works.",
                 "I think this works.",
                 "duplicate short sentence"
@@ -330,6 +335,11 @@ struct RomaCoreChecks {
                 "I know you know.",
                 "I know you know.",
                 "terminal you know guard"
+            ),
+            (
+                "Do you know what I mean?",
+                "Do you know what I mean?",
+                "terminal you know what I mean guard"
             )
         ]
 

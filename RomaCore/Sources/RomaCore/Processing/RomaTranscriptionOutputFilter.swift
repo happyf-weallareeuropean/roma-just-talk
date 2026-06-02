@@ -198,7 +198,7 @@ public struct RomaTranscriptionOutputFilter {
         (#"(?i)[,;:…]\s+(?:you\s+know|like)[,;:…]+(?=\s)"#, " ")
     ]
     private static let blockedPreviousWordsForTerminalYouKnow: Set<String> = [
-        "do", "does", "did", "don't", "know", "let", "should", "to", "will", "would"
+        "do", "does", "did", "don't", "if", "know", "let", "should", "to", "whether", "will", "would"
     ]
     private static let inlineNumberedListMarkerPattern = #"(?<![\p{L}\p{N}])\d{1,2}\.\s+(?=\S)"#
     private static let markdownHeadingPattern = #"(?im)(^|\n)[ \t]*(?:heading|header)[ \t]+(one|two|three|1|2|3)[ \t]+([^\n]+)"#
@@ -629,7 +629,7 @@ public struct RomaTranscriptionOutputFilter {
 
     private static func removeTerminalDiscourseFillers(from text: String) -> String {
         guard let regex = try? NSRegularExpression(
-            pattern: #"(?i)^([\s\S]*?)[ \t]+you[ \t]+know[ \t]*([.!?])\s*$"#
+            pattern: #"(?i)^([\s\S]*?)[ \t]+you[ \t]+know(?:[ \t]+what[ \t]+i[ \t]+mean)?[ \t]*([.!?])\s*$"#
         ) else {
             return text
         }
