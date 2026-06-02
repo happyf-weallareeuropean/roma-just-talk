@@ -227,6 +227,11 @@ struct RomaCoreChecks {
                 "hyphenated pause sounds"
             ),
             (
+                "This works you know.",
+                "This works.",
+                "terminal discourse filler"
+            ),
+            (
                 "I think this works. I think this works.",
                 "I think this works.",
                 "duplicate short sentence"
@@ -320,6 +325,11 @@ struct RomaCoreChecks {
                 "Use the Oxford comma",
                 "Use the Oxford comma",
                 "comma command prose guard"
+            ),
+            (
+                "I know you know.",
+                "I know you know.",
+                "terminal you know guard"
             )
         ]
 

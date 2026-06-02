@@ -197,6 +197,9 @@ public struct RomaTranscriptionOutputFilter {
         (#"(?i)[,;:…]\s+(?:you\s+know|like)[,;:…]*([.!?])\s*$"#, "$1"),
         (#"(?i)[,;:…]\s+(?:you\s+know|like)[,;:…]+(?=\s)"#, " ")
     ]
+    private static let blockedPreviousWordsForTerminalYouKnow: Set<String> = [
+        "do", "does", "did", "don't", "know", "let", "should", "to", "will", "would"
+    ]
     private static let inlineNumberedListMarkerPattern = #"(?<![\p{L}\p{N}])\d{1,2}\.\s+(?=\S)"#
     private static let markdownHeadingPattern = #"(?im)(^|\n)[ \t]*(?:heading|header)[ \t]+(one|two|three|1|2|3)[ \t]+([^\n]+)"#
     private static let uncheckedMarkdownTaskPattern = #"(?im)(^|\n)[ \t]*(?:todo|to[ \t]+do|checkbox|check[ \t]+box|unchecked[ \t]+(?:task|checkbox|check[ \t]+box))[ \t]+([^\n]+)"#
@@ -593,6 +596,7 @@ public struct RomaTranscriptionOutputFilter {
         var filteredText = text
 
         filteredText = removePunctuatedDiscourseFillers(from: filteredText)
+        filteredText = removeTerminalDiscourseFillers(from: filteredText)
 
         let joinedPausePattern = #"(?i)(?<![\p{L}\p{N}])(?:m+h+m+|m+[\s-]+h+m+|u+h+[\s-]+h*u+h+|u+h+[\s-]+u+h+|u+m+[\s-]+h+m+)(?:[.,;:!?…]+)?(?![\p{L}\p{N}])"#
         if let regex = try? NSRegularExpression(pattern: joinedPausePattern) {
@@ -621,6 +625,33 @@ public struct RomaTranscriptionOutputFilter {
         }
 
         return filteredText
+    }
+
+    private static func removeTerminalDiscourseFillers(from text: String) -> String {
+        guard let regex = try? NSRegularExpression(
+            pattern: #"(?i)^([\s\S]*?)[ \t]+you[ \t]+know[ \t]*([.!?])\s*$"#
+        ) else {
+            return text
+        }
+
+        let range = NSRange(text.startIndex..., in: text)
+        guard let match = regex.firstMatch(in: text, range: range),
+              match.numberOfRanges >= 3,
+              let prefixRange = Range(match.range(at: 1), in: text),
+              let punctuationRange = Range(match.range(at: 2), in: text) else {
+            return text
+        }
+
+        let prefix = String(text[prefixRange])
+        let trimmedPrefix = prefix.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard wordCount(in: trimmedPrefix) >= 2,
+              let previousWord = previousWord(in: trimmedPrefix),
+              !blockedPreviousWordsForTerminalYouKnow.contains(previousWord),
+              trimmedPrefix.last.map({ !",;:…".contains($0) }) == true else {
+            return text
+        }
+
+        return "\(trimmedPrefix)\(String(text[punctuationRange]))"
     }
 
     private static func removePunctuatedDiscourseFillers(from text: String) -> String {
