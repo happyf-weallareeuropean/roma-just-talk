@@ -51,6 +51,52 @@ function Resolve-AgentExecutable {
     throw "RomaWindowsAgent.exe was not found under $BuildDirectory"
 }
 
+function Resolve-SwiftRuntimeDirectory {
+    $pathSeparator = [System.IO.Path]::PathSeparator
+    $pathDirectories = $env:PATH -split [regex]::Escape($pathSeparator) |
+        Where-Object { ![string]::IsNullOrWhiteSpace($_) }
+
+    foreach ($directory in $pathDirectories) {
+        $candidate = Join-Path $directory "swiftCore.dll"
+        if (Test-Path -LiteralPath $candidate) {
+            return Get-Item -LiteralPath $directory
+        }
+    }
+
+    return $null
+}
+
+function Copy-SwiftRuntimeLibraries {
+    param(
+        [Parameter(Mandatory = $true)]
+        [string]$OutputDir
+    )
+
+    $runtimeDirectory = Resolve-SwiftRuntimeDirectory
+    if (!$runtimeDirectory) {
+        Write-Host "swift_runtime_dir=not_found"
+        Write-Host "swift_runtime_dlls=0"
+        return @{
+            Directory = ""
+            Count = 0
+        }
+    }
+
+    $runtimeLibraries = Get-ChildItem -LiteralPath $runtimeDirectory.FullName -Filter "*.dll" |
+        Sort-Object Name
+    foreach ($library in $runtimeLibraries) {
+        Copy-Item -LiteralPath $library.FullName -Destination (Join-Path $OutputDir $library.Name) -Force
+    }
+
+    Write-Host "swift_runtime_dir=$($runtimeDirectory.FullName)"
+    Write-Host "swift_runtime_dlls=$($runtimeLibraries.Count)"
+
+    return @{
+        Directory = $runtimeDirectory.FullName
+        Count = $runtimeLibraries.Count
+    }
+}
+
 $packageRoot = Resolve-Path "$PSScriptRoot\.."
 $OutputDir = $ExecutionContext.SessionState.Path.GetUnresolvedProviderPathFromPSPath($OutputDir)
 New-Item -ItemType Directory -Force -Path $OutputDir | Out-Null
@@ -88,6 +134,11 @@ try {
         Write-Host "smoke_script=$smokeScriptOutput"
     }
 
+    $swiftRuntime = @{}
+    Invoke-Step "copy Swift runtime libraries" {
+        $script:swiftRuntime = Copy-SwiftRuntimeLibraries -OutputDir $OutputDir
+    }
+
     Invoke-Step "packaged agent smoke" {
         & $smokeScriptOutput `
             -AgentPath $agentOutput `
@@ -104,6 +155,8 @@ try {
         "output=$agentOutput",
         "sample_config=$configPath",
         "smoke_script=$smokeScriptOutput",
+        "swift_runtime_dir=$($swiftRuntime.Directory)",
+        "swift_runtime_dlls=$($swiftRuntime.Count)",
         "bytes=$($agentFile.Length)"
     ) | Set-Content -LiteralPath $manifestPath -Encoding UTF8
 

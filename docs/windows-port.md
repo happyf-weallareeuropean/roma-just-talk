@@ -204,6 +204,8 @@ powershell -ExecutionPolicy Bypass -File C:\tmp\roma-windows-agent\smoke-windows
 
 The first command proves the packaged `RomaWindowsAgent.exe doctor` and `write-config` path without SwiftPM. The second command is the laptop proof: hold `Ctrl+Shift+R`, speak, release, transcribe, and optionally paste through the same config path.
 
+`package-windows-agent.ps1` copies Swift runtime DLLs from the PATH directory containing `swiftCore.dll` into the artifact when available. If `manifest.txt` reports `swift_runtime_dlls=0`, install the Swift toolchain on the laptop or put the Swift runtime `usr\bin` directory on `PATH` before running the smoke script.
+
 Windows agent config:
 
 ```powershell
@@ -219,7 +221,7 @@ CI proof:
 - `.github/workflows/romacore.yml` builds `RomaCore` on macOS and Windows.
 - The Windows job verifies Visual Studio C++ tools, installs the official Swift toolchain with `winget install --id Swift.Toolchain`, then runs `windows-proof.ps1 -SkipMic`.
 - CI is noninteractive, so it proves Windows compilation, PowerShell parse validity, pre-roll/WAV output, shared cleanup/replacement/paste text processing, DPAPI secret round-trip, stored-key transcription against a local mock STT endpoint, reusable `RomaWindowsAgent` config writing, and hotkey/paste doctor paths. It does not prove real microphone permission, real hotkey delivery, or paste into Notepad.
-- CI also runs `package-windows-agent.ps1`, verifies the packaged `RomaWindowsAgent.exe` through `smoke-windows-agent.ps1`, and uploads a `roma-windows-agent` artifact for laptop smoke tests.
+- CI also runs `package-windows-agent.ps1`, copies Swift runtime DLLs when available, verifies the packaged `RomaWindowsAgent.exe` through `smoke-windows-agent.ps1`, and uploads a `roma-windows-agent` artifact for laptop smoke tests.
 
 Raw command sequence:
 

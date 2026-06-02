@@ -2,6 +2,7 @@
 
 ## v1.81 - Unreleased
 
+- Copied Swift runtime DLLs into the Windows agent artifact when the runtime is available on `PATH`.
 - Added a packaged Windows-agent smoke script for artifact-level doctor/config/dictation proof.
 - Added reusable Windows-agent configuration for endpoint/model/key and dictation defaults.
 - Added a thin `RomaWindowsAgent` entrypoint for Windows dictation through the shared `RomaCore` runtime.
