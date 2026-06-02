@@ -13,6 +13,7 @@ struct RomaCoreChecks {
         try checkWordReplacementProcessor()
         try checkWindowsHotKeyProofDescriptor()
         try checkWindowsLowLevelKeyboardHookProofDescriptor()
+        try await checkWindowsDictationRuntimeDescriptor()
         try checkWindowsClipboardPayloadIsCFUnicodeText()
         try checkWindowsDPAPISecretStoreContract()
         try checkTranscriptionRequestMetadata()
@@ -262,6 +263,30 @@ struct RomaCoreChecks {
                 throw CheckFailure("low-level hook keyup wait should be unsupported off Windows")
             } catch WindowsLowLevelKeyboardHookError.unsupported {
             }
+        }
+    }
+
+    private static func checkWindowsDictationRuntimeDescriptor() async throws {
+        guard !WindowsDictationRuntime.isRuntimeAvailable else { return }
+
+        let model = TranscriptionModelDescriptor(
+            name: "proof",
+            displayName: "Proof",
+            provider: .custom
+        )
+        let request = WindowsDictationRuntimeRequest(
+            outputURL: URL(fileURLWithPath: "/tmp/windows-runtime-proof.wav"),
+            model: model,
+            trigger: .toggle(recordSeconds: 0)
+        )
+
+        do {
+            _ = try await WindowsDictationRuntime.run(
+                request,
+                transcriptionService: FakeTranscriptionService()
+            )
+            throw CheckFailure("Windows dictation runtime should be unsupported off Windows")
+        } catch WindowsDictationRuntimeError.unsupported {
         }
     }
 

@@ -61,6 +61,7 @@ struct RomaProofAgent {
         print("openai_compatible_transcription_source=true")
         print("transcription_output_filter_source=true")
         print("word_replacement_processor_source=true")
+        print("windows_dictation_runtime_source=true")
         print("windows_dictation_proof_source=true")
     }
 
@@ -209,7 +210,6 @@ struct RomaProofAgent {
     }
 
     private static func runWindowsDictationProof(arguments: [String]) async throws {
-        #if os(Windows)
         let outputURL = URL(fileURLWithPath: try value(after: "--out", in: arguments))
         let seconds = try doubleValue(after: "--seconds", in: arguments, default: 2)
         let timeoutMilliseconds = UInt32(try doubleValue(after: "--timeout", in: arguments, default: 15) * 1_000)
@@ -219,9 +219,6 @@ struct RomaProofAgent {
         let shouldPaste = arguments.contains("--paste")
         let shouldUseHoldHook = arguments.contains("--hold-hook")
         let wordReplacements = try replacementRules(from: arguments)
-        let hotKey = WindowsHotKey.proofToggle
-        let chord = WindowsLowLevelKeyboardHookChord.proofHold
-        let recorder = MiniaudioCaptureRecorder()
         let service = try makeTranscriptionService(
             endpointText: endpointText,
             apiKeySource: apiKeySource
@@ -231,80 +228,60 @@ struct RomaProofAgent {
             displayName: modelName,
             provider: .custom
         )
-        let pipeline = DictationPipeline(
-            recorder: recorder,
-            transcriptionService: service,
-            textInsertion: shouldPaste ? WindowsClipboardTextInsertion() : nil
-        )
-        let request = DictationPipelineRequest(
-            outputURL: outputURL,
-            model: model,
-            language: optionalValue(after: "--language", in: arguments),
-            prompt: optionalValue(after: "--prompt", in: arguments),
-            shouldInsertTranscription: shouldPaste,
-            textProcessing: DictationTextProcessingConfiguration(
-                wordReplacements: wordReplacements
-            )
-        )
+        let trigger: WindowsDictationTrigger = shouldUseHoldHook
+            ? .hold(timeoutMilliseconds: timeoutMilliseconds)
+            : .toggle(recordSeconds: seconds)
+        print("recording_mode=\(shouldUseHoldHook ? "hold" : "toggle")")
 
-        do {
-            try await recorder.startPreRollBuffering()
-            print("pre_roll_buffering=true")
-
-            let result: DictationPipelineResult
-            if shouldUseHoldHook {
-                print("recording_mode=hold")
-                print("waiting_for_key_down=\(chord.displayName)")
-                _ = try WindowsLowLevelKeyboardHookProof.waitForKeyDown(
-                    chord: chord,
-                    timeoutMilliseconds: timeoutMilliseconds
-                )
-                print("hold_key_down=true")
-
-                result = try await pipeline.runRecordingWindow(request) {
-                    _ = try WindowsLowLevelKeyboardHookProof.waitForKeyUp(
-                        chord: chord,
-                        timeoutMilliseconds: timeoutMilliseconds
-                    )
-                    print("hold_key_up=true")
-                }
-            } else {
-                print("recording_mode=toggle")
-                print("waiting_for=\(hotKey.displayName)")
-                try WindowsRegisterHotKeyProof.waitForSingleTrigger(hotKey: hotKey)
+        let result = try await WindowsDictationRuntime.run(
+            WindowsDictationRuntimeRequest(
+                outputURL: outputURL,
+                model: model,
+                language: optionalValue(after: "--language", in: arguments),
+                prompt: optionalValue(after: "--prompt", in: arguments),
+                shouldPaste: shouldPaste,
+                textProcessing: DictationTextProcessingConfiguration(
+                    wordReplacements: wordReplacements
+                ),
+                trigger: trigger
+            ),
+            transcriptionService: service
+        ) { event in
+            switch event {
+            case .preRollBuffering:
+                print("pre_roll_buffering=true")
+            case .waitingForToggle(let displayName):
+                print("waiting_for=\(displayName)")
+            case .toggleReceived:
                 print("hotkey_received=true")
-
-                result = try await pipeline.runRecordingWindow(request) {
-                    try await sleep(seconds: seconds)
-                }
+            case .waitingForHoldKeyDown(let displayName):
+                print("waiting_for_key_down=\(displayName)")
+            case .holdKeyDown:
+                print("hold_key_down=true")
+            case .holdKeyUp:
+                print("hold_key_up=true")
             }
-            let audio = result.session.recordedAudio
-
-            print("wrote=\(audio.fileURL.path)")
-            print("duration_seconds=\(String(format: "%.3f", audio.durationSeconds ?? 0))")
-            print("included_pre_roll_seconds=\(audio.includedPreRollSeconds ?? 0)")
-            print("sample_rate=\(audio.format.sampleRate)")
-            print("channels=\(audio.format.channelCount)")
-            printTranscriptionResult(
-                result.transcription,
-                endpointText: endpointText,
-                modelName: modelName,
-                apiKeySource: apiKeySource,
-                audioURL: audio.fileURL
-            )
-            print("processed_transcript_length=\(result.processedText.count)")
-            print("processed_transcript_text=\(oneLine(result.processedText))")
-            print("word_replacements=\(wordReplacements.count)")
-
-            print("paste_sent=\(shouldPaste)")
-            print("paste_text_source=processed_transcript")
-        } catch {
-            await recorder.stopCapture()
-            throw error
         }
-        #else
-        throw AgentError.unsupportedPlatform("windows-dictation-proof requires Windows")
-        #endif
+        let audio = result.session.recordedAudio
+
+        print("wrote=\(audio.fileURL.path)")
+        print("duration_seconds=\(String(format: "%.3f", audio.durationSeconds ?? 0))")
+        print("included_pre_roll_seconds=\(audio.includedPreRollSeconds ?? 0)")
+        print("sample_rate=\(audio.format.sampleRate)")
+        print("channels=\(audio.format.channelCount)")
+        printTranscriptionResult(
+            result.transcription,
+            endpointText: endpointText,
+            modelName: modelName,
+            apiKeySource: apiKeySource,
+            audioURL: audio.fileURL
+        )
+        print("processed_transcript_length=\(result.processedText.count)")
+        print("processed_transcript_text=\(oneLine(result.processedText))")
+        print("word_replacements=\(wordReplacements.count)")
+
+        print("paste_sent=\(shouldPaste)")
+        print("paste_text_source=processed_transcript")
     }
 
     private static func runDictationPipelineProof(arguments: [String]) async throws {
