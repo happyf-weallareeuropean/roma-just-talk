@@ -57,6 +57,25 @@ struct TranscriptionOutputFilter {
         }
     }
 
+    private struct SpokenPunctuationCommand {
+        let pattern: String
+        let output: String
+        let blockedPreviousWords: Set<String>
+        let blockedNextWords: Set<String>
+
+        init(
+            pattern: String,
+            output: String,
+            blockedPreviousWords: Set<String> = [],
+            blockedNextWords: Set<String> = []
+        ) {
+            self.pattern = pattern
+            self.output = output
+            self.blockedPreviousWords = blockedPreviousWords
+            self.blockedNextWords = blockedNextWords
+        }
+    }
+
     private static let lowercaseTranscriptionKey = "LowercaseTranscription"
     private static let apostropheLikeCharacters = CharacterSet(charactersIn: "'’‘ʼ＇")
     private static let removableTrailingFragmentPunctuation = CharacterSet(charactersIn: ".,;:…")
@@ -109,6 +128,44 @@ struct TranscriptionOutputFilter {
         (#"(?i)(?<![\p{L}\p{N}])newline(?![\p{L}\p{N}])"#, "\n"),
         (#"(?i)(?<![\p{L}\p{N}])(?:new\s+bullet|bullet\s+point|bullet)(?![\p{L}\p{N}])"#, "\n- ")
     ]
+    private static let spokenPunctuationCommands = [
+        SpokenPunctuationCommand(
+            pattern: #"(?i)(?<![\p{L}\p{N}])question\s+mark(?![\p{L}\p{N}])"#,
+            output: "?"
+        ),
+        SpokenPunctuationCommand(
+            pattern: #"(?i)(?<![\p{L}\p{N}])exclamation\s+(?:mark|point)(?![\p{L}\p{N}])"#,
+            output: "!"
+        ),
+        SpokenPunctuationCommand(
+            pattern: #"(?i)(?<![\p{L}\p{N}])full\s+stop(?![\p{L}\p{N}])"#,
+            output: "."
+        ),
+        SpokenPunctuationCommand(
+            pattern: #"(?i)(?<![\p{L}\p{N}])period(?![\p{L}\p{N}])"#,
+            output: ".",
+            blockedPreviousWords: [
+                "billing", "class", "current", "grace", "historical",
+                "pay", "payback", "reporting", "retention", "school",
+                "time", "trial"
+            ],
+            blockedNextWords: ["drama", "of", "piece"]
+        ),
+        SpokenPunctuationCommand(
+            pattern: #"(?i)(?<![\p{L}\p{N}])comma(?![\p{L}\p{N}])"#,
+            output: ",",
+            blockedPreviousWords: ["oxford", "serial"],
+            blockedNextWords: ["operator", "separated"]
+        ),
+        SpokenPunctuationCommand(
+            pattern: #"(?i)(?<![\p{L}\p{N}])semicolon(?![\p{L}\p{N}])"#,
+            output: ";"
+        ),
+        SpokenPunctuationCommand(
+            pattern: #"(?i)(?<![\p{L}\p{N}])colon(?![\p{L}\p{N}])"#,
+            output: ":"
+        )
+    ]
 
     static func filter(_ text: String) -> String {
         var filteredText = unwrapBracketedWholeOutput(text)
@@ -135,6 +192,7 @@ struct TranscriptionOutputFilter {
 
         filteredText = applyBacktrackingCorrections(in: filteredText)
         filteredText = applySpokenFormattingCommands(in: filteredText)
+        filteredText = applySpokenPunctuationCommands(in: filteredText)
         filteredText = collapseAdjacentRepeatedWords(in: filteredText)
 
         // Clean whitespace
@@ -268,6 +326,118 @@ struct TranscriptionOutputFilter {
         }
 
         return normalizeSpokenFormattingSpacing(formattedText)
+    }
+
+    private static func applySpokenPunctuationCommands(in text: String) -> String {
+        var punctuatedText = text
+
+        for command in spokenPunctuationCommands {
+            guard let regex = try? NSRegularExpression(pattern: command.pattern) else {
+                continue
+            }
+
+            let fullRange = NSRange(punctuatedText.startIndex..., in: punctuatedText)
+            let matches = regex.matches(in: punctuatedText, range: fullRange).reversed()
+
+            for match in matches {
+                guard let range = Range(match.range, in: punctuatedText),
+                      shouldApplySpokenPunctuationCommand(command, in: punctuatedText, commandRange: range) else {
+                    continue
+                }
+
+                punctuatedText = replaceSpokenPunctuationCommand(command, in: punctuatedText, commandRange: range)
+            }
+        }
+
+        return normalizePunctuationSpacing(punctuatedText)
+    }
+
+    private static func shouldApplySpokenPunctuationCommand(
+        _ command: SpokenPunctuationCommand,
+        in text: String,
+        commandRange: Range<String.Index>
+    ) -> Bool {
+        let beforeCommand = String(text[..<commandRange.lowerBound])
+        let afterCommand = String(text[commandRange.upperBound...])
+
+        guard previousWord(in: beforeCommand) != nil else { return false }
+
+        if let previousWord = previousWord(in: beforeCommand),
+           command.blockedPreviousWords.contains(previousWord) {
+            return false
+        }
+
+        if let nextWord = nextWord(in: afterCommand),
+           command.blockedNextWords.contains(nextWord) {
+            return false
+        }
+
+        return true
+    }
+
+    private static func replaceSpokenPunctuationCommand(
+        _ command: SpokenPunctuationCommand,
+        in text: String,
+        commandRange: Range<String.Index>
+    ) -> String {
+        let prefix = String(text[..<commandRange.lowerBound])
+            .trimmingCharacters(in: .whitespacesAndNewlines)
+        let suffix = String(text[commandRange.upperBound...])
+            .trimmingCharacters(in: .whitespacesAndNewlines)
+
+        guard !suffix.isEmpty else {
+            return prefix + command.output
+        }
+
+        if let firstSuffixCharacter = suffix.first,
+           firstSuffixCharacter.isPunctuation || firstSuffixCharacter.isNewline {
+            return prefix + command.output + suffix
+        }
+
+        return "\(prefix)\(command.output) \(suffix)"
+    }
+
+    private static func normalizePunctuationSpacing(_ text: String) -> String {
+        text
+            .replacingOccurrences(of: #"\s+([,.;:!?])"#, with: "$1", options: .regularExpression)
+            .replacingOccurrences(of: #"([,.;:!?])([^\s,.;:!?\]\)}])"#, with: "$1 $2", options: .regularExpression)
+            .replacingOccurrences(of: #"\s+([)\]\}])"#, with: "$1", options: .regularExpression)
+    }
+
+    private static func previousWord(in text: String) -> String? {
+        let endIndex = indexBeforeTrailingNoise(in: text, from: text.endIndex)
+        guard endIndex > text.startIndex else { return nil }
+
+        var wordStart = endIndex
+        while wordStart > text.startIndex {
+            let previousIndex = text.index(before: wordStart)
+            guard isWordCharacter(text[previousIndex]) else { break }
+            wordStart = previousIndex
+        }
+
+        guard wordStart < endIndex else { return nil }
+        return String(text[wordStart..<endIndex]).lowercased()
+    }
+
+    private static func nextWord(in text: String) -> String? {
+        var index = text.startIndex
+        while index < text.endIndex {
+            let currentCharacter = text[index]
+            if currentCharacter.isWhitespace || character(currentCharacter, isIn: softPhrasePunctuation) {
+                index = text.index(after: index)
+                continue
+            }
+            break
+        }
+
+        guard index < text.endIndex else { return nil }
+        let wordStart = index
+        while index < text.endIndex, isWordCharacter(text[index]) {
+            index = text.index(after: index)
+        }
+
+        guard wordStart < index else { return nil }
+        return String(text[wordStart..<index]).lowercased()
     }
 
     private static func normalizeSpokenFormattingSpacing(_ text: String) -> String {

@@ -2,7 +2,7 @@
 
 ## v1.81 - Unreleased
 
-- Improved final dictation cleanup for mid-sentence fragments, stray bracket wrappers, pause sounds, repeated words, obvious self-corrections, and spoken line/paragraph/bullet commands.
+- Improved final dictation cleanup for mid-sentence fragments, stray bracket wrappers, pause sounds, repeated words, obvious self-corrections, and spoken formatting/punctuation commands.
 
 ## v1.80 - 2026-06-01
 

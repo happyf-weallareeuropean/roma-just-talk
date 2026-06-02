@@ -175,6 +175,15 @@ struct VoiceInkTests {
         #expect(TranscriptionOutputFilter.filter("This newlineish word should stay.") == "This newlineish word should stay.")
     }
 
+    @Test func transcriptionFilterAppliesConservativeSpokenPunctuationCommands() async throws {
+        #expect(TranscriptionOutputFilter.filter("Hello comma world full stop") == "Hello, world.")
+        #expect(TranscriptionOutputFilter.filter("Are you coming question mark") == "Are you coming?")
+        #expect(TranscriptionOutputFilter.filter("Ship it exclamation mark") == "Ship it!")
+        #expect(TranscriptionOutputFilter.filter("Use model semicolon retry colon now") == "Use model; retry: now")
+        #expect(TranscriptionOutputFilter.filter("This is a trial period") == "This is a trial period")
+        #expect(TranscriptionOutputFilter.filter("Use the Oxford comma") == "Use the Oxford comma")
+    }
+
     @Test func modifierOnlyShortcutsUseNSEventMonitorPath() async throws {
         let monitor = ShortcutMonitor()
         var keyDownCount = 0
