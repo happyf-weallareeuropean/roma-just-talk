@@ -86,6 +86,22 @@ struct TranscriptionOutputFilterTests {
         #expect(TranscriptionOutputFilter.applyInsertionPolish("VoiceInk.", context: nil) == "VoiceInk")
     }
 
+    @Test func insertionContextUsesAccessibilityUTF16Offsets() async throws {
+        let prefix = "Say 😄 so this"
+        let fullText = "\(prefix) model"
+        let selectedRange = CFRange(location: prefix.utf16.count, length: 0)
+
+        let context = TranscriptionOutputFilter.insertionContext(
+            fromFullText: fullText,
+            selectedRange: selectedRange,
+            selectedText: nil
+        )
+
+        #expect(context.precedingText == prefix)
+        #expect(TranscriptionOutputFilter.applyInsertionPolish("Model.", context: context) == "model")
+        #expect(TranscriptionOutputFilter.applyInsertionSpacing("model", context: context) == " model")
+    }
+
     @Test func transcriptionFilterRespectsCleanupLevels() async throws {
         let oldRemoveFillerWords = UserDefaults.standard.object(forKey: "RemoveFillerWords")
         let oldCleanupLevel = UserDefaults.standard.object(forKey: TranscriptionCleanupLevel.userDefaultsKey)

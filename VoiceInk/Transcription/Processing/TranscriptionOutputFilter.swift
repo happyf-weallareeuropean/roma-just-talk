@@ -210,13 +210,14 @@ struct TranscriptionOutputFilter {
         return prefixValue as? String
     }
 
-    private static func insertionContext(
+    static func insertionContext(
         fromFullText fullText: String,
         selectedRange: CFRange,
         selectedText: String?
     ) -> TextInsertionContext {
-        let cursorOffset = max(0, min(selectedRange.location, fullText.count))
-        let cursorIndex = fullText.index(fullText.startIndex, offsetBy: cursorOffset)
+        let cursorOffset = max(0, min(selectedRange.location, fullText.utf16.count))
+        let utf16Index = fullText.utf16.index(fullText.utf16.startIndex, offsetBy: cursorOffset)
+        let cursorIndex = String.Index(utf16Index, within: fullText) ?? fullText.endIndex
         return TextInsertionContext(
             precedingText: String(fullText[..<cursorIndex]),
             selectedText: selectedText
