@@ -14,6 +14,7 @@
 - Added guarded spoken Markdown formatting for headings, task checkboxes, and code fences.
 - Added guarded spoken Markdown formatting for inline code and links.
 - Tightened spoken inline-code formatting so trailing prose stays outside backticks.
+- Tightened spoken Markdown link formatting so trailing prose stays outside links.
 - Added guarded spoken code-case formatting for camelCase, snake_case, kebab-case, and PascalCase identifiers.
 - Tightened spoken code-case formatting so trailing prose stays outside identifiers.
 - Added guarded spoken slash, backslash, dash, hyphen, at sign, dot, and underscore formatting commands.

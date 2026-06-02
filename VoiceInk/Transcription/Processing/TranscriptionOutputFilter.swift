@@ -177,7 +177,7 @@ struct TranscriptionOutputFilter {
     private static let uncheckedMarkdownTaskPattern = #"(?im)(^|\n)[ \t]*(?:todo|to[ \t]+do|checkbox|check[ \t]+box|unchecked[ \t]+(?:task|checkbox|check[ \t]+box))[ \t]+([^\n]+)"#
     private static let checkedMarkdownTaskPattern = #"(?im)(^|\n)[ \t]*(?:(?:checked|done|completed)[ \t]+(?:task|checkbox|check[ \t]+box))[ \t]+([^\n]+)"#
     private static let inlineCodePattern = #"(?i)(?<![\p{L}\p{N}])inline[ \t]+code[ \t]+((?:(?!for\b|from\b|in\b|into\b|on\b|to\b|with\b)[\p{L}\p{N}_./@:+#-]+[ \t]*){1,4})([.!?])?(?=\s+(?:for|from|in|into|on|to|with)\b|\s|$)"#
-    private static let markdownLinkPattern = #"(?im)(^|\n)[ \t]*(?:markdown[ \t]+)?link[ \t]+([^\n]{1,80}?)[ \t]+to[ \t]+([^ \t\n]+)[ \t]*[.!?]?(?=\n|$)"#
+    private static let markdownLinkPattern = #"(?im)(^|\n)[ \t]*(?:markdown[ \t]+)?link[ \t]+([^\n]{1,80}?)[ \t]+to[ \t]+([^ \t\n]+)([ \t]+(?:for|from|in|into|on|to|with)\b[^\n.!?]*)?[ \t]*([.!?])?(?=\n|$)"#
     private static let openCodeBlockPattern = #"(?im)(^|\n)[ \t]*(?:open|start)[ \t]+code[ \t]+block(?:[ \t]+([A-Za-z0-9_+#.-]+))?[ \t]*(?=\n|$)"#
     private static let closeCodeBlockPattern = #"(?im)(^|\n)[ \t]*(?:close|end)[ \t]+code[ \t]+block[ \t]*(?=\n|$)"#
     private static let spokenSchemeURLPattern = #"(?i)(?<![\p{L}\p{N}])((?:h[ \t]+t[ \t]+t[ \t]+p[ \t]+s?)|https?)[ \t]*(?:colon|:)[ \t]+(?:slash[ \t]+slash|forward[ \t]+slash[ \t]+forward[ \t]+slash)[ \t]+((?:(?:[A-Za-z0-9-]+[ \t]+dot[ \t]+)+(?:ai|app|co|com|dev|edu|gov|io|net|org)(?:(?:[ \t]+(?:slash|forward[ \t]+slash)[ \t]+[A-Za-z0-9_-]+)+)?)|(?:localhost(?:[ \t]+colon[ \t]+\d{1,5})?(?:(?:[ \t]+(?:slash|forward[ \t]+slash)[ \t]+[A-Za-z0-9_-]+)+)?))([.!?])?(?=\s|$|\n)"#
@@ -1559,7 +1559,7 @@ struct TranscriptionOutputFilter {
         let matches = regex.matches(in: formattedText, range: NSRange(formattedText.startIndex..., in: formattedText))
 
         for match in matches.reversed() {
-            guard match.numberOfRanges >= 4,
+            guard match.numberOfRanges >= 6,
                   let fullRange = Range(match.range(at: 0), in: formattedText),
                   let prefixRange = Range(match.range(at: 1), in: formattedText),
                   let labelRange = Range(match.range(at: 2), in: formattedText),
@@ -1576,7 +1576,10 @@ struct TranscriptionOutputFilter {
             }
 
             let prefix = String(formattedText[prefixRange])
-            formattedText.replaceSubrange(fullRange, with: "\(prefix)[\(label)](\(target))")
+            let suffix = optionalMatchText(in: formattedText, match: match, rangeIndex: 4) ?? ""
+            let terminalPunctuation = optionalMatchText(in: formattedText, match: match, rangeIndex: 5) ?? ""
+            let trailingText = suffix.isEmpty ? "" : "\(suffix)\(terminalPunctuation)"
+            formattedText.replaceSubrange(fullRange, with: "\(prefix)[\(label)](\(target))\(trailingText)")
         }
 
         return formattedText

@@ -98,6 +98,8 @@ struct TranscriptionOutputFilterTests {
         #expect(TranscriptionOutputFilter.filter("Write inline code api slash users for the example.") == "Write `api/users` for the example.")
         #expect(TranscriptionOutputFilter.filter("Link docs to docs dot example dot com.") == "[docs](docs.example.com)")
         #expect(TranscriptionOutputFilter.filter("Markdown link VoiceInk docs to docs dot example dot com slash api.") == "[VoiceInk docs](docs.example.com/api)")
+        #expect(TranscriptionOutputFilter.filter("Link docs to docs dot example dot com in the readme.") == "[docs](docs.example.com) in the readme.")
+        #expect(TranscriptionOutputFilter.filter("Markdown link VoiceInk docs to docs dot example dot com slash api for the issue.") == "[VoiceInk docs](docs.example.com/api) for the issue.")
         #expect(TranscriptionOutputFilter.filter("Open code block swift new line let x equals one new line close code block") == "```swift\nlet x equals one\n```")
         #expect(TranscriptionOutputFilter.filter("Task force meeting.") == "Task force meeting.")
         #expect(TranscriptionOutputFilter.filter("Heading one is common.") == "Heading one is common.")
