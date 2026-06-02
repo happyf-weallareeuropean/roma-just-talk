@@ -5,6 +5,7 @@
 - Removed guarded unpunctuated "like" fillers such as "I was like going" while preserving meaningful uses.
 - Removed terminal discourse fillers such as "you know" and "you know what I mean" when they are throwaway speech tails, while preserving meaningful uses.
 - Fixed cursor-context fallback around emoji and non-ASCII text so insertion cleanup still lowercases and spaces mid-sentence dictation correctly.
+- Asserted the generated Windows agent JSON config during packaged smoke tests.
 - Made Windows text clipboard restore configurable through the agent config, launcher, and smoke scripts.
 - Restored the previous text clipboard after Windows paste proof sessions when the clipboard still contains the dictated text.
 - Report the actual captured pre-roll duration in the Windows miniaudio recorder instead of the configured maximum.

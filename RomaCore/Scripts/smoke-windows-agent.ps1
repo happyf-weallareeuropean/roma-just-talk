@@ -72,6 +72,28 @@ function Assert-NonEmptyFile {
     Write-Host "bytes=$($item.Length)"
 }
 
+function Assert-JsonPropertyEquals {
+    param(
+        [Parameter(Mandatory = $true)]
+        [object]$Object,
+        [Parameter(Mandatory = $true)]
+        [string]$Name,
+        [Parameter(Mandatory = $true)]
+        [object]$Expected
+    )
+
+    if (!($Object.PSObject.Properties.Name -contains $Name)) {
+        throw "Expected JSON property '$Name' was not found"
+    }
+
+    $actual = $Object.$Name
+    if ($actual -ne $Expected) {
+        throw "Expected JSON property '$Name' to equal '$Expected', got '$actual'"
+    }
+
+    Write-Host "asserted_json=$Name"
+}
+
 function Assert-WavFileWithBytes {
     param(
         [Parameter(Mandatory = $true)]
@@ -247,6 +269,27 @@ Invoke-Step "agent config" {
     Assert-OutputContains -Output $configOutput -Expected "restore_clipboard_after_paste="
     Assert-OutputContains -Output $configOutput -Expected "clipboard_restore_delay_seconds="
     Assert-NonEmptyFile -Path $ConfigPath
+
+    $configJson = Get-Content -LiteralPath $ConfigPath -Raw | ConvertFrom-Json
+    Assert-JsonPropertyEquals -Object $configJson -Name "endpoint" -Expected $Endpoint
+    Assert-JsonPropertyEquals -Object $configJson -Name "model" -Expected $Model
+    Assert-JsonPropertyEquals -Object $configJson -Name "outputPath" -Expected $dictationOutput
+    Assert-JsonPropertyEquals -Object $configJson -Name "usesHoldHook" -Expected $shouldUseHoldHook
+    if ($PasteDictation) {
+        Assert-JsonPropertyEquals -Object $configJson -Name "shouldPaste" -Expected $true
+    }
+    if ($RestoreClipboard) {
+        Assert-JsonPropertyEquals -Object $configJson -Name "restoreClipboardAfterPaste" -Expected $true
+    }
+    if ($NoRestoreClipboard) {
+        Assert-JsonPropertyEquals -Object $configJson -Name "restoreClipboardAfterPaste" -Expected $false
+    }
+    if ($PSBoundParameters.ContainsKey("ClipboardRestoreDelaySeconds")) {
+        Assert-JsonPropertyEquals `
+            -Object $configJson `
+            -Name "clipboardRestoreDelaySeconds" `
+            -Expected $ClipboardRestoreDelaySeconds
+    }
 }
 
 if ($RunDictation) {
