@@ -25,6 +25,7 @@
 - Added guarded spoken code-case formatting for camelCase, snake_case, kebab-case, and PascalCase identifiers.
 - Tightened spoken code-case formatting so trailing prose stays outside identifiers.
 - Added guarded spoken slash, backslash, dash, hyphen, at sign, dot, and underscore formatting commands.
+- Added guarded spoken contraction cleanup such as "can apostrophe t" into "can't".
 - Added guarded spoken URL cleanup for "https colon slash slash" and "www dot" dictation.
 - Tightened spoken URL cleanup so trailing prose after a domain stays outside the URL.
 - Added guarded date, time, currency, and percent cleanup for natural dictation.

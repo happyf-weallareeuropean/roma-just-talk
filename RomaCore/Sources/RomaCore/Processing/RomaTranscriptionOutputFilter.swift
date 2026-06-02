@@ -111,6 +111,11 @@ public struct RomaTranscriptionOutputFilter {
         }
     }
 
+    private struct SpokenContractionCommand {
+        let pattern: String
+        let replacement: String
+    }
+
     private enum SpokenCodeCaseStyle {
         case camel
         case snake
@@ -296,6 +301,54 @@ public struct RomaTranscriptionOutputFilter {
             blockedNextWords: ["of"]
         )
     ]
+    private static let spokenContractionCommands = [
+        SpokenContractionCommand(pattern: #"(?i)(?<![\p{L}\p{N}])can\s+apostrophe\s+t(?![\p{L}\p{N}])"#, replacement: "can't"),
+        SpokenContractionCommand(pattern: #"(?i)(?<![\p{L}\p{N}])don\s+apostrophe\s+t(?![\p{L}\p{N}])"#, replacement: "don't"),
+        SpokenContractionCommand(pattern: #"(?i)(?<![\p{L}\p{N}])won\s+apostrophe\s+t(?![\p{L}\p{N}])"#, replacement: "won't"),
+        SpokenContractionCommand(pattern: #"(?i)(?<![\p{L}\p{N}])doesn\s+apostrophe\s+t(?![\p{L}\p{N}])"#, replacement: "doesn't"),
+        SpokenContractionCommand(pattern: #"(?i)(?<![\p{L}\p{N}])didn\s+apostrophe\s+t(?![\p{L}\p{N}])"#, replacement: "didn't"),
+        SpokenContractionCommand(pattern: #"(?i)(?<![\p{L}\p{N}])isn\s+apostrophe\s+t(?![\p{L}\p{N}])"#, replacement: "isn't"),
+        SpokenContractionCommand(pattern: #"(?i)(?<![\p{L}\p{N}])aren\s+apostrophe\s+t(?![\p{L}\p{N}])"#, replacement: "aren't"),
+        SpokenContractionCommand(pattern: #"(?i)(?<![\p{L}\p{N}])wasn\s+apostrophe\s+t(?![\p{L}\p{N}])"#, replacement: "wasn't"),
+        SpokenContractionCommand(pattern: #"(?i)(?<![\p{L}\p{N}])weren\s+apostrophe\s+t(?![\p{L}\p{N}])"#, replacement: "weren't"),
+        SpokenContractionCommand(pattern: #"(?i)(?<![\p{L}\p{N}])hasn\s+apostrophe\s+t(?![\p{L}\p{N}])"#, replacement: "hasn't"),
+        SpokenContractionCommand(pattern: #"(?i)(?<![\p{L}\p{N}])haven\s+apostrophe\s+t(?![\p{L}\p{N}])"#, replacement: "haven't"),
+        SpokenContractionCommand(pattern: #"(?i)(?<![\p{L}\p{N}])hadn\s+apostrophe\s+t(?![\p{L}\p{N}])"#, replacement: "hadn't"),
+        SpokenContractionCommand(pattern: #"(?i)(?<![\p{L}\p{N}])shouldn\s+apostrophe\s+t(?![\p{L}\p{N}])"#, replacement: "shouldn't"),
+        SpokenContractionCommand(pattern: #"(?i)(?<![\p{L}\p{N}])wouldn\s+apostrophe\s+t(?![\p{L}\p{N}])"#, replacement: "wouldn't"),
+        SpokenContractionCommand(pattern: #"(?i)(?<![\p{L}\p{N}])couldn\s+apostrophe\s+t(?![\p{L}\p{N}])"#, replacement: "couldn't"),
+        SpokenContractionCommand(pattern: #"(?i)(?<![\p{L}\p{N}])I\s+apostrophe\s+m(?![\p{L}\p{N}])"#, replacement: "I'm"),
+        SpokenContractionCommand(pattern: #"(?i)(?<![\p{L}\p{N}])I\s+apostrophe\s+ve(?![\p{L}\p{N}])"#, replacement: "I've"),
+        SpokenContractionCommand(pattern: #"(?i)(?<![\p{L}\p{N}])I\s+apostrophe\s+ll(?![\p{L}\p{N}])"#, replacement: "I'll"),
+        SpokenContractionCommand(pattern: #"(?i)(?<![\p{L}\p{N}])I\s+apostrophe\s+d(?![\p{L}\p{N}])"#, replacement: "I'd"),
+        SpokenContractionCommand(pattern: #"(?i)(?<![\p{L}\p{N}])we\s+apostrophe\s+re(?![\p{L}\p{N}])"#, replacement: "we're"),
+        SpokenContractionCommand(pattern: #"(?i)(?<![\p{L}\p{N}])you\s+apostrophe\s+re(?![\p{L}\p{N}])"#, replacement: "you're"),
+        SpokenContractionCommand(pattern: #"(?i)(?<![\p{L}\p{N}])they\s+apostrophe\s+re(?![\p{L}\p{N}])"#, replacement: "they're"),
+        SpokenContractionCommand(pattern: #"(?i)(?<![\p{L}\p{N}])we\s+apostrophe\s+ve(?![\p{L}\p{N}])"#, replacement: "we've"),
+        SpokenContractionCommand(pattern: #"(?i)(?<![\p{L}\p{N}])you\s+apostrophe\s+ve(?![\p{L}\p{N}])"#, replacement: "you've"),
+        SpokenContractionCommand(pattern: #"(?i)(?<![\p{L}\p{N}])they\s+apostrophe\s+ve(?![\p{L}\p{N}])"#, replacement: "they've"),
+        SpokenContractionCommand(pattern: #"(?i)(?<![\p{L}\p{N}])we\s+apostrophe\s+ll(?![\p{L}\p{N}])"#, replacement: "we'll"),
+        SpokenContractionCommand(pattern: #"(?i)(?<![\p{L}\p{N}])you\s+apostrophe\s+ll(?![\p{L}\p{N}])"#, replacement: "you'll"),
+        SpokenContractionCommand(pattern: #"(?i)(?<![\p{L}\p{N}])they\s+apostrophe\s+ll(?![\p{L}\p{N}])"#, replacement: "they'll"),
+        SpokenContractionCommand(pattern: #"(?i)(?<![\p{L}\p{N}])we\s+apostrophe\s+d(?![\p{L}\p{N}])"#, replacement: "we'd"),
+        SpokenContractionCommand(pattern: #"(?i)(?<![\p{L}\p{N}])you\s+apostrophe\s+d(?![\p{L}\p{N}])"#, replacement: "you'd"),
+        SpokenContractionCommand(pattern: #"(?i)(?<![\p{L}\p{N}])they\s+apostrophe\s+d(?![\p{L}\p{N}])"#, replacement: "they'd"),
+        SpokenContractionCommand(pattern: #"(?i)(?<![\p{L}\p{N}])he\s+apostrophe\s+s(?![\p{L}\p{N}])"#, replacement: "he's"),
+        SpokenContractionCommand(pattern: #"(?i)(?<![\p{L}\p{N}])he\s+apostrophe\s+ll(?![\p{L}\p{N}])"#, replacement: "he'll"),
+        SpokenContractionCommand(pattern: #"(?i)(?<![\p{L}\p{N}])he\s+apostrophe\s+d(?![\p{L}\p{N}])"#, replacement: "he'd"),
+        SpokenContractionCommand(pattern: #"(?i)(?<![\p{L}\p{N}])she\s+apostrophe\s+s(?![\p{L}\p{N}])"#, replacement: "she's"),
+        SpokenContractionCommand(pattern: #"(?i)(?<![\p{L}\p{N}])she\s+apostrophe\s+ll(?![\p{L}\p{N}])"#, replacement: "she'll"),
+        SpokenContractionCommand(pattern: #"(?i)(?<![\p{L}\p{N}])she\s+apostrophe\s+d(?![\p{L}\p{N}])"#, replacement: "she'd"),
+        SpokenContractionCommand(pattern: #"(?i)(?<![\p{L}\p{N}])it\s+apostrophe\s+s(?![\p{L}\p{N}])"#, replacement: "it's"),
+        SpokenContractionCommand(pattern: #"(?i)(?<![\p{L}\p{N}])it\s+apostrophe\s+ll(?![\p{L}\p{N}])"#, replacement: "it'll"),
+        SpokenContractionCommand(pattern: #"(?i)(?<![\p{L}\p{N}])it\s+apostrophe\s+d(?![\p{L}\p{N}])"#, replacement: "it'd"),
+        SpokenContractionCommand(pattern: #"(?i)(?<![\p{L}\p{N}])that\s+apostrophe\s+s(?![\p{L}\p{N}])"#, replacement: "that's"),
+        SpokenContractionCommand(pattern: #"(?i)(?<![\p{L}\p{N}])what\s+apostrophe\s+s(?![\p{L}\p{N}])"#, replacement: "what's"),
+        SpokenContractionCommand(pattern: #"(?i)(?<![\p{L}\p{N}])who\s+apostrophe\s+s(?![\p{L}\p{N}])"#, replacement: "who's"),
+        SpokenContractionCommand(pattern: #"(?i)(?<![\p{L}\p{N}])where\s+apostrophe\s+s(?![\p{L}\p{N}])"#, replacement: "where's"),
+        SpokenContractionCommand(pattern: #"(?i)(?<![\p{L}\p{N}])when\s+apostrophe\s+s(?![\p{L}\p{N}])"#, replacement: "when's"),
+        SpokenContractionCommand(pattern: #"(?i)(?<![\p{L}\p{N}])let\s+apostrophe\s+s(?![\p{L}\p{N}])"#, replacement: "let's")
+    ]
     private static let spokenCodeCaseCommands = [
         SpokenCodeCaseCommand(
             pattern: #"(?i)(?<![\p{L}\p{N}])camel\s*case\s+((?:(?!for\b|from\b|in\b|into\b|on\b|to\b|with\b)[\p{L}\p{N}]+\s*){1,5})(?=\s+(?:for|from|in|into|on|to|with)\b|[.!?,;:]|$)"#,
@@ -401,6 +454,7 @@ public struct RomaTranscriptionOutputFilter {
         filteredText = applySpokenPunctuationCommands(in: filteredText)
         filteredText = formatInlineNumberedLists(in: filteredText)
         filteredText = applySpokenSymbolCommands(in: filteredText)
+        filteredText = applySpokenContractionCommands(in: filteredText)
         filteredText = applySpokenCodeCaseCommands(in: filteredText)
         filteredText = applySpokenMarkdownCommands(in: filteredText)
         if cleanupLevel == .polished {
@@ -656,6 +710,43 @@ public struct RomaTranscriptionOutputFilter {
         }
 
         return symbolizedText
+    }
+
+    private static func applySpokenContractionCommands(in text: String) -> String {
+        var contractedText = text
+
+        for command in spokenContractionCommands {
+            guard let regex = try? NSRegularExpression(pattern: command.pattern) else {
+                continue
+            }
+
+            let fullRange = NSRange(contractedText.startIndex..., in: contractedText)
+            let matches = regex.matches(in: contractedText, range: fullRange).reversed()
+
+            for match in matches {
+                guard let range = Range(match.range, in: contractedText) else {
+                    continue
+                }
+
+                let matchedText = String(contractedText[range])
+                let replacement = spokenContractionReplacement(command.replacement, matchedText: matchedText)
+                contractedText.replaceSubrange(range, with: replacement)
+            }
+        }
+
+        return contractedText
+    }
+
+    private static func spokenContractionReplacement(_ replacement: String, matchedText: String) -> String {
+        if replacement.first == "I" {
+            return replacement
+        }
+
+        guard matchedText.first?.isUppercase == true else {
+            return replacement
+        }
+
+        return replacement.prefix(1).uppercased() + String(replacement.dropFirst())
     }
 
     private static func shouldApplySpokenSymbolCommand(

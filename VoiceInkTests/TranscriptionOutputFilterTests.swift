@@ -106,9 +106,11 @@ struct TranscriptionOutputFilterTests {
 
         TranscriptionCleanupLevel.setCurrent(.raw)
         #expect(TranscriptionOutputFilter.filter("hmm... Hello comma world. Hello comma world.") == "hmm... Hello comma world. Hello comma world.")
+        #expect(TranscriptionOutputFilter.filter("I can apostrophe t go.") == "I can apostrophe t go.")
 
         TranscriptionCleanupLevel.setCurrent(.light)
         #expect(TranscriptionOutputFilter.filter("hmm... Hello comma world.") == "hmm... Hello, world.")
+        #expect(TranscriptionOutputFilter.filter("I can apostrophe t go.") == "I can't go.")
         #expect(TranscriptionOutputFilter.filter("Let's meet at two, wait no, three.") == "Let's meet at two, wait no, three.")
         #expect(TranscriptionOutputFilter.filter("I think I think this works.") == "I think I think this works.")
         #expect(TranscriptionOutputFilter.filter("I think this works, I think this works.") == "I think this works, I think this works.")
@@ -195,6 +197,19 @@ struct TranscriptionOutputFilterTests {
         #expect(TranscriptionOutputFilter.filter("Use the underscore command.") == "Use the underscore command.")
         #expect(TranscriptionOutputFilter.filter("We discussed http colon syntax today.") == "We discussed http colon syntax today.")
         #expect(TranscriptionOutputFilter.filter("Say www dot matrix is old.") == "Say www dot matrix is old.")
+    }
+
+    @Test func transcriptionFilterAppliesGuardedSpokenContractions() async throws {
+        TranscriptionCleanupLevel.setCurrent(.polished)
+        #expect(TranscriptionOutputFilter.filter("I can apostrophe t go.") == "I can't go.")
+        #expect(TranscriptionOutputFilter.filter("I don apostrophe t know.") == "I don't know.")
+        #expect(TranscriptionOutputFilter.filter("I apostrophe m ready.") == "I'm ready.")
+        #expect(TranscriptionOutputFilter.filter("We apostrophe re live.") == "We're live.")
+        #expect(TranscriptionOutputFilter.filter("They apostrophe ve shipped.") == "They've shipped.")
+        #expect(TranscriptionOutputFilter.filter("It apostrophe s ready.") == "It's ready.")
+        #expect(TranscriptionOutputFilter.filter("She apostrophe ll approve.") == "She'll approve.")
+        #expect(TranscriptionOutputFilter.filter("Let apostrophe s ship.") == "Let's ship.")
+        #expect(TranscriptionOutputFilter.filter("The word apostrophe is here.") == "The word apostrophe is here.")
     }
 
     @Test func transcriptionFilterAppliesGuardedCodeCaseCommands() async throws {
