@@ -207,8 +207,12 @@ public struct RomaTranscriptionOutputFilter {
             sorry\s+not\s+that\s*[,;:]?\s+actually |
             scratch\s+that |
             wait\s+no |
+            never\s*mind |
+            nevermind |
             sorry\s+not\s+that |
             sorry\s+no |
+            no\s*[,;:]?\s+sorry |
+            or\s+rather |
             i\s+mean
         )
         \s*[,;:]?\s+

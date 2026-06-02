@@ -77,8 +77,12 @@ struct TranscriptionOutputFilterTests {
         #expect(TranscriptionOutputFilter.filter("The meeting is on Tuesday, sorry not that, actually Wednesday.") == "The meeting is on Wednesday.")
         #expect(TranscriptionOutputFilter.filter("Use model wait no models.") == "Use models.")
         #expect(TranscriptionOutputFilter.filter("Let's meet at two... actually three.") == "Let's meet at three.")
+        #expect(TranscriptionOutputFilter.filter("Let's meet at two, never mind, three.") == "Let's meet at three.")
+        #expect(TranscriptionOutputFilter.filter("Use model or rather models.") == "Use models.")
+        #expect(TranscriptionOutputFilter.filter("Use model, no sorry, module.") == "Use module.")
         #expect(TranscriptionOutputFilter.filter("I actually think this works.") == "I actually think this works.")
         #expect(TranscriptionOutputFilter.filter("I mean this is wrong wait no right.") == "I mean this is right.")
+        #expect(TranscriptionOutputFilter.filter("Never mind what I said.") == "Never mind what I said.")
     }
 
     @Test func transcriptionFilterAppliesSpokenFormattingCommands() async throws {

@@ -6,6 +6,7 @@
 - Improved cleanup for hyphenated pause sounds such as "mm-hmm" and "uh-huh".
 - Removed punctuated discourse fillers such as ", like," and ", you know." without dropping meaningful uses.
 - Collapsed obvious repeated short sentences from dictated output.
+- Expanded bounded self-correction cleanup for "never mind", "no sorry", and "or rather" corrections.
 - Added spoken quote and parenthesis formatting commands.
 - Added spoken square bracket and brace formatting commands.
 - Preserved dictated quote and parenthesis fragments through final insertion cleanup.
