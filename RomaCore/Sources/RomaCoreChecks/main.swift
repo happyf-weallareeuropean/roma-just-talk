@@ -10,6 +10,7 @@ struct RomaCoreChecks {
         try checkMiniaudioRecorderUsesSpeechPCMContract()
         try checkOpenAICompatibleMultipartBody()
         try checkTranscriptionOutputFilter()
+        try checkPostSTTCleanupTortureCorpus()
         try checkWordReplacementProcessor()
         try checkCommandLineOptions()
         try checkWindowsAgentConfiguration()
@@ -185,6 +186,120 @@ struct RomaCoreChecks {
                 shouldLowercase: true
             ) == "model",
             "shared cleanup preferences should remove a trailing period and lowercase"
+        )
+    }
+
+    private static func checkPostSTTCleanupTortureCorpus() throws {
+        let filterCases: [(input: String, expected: String, note: String)] = [
+            (
+                "hmm.... eh... I I think think this this works.",
+                "I think this works.",
+                "pause noise and repeated words"
+            ),
+            (
+                "mm-hmm... uh-huh, I think so.",
+                "I think so.",
+                "hyphenated pause sounds"
+            ),
+            (
+                "I think this works. I think this works.",
+                "I think this works.",
+                "duplicate short sentence"
+            ),
+            (
+                "We should ship we should ship this.",
+                "We should ship this.",
+                "repeated short phrase"
+            ),
+            (
+                "Let's meet at two, wait no, three.",
+                "Let's meet at three.",
+                "wait no correction"
+            ),
+            (
+                "Use model replace that with module.",
+                "Use module.",
+                "replace that with correction"
+            ),
+            (
+                "Wrong phrase scratch that. Right phrase.",
+                "Right phrase.",
+                "scratch that correction"
+            ),
+            (
+                "Open quote hello comma world close quote.",
+                "\"hello, world\".",
+                "spoken enclosure and punctuation"
+            ),
+            (
+                "Use api slash users.",
+                "Use api/users.",
+                "spoken slash command"
+            ),
+            (
+                "Open https colon slash slash docs dot example dot com slash api.",
+                "Open https://docs.example.com/api",
+                "spoken URL command"
+            ),
+            (
+                "I can apostrophe t go.",
+                "I can't go.",
+                "spoken contraction"
+            ),
+            (
+                "Felix apostrophe s laptop is ready.",
+                "Felix's laptop is ready.",
+                "spoken possessive"
+            ),
+            (
+                "The phrase replace that with is useful.",
+                "The phrase replace that with is useful.",
+                "replace command prose guard"
+            ),
+            (
+                "New York New York is the title.",
+                "New York New York is the title.",
+                "intentional repeated phrase guard"
+            )
+        ]
+
+        for testCase in filterCases {
+            let output = RomaTranscriptionOutputFilter.filter(testCase.input, removesFillerWords: true)
+            try require(
+                output == testCase.expected,
+                "post-STT cleanup corpus failed \(testCase.note); output=\(output)"
+            )
+        }
+
+        try require(
+            RomaTranscriptionOutputFilter.filter(
+                "hmm... Hello comma world. Hello comma world.",
+                cleanupLevel: .raw,
+                removesFillerWords: true
+            ) == "hmm... Hello comma world. Hello comma world.",
+            "raw cleanup should preserve fillers and spoken commands"
+        )
+        try require(
+            RomaTranscriptionOutputFilter.filter(
+                "Wrong phrase scratch that. Right phrase.",
+                cleanupLevel: .light,
+                removesFillerWords: true
+            ) == "Wrong phrase scratch that. Right phrase.",
+            "light cleanup should preserve backtracking erase commands"
+        )
+
+        let midSentenceContext = RomaTranscriptionOutputFilter.TextInsertionContext(precedingText: "...so this")
+        try require(
+            RomaTranscriptionOutputFilter.applyInsertionPolish("Model.", context: midSentenceContext) == "model",
+            "insertion polish should lowercase final mid-sentence word"
+        )
+        try require(
+            RomaTranscriptionOutputFilter.applyInsertionPolish("[Model.]", context: nil) == "model",
+            "insertion polish should unwrap bracketed final fragments"
+        )
+        try require(
+            RomaTranscriptionOutputFilter.applyInsertionPolish("Question mark.", context: midSentenceContext) == "?",
+            "insertion polish should attach standalone punctuation commands"
         )
     }
 
