@@ -745,7 +745,18 @@ public struct RomaTranscriptionOutputFilter {
         let normalizedText = text
             .trimmingCharacters(in: CharacterSet(charactersIn: ".!?,;:… ").union(.whitespacesAndNewlines))
             .lowercased()
-        return nonSpeechBracketContents.contains(normalizedText)
+        return nonSpeechBracketContents.contains(normalizedText) || isTranscriptSpeakerLabel(normalizedText)
+    }
+
+    private static func isTranscriptSpeakerLabel(_ text: String) -> Bool {
+        guard let regex = try? NSRegularExpression(
+            pattern: #"^speaker(?:[\s_-]*(?:\d{1,3}|[a-z]))?$"#
+        ) else {
+            return false
+        }
+
+        let range = NSRange(text.startIndex..., in: text)
+        return regex.firstMatch(in: text, range: range) != nil
     }
 
     public static func applyInsertionPolish(_ text: String, context: TextInsertionContext?) -> String {

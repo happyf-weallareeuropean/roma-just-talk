@@ -363,6 +363,16 @@ struct RomaCoreChecks {
                 "bracketed beeping artifact"
             ),
             (
+                "Use [speaker 1] now.",
+                "Use now.",
+                "bracketed speaker number label"
+            ),
+            (
+                "Use (Speaker_00) now.",
+                "Use now.",
+                "bracketed speaker underscore label"
+            ),
+            (
                 "Use [breath control] now.",
                 "Use [breath control] now.",
                 "bracketed literal breath phrase guard"
@@ -381,6 +391,11 @@ struct RomaCoreChecks {
                 "Use [typing speed] now.",
                 "Use [typing speed] now.",
                 "bracketed literal typing phrase guard"
+            ),
+            (
+                "Use [speaker notes] now.",
+                "Use [speaker notes] now.",
+                "bracketed literal speaker phrase guard"
             ),
             (
                 "I was like going there.",

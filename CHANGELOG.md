@@ -2,6 +2,7 @@
 
 ## v1.81 - Unreleased
 
+- Removed bracketed transcript speaker labels such as "[speaker 1]" and "(Speaker_00)".
 - Removed bracketed sound-effect artifacts such as "[keyboard typing]", "[phone ringing]", and "[beeping]".
 - Removed bracketed ASR artifacts such as "[blank audio]", "[laughing]", and "[speaking foreign language]".
 - Removed more bracketed ASR artifacts such as "[unintelligible]", "(crosstalk)", and "[overlap]".
