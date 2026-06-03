@@ -388,6 +388,8 @@ public struct RomaTranscriptionOutputFilter {
             no\s*[,;:]?\s+sorry |
             (?:[,;:…]|\.\.\.)\s*rather\s*[,;:]? |
             or\s+rather |
+            or\s+actually |
+            or\s+wait\s*[,;:]?\s+no |
             (?:[,;:…]|\.\.\.)\s*instead(?!\s+of\b)\s*[,;:]? |
             i\s+mean
         )
@@ -3414,8 +3416,14 @@ public struct RomaTranscriptionOutputFilter {
             return false
         }
 
+        if isOrAlternativeBacktrackingMarker(markerText),
+           wordCount(in: correctionText) != 1 {
+            return false
+        }
+
         guard isReplaceOrChangeBacktrackingMarker(markerText) ||
-                isGuardedNaturalBacktrackingMarker(markerText) else {
+                isGuardedNaturalBacktrackingMarker(markerText) ||
+                isOrAlternativeBacktrackingMarker(markerText) else {
             return true
         }
 
@@ -3473,6 +3481,14 @@ public struct RomaTranscriptionOutputFilter {
             "wait nevermind",
             "never mind",
             "nevermind"
+        ].contains(normalizedMarker)
+    }
+
+    private static func isOrAlternativeBacktrackingMarker(_ markerText: String) -> Bool {
+        let normalizedMarker = normalizedBacktrackingMarker(markerText)
+        return [
+            "or actually",
+            "or wait no"
         ].contains(normalizedMarker)
     }
 

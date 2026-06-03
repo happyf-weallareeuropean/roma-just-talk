@@ -1132,6 +1132,16 @@ struct RomaCoreChecks {
                 "bounded rather correction"
             ),
             (
+                "Let's meet at two or actually three.",
+                "Let's meet at three.",
+                "or actually single-word correction"
+            ),
+            (
+                "Use model or wait no module.",
+                "Use module.",
+                "or wait no single-word correction"
+            ),
+            (
                 "Use model, instead module.",
                 "Use module.",
                 "bounded instead correction"
@@ -1905,6 +1915,16 @@ struct RomaCoreChecks {
                 "Use model instead of module.",
                 "Use model instead of module.",
                 "instead of prose guard"
+            ),
+            (
+                "Use local or actually cloud models.",
+                "Use local or actually cloud models.",
+                "or actually multi-word alternative guard"
+            ),
+            (
+                "The phrase or actually is useful.",
+                "The phrase or actually is useful.",
+                "or actually phrase guard"
             ),
             (
                 "I would instead wait.",
