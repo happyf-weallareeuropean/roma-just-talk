@@ -2,6 +2,7 @@
 
 ## v1.81 - Unreleased
 
+- Ignored nested "actually" and "I mean" lead-ins after bounded correction markers.
 - Added bounded "oops", "whoops", "my bad", and "correction" self-correction cleanup aliases.
 - Removed bracketed humming and mumbling ASR artifacts.
 - Added bounded "scratch that out" and "scratch last word/sentence" cleanup aliases.

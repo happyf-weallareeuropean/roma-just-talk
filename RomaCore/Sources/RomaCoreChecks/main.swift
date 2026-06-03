@@ -718,6 +718,11 @@ struct RomaCoreChecks {
                 "oops correction"
             ),
             (
+                "Use model, oops actually module.",
+                "Use module.",
+                "oops actually correction"
+            ),
+            (
                 "Use model, whoops, module.",
                 "Use module.",
                 "whoops correction"
@@ -728,9 +733,24 @@ struct RomaCoreChecks {
                 "my bad correction"
             ),
             (
+                "Use model, my bad, I mean module.",
+                "Use module.",
+                "my bad i mean correction"
+            ),
+            (
                 "Use model, correction module.",
                 "Use module.",
                 "correction marker cleanup"
+            ),
+            (
+                "Use model, correction actually module.",
+                "Use module.",
+                "correction actually marker cleanup"
+            ),
+            (
+                "Use model, sorry, actually module.",
+                "Use module.",
+                "sorry actually marker cleanup"
             ),
             (
                 "Use old model, correction the new module.",
@@ -1591,6 +1611,11 @@ struct RomaCoreChecks {
                 "Oops, I forgot the model.",
                 "Oops, I forgot the model.",
                 "leading oops prose guard"
+            ),
+            (
+                "Oops actually I forgot the model.",
+                "Oops actually I forgot the model.",
+                "leading oops actually prose guard"
             ),
             (
                 "My bad idea still works.",

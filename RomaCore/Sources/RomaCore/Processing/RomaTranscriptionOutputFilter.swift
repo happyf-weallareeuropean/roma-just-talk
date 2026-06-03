@@ -3071,7 +3071,11 @@ public struct RomaTranscriptionOutputFilter {
 
     private static func rewriteBacktrackingMatch(in text: String, markerRange: Range<String.Index>) -> String? {
         let beforeMarker = String(text[..<markerRange.lowerBound])
-        let afterMarker = String(text[markerRange.upperBound...])
+        let markerText = String(text[markerRange])
+        let afterMarker = correctionSourceAfterNestedIntro(
+            String(text[markerRange.upperBound...]),
+            markerText: markerText
+        )
 
         guard let correction = leadingCorrectionPhrase(in: afterMarker) else {
             return nil
@@ -3079,7 +3083,7 @@ public struct RomaTranscriptionOutputFilter {
 
         let correctionText = String(afterMarker[correction.range])
         guard shouldApplyBacktrackingMarker(
-            String(text[markerRange]),
+            markerText,
             beforeMarker: beforeMarker,
             correctionText: correctionText
         ),
@@ -3092,6 +3096,34 @@ public struct RomaTranscriptionOutputFilter {
 
         let suffix = String(afterMarker[correction.range.upperBound...])
         return normalizeBacktrackingWhitespace(join(prefix, correctionText, suffix))
+    }
+
+    private static func correctionSourceAfterNestedIntro(_ text: String, markerText: String) -> String {
+        switch normalizedBacktrackingMarker(markerText) {
+        case "oops", "whoops", "woops", "my bad", "correction", "sorry", "no sorry":
+            break
+        default:
+            return text
+        }
+
+        guard let regex = try? NSRegularExpression(
+            pattern: #"(?i)^\s*(?:actually|i\s+mean|i\s+meant)\s*[,;:]?\s+"#
+        ) else {
+            return text
+        }
+
+        let range = NSRange(text.startIndex..., in: text)
+        guard let match = regex.firstMatch(in: text, range: range),
+              let matchRange = Range(match.range, in: text) else {
+            return text
+        }
+
+        let suffix = String(text[matchRange.upperBound...])
+        guard firstWord(in: suffix) != nil else {
+            return text
+        }
+
+        return suffix
     }
 
     private static func removalWordCount(for correctionText: String, fallback wordCount: Int, beforeMarker: String) -> Int {
@@ -3168,9 +3200,7 @@ public struct RomaTranscriptionOutputFilter {
     }
 
     private static func isReplaceOrChangeBacktrackingMarker(_ markerText: String) -> Bool {
-        let normalizedMarker = normalizeWhitespace(markerText)
-            .trimmingCharacters(in: CharacterSet(charactersIn: ",;: "))
-            .lowercased()
+        let normalizedMarker = normalizedBacktrackingMarker(markerText)
         return [
             "replace that with",
             "replace it with",
@@ -3180,14 +3210,19 @@ public struct RomaTranscriptionOutputFilter {
     }
 
     private static func isMakeOrCallBacktrackingMarker(_ markerText: String) -> Bool {
-        let normalizedMarker = normalizeWhitespace(markerText)
-            .trimmingCharacters(in: CharacterSet(charactersIn: ",;: "))
-            .lowercased()
+        let normalizedMarker = normalizedBacktrackingMarker(markerText)
         return [
             "make that",
             "make it",
             "call it"
         ].contains(normalizedMarker)
+    }
+
+    private static func normalizedBacktrackingMarker(_ markerText: String) -> String {
+        normalizeWhitespace(markerText)
+            .trimmingCharacters(in: CharacterSet(charactersIn: ",;:… "))
+            .replacingOccurrences(of: #"\.+"#, with: "", options: .regularExpression)
+            .lowercased()
     }
 
     private static func applyScratchThatCommands(in text: String) -> String {
