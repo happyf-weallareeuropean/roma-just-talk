@@ -334,6 +334,7 @@ public struct RomaTranscriptionOutputFilter {
         """#
     private static let scratchThatCommandPattern = #"(?i)(?<![\p{L}\p{N}])(?:scratch|strike|delete|remove|erase|undo)\s+that(?:\s*[.!?,;:…]+|(?=\s*$|\s*\n))"#
     private static let deletePreviousWordCommandPattern = #"(?i)(?<![\p{L}\p{N}])(?:delete|remove|erase|undo)\s+(?:last|previous)(?:\s+(\d|one|two|three|four|five))?\s+words?(?:\s*[.!?,;:…]+|(?=\s*$|\s*\n)|\s+)"#
+    private static let deletePreviousLineCommandPattern = #"(?i)(?<![\p{L}\p{N}])(?:delete|remove|erase|undo)\s+(?:last|previous)\s+line(?:\s*[.!?,;:…]+|(?=\s*$|\s*\n)|\s+)"#
     private static let deletePreviousSentenceCommandPattern = #"(?i)(?<![\p{L}\p{N}])(?:delete|remove|erase|undo)\s+(?:last|previous)\s+sentence(?:\s*[.!?,;:…]+|(?=\s*$|\s*\n)|\s+)"#
     private static let phraseBoundaryPunctuation = CharacterSet(charactersIn: ".,!?;:…")
     private static let softPhrasePunctuation = CharacterSet(charactersIn: ",;:…")
@@ -612,6 +613,9 @@ public struct RomaTranscriptionOutputFilter {
             filteredText = applyBacktrackingCorrections(in: filteredText)
         }
         filteredText = applySpokenFormattingCommands(in: filteredText)
+        if cleanupLevel == .polished {
+            filteredText = applyDeletePreviousLineCommands(in: filteredText)
+        }
         filteredText = applySpokenEnclosureCommands(in: filteredText)
         filteredText = applySpokenURLCommands(in: filteredText)
         filteredText = applySpokenValueFormattingCommands(in: filteredText)
@@ -2929,6 +2933,42 @@ public struct RomaTranscriptionOutputFilter {
         return count
     }
 
+    private static func applyDeletePreviousLineCommands(in text: String) -> String {
+        guard let regex = try? NSRegularExpression(pattern: deletePreviousLineCommandPattern) else {
+            return text
+        }
+
+        var correctedText = text
+        var rewriteCount = 0
+
+        while rewriteCount < 8 {
+            let fullRange = NSRange(correctedText.startIndex..., in: correctedText)
+            guard let match = regex.firstMatch(in: correctedText, range: fullRange),
+                  let markerRange = Range(match.range, in: correctedText),
+                  let rewrittenText = rewriteDeletePreviousLineCommand(in: correctedText, markerRange: markerRange),
+                  rewrittenText != correctedText else {
+                break
+            }
+
+            correctedText = rewrittenText
+            rewriteCount += 1
+        }
+
+        return correctedText
+    }
+
+    private static func rewriteDeletePreviousLineCommand(in text: String, markerRange: Range<String.Index>) -> String? {
+        let beforeMarker = String(text[..<markerRange.lowerBound])
+        let afterMarker = String(text[markerRange.upperBound...])
+
+        guard shouldApplyDeleteCommand(beforeMarker: beforeMarker, afterMarker: afterMarker),
+              let prefix = removeTrailingLine(from: beforeMarker) else {
+            return nil
+        }
+
+        return joinLineDeletion(prefix: prefix, suffix: afterMarker)
+    }
+
     private static func applyDeletePreviousSentenceCommands(in text: String) -> String {
         guard let regex = try? NSRegularExpression(pattern: deletePreviousSentenceCommandPattern) else {
             return text
@@ -3088,6 +3128,21 @@ public struct RomaTranscriptionOutputFilter {
         return prefix
     }
 
+    private static func removeTrailingLine(from text: String) -> String? {
+        let trimmedText = text.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard wordCount(in: trimmedText) > 0 else { return nil }
+
+        guard let lastNewlineIndex = trimmedText.lastIndex(where: { $0.isNewline }) else {
+            return ""
+        }
+
+        let lineStart = trimmedText.index(after: lastNewlineIndex)
+        let removedLine = String(trimmedText[lineStart...])
+        guard wordCount(in: removedLine) > 0 else { return nil }
+
+        return String(trimmedText[...lastNewlineIndex])
+    }
+
     private static func removeTrailingSentence(from text: String) -> String? {
         let trimmedText = text.trimmingCharacters(in: .whitespacesAndNewlines)
         guard wordCount(in: trimmedText) > 0 else { return nil }
@@ -3171,6 +3226,21 @@ public struct RomaTranscriptionOutputFilter {
             return base + trimmedSuffix
         }
         return base.isEmpty ? trimmedSuffix : "\(base) \(trimmedSuffix)"
+    }
+
+    private static func joinLineDeletion(prefix: String, suffix: String) -> String {
+        let trimmedSuffix = suffix.trimmingCharacters(in: .whitespacesAndNewlines)
+        let normalizedPrefix = prefix.trimmingCharacters(in: .whitespaces)
+
+        guard !normalizedPrefix.isEmpty else {
+            return normalizeWhitespace(trimmedSuffix)
+        }
+
+        guard !trimmedSuffix.isEmpty else {
+            return normalizeWhitespace(normalizedPrefix)
+        }
+
+        return normalizeWhitespace(normalizedPrefix + trimmedSuffix)
     }
 
     private static func normalizeBacktrackingWhitespace(_ text: String) -> String {

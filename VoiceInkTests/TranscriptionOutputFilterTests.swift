@@ -247,6 +247,8 @@ struct TranscriptionOutputFilterTests {
     @Test func transcriptionFilterAppliesSpokenFormattingCommands() async throws {
         TranscriptionCleanupLevel.setCurrent(.polished)
         #expect(TranscriptionOutputFilter.filter("First line new line second line.") == "First line\nsecond line.")
+        #expect(TranscriptionOutputFilter.filter("First line new line wrong line delete last line right line.") == "First line\nright line.")
+        #expect(TranscriptionOutputFilter.filter("First line press enter wrong line undo previous line right line.") == "First line\nright line.")
         #expect(TranscriptionOutputFilter.filter("Intro new paragraph Details.") == "Intro\n\nDetails.")
         #expect(TranscriptionOutputFilter.filter("Intro skip a line Details.") == "Intro\n\nDetails.")
         #expect(TranscriptionOutputFilter.filter("Intro start a new paragraph Details.") == "Intro\n\nDetails.")
@@ -264,6 +266,7 @@ struct TranscriptionOutputFilterTests {
         #expect(TranscriptionOutputFilter.filter("Use version 1.2.3 today.") == "Use version 1.2.3 today.")
         #expect(TranscriptionOutputFilter.filter("Use version one two today.") == "Use version one two today.")
         #expect(TranscriptionOutputFilter.filter("The first item is setup. The second item is launch.") == "The first item is setup. The second item is launch.")
+        #expect(TranscriptionOutputFilter.filter("The delete last line command is useful.") == "The delete last line command is useful.")
         #expect(TranscriptionOutputFilter.filter("The phrase skip a line is useful.") == "The phrase skip a line is useful.")
         #expect(TranscriptionOutputFilter.filter("Explain how to start a new paragraph in docs.") == "Explain how to start a new paragraph in docs.")
         #expect(TranscriptionOutputFilter.filter("The break here is intentional.") == "The break here is intentional.")

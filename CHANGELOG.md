@@ -2,6 +2,7 @@
 
 ## v1.81 - Unreleased
 
+- Added same-utterance "delete last line" cleanup after spoken line-break commands.
 - Added guarded "press tab" and "hit tab key" cleanup commands for tab-separated dictation.
 - Added guarded "press enter" and "hit return key" line-break cleanup commands.
 - Added counted same-utterance delete commands such as "delete last two words" and "undo previous three words".

@@ -443,6 +443,16 @@ struct RomaCoreChecks {
                 "delete last sentence correction"
             ),
             (
+                "First line new line wrong line delete last line right line.",
+                "First line\nright line.",
+                "delete last line after spoken newline"
+            ),
+            (
+                "First line press enter wrong line undo previous line right line.",
+                "First line\nright line.",
+                "undo previous line after enter command"
+            ),
+            (
                 "Open quote hello comma world close quote.",
                 "\"hello, world\".",
                 "spoken enclosure and punctuation"
@@ -651,6 +661,11 @@ struct RomaCoreChecks {
                 "The delete last sentence command is useful.",
                 "The delete last sentence command is useful.",
                 "delete last sentence prose guard"
+            ),
+            (
+                "The delete last line command is useful.",
+                "The delete last line command is useful.",
+                "delete last line prose guard"
             ),
             (
                 "The first item is setup. The second item is launch.",
