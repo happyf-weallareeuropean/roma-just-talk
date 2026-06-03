@@ -2,6 +2,7 @@
 
 ## v1.81 - Unreleased
 
+- Removed listening-related ASR boilerplate such as "Thanks for listening.".
 - Removed bracketed transcript timestamp artifacts such as "[00:00]" and "[00:01 - 00:03]".
 - Removed bracketed non-speech descriptors such as "[humming softly]", "[music playing]", and "[background chatter]".
 - Ignored nested "actually" and "I mean" lead-ins after bounded correction markers.

@@ -637,9 +637,14 @@ struct TranscriptionOutputFilterTests {
     @Test func transcriptionFilterRemovesCommonASRBoilerplate() async throws {
         TranscriptionCleanupLevel.setCurrent(.polished)
         #expect(TranscriptionOutputFilter.filter("Thank you for watching.") == "")
+        #expect(TranscriptionOutputFilter.filter("Thanks for listening.") == "")
+        #expect(TranscriptionOutputFilter.filter("Thank you for listening.") == "")
         #expect(TranscriptionOutputFilter.filter("Okay. Thank you for watching.") == "Okay.")
+        #expect(TranscriptionOutputFilter.filter("Okay. Thanks for listening.") == "Okay.")
         #expect(TranscriptionOutputFilter.filter("Ship it.\nSubtitles by Amara.org community") == "Ship it.")
         #expect(TranscriptionOutputFilter.filter("Thank you for helping.") == "Thank you for helping.")
+        #expect(TranscriptionOutputFilter.filter("Thank you for listening carefully.") == "Thank you for listening carefully.")
+        #expect(TranscriptionOutputFilter.filter("End with thanks for listening.") == "End with thanks for listening.")
         #expect(TranscriptionOutputFilter.filter("End with thank you for watching.") == "End with thank you for watching.")
     }
 

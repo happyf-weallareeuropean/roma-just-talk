@@ -773,6 +773,31 @@ struct RomaCoreChecks {
                 "punctuated long terminal discourse filler"
             ),
             (
+                "Thank you for watching.",
+                "",
+                "standalone watching boilerplate"
+            ),
+            (
+                "Thanks for listening.",
+                "",
+                "standalone listening boilerplate"
+            ),
+            (
+                "Okay. Thanks for listening.",
+                "Okay.",
+                "terminal listening boilerplate"
+            ),
+            (
+                "Thank you for listening carefully.",
+                "Thank you for listening carefully.",
+                "listening prose guard"
+            ),
+            (
+                "End with thanks for listening.",
+                "End with thanks for listening.",
+                "embedded listening prose guard"
+            ),
+            (
                 "you know.",
                 "",
                 "standalone you know filler"
