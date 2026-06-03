@@ -2,6 +2,7 @@
 
 ## v1.81 - Unreleased
 
+- Removed bracketed non-speech descriptors such as "[humming softly]", "[music playing]", and "[background chatter]".
 - Ignored nested "actually" and "I mean" lead-ins after bounded correction markers.
 - Added bounded "oops", "whoops", "my bad", and "correction" self-correction cleanup aliases.
 - Removed bracketed humming and mumbling ASR artifacts.

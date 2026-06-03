@@ -478,9 +478,19 @@ struct RomaCoreChecks {
                 "bracketed humming artifact"
             ),
             (
+                "Use [humming softly] now.",
+                "Use now.",
+                "bracketed humming descriptor artifact"
+            ),
+            (
                 "Use (mumbling) now.",
                 "Use now.",
                 "bracketed mumbling artifact"
+            ),
+            (
+                "Use (mumbling indistinctly) now.",
+                "Use now.",
+                "bracketed mumbling descriptor artifact"
             ),
             (
                 "Use [unintelligible] now.",
@@ -548,6 +558,11 @@ struct RomaCoreChecks {
                 "bracketed keyboard typing artifact"
             ),
             (
+                "Use [typing sounds] now.",
+                "Use now.",
+                "bracketed typing sounds artifact"
+            ),
+            (
                 "Use [keyboard-typing] now.",
                 "Use now.",
                 "bracketed hyphenated keyboard typing artifact"
@@ -566,6 +581,21 @@ struct RomaCoreChecks {
                 "Use [beeping] now.",
                 "Use now.",
                 "bracketed beeping artifact"
+            ),
+            (
+                "Use [music playing] now.",
+                "Use now.",
+                "bracketed music playing artifact"
+            ),
+            (
+                "Use [background chatter] now.",
+                "Use now.",
+                "bracketed background chatter artifact"
+            ),
+            (
+                "Use [crowd noise] now.",
+                "Use now.",
+                "bracketed crowd noise artifact"
             ),
             (
                 "Use [speaker 1] now.",
@@ -596,6 +626,26 @@ struct RomaCoreChecks {
                 "Use [sound design] now.",
                 "Use [sound design] now.",
                 "bracketed literal sound phrase guard"
+            ),
+            (
+                "Use [music theory] now.",
+                "Use [music theory] now.",
+                "bracketed literal music phrase guard"
+            ),
+            (
+                "Use [background color] now.",
+                "Use [background color] now.",
+                "bracketed literal background phrase guard"
+            ),
+            (
+                "Use [crowd size] now.",
+                "Use [crowd size] now.",
+                "bracketed literal crowd phrase guard"
+            ),
+            (
+                "Use [mumble rap] now.",
+                "Use [mumble rap] now.",
+                "bracketed literal mumble phrase guard"
             ),
             (
                 "Use [foreign language class] now.",

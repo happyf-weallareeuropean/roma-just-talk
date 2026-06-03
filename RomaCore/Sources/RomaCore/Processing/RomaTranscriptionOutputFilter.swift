@@ -774,7 +774,9 @@ public struct RomaTranscriptionOutputFilter {
 
     private static func isNonSpeechBracketContent(_ text: String) -> Bool {
         let normalizedText = normalizedBracketContent(text)
-        return nonSpeechBracketContents.contains(normalizedText) || isTranscriptSpeakerLabel(normalizedText)
+        return nonSpeechBracketContents.contains(normalizedText) ||
+            isExtendedNonSpeechBracketContent(normalizedText) ||
+            isTranscriptSpeakerLabel(normalizedText)
     }
 
     private static func normalizedBracketContent(_ text: String) -> String {
@@ -782,6 +784,27 @@ public struct RomaTranscriptionOutputFilter {
             .trimmingCharacters(in: CharacterSet(charactersIn: ".!?,;:… ").union(.whitespacesAndNewlines))
             .lowercased()
             .replacingOccurrences(of: #"[\s_-]+"#, with: " ", options: .regularExpression)
+    }
+
+    private static func isExtendedNonSpeechBracketContent(_ text: String) -> Bool {
+        let patterns = [
+            #"^(?:applause|breathing|coughing|humming|laughing|mumbling|music|noise|sighing|typing)(?:\s+(?:continues?|indistinctly|loudly|playing|quietly|softly|sounds?)){1,3}$"#,
+            #"^background\s+(?:chatter|conversation|music|noise|speech|voices)$"#,
+            #"^crowd\s+(?:applause|chatter|noise|talking)$"#
+        ]
+
+        for pattern in patterns {
+            guard let regex = try? NSRegularExpression(pattern: pattern) else {
+                continue
+            }
+
+            let range = NSRange(text.startIndex..., in: text)
+            if regex.firstMatch(in: text, range: range) != nil {
+                return true
+            }
+        }
+
+        return false
     }
 
     private static func isTranscriptSpeakerLabel(_ text: String) -> Bool {
