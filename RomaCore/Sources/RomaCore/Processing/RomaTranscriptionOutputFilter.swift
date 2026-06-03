@@ -922,6 +922,7 @@ public struct RomaTranscriptionOutputFilter {
         filteredText = removePunctuatedDiscourseFillers(from: filteredText)
         filteredText = removeTerminalDiscourseFillers(from: filteredText)
         filteredText = removeUnpunctuatedLikeFillers(from: filteredText)
+        filteredText = preserveBacktrackingMarkersAfterPauseFillers(in: filteredText)
 
         let embeddedPausePattern = #"(?i)(?<=[\p{L}\p{N}])[,;:…][ \t]+(?:u+h+|u+m+|h+m+|m+h+|m{2,}|e+h+|e+r+|a+h+|h+uh+)(?:[.,;:!?…]+)?(?=[ \t]+[\p{L}\p{N}])"#
         if let regex = try? NSRegularExpression(pattern: embeddedPausePattern) {
@@ -961,6 +962,47 @@ public struct RomaTranscriptionOutputFilter {
         }
 
         return filteredText
+    }
+
+    private static func preserveBacktrackingMarkersAfterPauseFillers(in text: String) -> String {
+        guard let regex = try? NSRegularExpression(
+            pattern: #"(?i)([,;:…]|\.\.\.)[ \t]+(?:u+h+|u+m+|h+m+|m+h+|m{2,}|e+h+|e+r+|a+h+|h+uh+)(?:[.,;:!?…]+)?[ \t]+(actually(?:[ \t]+no|[ \t]+make[ \t]+it)?|better[ \t]+make[ \t]+it|sorry[ \t]+i[ \t]+mean|sorry[ \t]+i[ \t]+meant|i[ \t]+mean|i[ \t]+meant|i[ \t]+should[ \t]+say|make[ \t]+that|make[ \t]+it|call[ \t]+it|wait[ \t]+no|no[ \t]+wait|no[ \t]+actually|rather|instead|oops|whoops|woops|my[ \t]+bad|correction)(?=\s)"#
+        ) else {
+            return text
+        }
+
+        var preservedText = text
+        let matches = regex.matches(in: preservedText, range: NSRange(preservedText.startIndex..., in: preservedText))
+
+        for match in matches.reversed() {
+            guard match.numberOfRanges >= 3,
+                  let fullRange = Range(match.range(at: 0), in: preservedText),
+                  let punctuationRange = Range(match.range(at: 1), in: preservedText),
+                  let markerRange = Range(match.range(at: 2), in: preservedText) else {
+                continue
+            }
+
+            let prefix = String(preservedText[..<fullRange.lowerBound])
+            guard shouldPreserveBacktrackingMarkerAfterPauseFiller(beforeMarker: prefix) else {
+                continue
+            }
+
+            preservedText.replaceSubrange(
+                fullRange,
+                with: "\(preservedText[punctuationRange]) \(preservedText[markerRange])"
+            )
+        }
+
+        return preservedText
+    }
+
+    private static func shouldPreserveBacktrackingMarkerAfterPauseFiller(beforeMarker text: String) -> Bool {
+        guard wordCount(in: text) >= 2,
+              let previousWord = previousWord(in: text) else {
+            return false
+        }
+
+        return !["am", "are", "be", "been", "being", "is", "was", "were"].contains(previousWord)
     }
 
     private static func startsWithRemovableLeadingFillerNoise(_ text: String, fillerWords configuredFillerWords: [String]) -> Bool {

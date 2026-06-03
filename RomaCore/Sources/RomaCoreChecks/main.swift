@@ -853,6 +853,21 @@ struct RomaCoreChecks {
                 "my bad i mean correction"
             ),
             (
+                "Use model, um actually module.",
+                "Use module.",
+                "pause before actually correction"
+            ),
+            (
+                "Use model, uh I mean module.",
+                "Use module.",
+                "pause before i mean correction"
+            ),
+            (
+                "Let's meet at two, hmm wait no three.",
+                "Let's meet at three.",
+                "pause before wait no correction"
+            ),
+            (
                 "Use model, correction module.",
                 "Use module.",
                 "correction marker cleanup"
@@ -1616,6 +1631,16 @@ struct RomaCoreChecks {
                 "I am sorry this happened.",
                 "I am sorry this happened.",
                 "sorry prose guard"
+            ),
+            (
+                "I am, um actually, not sure.",
+                "I am actually, not sure.",
+                "pause before actually prose guard"
+            ),
+            (
+                "This is, hmm actually, pretty good.",
+                "This is actually, pretty good.",
+                "copula pause before actually prose guard"
             ),
             (
                 "There is no wait time.",
