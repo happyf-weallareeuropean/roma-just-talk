@@ -3599,6 +3599,9 @@ public struct RomaTranscriptionOutputFilter {
 
             if normalizedWord == previousNormalizedWord,
                !preservedRepeatedWords.contains(normalizedWord) {
+                if let previousPart = result.popLast() {
+                    result.append(mergedRepeatedWordToken(previousPart, part))
+                }
                 continue
             }
 
@@ -3607,6 +3610,58 @@ public struct RomaTranscriptionOutputFilter {
         }
 
         return result.joined(separator: " ")
+    }
+
+    private static func mergedRepeatedWordToken(_ previousToken: String, _ duplicateToken: String) -> String {
+        if hasTrailingSentencePunctuation(duplicateToken) {
+            if hasTrailingSentencePunctuation(previousToken) {
+                return previousToken
+            }
+            return appendingTrailingSentencePunctuation(from: duplicateToken, to: previousToken)
+        }
+
+        if hasTrailingSentencePunctuation(previousToken) {
+            return previousToken
+        }
+
+        let cleanedDuplicateToken = removingTrailingRepeatSeparator(from: duplicateToken)
+        if cleanedDuplicateToken != duplicateToken {
+            return cleanedDuplicateToken
+        }
+
+        return removingTrailingRepeatSeparator(from: previousToken)
+    }
+
+    private static func hasTrailingSentencePunctuation(_ token: String) -> Bool {
+        token.last.map { ".!?".contains($0) } == true && !token.hasSuffix("...")
+    }
+
+    private static func appendingTrailingSentencePunctuation(from duplicateToken: String, to previousToken: String) -> String {
+        guard let punctuation = duplicateToken.last, ".!?".contains(punctuation) else {
+            return duplicateToken
+        }
+
+        let baseToken = removingTrailingRepeatSeparator(from: previousToken)
+        guard !baseToken.isEmpty else {
+            return duplicateToken
+        }
+
+        return "\(baseToken)\(punctuation)"
+    }
+
+    private static func removingTrailingRepeatSeparator(from token: String) -> String {
+        var cleanedToken = token
+
+        while cleanedToken.hasSuffix("...") {
+            cleanedToken.removeLast(3)
+        }
+
+        while let lastCharacter = cleanedToken.last,
+              character(lastCharacter, isIn: softPhrasePunctuation) {
+            cleanedToken.removeLast()
+        }
+
+        return cleanedToken.isEmpty ? token : cleanedToken
     }
 
     private static func collapseRepeatedShortSentences(in text: String) -> String {

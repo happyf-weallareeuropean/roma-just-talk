@@ -2,6 +2,7 @@
 
 ## v1.81 - Unreleased
 
+- Removed stale comma/ellipsis punctuation when collapsing repeated words such as "I, I think".
 - Preserved article replacement intent when both old and new self-correction phrases include articles, such as "the model" to "a module".
 - Preserved sentence prefixes when self-corrections start with articles, such as "replace that with a module".
 - Added bounded "better make it..." self-correction cleanup for phrases such as "Use model, better make it module.".

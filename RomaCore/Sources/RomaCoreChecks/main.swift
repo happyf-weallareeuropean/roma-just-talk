@@ -308,6 +308,21 @@ struct RomaCoreChecks {
                 "pause noise and repeated words"
             ),
             (
+                "I, I think this works.",
+                "I think this works.",
+                "punctuated repeated word"
+            ),
+            (
+                "This this.",
+                "This.",
+                "final repeated word punctuation"
+            ),
+            (
+                "No, no, this is wrong.",
+                "No, no, this is wrong.",
+                "preserved punctuated repeated word"
+            ),
+            (
                 "mm-hmm... uh-huh, I think so.",
                 "I think so.",
                 "hyphenated pause sounds"

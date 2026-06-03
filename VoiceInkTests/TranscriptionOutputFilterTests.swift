@@ -243,6 +243,9 @@ struct TranscriptionOutputFilterTests {
         #expect(TranscriptionOutputFilter.filter("This, um, works.") == "This works.")
         #expect(TranscriptionOutputFilter.filter("Let's meet at two, wait no, three.") == "Let's meet at three.")
         #expect(TranscriptionOutputFilter.filter("I think I think this works.") == "I think this works.")
+        #expect(TranscriptionOutputFilter.filter("I, I think this works.") == "I think this works.")
+        #expect(TranscriptionOutputFilter.filter("This this.") == "This.")
+        #expect(TranscriptionOutputFilter.filter("No, no, this is wrong.") == "No, no, this is wrong.")
         #expect(TranscriptionOutputFilter.filter("I think this works, I think this works.") == "I think this works.")
     }
 
