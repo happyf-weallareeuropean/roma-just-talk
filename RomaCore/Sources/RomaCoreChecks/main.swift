@@ -568,6 +568,21 @@ struct RomaCoreChecks {
                 "spoken question mark over auto question mark"
             ),
             (
+                "Are you ready question point.",
+                "Are you ready?",
+                "spoken question point command"
+            ),
+            (
+                "Are you ready question sign.",
+                "Are you ready?",
+                "spoken question sign command"
+            ),
+            (
+                "Ship it exclamation sign.",
+                "Ship it!",
+                "spoken exclamation sign command"
+            ),
+            (
                 "Wait ellipsis maybe.",
                 "Wait... maybe.",
                 "spoken ellipsis command"
@@ -871,6 +886,26 @@ struct RomaCoreChecks {
                 "Use dot notation.",
                 "Use dot notation.",
                 "dot command prose guard"
+            ),
+            (
+                "The question mark command is useful.",
+                "The question mark command is useful.",
+                "question mark command prose guard"
+            ),
+            (
+                "The exclamation sign command is useful.",
+                "The exclamation sign command is useful.",
+                "exclamation sign command prose guard"
+            ),
+            (
+                "The colon operator is useful.",
+                "The colon operator is useful.",
+                "colon operator prose guard"
+            ),
+            (
+                "The ellipsis symbol is useful.",
+                "The ellipsis symbol is useful.",
+                "ellipsis symbol prose guard"
             ),
             (
                 "Quote from the docs.",

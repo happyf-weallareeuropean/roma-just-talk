@@ -213,6 +213,15 @@ public struct RomaTranscriptionOutputFilter {
     private static let blockedNextWordsForSpokenPossessive: Set<String> = [
         "character", "characters", "is", "mark", "marks", "means", "meaning", "suffix", "symbol", "symbols"
     ]
+    private static let blockedPreviousWordsForSpokenPunctuationName: Set<String> = [
+        "a", "an", "command", "commands", "how", "phrase", "phrases", "say", "saying",
+        "symbol", "symbols", "the", "to", "word", "words"
+    ]
+    private static let blockedNextWordsForSpokenPunctuationName: Set<String> = [
+        "character", "characters", "command", "commands", "from", "in", "is", "means",
+        "of", "operator", "phrase", "phrases", "separated", "shortcut", "shortcuts",
+        "symbol", "symbols"
+    ]
     private static let spokenPossessivePattern = #"(?i)(?<![\p{L}\p{N}])([\p{L}\p{N}][\p{L}\p{N}'’ʼ-]{0,63})\s+apostrophe\s+s(?=\s+[\p{L}\p{N}])"#
     private static let spokenNoSpaceCommandPattern = #"(?i)(?<![\p{L}\p{N}])([\p{L}\p{N}][\p{L}\p{N}'’ʼ-]{0,63})[ \t]+no[ \t]+spaces?[ \t]+([\p{L}\p{N}][\p{L}\p{N}'’ʼ-]{0,63})(?![\p{L}\p{N}])"#
     private static let blockedPreviousWordsForSpokenNoSpace: Set<String> = [
@@ -547,48 +556,61 @@ public struct RomaTranscriptionOutputFilter {
     private static let spokenPunctuationCommands = [
         SpokenPunctuationCommand(
             pattern: #"(?i)(?<![\p{L}\p{N}])(?:ellipsis|dot\s+dot\s+dot|period\s+period\s+period|full\s+stop\s+full\s+stop\s+full\s+stop)(?![\p{L}\p{N}])"#,
-            output: "..."
+            output: "...",
+            blockedPreviousWords: blockedPreviousWordsForSpokenPunctuationName,
+            blockedNextWords: blockedNextWordsForSpokenPunctuationName
         ),
         SpokenPunctuationCommand(
             pattern: #"(?i)(?<![\p{L}\p{N}])(?:em\s+dash|m\s+dash)(?![\p{L}\p{N}])"#,
-            output: " —"
+            output: " —",
+            blockedPreviousWords: blockedPreviousWordsForSpokenPunctuationName,
+            blockedNextWords: blockedNextWordsForSpokenPunctuationName
         ),
         SpokenPunctuationCommand(
-            pattern: #"(?i)(?<![\p{L}\p{N}])question\s+mark(?![\p{L}\p{N}])"#,
-            output: "?"
+            pattern: #"(?i)(?<![\p{L}\p{N}])question\s+(?:mark|point|sign)(?![\p{L}\p{N}])"#,
+            output: "?",
+            blockedPreviousWords: blockedPreviousWordsForSpokenPunctuationName,
+            blockedNextWords: blockedNextWordsForSpokenPunctuationName
         ),
         SpokenPunctuationCommand(
-            pattern: #"(?i)(?<![\p{L}\p{N}])exclamation\s+(?:mark|point)(?![\p{L}\p{N}])"#,
-            output: "!"
+            pattern: #"(?i)(?<![\p{L}\p{N}])exclamation\s+(?:mark|point|sign)(?![\p{L}\p{N}])"#,
+            output: "!",
+            blockedPreviousWords: blockedPreviousWordsForSpokenPunctuationName,
+            blockedNextWords: blockedNextWordsForSpokenPunctuationName
         ),
         SpokenPunctuationCommand(
             pattern: #"(?i)(?<![\p{L}\p{N}])full\s+stop(?![\p{L}\p{N}])"#,
-            output: "."
+            output: ".",
+            blockedPreviousWords: blockedPreviousWordsForSpokenPunctuationName,
+            blockedNextWords: blockedNextWordsForSpokenPunctuationName
         ),
         SpokenPunctuationCommand(
             pattern: #"(?i)(?<![\p{L}\p{N}])period(?![\p{L}\p{N}])"#,
             output: ".",
-            blockedPreviousWords: [
+            blockedPreviousWords: blockedPreviousWordsForSpokenPunctuationName.union([
                 "billing", "class", "current", "grace", "historical",
                 "pay", "payback", "reporting", "retention", "school",
                 "time", "trial"
-            ],
-            blockedNextWords: ["drama", "of", "piece"]
+            ]),
+            blockedNextWords: blockedNextWordsForSpokenPunctuationName.union(["drama", "of", "piece"])
         ),
         SpokenPunctuationCommand(
             pattern: #"(?i)(?<![\p{L}\p{N}])comma(?![\p{L}\p{N}])"#,
             output: ",",
-            blockedPreviousWords: ["oxford", "serial"],
-            blockedNextWords: ["operator", "separated"]
+            blockedPreviousWords: blockedPreviousWordsForSpokenPunctuationName.union(["oxford", "serial"]),
+            blockedNextWords: blockedNextWordsForSpokenPunctuationName
         ),
         SpokenPunctuationCommand(
             pattern: #"(?i)(?<![\p{L}\p{N}])semicolon(?![\p{L}\p{N}])"#,
-            output: ";"
+            output: ";",
+            blockedPreviousWords: blockedPreviousWordsForSpokenPunctuationName,
+            blockedNextWords: blockedNextWordsForSpokenPunctuationName
         ),
         SpokenPunctuationCommand(
             pattern: #"(?i)(?<![\p{L}\p{N}])colon(?![\p{L}\p{N}])"#,
             output: ":",
-            blockedPreviousWords: ["http", "https"]
+            blockedPreviousWords: blockedPreviousWordsForSpokenPunctuationName.union(["http", "https"]),
+            blockedNextWords: blockedNextWordsForSpokenPunctuationName
         )
     ]
     private static let standaloneSpokenPunctuationOutputs = [
@@ -596,8 +618,11 @@ public struct RomaTranscriptionOutputFilter {
         "period": ".",
         "full stop": ".",
         "question mark": "?",
+        "question point": "?",
+        "question sign": "?",
         "exclamation mark": "!",
         "exclamation point": "!",
+        "exclamation sign": "!",
         "semicolon": ";",
         "colon": ":"
     ]
