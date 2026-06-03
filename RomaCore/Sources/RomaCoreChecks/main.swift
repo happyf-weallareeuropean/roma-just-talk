@@ -573,6 +573,16 @@ struct RomaCoreChecks {
                 "sorry i mean correction"
             ),
             (
+                "Use model, I meant module.",
+                "Use module.",
+                "i meant correction"
+            ),
+            (
+                "Use model, sorry I meant module.",
+                "Use module.",
+                "sorry i meant correction"
+            ),
+            (
                 "Set color blue, sorry red.",
                 "Set color red.",
                 "sorry correction"
@@ -1216,6 +1226,11 @@ struct RomaCoreChecks {
                 "This is like magic.",
                 "This is like magic.",
                 "like simile guard"
+            ),
+            (
+                "I meant what I said.",
+                "I meant what I said.",
+                "i meant prose guard"
             ),
             (
                 "This, however, works.",
