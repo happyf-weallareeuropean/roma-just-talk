@@ -913,6 +913,26 @@ struct RomaCoreChecks {
                 "pause before wait no correction"
             ),
             (
+                "Use model, wait actually module.",
+                "Use module.",
+                "wait actually correction"
+            ),
+            (
+                "Use model, wait, I mean module.",
+                "Use module.",
+                "wait i mean correction"
+            ),
+            (
+                "Use model... wait, I meant module.",
+                "Use module.",
+                "wait i meant correction"
+            ),
+            (
+                "Let's meet at two, wait actually three.",
+                "Let's meet at three.",
+                "wait actually replacement correction"
+            ),
+            (
                 "Use model no I mean module.",
                 "Use module.",
                 "no i mean correction"
@@ -1521,6 +1541,21 @@ struct RomaCoreChecks {
                 "The phrase no actually is useful.",
                 "The phrase no actually is useful.",
                 "no actually phrase guard"
+            ),
+            (
+                "Let's wait actually until tomorrow.",
+                "Let's wait actually until tomorrow.",
+                "wait actually prose guard"
+            ),
+            (
+                "The phrase wait actually is useful.",
+                "The phrase wait actually is useful.",
+                "wait actually phrase guard"
+            ),
+            (
+                "The phrase, wait actually, is useful.",
+                "The phrase, wait actually, is useful.",
+                "punctuated wait actually phrase guard"
             ),
             (
                 "Please change that to red.",

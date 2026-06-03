@@ -360,6 +360,9 @@ public struct RomaTranscriptionOutputFilter {
             change\s+(?:that|it)\s+to |
             scratch\s+that(?!\s+out\b) |
             wait\s+no |
+            (?:[,;:…]|\.\.\.)\s*wait\s*[,;:]?\s+actually\s*[,;:]? |
+            (?:[,;:…]|\.\.\.)\s*wait\s*[,;:]?\s+i\s+mean\s*[,;:]? |
+            (?:[,;:…]|\.\.\.)\s*wait\s*[,;:]?\s+i\s+meant\s*[,;:]? |
             (?:[,;:…]|\.\.\.)\s*no\s*[,;:]?\s+wait\s*[,;:]? |
             no\s*[,;:]?\s+i\s+mean\s*[,;:]? |
             no\s*[,;:]?\s+i\s+meant\s*[,;:]? |
@@ -3314,7 +3317,10 @@ public struct RomaTranscriptionOutputFilter {
         return [
             "no i mean",
             "no i meant",
-            "no actually"
+            "no actually",
+            "wait actually",
+            "wait i mean",
+            "wait i meant"
         ].contains(normalizedMarker)
     }
 
