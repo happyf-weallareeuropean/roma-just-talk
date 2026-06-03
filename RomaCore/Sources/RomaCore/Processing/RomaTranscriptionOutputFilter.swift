@@ -181,7 +181,8 @@ public struct RomaTranscriptionOutputFilter {
         "applause", "background music", "background noise", "beep", "beeping",
         "blank audio", "breath", "breathing", "clapping", "cough", "coughing",
         "crosstalk", "foreign language", "inaudible", "indistinct", "keyboard typing",
-        "empty audio", "laughter", "laughing", "laughs", "music", "noise",
+        "empty audio", "hum", "humming", "laughter", "laughing", "laughs",
+        "mumble", "mumbling", "music", "noise",
         "no audio", "no sound", "no speech", "overlap", "overlapping",
         "phone ringing", "ringing", "sigh", "sighing", "silence", "silent",
         "sneeze", "sneezing", "sound", "speaking foreign language", "static",
@@ -344,6 +345,9 @@ public struct RomaTranscriptionOutputFilter {
             (?:[,;:…]|\.\.\.)\s*actually |
             (?:[,;:…]|\.\.\.)\s*no\s*[,;:]?\s+actually\s*[,;:]? |
             sorry\s+not\s+that\s*[,;:]?\s+actually |
+            (?:[,;:…]|\.\.\.)\s*(?:oops|whoops|woops)\s*[,;:]? |
+            (?:[,;:…]|\.\.\.)\s*my\s+bad\s*[,;:]? |
+            (?:[,;:…]|\.\.\.)\s*correction\s*[,;:]? |
             (?:[,;:…]|\.\.\.)\s*sorry\s*[,;:]?\s+i\s+mean\s*[,;:]? |
             (?:[,;:…]|\.\.\.)\s*sorry\s*[,;:]?\s+i\s+meant\s*[,;:]? |
             sorry\s*[,;:]?\s+i\s+mean\s*[,;:]? |

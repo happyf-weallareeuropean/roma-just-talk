@@ -473,6 +473,16 @@ struct RomaCoreChecks {
                 "bracketed sigh artifact"
             ),
             (
+                "Use [humming] now.",
+                "Use now.",
+                "bracketed humming artifact"
+            ),
+            (
+                "Use (mumbling) now.",
+                "Use now.",
+                "bracketed mumbling artifact"
+            ),
+            (
                 "Use [unintelligible] now.",
                 "Use now.",
                 "bracketed unintelligible artifact"
@@ -701,6 +711,31 @@ struct RomaCoreChecks {
                 "Let's meet at two, no wait, three.",
                 "Let's meet at three.",
                 "no wait correction"
+            ),
+            (
+                "Use model, oops module.",
+                "Use module.",
+                "oops correction"
+            ),
+            (
+                "Use model, whoops, module.",
+                "Use module.",
+                "whoops correction"
+            ),
+            (
+                "Use model, my bad, module.",
+                "Use module.",
+                "my bad correction"
+            ),
+            (
+                "Use model, correction module.",
+                "Use module.",
+                "correction marker cleanup"
+            ),
+            (
+                "Use old model, correction the new module.",
+                "Use the new module.",
+                "correction marker article cleanup"
             ),
             (
                 "Let's meet at two, no actually three.",
@@ -1551,6 +1586,21 @@ struct RomaCoreChecks {
                 "I meant what I said.",
                 "I meant what I said.",
                 "i meant prose guard"
+            ),
+            (
+                "Oops, I forgot the model.",
+                "Oops, I forgot the model.",
+                "leading oops prose guard"
+            ),
+            (
+                "My bad idea still works.",
+                "My bad idea still works.",
+                "my bad prose guard"
+            ),
+            (
+                "The correction module is ready.",
+                "The correction module is ready.",
+                "correction prose guard"
             ),
             (
                 "We can actually make it work.",

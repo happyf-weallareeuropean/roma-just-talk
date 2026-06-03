@@ -2,6 +2,8 @@
 
 ## v1.81 - Unreleased
 
+- Added bounded "oops", "whoops", "my bad", and "correction" self-correction cleanup aliases.
+- Removed bracketed humming and mumbling ASR artifacts.
 - Added bounded "scratch that out" and "scratch last word/sentence" cleanup aliases.
 - Removed leaked Whisper language tokens such as "<|en|>", "<|zh|>", and "<|haw|>".
 - Removed leaked Whisper control tokens such as "<|startoftranscript|>", "<|notimestamps|>", and "<|0.00|>".
