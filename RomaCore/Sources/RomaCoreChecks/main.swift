@@ -423,6 +423,21 @@ struct RomaCoreChecks {
                 "inline transcribe special token"
             ),
             (
+                "Use <|en|> now.",
+                "Use now.",
+                "inline english language special token"
+            ),
+            (
+                "Use <|zh|> now.",
+                "Use now.",
+                "inline chinese language special token"
+            ),
+            (
+                "Use <|haw|> now.",
+                "Use now.",
+                "inline three-letter language special token"
+            ),
+            (
                 "Use <|0.00|> now.",
                 "Use now.",
                 "inline timestamp special token"

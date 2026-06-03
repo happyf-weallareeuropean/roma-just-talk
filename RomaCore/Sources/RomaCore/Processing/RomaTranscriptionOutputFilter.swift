@@ -268,7 +268,7 @@ public struct RomaTranscriptionOutputFilter {
             ""
         )
     ]
-    private static let asrSpecialTokenPattern = #"(?i)<\|\s*(?:no[\s_-]*speech|nospeech|empty[\s_-]*audio|blank[\s_-]*audio|no[\s_-]*audio|silence|silent|end[\s_-]*of[\s_-]*text|endoftext|start[\s_-]*of[\s_-]*transcript|startoftranscript|no[\s_-]*timestamps|notimestamps|transcribe|translate|\d{1,2}(?:\.\d{1,2})?)\s*\|>"#
+    private static let asrSpecialTokenPattern = #"(?i)<\|\s*(?:no[\s_-]*speech|nospeech|empty[\s_-]*audio|blank[\s_-]*audio|no[\s_-]*audio|silence|silent|end[\s_-]*of[\s_-]*text|endoftext|start[\s_-]*of[\s_-]*transcript|startoftranscript|no[\s_-]*timestamps|notimestamps|transcribe|translate|af|am|ar|as|az|ba|be|bg|bn|bo|br|bs|ca|cs|cy|da|de|el|en|es|et|eu|fa|fi|fo|fr|gl|gu|ha|haw|he|hi|hr|ht|hu|hy|id|is|it|ja|jw|ka|kk|km|kn|ko|la|lb|ln|lo|lt|lv|mg|mi|mk|ml|mn|mr|ms|mt|my|ne|nl|nn|no|oc|pa|pl|ps|pt|ro|ru|sa|sd|si|sk|sl|sn|so|sq|sr|su|sv|sw|ta|te|tg|th|tk|tl|tr|tt|uk|ur|uz|vi|yi|yo|zh|\d{1,2}(?:\.\d{1,2})?)\s*\|>"#
     private static let punctuatedDiscourseFillerPatterns: [(pattern: String, replacement: String)] = [
         (#"(?i)[,;:…]\s+(?:you\s+know|like)[,;:…]*([.!?])\s*$"#, "$1"),
         (#"(?i)[,;:…]\s+(?:you\s+know|like)[,;:…]+(?=\s)"#, " ")
