@@ -388,6 +388,36 @@ struct RomaCoreChecks {
                 "standalone bracketed underscored non-speech artifact"
             ),
             (
+                "<|nospeech|>",
+                "",
+                "standalone nospeech special token"
+            ),
+            (
+                "Use <|no_speech|> now.",
+                "Use now.",
+                "inline no speech special token"
+            ),
+            (
+                "Use <|silence|> now.",
+                "Use now.",
+                "inline silence special token"
+            ),
+            (
+                "Use <|endoftext|> now.",
+                "Use now.",
+                "inline endoftext special token"
+            ),
+            (
+                "Use <model> now.",
+                "Use <model> now.",
+                "angle token literal guard"
+            ),
+            (
+                "Use <|model|> now.",
+                "Use <|model|> now.",
+                "unknown pipe token literal guard"
+            ),
+            (
                 "[speaker 1]",
                 "",
                 "standalone bracketed speaker number label"

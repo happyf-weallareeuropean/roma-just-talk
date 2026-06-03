@@ -2,6 +2,7 @@
 
 ## v1.81 - Unreleased
 
+- Removed leaked ASR special tokens such as "<|nospeech|>", "<|no_speech|>", and "<|endoftext|>".
 - Removed more bracketed no-speech ASR artifacts such as "[no_speech]", "[empty_audio]", and "[no sound]".
 - Added bounded ", make it..." self-correction cleanup with guards for polite command prose.
 - Added bounded "replace it with" and "change it to" cleanup with guards for ordinary command prose.

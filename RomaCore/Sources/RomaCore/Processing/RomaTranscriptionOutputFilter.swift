@@ -268,6 +268,7 @@ public struct RomaTranscriptionOutputFilter {
             ""
         )
     ]
+    private static let asrSpecialTokenPattern = #"(?i)<\|\s*(?:no[\s_-]*speech|nospeech|empty[\s_-]*audio|blank[\s_-]*audio|no[\s_-]*audio|silence|silent|end[\s_-]*of[\s_-]*text|endoftext)\s*\|>"#
     private static let punctuatedDiscourseFillerPatterns: [(pattern: String, replacement: String)] = [
         (#"(?i)[,;:…]\s+(?:you\s+know|like)[,;:…]*([.!?])\s*$"#, "$1"),
         (#"(?i)[,;:…]\s+(?:you\s+know|like)[,;:…]+(?=\s)"#, " ")
@@ -663,6 +664,8 @@ public struct RomaTranscriptionOutputFilter {
             filteredText = regex.stringByReplacingMatches(in: filteredText, options: [], range: range, withTemplate: "")
         }
 
+        filteredText = removeASRSpecialTokens(from: filteredText)
+
         filteredText = removeNonSpeechBracketedContent(from: filteredText)
 
         filteredText = removeASRBoilerplate(from: filteredText)
@@ -727,6 +730,15 @@ public struct RomaTranscriptionOutputFilter {
         }
 
         return filteredText
+    }
+
+    private static func removeASRSpecialTokens(from text: String) -> String {
+        guard let regex = try? NSRegularExpression(pattern: asrSpecialTokenPattern) else {
+            return text
+        }
+
+        let range = NSRange(text.startIndex..., in: text)
+        return regex.stringByReplacingMatches(in: text, options: [], range: range, withTemplate: "")
     }
 
     private static func removeNonSpeechBracketedContent(from text: String) -> String {
