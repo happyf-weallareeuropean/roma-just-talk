@@ -548,6 +548,16 @@ struct RomaCoreChecks {
                 "split here paragraph command"
             ),
             (
+                "First press enter second.",
+                "First\nsecond.",
+                "press enter line command"
+            ),
+            (
+                "First hit return key second.",
+                "First\nsecond.",
+                "hit return key line command"
+            ),
+            (
                 "Use api slash users.",
                 "Use api/users.",
                 "spoken slash command"
@@ -651,6 +661,16 @@ struct RomaCoreChecks {
                 "The break here is intentional.",
                 "The break here is intentional.",
                 "break here prose guard"
+            ),
+            (
+                "The press enter shortcut is useful.",
+                "The press enter shortcut is useful.",
+                "press enter shortcut prose guard"
+            ),
+            (
+                "Explain how to press enter in docs.",
+                "Explain how to press enter in docs.",
+                "press enter prose guard"
             ),
             (
                 "All caps is loud.",

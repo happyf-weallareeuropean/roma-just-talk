@@ -374,6 +374,12 @@ public struct RomaTranscriptionOutputFilter {
             replacement: "\n\n",
             blockedPreviousWords: ["command", "commands", "how", "phrase", "phrases", "say", "saying", "the", "to", "word", "words"],
             blockedNextWords: ["command", "commands", "from", "in", "is", "means", "of", "phrase", "phrases", "shortcut", "shortcuts"]
+        ),
+        GuardedSpokenFormattingCommand(
+            pattern: #"(?i)(?<![\p{L}\p{N}])(?:press|hit|tap)\s+(?:the\s+)?(?:enter|return)(?:\s+key)?(?![\p{L}\p{N}])"#,
+            replacement: "\n",
+            blockedPreviousWords: ["command", "commands", "how", "phrase", "phrases", "say", "saying", "the", "to", "word", "words"],
+            blockedNextWords: ["command", "commands", "from", "in", "is", "means", "of", "phrase", "phrases", "shortcut", "shortcuts"]
         )
     ]
     private static let spokenEnclosureCommands: [(pattern: String, replacement: String)] = [

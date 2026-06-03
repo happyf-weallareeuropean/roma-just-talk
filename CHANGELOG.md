@@ -2,6 +2,7 @@
 
 ## v1.81 - Unreleased
 
+- Added guarded "press enter" and "hit return key" line-break cleanup commands.
 - Added counted same-utterance delete commands such as "delete last two words" and "undo previous three words".
 - Added guarded spoken text casing commands for all-caps, uppercase, lowercase, capitalization, and title case.
 - Added guarded paragraph aliases such as "skip a line", "start a new paragraph", "break here", and "split here".
