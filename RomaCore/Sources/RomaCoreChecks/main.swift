@@ -608,6 +608,26 @@ struct RomaCoreChecks {
                 "bracketed speaker underscore label"
             ),
             (
+                "Use [00:00] now.",
+                "Use now.",
+                "bracketed transcript timestamp"
+            ),
+            (
+                "Use (00:01:12) now.",
+                "Use now.",
+                "parenthesized transcript timestamp"
+            ),
+            (
+                "Use [00:01 - 00:03] now.",
+                "Use now.",
+                "bracketed transcript timestamp range"
+            ),
+            (
+                "Use [00:00 timestamp] now.",
+                "Use now.",
+                "bracketed transcript timestamp label"
+            ),
+            (
                 "Use [breath control] now.",
                 "Use [breath control] now.",
                 "bracketed literal breath phrase guard"
@@ -646,6 +666,26 @@ struct RomaCoreChecks {
                 "Use [mumble rap] now.",
                 "Use [mumble rap] now.",
                 "bracketed literal mumble phrase guard"
+            ),
+            (
+                "Use [12:30 PM] now.",
+                "Use [12:30 PM] now.",
+                "bracketed literal time phrase guard"
+            ),
+            (
+                "Use [12:30] now.",
+                "Use [12:30] now.",
+                "bracketed literal clock time guard"
+            ),
+            (
+                "Use [chapter 00:00] now.",
+                "Use [chapter 00:00] now.",
+                "bracketed timestamp prose guard"
+            ),
+            (
+                "Use chapter 00:00 now.",
+                "Use chapter 00:00 now.",
+                "inline timecode punctuation guard"
             ),
             (
                 "Use [foreign language class] now.",

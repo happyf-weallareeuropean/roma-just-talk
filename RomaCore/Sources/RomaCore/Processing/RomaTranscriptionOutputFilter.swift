@@ -776,6 +776,7 @@ public struct RomaTranscriptionOutputFilter {
         let normalizedText = normalizedBracketContent(text)
         return nonSpeechBracketContents.contains(normalizedText) ||
             isExtendedNonSpeechBracketContent(normalizedText) ||
+            isTranscriptTimestampLabel(normalizedText) ||
             isTranscriptSpeakerLabel(normalizedText)
     }
 
@@ -791,6 +792,26 @@ public struct RomaTranscriptionOutputFilter {
             #"^(?:applause|breathing|coughing|humming|laughing|mumbling|music|noise|sighing|typing)(?:\s+(?:continues?|indistinctly|loudly|playing|quietly|softly|sounds?)){1,3}$"#,
             #"^background\s+(?:chatter|conversation|music|noise|speech|voices)$"#,
             #"^crowd\s+(?:applause|chatter|noise|talking)$"#
+        ]
+
+        for pattern in patterns {
+            guard let regex = try? NSRegularExpression(pattern: pattern) else {
+                continue
+            }
+
+            let range = NSRange(text.startIndex..., in: text)
+            if regex.firstMatch(in: text, range: range) != nil {
+                return true
+            }
+        }
+
+        return false
+    }
+
+    private static func isTranscriptTimestampLabel(_ text: String) -> Bool {
+        let patterns = [
+            #"^(?:0{1,2}:\d{2}(?::\d{2})?(?:\.\d{1,3})?|\d{1,2}:\d{2}\s*(?:timestamp|timestamps))$"#,
+            #"^(?:\d{1,2}:)?\d{2}:\d{2}\s*(?:-|–|—)?\s+(?:\d{1,2}:)?\d{2}:\d{2}(?:\s*(?:timestamp|timestamps))?$"#
         ]
 
         for pattern in patterns {
@@ -2943,7 +2964,7 @@ public struct RomaTranscriptionOutputFilter {
 
     private static func protectPunctuationSpacingSpans(in text: String) -> (text: String, spans: [String]) {
         guard let regex = try? NSRegularExpression(
-            pattern: #"(?i)\b(?:https?://|www\.)[A-Za-z0-9._~:/?#\[\]@!$&'()*+,;=%-]+|(?<![\p{L}\p{N}])\.[A-Za-z][A-Za-z0-9._-]{0,63}"#
+            pattern: #"(?i)\b\d{1,2}:\d{2}(?::\d{2})?(?:\.\d{1,3})?\b|\b(?:https?://|www\.)[A-Za-z0-9._~:/?#\[\]@!$&'()*+,;=%-]+|(?<![\p{L}\p{N}])\.[A-Za-z][A-Za-z0-9._-]{0,63}"#
         ) else {
             return (text, [])
         }
