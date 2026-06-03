@@ -179,8 +179,9 @@ public struct RomaTranscriptionOutputFilter {
     private static let removableTrailingSpacedFragmentSymbols = "/\\|"
     private static let nonSpeechBracketContents: Set<String> = [
         "applause", "background noise", "breath", "breathing", "cough", "coughing",
-        "inaudible", "laughter", "laughs", "music", "noise", "sigh", "sighing",
-        "silence", "sneeze", "sneezing", "sound", "static"
+        "crosstalk", "inaudible", "indistinct", "laughter", "laughs", "music",
+        "noise", "overlap", "overlapping", "sigh", "sighing", "silence", "sneeze",
+        "sneezing", "sound", "static", "unclear", "unintelligible"
     ]
     private static let preservedRepeatedWords: Set<String> = [
         "ha", "haha", "no", "ok", "okay", "really", "so", "very", "yes"

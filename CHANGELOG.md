@@ -2,6 +2,7 @@
 
 ## v1.81 - Unreleased
 
+- Removed more bracketed ASR artifacts such as "[unintelligible]", "(crosstalk)", and "[overlap]".
 - Removed bracketed non-speech artifacts such as "[cough]", "(breathing)", and "{sighing}".
 - Added bounded ", rather," self-correction cleanup while preserving ordinary "rather" prose.
 - Added bounded ", no wait," self-correction cleanup while preserving normal "no wait time" prose.

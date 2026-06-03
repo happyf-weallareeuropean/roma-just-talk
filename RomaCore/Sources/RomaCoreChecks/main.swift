@@ -323,9 +323,24 @@ struct RomaCoreChecks {
                 "bracketed sigh artifact"
             ),
             (
+                "Use [unintelligible] now.",
+                "Use now.",
+                "bracketed unintelligible artifact"
+            ),
+            (
+                "Use (crosstalk) now.",
+                "Use now.",
+                "bracketed crosstalk artifact"
+            ),
+            (
                 "Use [breath control] now.",
                 "Use [breath control] now.",
                 "bracketed literal breath phrase guard"
+            ),
+            (
+                "Use [unclear goal] now.",
+                "Use [unclear goal] now.",
+                "bracketed literal unclear phrase guard"
             ),
             (
                 "I was like going there.",
