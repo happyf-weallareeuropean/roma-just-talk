@@ -463,6 +463,11 @@ struct RomaCoreChecks {
                 "leading okay so filler"
             ),
             (
+                "Okay, um, so this works.",
+                "this works.",
+                "leading okay pause so filler"
+            ),
+            (
                 "All right, so this works.",
                 "this works.",
                 "leading all right so filler"
@@ -476,6 +481,11 @@ struct RomaCoreChecks {
                 "Yeah, so this works.",
                 "this works.",
                 "leading yeah so filler"
+            ),
+            (
+                "Yeah, hmm, so this works.",
+                "this works.",
+                "leading yeah pause so filler"
             ),
             (
                 "This works you know.",

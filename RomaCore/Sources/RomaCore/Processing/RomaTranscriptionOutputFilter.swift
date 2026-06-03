@@ -273,6 +273,7 @@ public struct RomaTranscriptionOutputFilter {
     ]
     private static let leadingDiscourseFillerPatterns: [(pattern: String, replacement: String)] = [
         (#"(?i)^\s*(?:ok(?:ay)?|all\s+right|alright|right|yeah)[,;:…]*[ \t]+so[,;:…]*[ \t]+"#, ""),
+        (#"(?i)^\s*(?:ok(?:ay)?|all\s+right|alright|right|yeah)(?:[ \t]*[,;:…]+[ \t]*)+so[,;:…]*[ \t]+"#, ""),
         (#"(?i)^\s*(?:you\s+know|i\s+mean|like)[,;:…]+[ \t]*"#, "")
     ]
     private static let standaloneDiscourseFillerPattern = #"(?i)^\s*you[ \t]+know(?:[ \t]+what[ \t]+i[ \t]+mean)?[ \t]*[.,;:…]*\s*$"#
@@ -869,6 +870,8 @@ public struct RomaTranscriptionOutputFilter {
                 filteredText = regex.stringByReplacingMatches(in: filteredText, options: [], range: range, withTemplate: "")
             }
         }
+
+        filteredText = removeLeadingDiscourseFillers(from: filteredText)
 
         return filteredText
     }
