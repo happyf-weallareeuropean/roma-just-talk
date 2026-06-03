@@ -2,6 +2,7 @@
 
 ## v1.81 - Unreleased
 
+- Removed more bracketed non-speech descriptors such as "[silence continues]" and "[phone ringing loudly]".
 - Preserved correction markers after pause fillers, such as ", um actually..." and ", hmm wait no...".
 - Removed listening-related ASR boilerplate such as "Thanks for listening.".
 - Removed bracketed transcript timestamp artifacts such as "[00:00]" and "[00:01 - 00:03]".

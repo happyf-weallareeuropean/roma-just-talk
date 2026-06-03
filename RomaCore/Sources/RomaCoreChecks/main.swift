@@ -538,6 +538,11 @@ struct RomaCoreChecks {
                 "bracketed silent artifact"
             ),
             (
+                "Use [silence continues] now.",
+                "Use now.",
+                "bracketed silence descriptor artifact"
+            ),
+            (
                 "Use [speaking foreign language] now.",
                 "Use now.",
                 "bracketed speaking foreign language artifact"
@@ -556,6 +561,11 @@ struct RomaCoreChecks {
                 "Use [keyboard typing] now.",
                 "Use now.",
                 "bracketed keyboard typing artifact"
+            ),
+            (
+                "Use [keyboard typing softly] now.",
+                "Use now.",
+                "bracketed keyboard typing descriptor artifact"
             ),
             (
                 "Use [typing sounds] now.",
@@ -578,9 +588,19 @@ struct RomaCoreChecks {
                 "bracketed underscored phone ringing artifact"
             ),
             (
+                "Use [phone ringing loudly] now.",
+                "Use now.",
+                "bracketed phone ringing descriptor artifact"
+            ),
+            (
                 "Use [beeping] now.",
                 "Use now.",
                 "bracketed beeping artifact"
+            ),
+            (
+                "Use [beep sounds] now.",
+                "Use now.",
+                "bracketed beep sounds artifact"
             ),
             (
                 "Use [music playing] now.",
@@ -596,6 +616,11 @@ struct RomaCoreChecks {
                 "Use [crowd noise] now.",
                 "Use now.",
                 "bracketed crowd noise artifact"
+            ),
+            (
+                "Use [static noise] now.",
+                "Use now.",
+                "bracketed static noise artifact"
             ),
             (
                 "Use [speaker 1] now.",
@@ -666,6 +691,26 @@ struct RomaCoreChecks {
                 "Use [mumble rap] now.",
                 "Use [mumble rap] now.",
                 "bracketed literal mumble phrase guard"
+            ),
+            (
+                "Use [silence policy] now.",
+                "Use [silence policy] now.",
+                "bracketed literal silence phrase guard"
+            ),
+            (
+                "Use [static site] now.",
+                "Use [static site] now.",
+                "bracketed literal static phrase guard"
+            ),
+            (
+                "Use [ringing endorsement] now.",
+                "Use [ringing endorsement] now.",
+                "bracketed literal ringing phrase guard"
+            ),
+            (
+                "Use [beep test] now.",
+                "Use [beep test] now.",
+                "bracketed literal beep phrase guard"
             ),
             (
                 "Use [12:30 PM] now.",

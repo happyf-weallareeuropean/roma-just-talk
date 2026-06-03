@@ -789,9 +789,10 @@ public struct RomaTranscriptionOutputFilter {
 
     private static func isExtendedNonSpeechBracketContent(_ text: String) -> Bool {
         let patterns = [
-            #"^(?:applause|breathing|coughing|humming|laughing|mumbling|music|noise|sighing|typing)(?:\s+(?:continues?|indistinctly|loudly|playing|quietly|softly|sounds?)){1,3}$"#,
+            #"^(?:applause|beep|beeping|breathing|coughing|humming|laughing|mumbling|music|noise|ringing|sighing|silence|sneeze|sneezing|static|typing)(?:\s+(?:continues?|indistinctly|loudly|noise|playing|quietly|softly|sounds?)){1,3}$"#,
             #"^background\s+(?:chatter|conversation|music|noise|speech|voices)$"#,
-            #"^crowd\s+(?:applause|chatter|noise|talking)$"#
+            #"^crowd\s+(?:applause|chatter|noise|talking)$"#,
+            #"^(?:keyboard\s+typing|phone\s+ringing)(?:\s+(?:continues?|loudly|quietly|softly|sounds?)){1,3}$"#
         ]
 
         for pattern in patterns {
