@@ -128,6 +128,11 @@ public struct RomaTranscriptionOutputFilter {
         let style: SpokenCodeCaseStyle
     }
 
+    private struct SpokenSequenceListMarker {
+        let range: Range<String.Index>
+        let value: Int
+    }
+
     private enum SpokenMarkdownTaskState {
         case unchecked
         case checked
@@ -221,6 +226,27 @@ public struct RomaTranscriptionOutputFilter {
         "sorta", "thinking", "trying", "using", "waiting", "working"
     ]
     private static let inlineNumberedListMarkerPattern = #"(?<![\p{L}\p{N}])\d{1,2}\.\s+(?=\S)"#
+    private static let spokenSequenceListMarkerPattern = #"(?i)(?<![\p{L}\p{N}])(one|two|three|four|five|six|seven|eight|nine|first|second|third|fourth|fifth|sixth|seventh|eighth|ninth)(?:[.)])?[ \t]+(?=\S)"#
+    private static let spokenSequenceListMarkerValues: [String: Int] = [
+        "one": 1, "first": 1,
+        "two": 2, "second": 2,
+        "three": 3, "third": 3,
+        "four": 4, "fourth": 4,
+        "five": 5, "fifth": 5,
+        "six": 6, "sixth": 6,
+        "seven": 7, "seventh": 7,
+        "eight": 8, "eighth": 8,
+        "nine": 9, "ninth": 9
+    ]
+    private static let blockedPreviousWordsForSpokenSequenceListMarkers: Set<String> = [
+        "a", "an", "chapter", "her", "his", "its", "line", "my", "our", "page",
+        "section", "that", "the", "their", "these", "this", "those", "version", "your"
+    ]
+    private static let blockedNextWordsForSpokenSequenceListMarkers: Set<String> = [
+        "billion", "cent", "cents", "dollar", "dollars", "grade", "grades", "hundred",
+        "item", "items", "line", "lines", "million", "percent", "place", "places",
+        "point", "second", "seconds", "thing", "things", "thousand", "time", "times"
+    ]
     private static let markdownHeadingPattern = #"(?im)(^|\n)[ \t]*(?:heading|header)[ \t]+(one|two|three|1|2|3)[ \t]+([^\n]+)"#
     private static let uncheckedMarkdownTaskPattern = #"(?im)(^|\n)[ \t]*(?:todo|to[ \t]+do|checkbox|check[ \t]+box|unchecked[ \t]+(?:task|checkbox|check[ \t]+box))[ \t]+([^\n]+)"#
     private static let checkedMarkdownTaskPattern = #"(?im)(^|\n)[ \t]*(?:(?:checked|done|completed)[ \t]+(?:task|checkbox|check[ \t]+box))[ \t]+([^\n]+)"#
@@ -513,6 +539,7 @@ public struct RomaTranscriptionOutputFilter {
         filteredText = applySpokenURLCommands(in: filteredText)
         filteredText = applySpokenValueFormattingCommands(in: filteredText)
         filteredText = applySpokenPunctuationCommands(in: filteredText)
+        filteredText = replaceSpokenSequenceListMarkers(in: filteredText)
         filteredText = formatInlineNumberedLists(in: filteredText)
         filteredText = applySpokenSymbolCommands(in: filteredText)
         filteredText = applySpokenContractionCommands(in: filteredText)
@@ -2280,6 +2307,80 @@ public struct RomaTranscriptionOutputFilter {
         guard currentIndex > text.startIndex else { return text }
         formattedText += String(text[currentIndex...])
         return formattedText
+    }
+
+    private static func replaceSpokenSequenceListMarkers(in text: String) -> String {
+        guard let regex = try? NSRegularExpression(pattern: spokenSequenceListMarkerPattern) else {
+            return text
+        }
+
+        let matches = regex.matches(in: text, range: NSRange(text.startIndex..., in: text))
+        let markers = matches.compactMap { match -> SpokenSequenceListMarker? in
+            guard match.numberOfRanges >= 2,
+                  let fullRange = Range(match.range(at: 0), in: text),
+                  let markerRange = Range(match.range(at: 1), in: text) else {
+                return nil
+            }
+
+            let markerText = String(text[markerRange]).lowercased()
+            guard let value = spokenSequenceListMarkerValues[markerText] else { return nil }
+
+            let beforeMarker = String(text[..<fullRange.lowerBound])
+            if let previousWord = previousWord(in: beforeMarker),
+               blockedPreviousWordsForSpokenSequenceListMarkers.contains(previousWord) {
+                return nil
+            }
+
+            let afterMarker = String(text[fullRange.upperBound...])
+            if let nextWord = nextWord(in: afterMarker),
+               blockedNextWordsForSpokenSequenceListMarkers.contains(nextWord) {
+                return nil
+            }
+
+            return SpokenSequenceListMarker(range: fullRange, value: value)
+        }
+
+        let replacementIndices = spokenSequenceListRunIndices(in: markers)
+        guard !replacementIndices.isEmpty else { return text }
+
+        var listText = text
+        for index in replacementIndices.sorted(by: >) {
+            let marker = markers[index]
+            listText.replaceSubrange(marker.range, with: "\(marker.value). ")
+        }
+
+        return listText
+    }
+
+    private static func spokenSequenceListRunIndices(in markers: [SpokenSequenceListMarker]) -> Set<Int> {
+        var replacementIndices: Set<Int> = []
+        var runStart = 0
+
+        while runStart < markers.count {
+            guard markers[runStart].value == 1 else {
+                runStart += 1
+                continue
+            }
+
+            var run = [runStart]
+            var nextExpectedValue = 2
+            var cursor = runStart + 1
+
+            while cursor < markers.count, markers[cursor].value == nextExpectedValue {
+                run.append(cursor)
+                nextExpectedValue += 1
+                cursor += 1
+            }
+
+            if run.count >= 2 {
+                replacementIndices.formUnion(run)
+                runStart = cursor
+            } else {
+                runStart += 1
+            }
+        }
+
+        return replacementIndices
     }
 
     private static func precedingWhitespaceStart(in text: String, before index: String.Index) -> String.Index {

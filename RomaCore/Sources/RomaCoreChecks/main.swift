@@ -498,6 +498,16 @@ struct RomaCoreChecks {
                 "compact dash command guard"
             ),
             (
+                "My top goals are one finish the report two send the slides.",
+                "My top goals are\n1. finish the report\n2. send the slides.",
+                "cardinal spoken sequence list"
+            ),
+            (
+                "Plan first confirm scope second ship patch.",
+                "Plan\n1. confirm scope\n2. ship patch.",
+                "ordinal spoken sequence list"
+            ),
+            (
                 "Use api slash users.",
                 "Use api/users.",
                 "spoken slash command"
@@ -506,6 +516,11 @@ struct RomaCoreChecks {
                 ".env file.",
                 ".env file.",
                 "dot-prefixed token guard"
+            ),
+            (
+                "Use version one two today.",
+                "Use version one two today.",
+                "spoken sequence version guard"
             ),
             (
                 "Open https colon slash slash docs dot example dot com slash api.",
@@ -546,6 +561,11 @@ struct RomaCoreChecks {
                 "The delete last sentence command is useful.",
                 "The delete last sentence command is useful.",
                 "delete last sentence prose guard"
+            ),
+            (
+                "The first item is setup. The second item is launch.",
+                "The first item is setup. The second item is launch.",
+                "spoken sequence prose guard"
             ),
             (
                 "I am sorry this happened.",
