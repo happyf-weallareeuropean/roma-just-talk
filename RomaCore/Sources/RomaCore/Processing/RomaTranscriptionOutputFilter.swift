@@ -121,6 +121,12 @@ public struct RomaTranscriptionOutputFilter {
         let range: Range<String.Index>
     }
 
+    private struct SpokenDateCandidate {
+        let wordCount: Int
+        let dayWordCount: Int
+        let yearWord: String?
+    }
+
     private enum SpokenCodeCaseStyle {
         case camel
         case snake
@@ -218,6 +224,21 @@ public struct RomaTranscriptionOutputFilter {
     ]
     private static let dateContextWords: Set<String> = [
         "after", "before", "by", "due", "from", "on", "since", "through", "until"
+    ]
+    private static let monthWords: Set<String> = [
+        "january", "february", "march", "april", "may", "june",
+        "july", "august", "september", "october", "november", "december"
+    ]
+    private static let ordinalDayValues: [String: Int] = [
+        "first": 1, "second": 2, "third": 3, "fourth": 4, "fifth": 5,
+        "sixth": 6, "seventh": 7, "eighth": 8, "ninth": 9, "tenth": 10,
+        "eleventh": 11, "twelfth": 12, "thirteenth": 13, "fourteenth": 14,
+        "fifteenth": 15, "sixteenth": 16, "seventeenth": 17, "eighteenth": 18,
+        "nineteenth": 19, "twentieth": 20, "twenty first": 21,
+        "twenty second": 22, "twenty third": 23, "twenty fourth": 24,
+        "twenty fifth": 25, "twenty sixth": 26, "twenty seventh": 27,
+        "twenty eighth": 28, "twenty ninth": 29, "thirtieth": 30,
+        "thirty first": 31
     ]
     private static let poundWeightContextWords: Set<String> = [
         "dropped", "gain", "gained", "lose", "losing", "lost", "shed", "weigh", "weighed", "weighs"
@@ -2230,19 +2251,7 @@ public struct RomaTranscriptionOutputFilter {
             .lowercased()
             .replacingOccurrences(of: #"\s+"#, with: " ", options: .regularExpression)
 
-        let ordinals = [
-            "first": 1, "second": 2, "third": 3, "fourth": 4, "fifth": 5,
-            "sixth": 6, "seventh": 7, "eighth": 8, "ninth": 9, "tenth": 10,
-            "eleventh": 11, "twelfth": 12, "thirteenth": 13, "fourteenth": 14,
-            "fifteenth": 15, "sixteenth": 16, "seventeenth": 17, "eighteenth": 18,
-            "nineteenth": 19, "twentieth": 20, "twenty first": 21,
-            "twenty second": 22, "twenty third": 23, "twenty fourth": 24,
-            "twenty fifth": 25, "twenty sixth": 26, "twenty seventh": 27,
-            "twenty eighth": 28, "twenty ninth": 29, "thirtieth": 30,
-            "thirty first": 31
-        ]
-
-        return ordinals[normalizedText]
+        return ordinalDayValues[normalizedText]
     }
 
     private static func normalizedMeridiem(_ text: String) -> String {
@@ -3325,7 +3334,7 @@ public struct RomaTranscriptionOutputFilter {
             in: afterMarker,
             beforeMarker: beforeMarker
         )
-        let correctionText = String(afterMarker[boundedCorrection.range])
+        let correctionText = boundedCorrection.replacementText ?? String(afterMarker[boundedCorrection.range])
         guard shouldApplyBacktrackingMarker(
             markerText,
             beforeMarker: beforeMarker,
@@ -3347,11 +3356,17 @@ public struct RomaTranscriptionOutputFilter {
         markerText: String,
         in text: String,
         beforeMarker: String
-    ) -> (range: Range<String.Index>, wordCount: Int, removalWordCount: Int) {
+    ) -> (
+        range: Range<String.Index>,
+        wordCount: Int,
+        removalWordCount: Int,
+        replacementText: String?
+    ) {
         let defaultCorrection = (
             range: correction.range,
             wordCount: correction.wordCount,
-            removalWordCount: correction.wordCount
+            removalWordCount: correction.wordCount,
+            replacementText: Optional<String>.none
         )
         guard isSingleWordReplacementBacktrackingMarker(markerText) else {
             return defaultCorrection
@@ -3366,14 +3381,22 @@ public struct RomaTranscriptionOutputFilter {
            let correctionTimeWordCount = leadingSpokenTimeWordCount(in: correctionTokens.map { $0.text }) ??
             (spokenHourValue(firstToken.text) == nil ? nil : 1) {
             let timeRange = firstToken.range.lowerBound..<correctionTokens[correctionTimeWordCount - 1].range.upperBound
-            return (timeRange, correctionTimeWordCount, sourceTimeWordCount)
+            return (timeRange, correctionTimeWordCount, sourceTimeWordCount, nil)
+        }
+
+        if let dateCorrection = boundedSpokenDateCorrection(
+            beforeMarker: beforeMarker,
+            correctionTokens: correctionTokens,
+            in: text
+        ) {
+            return dateCorrection
         }
 
         guard correction.wordCount > 1 else {
             return defaultCorrection
         }
 
-        return (firstToken.range, 1, 1)
+        return (firstToken.range, 1, 1, nil)
     }
 
     private static func correctionSourceAfterNestedIntro(_ text: String, markerText: String) -> String {
@@ -3470,6 +3493,132 @@ public struct RomaTranscriptionOutputFilter {
         }
 
         return tokens
+    }
+
+    private static func boundedSpokenDateCorrection(
+        beforeMarker: String,
+        correctionTokens: [WordToken],
+        in text: String
+    ) -> (
+        range: Range<String.Index>,
+        wordCount: Int,
+        removalWordCount: Int,
+        replacementText: String?
+    )? {
+        guard let sourceDate = trailingSpokenDate(in: beforeMarker) else {
+            return nil
+        }
+
+        let correctionWords = correctionTokens.map { $0.text }
+        if let correctionDate = leadingSpokenDate(in: correctionWords) {
+            let dateRange = correctionTokens[0].range.lowerBound..<correctionTokens[correctionDate.wordCount - 1].range.upperBound
+            return (dateRange, correctionDate.wordCount, sourceDate.wordCount, nil)
+        }
+
+        guard let correctionDayWordCount = leadingSpokenDayWordCount(in: correctionWords) else {
+            return nil
+        }
+
+        let dayRange = correctionTokens[0].range.lowerBound..<correctionTokens[correctionDayWordCount - 1].range.upperBound
+        if let sourceYear = sourceDate.yearWord {
+            let dayText = String(text[dayRange])
+            return (
+                dayRange,
+                correctionDayWordCount,
+                sourceDate.dayWordCount + 1,
+                "\(dayText) \(sourceYear)"
+            )
+        }
+
+        return (dayRange, correctionDayWordCount, sourceDate.dayWordCount, nil)
+    }
+
+    private static func trailingSpokenDate(in text: String) -> SpokenDateCandidate? {
+        let tokens = wordTokens(in: text)
+        let words = tokens.map { $0.text }
+        guard tokens.count >= 2 else { return nil }
+
+        let maxCandidateCount = min(4, words.count)
+        for wordCount in stride(from: maxCandidateCount, through: 2, by: -1) {
+            let candidateTokens = Array(tokens.suffix(wordCount))
+            let candidate = candidateTokens.map { $0.text }
+            if let date = leadingSpokenDate(in: candidate),
+               date.wordCount == wordCount,
+               let monthToken = candidateTokens.first,
+               shouldFormatSpokenMonth(
+                String(text[monthToken.range]),
+                precedingText: String(text[..<monthToken.range.lowerBound])
+               ) {
+                return date
+            }
+        }
+
+        return nil
+    }
+
+    private static func leadingSpokenDate(in words: [String]) -> SpokenDateCandidate? {
+        guard words.count >= 2,
+              monthWords.contains(words[0]) else {
+            return nil
+        }
+
+        for dayWordCount in [2, 1] where words.count >= 1 + dayWordCount {
+            let dayWords = Array(words[1..<(1 + dayWordCount)])
+            guard spokenDayValue(dayWords) != nil else { continue }
+
+            let yearIndex = 1 + dayWordCount
+            let yearWord = words.indices.contains(yearIndex) && isFourDigitYearWord(words[yearIndex]) ? words[yearIndex] : nil
+            return SpokenDateCandidate(
+                wordCount: yearIndex + (yearWord == nil ? 0 : 1),
+                dayWordCount: dayWordCount,
+                yearWord: yearWord
+            )
+        }
+
+        return nil
+    }
+
+    private static func leadingSpokenDayWordCount(in words: [String]) -> Int? {
+        for wordCount in [2, 1] where words.count >= wordCount {
+            let dayWords = Array(words[0..<wordCount])
+            guard spokenDayValue(dayWords) != nil else { continue }
+            return wordCount
+        }
+
+        return nil
+    }
+
+    private static func spokenDayValue(_ words: [String]) -> Int? {
+        guard !words.isEmpty, words.count <= 2 else { return nil }
+
+        if words.count == 1,
+           let numericDay = numericDayValue(words[0]) {
+            return numericDay
+        }
+
+        let dayText = words.joined(separator: " ")
+        return ordinalDayValues[dayText]
+    }
+
+    private static func numericDayValue(_ word: String) -> Int? {
+        let normalizedWord = word
+            .lowercased()
+            .replacingOccurrences(of: #"(?:st|nd|rd|th)$"#, with: "", options: .regularExpression)
+        guard let value = Int(normalizedWord),
+              (1...31).contains(value) else {
+            return nil
+        }
+
+        return value
+    }
+
+    private static func isFourDigitYearWord(_ word: String) -> Bool {
+        guard word.count == 4,
+              let value = Int(word) else {
+            return false
+        }
+
+        return (1000...9999).contains(value)
     }
 
     private static func trailingSpokenTimeWordCount(in text: String) -> Int? {

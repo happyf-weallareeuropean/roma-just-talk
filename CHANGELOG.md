@@ -2,6 +2,7 @@
 
 ## v1.81 - Unreleased
 
+- Preserved month/year context for spoken date self-corrections such as "June second wait no third tomorrow".
 - Replaced full spoken time phrases during natural self-corrections such as "two o clock wait no three thirty tomorrow".
 - Preserved trailing sentence continuations after one-word natural self-corrections such as "wait no three tomorrow".
 - Cleaned bounded "or actually" and "or wait no" one-word self-corrections while preserving longer alternatives.

@@ -1002,6 +1002,31 @@ struct RomaCoreChecks {
                 "wait no correction should replace numeric spoken time phrase"
             ),
             (
+                "Meet on June second wait no June third tomorrow.",
+                "Meet on June 3 tomorrow.",
+                "wait no correction should replace spoken date phrase"
+            ),
+            (
+                "Meet on June second wait no third tomorrow.",
+                "Meet on June 3 tomorrow.",
+                "wait no correction should preserve spoken date month"
+            ),
+            (
+                "Meet on June twenty second wait no twenty third tomorrow.",
+                "Meet on June 23 tomorrow.",
+                "wait no correction should preserve multi-word spoken date month"
+            ),
+            (
+                "Meet on June second 2026 wait no third tomorrow.",
+                "Meet on June 3, 2026 tomorrow.",
+                "wait no correction should preserve spoken date year"
+            ),
+            (
+                "Meet on June second 2026 wait no July third 2027 tomorrow.",
+                "Meet on July 3, 2027 tomorrow.",
+                "wait no correction should replace full spoken date with year"
+            ),
+            (
                 "Use model, oops module.",
                 "Use module.",
                 "oops correction"
