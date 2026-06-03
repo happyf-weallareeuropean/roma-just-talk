@@ -2329,6 +2329,25 @@ struct RomaCoreChecks {
             "insertion polish should attach standalone punctuation commands"
         )
         try require(
+            RomaTranscriptionOutputFilter.applyInsertionPolish("Ellipsis.", context: midSentenceContext) == "...",
+            "insertion polish should attach standalone ellipsis commands"
+        )
+        try require(
+            RomaTranscriptionOutputFilter.applyInsertionPolish("Dot dot dot.", context: midSentenceContext) == "...",
+            "insertion polish should attach standalone dot dot dot commands"
+        )
+        try require(
+            RomaTranscriptionOutputFilter.applyInsertionPolish("Em dash.", context: midSentenceContext) == " —",
+            "insertion polish should attach standalone em dash commands"
+        )
+        try require(
+            RomaTranscriptionOutputFilter.applyInsertionPolish(
+                "Ellipsis.",
+                context: RomaTranscriptionOutputFilter.TextInsertionContext(precedingText: "Done. ")
+            ) == "Ellipsis",
+            "insertion polish should not attach standalone ellipsis at sentence start"
+        )
+        try require(
             RomaTranscriptionOutputFilter.applyInsertionPolish("Comma.", context: closingSmartQuoteContext) == ",",
             "insertion polish should attach comma commands after closing smart quotes"
         )

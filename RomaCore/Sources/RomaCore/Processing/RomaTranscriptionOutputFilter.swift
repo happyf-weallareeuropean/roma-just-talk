@@ -655,6 +655,12 @@ public struct RomaTranscriptionOutputFilter {
         )
     ]
     private static let standaloneSpokenPunctuationOutputs = [
+        "ellipsis": "...",
+        "dot dot dot": "...",
+        "period period period": "...",
+        "full stop full stop full stop": "...",
+        "em dash": " —",
+        "m dash": " —",
         "comma": ",",
         "period": ".",
         "full stop": ".",
