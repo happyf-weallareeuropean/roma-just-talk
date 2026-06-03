@@ -2,6 +2,7 @@
 
 ## v1.81 - Unreleased
 
+- Added guarded "delete that sentence" and "undo this sentence" cleanup aliases.
 - Added guarded "new sentence" cleanup that inserts a sentence boundary and capitalizes the next word.
 - Added guarded "no space" cleanup for compact dictated terms such as "chat no space GPT".
 - Removed leading conversational filler phrases such as "okay so", "all right so", and "right so" when filler cleanup is enabled.

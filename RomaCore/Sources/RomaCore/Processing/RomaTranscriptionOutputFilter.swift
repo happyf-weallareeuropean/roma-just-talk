@@ -346,7 +346,7 @@ public struct RomaTranscriptionOutputFilter {
     private static let deletePreviousWordCommandPattern = #"(?i)(?<![\p{L}\p{N}])(?:delete|remove|erase|undo)\s+(?:last|previous)(?:\s+(\d|one|two|three|four|five))?\s+words?(?:\s*[.!?,;:…]+|(?=\s*$|\s*\n)|\s+)"#
     private static let deletePreviousLineCommandPattern = #"(?i)(?<![\p{L}\p{N}])(?:delete|remove|erase|undo)\s+(?:last|previous)\s+line(?:\s*[.!?,;:…]+|(?=\s*$|\s*\n)|\s+)"#
     private static let deletePreviousParagraphCommandPattern = #"(?i)(?<![\p{L}\p{N}])(?:delete|remove|erase|undo)\s+(?:last|previous)\s+paragraph(?:\s*[.!?,;:…]+|(?=\s*$|\s*\n)|\s+)"#
-    private static let deletePreviousSentenceCommandPattern = #"(?i)(?<![\p{L}\p{N}])(?:delete|remove|erase|undo)\s+(?:last|previous)\s+sentence(?:\s*[.!?,;:…]+|(?=\s*$|\s*\n)|\s+)"#
+    private static let deletePreviousSentenceCommandPattern = #"(?i)(?<![\p{L}\p{N}])(?:delete|remove|erase|undo)\s+(?:last|previous|that|this)\s+sentence(?:\s*[.!?,;:…]+|(?=\s*$|\s*\n)|\s+)"#
     private static let phraseBoundaryPunctuation = CharacterSet(charactersIn: ".,!?;:…")
     private static let softPhrasePunctuation = CharacterSet(charactersIn: ",;:…")
     private static let wordConnectorCharacters = CharacterSet(charactersIn: "'’ʼ-")

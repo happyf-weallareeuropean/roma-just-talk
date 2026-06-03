@@ -463,6 +463,16 @@ struct RomaCoreChecks {
                 "delete last sentence correction"
             ),
             (
+                "First sentence. Wrong sentence. delete that sentence. Right sentence.",
+                "First sentence. Right sentence.",
+                "delete that sentence correction"
+            ),
+            (
+                "First sentence. Wrong sentence. undo this sentence. Right sentence.",
+                "First sentence. Right sentence.",
+                "undo this sentence correction"
+            ),
+            (
                 "First line new line wrong line delete last line right line.",
                 "First line\nright line.",
                 "delete last line after spoken newline"
@@ -711,6 +721,16 @@ struct RomaCoreChecks {
                 "The delete last sentence command is useful.",
                 "The delete last sentence command is useful.",
                 "delete last sentence prose guard"
+            ),
+            (
+                "The delete that sentence command is useful.",
+                "The delete that sentence command is useful.",
+                "delete that sentence prose guard"
+            ),
+            (
+                "Explain how to remove this sentence from docs.",
+                "Explain how to remove this sentence from docs.",
+                "remove this sentence prose guard"
             ),
             (
                 "The delete last line command is useful.",
