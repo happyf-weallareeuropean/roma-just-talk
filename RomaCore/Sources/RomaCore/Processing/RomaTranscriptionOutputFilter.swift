@@ -859,6 +859,7 @@ public struct RomaTranscriptionOutputFilter {
         let normalizedText = normalizeWhitespace(text)
         let wasWholeSquareBracketedOutput = isWholeSquareBracketedOutput(normalizedText)
         var polishedText = stripBoundaryNoise(from: normalizedText)
+        polishedText = removeRedundantOuterPunctuationAfterPreservedBoundary(from: polishedText)
         polishedText = removeLeadingPausePunctuation(from: polishedText)
         guard !polishedText.isEmpty else { return polishedText }
 
@@ -4250,7 +4251,8 @@ public struct RomaTranscriptionOutputFilter {
     }
 
     private static func removeTrailingShortFragmentPunctuation(from text: String) -> String {
-        var result = removeTrailingFragmentPunctuation(from: text)
+        var result = removeTrailingPunctuationAfterPreservedBoundary(from: text)
+        result = removeTrailingFragmentPunctuation(from: result)
         result = removeTrailingSpacedFragmentSymbols(from: result)
         result = removeTrailingSentenceFragmentPunctuationInsidePreservedBoundary(from: result)
         while let lastScalar = result.unicodeScalars.last,
@@ -4269,6 +4271,41 @@ public struct RomaTranscriptionOutputFilter {
             result.removeLast()
         }
         return result.trimmingCharacters(in: .whitespacesAndNewlines)
+    }
+
+    private static func removeTrailingPunctuationAfterPreservedBoundary(from text: String) -> String {
+        let trimmedText = text.trimmingCharacters(in: .whitespacesAndNewlines)
+        var candidate = trimmedText
+        var didRemovePunctuation = false
+
+        while let lastScalar = candidate.unicodeScalars.last,
+              removableTrailingFragmentPunctuation.contains(lastScalar) ||
+                removableTrailingSentenceFragmentPunctuation.contains(lastScalar) {
+            candidate.removeLast()
+            candidate = candidate.trimmingCharacters(in: .whitespacesAndNewlines)
+            didRemovePunctuation = true
+        }
+
+        guard didRemovePunctuation,
+              hasPreservedBalancedBoundary(candidate) else {
+            return text
+        }
+
+        return candidate
+    }
+
+    private static func removeRedundantOuterPunctuationAfterPreservedBoundary(from text: String) -> String {
+        let trimmedText = text.trimmingCharacters(in: .whitespacesAndNewlines)
+        let candidate = removeTrailingPunctuationAfterPreservedBoundary(from: trimmedText)
+        guard candidate != trimmedText,
+              let innerText = preservedBoundaryInnerText(in: candidate),
+              let lastInnerScalar = innerText.trimmingCharacters(in: .whitespacesAndNewlines).unicodeScalars.last,
+              removableTrailingFragmentPunctuation.contains(lastInnerScalar) ||
+                removableTrailingSentenceFragmentPunctuation.contains(lastInnerScalar) else {
+            return text
+        }
+
+        return candidate
     }
 
     private static func removeTrailingContinuationPeriod(from text: String) -> String {
@@ -4331,15 +4368,40 @@ public struct RomaTranscriptionOutputFilter {
 
     private static func isShortNoisyBoundaryFinalFragment(_ text: String) -> Bool {
         let trimmedText = text.trimmingCharacters(in: .whitespacesAndNewlines)
+        if isShortNoisyBoundaryFinalFragmentWithoutOuterPunctuation(trimmedText) {
+            return true
+        }
+
+        let withoutOuterPunctuation = removeTrailingPunctuationAfterPreservedBoundary(from: trimmedText)
+        guard withoutOuterPunctuation != trimmedText else { return false }
+        return isShortNoisyBoundaryFinalFragmentWithoutOuterPunctuation(withoutOuterPunctuation)
+    }
+
+    private static func isShortNoisyBoundaryFinalFragmentWithoutOuterPunctuation(_ text: String) -> Bool {
+        let trimmedText = text.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard let innerText = preservedBoundaryInnerText(in: trimmedText) else {
+            return false
+        }
+
+        return shouldRemoveNoisySentencePunctuationInsideBoundary(innerText)
+    }
+
+    private static func preservedBoundaryInnerText(in text: String) -> String? {
+        let trimmedText = text.trimmingCharacters(in: .whitespacesAndNewlines)
         guard let first = trimmedText.first,
               let closing = preservedClosingBoundary(for: first),
               trimmedText.last == closing else {
-            return false
+            return nil
         }
 
         let innerStart = trimmedText.index(after: trimmedText.startIndex)
         let innerEnd = trimmedText.index(before: trimmedText.endIndex)
-        return shouldRemoveNoisySentencePunctuationInsideBoundary(String(trimmedText[innerStart..<innerEnd]))
+        let innerText = String(trimmedText[innerStart..<innerEnd])
+        guard !innerText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else {
+            return nil
+        }
+
+        return innerText
     }
 
     private static func shouldRemoveNoisySentencePunctuationInsideBoundary(_ text: String) -> Bool {

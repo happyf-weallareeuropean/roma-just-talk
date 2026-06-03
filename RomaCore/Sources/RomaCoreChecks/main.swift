@@ -2252,6 +2252,18 @@ struct RomaCoreChecks {
             "insertion polish should strip noisy periods inside quoted final phrases"
         )
         try require(
+            RomaTranscriptionOutputFilter.applyInsertionPolish("\"A final word.\".", context: nil) == "\"a final word\"",
+            "insertion polish should strip outer punctuation after quoted final phrases"
+        )
+        try require(
+            RomaTranscriptionOutputFilter.applyInsertionPolish("“A final word.”.", context: nil) == "“a final word”",
+            "insertion polish should strip outer punctuation after smart-quoted final phrases"
+        )
+        try require(
+            RomaTranscriptionOutputFilter.applyInsertionPolish("(A final word.).", context: nil) == "(a final word)",
+            "insertion polish should strip outer punctuation after parenthesized final phrases"
+        )
+        try require(
             RomaTranscriptionOutputFilter.applyInsertionPolish("\"U.S.\"", context: nil) == "\"U.S.\"",
             "insertion polish should preserve quoted abbreviation periods"
         )
@@ -2261,6 +2273,13 @@ struct RomaCoreChecks {
                 context: nil
             ) == "\"This is a longer sentence.\"",
             "insertion polish should preserve quoted full-sentence periods"
+        )
+        try require(
+            RomaTranscriptionOutputFilter.applyInsertionPolish(
+                "\"This is a longer sentence.\".",
+                context: nil
+            ) == "\"This is a longer sentence.\"",
+            "insertion polish should strip redundant outer punctuation after quoted full sentences"
         )
         try require(
             RomaTranscriptionOutputFilter.applyInsertionPolish("... Model.", context: midSentenceContext) == "model",
