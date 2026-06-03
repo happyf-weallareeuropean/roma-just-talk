@@ -2,6 +2,7 @@
 
 ## v1.81 - Unreleased
 
+- Preserved sentence prefixes when self-corrections start with articles, such as "replace that with a module".
 - Added bounded "better make it..." self-correction cleanup for phrases such as "Use model, better make it module.".
 - Added bounded "actually make it..." self-correction cleanup for phrases such as "Use model, actually make it module.".
 - Added bounded "call it..." self-correction cleanup for phrases such as "Use model, call it module.".

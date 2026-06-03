@@ -3034,12 +3034,25 @@ public struct RomaTranscriptionOutputFilter {
             beforeMarker: beforeMarker,
             correctionText: correctionText
         ),
-              let prefix = removeTrailingWords(correction.wordCount, from: beforeMarker) else {
+              let prefix = removeTrailingWords(
+                removalWordCount(for: correctionText, fallback: correction.wordCount),
+                from: beforeMarker
+              ) else {
             return nil
         }
 
         let suffix = String(afterMarker[correction.range.upperBound...])
         return normalizeBacktrackingWhitespace(join(prefix, correctionText, suffix))
+    }
+
+    private static func removalWordCount(for correctionText: String, fallback wordCount: Int) -> Int {
+        guard wordCount > 1,
+              let firstCorrectionWord = firstWord(in: correctionText),
+              ["a", "an", "the"].contains(firstCorrectionWord) else {
+            return wordCount
+        }
+
+        return wordCount - 1
     }
 
     private static func shouldApplyBacktrackingMarker(

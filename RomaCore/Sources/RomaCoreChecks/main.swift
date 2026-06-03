@@ -578,6 +578,16 @@ struct RomaCoreChecks {
                 "replace that with correction"
             ),
             (
+                "Use model replace that with a module.",
+                "Use a module.",
+                "replace that with article correction"
+            ),
+            (
+                "Use old model replace that with a new module.",
+                "Use a new module.",
+                "replace phrase with article correction"
+            ),
+            (
                 "Use model, sorry I mean module.",
                 "Use module.",
                 "sorry i mean correction"
@@ -606,6 +616,11 @@ struct RomaCoreChecks {
                 "Use model, call it module.",
                 "Use module.",
                 "call it correction"
+            ),
+            (
+                "Use model, call it a module.",
+                "Use a module.",
+                "call it article correction"
             ),
             (
                 "Set color blue, sorry red.",
