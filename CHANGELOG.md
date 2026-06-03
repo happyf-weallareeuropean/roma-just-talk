@@ -2,6 +2,7 @@
 
 ## v1.81 - Unreleased
 
+- Cleaned natural "no I mean..." and "no actually..." self-corrections while preserving literal phrase references.
 - Removed more bracketed non-speech descriptors such as "[silence continues]" and "[phone ringing loudly]".
 - Preserved correction markers after pause fillers, such as ", um actually..." and ", hmm wait no...".
 - Removed listening-related ASR boilerplate such as "Thanks for listening.".

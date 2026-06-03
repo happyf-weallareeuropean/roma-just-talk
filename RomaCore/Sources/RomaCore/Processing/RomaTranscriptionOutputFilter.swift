@@ -361,6 +361,9 @@ public struct RomaTranscriptionOutputFilter {
             scratch\s+that(?!\s+out\b) |
             wait\s+no |
             (?:[,;:…]|\.\.\.)\s*no\s*[,;:]?\s+wait\s*[,;:]? |
+            no\s*[,;:]?\s+i\s+mean\s*[,;:]? |
+            no\s*[,;:]?\s+i\s+meant\s*[,;:]? |
+            no\s*[,;:]?\s+actually\s*[,;:]? |
             never\s*mind |
             nevermind |
             sorry\s+not\s+that |
@@ -3265,7 +3268,8 @@ public struct RomaTranscriptionOutputFilter {
             return false
         }
 
-        guard isReplaceOrChangeBacktrackingMarker(markerText) else {
+        guard isReplaceOrChangeBacktrackingMarker(markerText) ||
+                isGuardedNaturalBacktrackingMarker(markerText) else {
             return true
         }
 
@@ -3305,10 +3309,22 @@ public struct RomaTranscriptionOutputFilter {
         ].contains(normalizedMarker)
     }
 
+    private static func isGuardedNaturalBacktrackingMarker(_ markerText: String) -> Bool {
+        let normalizedMarker = normalizedBacktrackingMarker(markerText)
+        return [
+            "no i mean",
+            "no i meant",
+            "no actually"
+        ].contains(normalizedMarker)
+    }
+
     private static func normalizedBacktrackingMarker(_ markerText: String) -> String {
         normalizeWhitespace(markerText)
             .trimmingCharacters(in: CharacterSet(charactersIn: ",;:… "))
             .replacingOccurrences(of: #"\.+"#, with: "", options: .regularExpression)
+            .replacingOccurrences(of: #"[,;:]+"#, with: " ", options: .regularExpression)
+            .replacingOccurrences(of: #"\s+"#, with: " ", options: .regularExpression)
+            .trimmingCharacters(in: .whitespacesAndNewlines)
             .lowercased()
     }
 

@@ -913,6 +913,21 @@ struct RomaCoreChecks {
                 "pause before wait no correction"
             ),
             (
+                "Use model no I mean module.",
+                "Use module.",
+                "no i mean correction"
+            ),
+            (
+                "Use model no, I meant module.",
+                "Use module.",
+                "no i meant correction"
+            ),
+            (
+                "Use model no actually module.",
+                "Use module.",
+                "no actually correction"
+            ),
+            (
                 "Use model, correction module.",
                 "Use module.",
                 "correction marker cleanup"
@@ -1496,6 +1511,16 @@ struct RomaCoreChecks {
                 "The command change it to is useful.",
                 "The command change it to is useful.",
                 "change it command prose guard"
+            ),
+            (
+                "The phrase no I mean is useful.",
+                "The phrase no I mean is useful.",
+                "no i mean phrase guard"
+            ),
+            (
+                "The phrase no actually is useful.",
+                "The phrase no actually is useful.",
+                "no actually phrase guard"
             ),
             (
                 "Please change that to red.",
