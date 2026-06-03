@@ -143,6 +143,11 @@ public struct RomaTranscriptionOutputFilter {
         let output: String
     }
 
+    private struct SpokenCompactConnectorSuffix {
+        let wordCount: Int
+        let previousWord: String
+    }
+
     private enum SpokenCodeCaseStyle {
         case camel
         case snake
@@ -3812,6 +3817,21 @@ public struct RomaTranscriptionOutputFilter {
         let compactTokens = wordTokens(in: text)
         let compactWords = compactTokens.map { $0.text }
         guard let correctionWordCount = leadingSpokenCompactTokenWordCount(in: compactWords) else {
+            if let connectorCorrection = leadingSpokenCompactConnectorCorrection(in: compactWords),
+               let leadingConnector = spokenCompactConnector(in: compactWords, startingAt: 0),
+               let sourceSuffix = trailingSpokenCompactConnectorSuffix(
+                in: beforeMarker,
+                matching: connectorCorrection.output
+               ),
+               shouldUseSpokenCompactConnector(
+                connectorCorrection.output,
+                previousWord: sourceSuffix.previousWord,
+                nextWord: compactWords[leadingConnector.wordCount]
+               ) {
+                let compactRange = compactTokens[0].range.lowerBound..<compactTokens[connectorCorrection.wordCount - 1].range.upperBound
+                return (compactRange, connectorCorrection.wordCount, sourceSuffix.wordCount, nil)
+            }
+
             return nil
         }
 
@@ -3863,6 +3883,81 @@ public struct RomaTranscriptionOutputFilter {
 
         guard connectorCount > 0 else { return nil }
         return index
+    }
+
+    private static func leadingSpokenCompactConnectorCorrection(in words: [String]) -> SpokenCompactConnector? {
+        guard let connector = spokenCompactConnector(in: words, startingAt: 0) else {
+            return nil
+        }
+
+        let nextSegmentIndex = connector.wordCount
+        guard nextSegmentIndex < words.count,
+              isCompactTokenSegment(words[nextSegmentIndex]) else {
+            return nil
+        }
+
+        var index = nextSegmentIndex + 1
+        while index < words.count {
+            guard let nextConnector = spokenCompactConnector(in: words, startingAt: index) else {
+                break
+            }
+
+            let nextIndex = index + nextConnector.wordCount
+            guard nextIndex < words.count,
+                  isCompactTokenSegment(words[nextIndex]),
+                  shouldUseSpokenCompactConnector(
+                    nextConnector.output,
+                    previousWord: words[index - 1],
+                    nextWord: words[nextIndex]
+                  ) else {
+                break
+            }
+
+            index = nextIndex + 1
+        }
+
+        return SpokenCompactConnector(wordCount: index, output: connector.output)
+    }
+
+    private static func trailingSpokenCompactConnectorSuffix(
+        in text: String,
+        matching connectorOutput: String
+    ) -> SpokenCompactConnectorSuffix? {
+        let words = wordTokens(in: text).map { $0.text }
+        guard let tokenWordCount = trailingSpokenCompactTokenWordCount(in: text) else {
+            return nil
+        }
+
+        let compactWords = Array(words.suffix(tokenWordCount))
+        var index = 1
+        var suffix: SpokenCompactConnectorSuffix?
+        while index < compactWords.count {
+            guard let connector = spokenCompactConnector(in: compactWords, startingAt: index) else {
+                break
+            }
+
+            let nextSegmentIndex = index + connector.wordCount
+            guard nextSegmentIndex < compactWords.count,
+                  isCompactTokenSegment(compactWords[nextSegmentIndex]),
+                  shouldUseSpokenCompactConnector(
+                    connector.output,
+                    previousWord: compactWords[index - 1],
+                    nextWord: compactWords[nextSegmentIndex]
+                  ) else {
+                break
+            }
+
+            if connector.output == connectorOutput {
+                suffix = SpokenCompactConnectorSuffix(
+                    wordCount: compactWords.count - index,
+                    previousWord: compactWords[index - 1]
+                )
+            }
+
+            index = nextSegmentIndex + 1
+        }
+
+        return suffix
     }
 
     private static func spokenCompactConnector(

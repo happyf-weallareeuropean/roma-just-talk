@@ -1117,6 +1117,26 @@ struct RomaCoreChecks {
                 "wait no correction should replace spoken identifier phrase"
             ),
             (
+                "Open docs dot example dot com wait no dot org today.",
+                "Open docs.example.org today.",
+                "wait no correction should replace spoken domain suffix"
+            ),
+            (
+                "Open docs dot example dot com slash api wait no slash v2 today.",
+                "Open docs.example.com/v2 today.",
+                "wait no correction should replace spoken path suffix"
+            ),
+            (
+                "Email old at sign example dot com wait no at sign new dot com today.",
+                "Email old@new.com today.",
+                "wait no correction should replace spoken email domain suffix"
+            ),
+            (
+                "Use user underscore id wait no underscore name today.",
+                "Use user_name today.",
+                "wait no correction should replace spoken identifier suffix"
+            ),
+            (
                 "Use model, oops module.",
                 "Use module.",
                 "oops correction"
