@@ -408,6 +408,16 @@ struct RomaCoreChecks {
                 "spoken enclosure and punctuation"
             ),
             (
+                "Quote hello comma world unquote.",
+                "\"hello, world\".",
+                "quote unquote enclosure"
+            ),
+            (
+                "Single quote hello comma world single quote.",
+                "'hello, world'.",
+                "single quote pair enclosure"
+            ),
+            (
                 "Hello, comma world.",
                 "Hello, world.",
                 "spoken comma over auto comma"
@@ -486,6 +496,11 @@ struct RomaCoreChecks {
                 "Use dot notation.",
                 "Use dot notation.",
                 "dot command prose guard"
+            ),
+            (
+                "Quote from the docs.",
+                "Quote from the docs.",
+                "quote prose guard"
             ),
             (
                 "This is like magic.",

@@ -305,6 +305,8 @@ public struct RomaTranscriptionOutputFilter {
         (#"(?i)(?<![\p{L}\p{N}])(?:open|left)\s+(?:curly\s+)?brace(?![\p{L}\p{N}])"#, openBracePlaceholder),
         (#"(?i)(?<![\p{L}\p{N}])(?:close|right)\s+(?:curly\s+)?brace(?![\p{L}\p{N}])"#, closeBracePlaceholder)
     ]
+    private static let spokenDoubleQuotePairPattern = #"(?i)(?<![\p{L}\p{N}])quote[ \t]+([^.!?\n]{1,160}?)[ \t]+unquote([.!?])?(?![\p{L}\p{N}])"#
+    private static let spokenSingleQuotePairPattern = #"(?i)(?<![\p{L}\p{N}])single[ \t]+quote[ \t]+([^.!?\n]{1,160}?)[ \t]+single[ \t]+quote([.!?])?(?![\p{L}\p{N}])"#
     private static let spokenSymbolCommands = [
         SpokenSymbolCommand(
             pattern: #"(?i)(?<![\p{L}\p{N}])(?:forward\s+slash|slash)(?![\p{L}\p{N}])"#,
@@ -798,7 +800,7 @@ public struct RomaTranscriptionOutputFilter {
     }
 
     private static func applySpokenEnclosureCommands(in text: String) -> String {
-        var enclosedText = text
+        var enclosedText = applySpokenQuotePairCommands(in: text)
 
         for command in spokenEnclosureCommands {
             guard let regex = try? NSRegularExpression(pattern: command.pattern) else {
@@ -815,6 +817,42 @@ public struct RomaTranscriptionOutputFilter {
         }
 
         return normalizeSpokenEnclosureSpacing(enclosedText)
+    }
+
+    private static func applySpokenQuotePairCommands(in text: String) -> String {
+        var quotedText = replaceSpokenQuotePairs(in: text, pattern: spokenDoubleQuotePairPattern, opening: "\"", closing: "\"")
+        quotedText = replaceSpokenQuotePairs(in: quotedText, pattern: spokenSingleQuotePairPattern, opening: "'", closing: "'")
+        return quotedText
+    }
+
+    private static func replaceSpokenQuotePairs(
+        in text: String,
+        pattern: String,
+        opening: String,
+        closing: String
+    ) -> String {
+        guard let regex = try? NSRegularExpression(pattern: pattern) else {
+            return text
+        }
+
+        var quotedText = text
+        let matches = regex.matches(in: quotedText, range: NSRange(quotedText.startIndex..., in: quotedText))
+
+        for match in matches.reversed() {
+            guard match.numberOfRanges >= 3,
+                  let fullRange = Range(match.range(at: 0), in: quotedText),
+                  let contentRange = Range(match.range(at: 1), in: quotedText) else {
+                continue
+            }
+
+            let content = String(quotedText[contentRange]).trimmingCharacters(in: .whitespacesAndNewlines)
+            guard !content.isEmpty else { continue }
+
+            let punctuation = optionalMatchText(in: quotedText, match: match, rangeIndex: 2) ?? ""
+            quotedText.replaceSubrange(fullRange, with: "\(opening)\(content)\(closing)\(punctuation)")
+        }
+
+        return quotedText
     }
 
     private static func normalizeSpokenEnclosureSpacing(_ text: String) -> String {
