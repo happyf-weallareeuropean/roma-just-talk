@@ -2,6 +2,7 @@
 
 ## v1.81 - Unreleased
 
+- Removed trailing hyphen and dash artifacts from short final fragments.
 - Fixed punctuation spacing before closing quotes so quoted short fragments do not gain an internal trailing space.
 - Removed noisy `!` and `?` inside quoted, parenthesized, and braced short final fragments.
 - Removed noisy `!` and `?` from likely short final fragments such as mid-sentence "Model!".

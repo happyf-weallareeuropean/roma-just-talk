@@ -136,7 +136,7 @@ public struct RomaTranscriptionOutputFilter {
     private static let lowercaseTranscriptionKey = "LowercaseTranscription"
     private static let maxInsertionContextCharacters = 512
     private static let apostropheLikeCharacters = CharacterSet(charactersIn: "'’‘ʼ＇")
-    private static let removableTrailingFragmentPunctuation = CharacterSet(charactersIn: ".,;:…")
+    private static let removableTrailingFragmentPunctuation = CharacterSet(charactersIn: ".,;:…-–—")
     private static let removableTrailingSentenceFragmentPunctuation = CharacterSet(charactersIn: "!?")
     private static let nonSpeechBracketContents: Set<String> = [
         "applause", "background noise", "inaudible", "laughter", "laughs",
@@ -2798,7 +2798,7 @@ public struct RomaTranscriptionOutputFilter {
               removableTrailingFragmentPunctuation.contains(lastScalar) {
             result.removeLast()
         }
-        return result
+        return result.trimmingCharacters(in: .whitespacesAndNewlines)
     }
 
     private static func removeTrailingShortFragmentPunctuation(from text: String) -> String {

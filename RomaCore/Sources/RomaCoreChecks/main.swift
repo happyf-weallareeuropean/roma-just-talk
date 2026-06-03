@@ -210,6 +210,14 @@ struct RomaCoreChecks {
             "shared insertion polish should remove noisy question marks from mid-sentence fragments"
         )
         try require(
+            RomaTranscriptionOutputFilter.applyInsertionPolish("Model -", context: midSentenceContext) == "model",
+            "shared insertion polish should remove noisy hyphens from mid-sentence fragments"
+        )
+        try require(
+            RomaTranscriptionOutputFilter.applyInsertionPolish("Model —", context: midSentenceContext) == "model",
+            "shared insertion polish should remove noisy dashes from mid-sentence fragments"
+        )
+        try require(
             RomaTranscriptionOutputFilter.applyInsertionPolish("What?", context: midSentenceContext) == "what?",
             "shared insertion polish should preserve one-word question fragments"
         )
@@ -240,6 +248,11 @@ struct RomaCoreChecks {
         try require(
             RomaTranscriptionOutputFilter.applyInsertionPolish("\"What?\".", context: midSentenceContext) == "\"what?\"",
             "shared insertion polish should preserve quoted one-word questions"
+        )
+        try require(
+            RomaTranscriptionOutputFilter.applyInsertionPolish("state-of-the-art", context: midSentenceContext) ==
+                "state-of-the-art",
+            "shared insertion polish should preserve internal hyphens"
         )
         try require(
             RomaTranscriptionOutputFilter.applyInsertionSpacing("model", context: midSentenceContext) == " model",
