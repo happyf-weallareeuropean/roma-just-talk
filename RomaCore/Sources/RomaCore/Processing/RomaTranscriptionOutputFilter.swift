@@ -128,6 +128,25 @@ public struct RomaTranscriptionOutputFilter {
         let style: SpokenCodeCaseStyle
     }
 
+    private struct GuardedSpokenFormattingCommand {
+        let pattern: String
+        let replacement: String
+        let blockedPreviousWords: Set<String>
+        let blockedNextWords: Set<String>
+
+        init(
+            pattern: String,
+            replacement: String,
+            blockedPreviousWords: Set<String> = [],
+            blockedNextWords: Set<String> = []
+        ) {
+            self.pattern = pattern
+            self.replacement = replacement
+            self.blockedPreviousWords = blockedPreviousWords
+            self.blockedNextWords = blockedNextWords
+        }
+    }
+
     private struct SpokenSequenceListMarker {
         let range: Range<String.Index>
         let value: Int
@@ -323,11 +342,19 @@ public struct RomaTranscriptionOutputFilter {
     private static let openBracePlaceholder = "__VOICEINK_OPEN_BRACE__"
     private static let closeBracePlaceholder = "__VOICEINK_CLOSE_BRACE__"
     private static let spokenFormattingCommands: [(pattern: String, replacement: String)] = [
-        (#"(?i)(?<![\p{L}\p{N}])(?:new|next)\s+paragraph(?![\p{L}\p{N}])"#, "\n\n"),
+        (#"(?i)(?<![\p{L}\p{N}])(?<!start[ \t]a[ \t])(?:new|next)\s+paragraph(?![\p{L}\p{N}])"#, "\n\n"),
         (#"(?i)(?<![\p{L}\p{N}])(?:new|next)\s+line(?![\p{L}\p{N}])"#, "\n"),
         (#"(?i)(?<![\p{L}\p{N}])line\s+break(?![\p{L}\p{N}])"#, "\n"),
         (#"(?i)(?<![\p{L}\p{N}])newline(?![\p{L}\p{N}])"#, "\n"),
         (#"(?i)(?<![\p{L}\p{N}])(?:new\s+bullet|bullet\s+point|bullet)(?![\p{L}\p{N}])"#, "\n- ")
+    ]
+    private static let guardedSpokenFormattingCommands = [
+        GuardedSpokenFormattingCommand(
+            pattern: #"(?i)(?<![\p{L}\p{N}])(?:skip\s+a\s+line|blank\s+line|paragraph\s+break|start\s+a\s+new\s+paragraph|break\s+here|split\s+here)(?![\p{L}\p{N}])"#,
+            replacement: "\n\n",
+            blockedPreviousWords: ["command", "commands", "how", "phrase", "phrases", "say", "saying", "the", "to", "word", "words"],
+            blockedNextWords: ["command", "commands", "from", "in", "is", "means", "of", "phrase", "phrases", "shortcut", "shortcuts"]
+        )
     ]
     private static let spokenEnclosureCommands: [(pattern: String, replacement: String)] = [
         (#"(?i)(?<![\p{L}\p{N}])(?:open|start)\s+(?:quote|quotation\s+marks?)(?![\p{L}\p{N}])"#, openQuotePlaceholder),
@@ -840,7 +867,41 @@ public struct RomaTranscriptionOutputFilter {
             )
         }
 
+        formattedText = applyGuardedSpokenFormattingCommands(in: formattedText)
         return normalizeSpokenFormattingSpacing(formattedText)
+    }
+
+    private static func applyGuardedSpokenFormattingCommands(in text: String) -> String {
+        var formattedText = text
+
+        for command in guardedSpokenFormattingCommands {
+            guard let regex = try? NSRegularExpression(pattern: command.pattern) else {
+                continue
+            }
+
+            let matches = regex.matches(in: formattedText, range: NSRange(formattedText.startIndex..., in: formattedText))
+            for match in matches.reversed() {
+                guard let matchRange = Range(match.range, in: formattedText) else {
+                    continue
+                }
+
+                let prefix = String(formattedText[..<matchRange.lowerBound])
+                if let previousWord = previousWord(in: prefix),
+                   command.blockedPreviousWords.contains(previousWord) {
+                    continue
+                }
+
+                let suffix = String(formattedText[matchRange.upperBound...])
+                if let nextWord = nextWord(in: suffix),
+                   command.blockedNextWords.contains(nextWord) {
+                    continue
+                }
+
+                formattedText.replaceSubrange(matchRange, with: command.replacement)
+            }
+        }
+
+        return formattedText
     }
 
     private static func applySpokenEnclosureCommands(in text: String) -> String {

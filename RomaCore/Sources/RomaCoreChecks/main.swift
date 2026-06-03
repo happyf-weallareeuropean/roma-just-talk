@@ -508,6 +508,26 @@ struct RomaCoreChecks {
                 "ordinal spoken sequence list"
             ),
             (
+                "Intro skip a line Details.",
+                "Intro\n\nDetails.",
+                "skip a line paragraph command"
+            ),
+            (
+                "Intro start a new paragraph Details.",
+                "Intro\n\nDetails.",
+                "start a new paragraph command"
+            ),
+            (
+                "Intro break here Details.",
+                "Intro\n\nDetails.",
+                "break here paragraph command"
+            ),
+            (
+                "Intro split here Details.",
+                "Intro\n\nDetails.",
+                "split here paragraph command"
+            ),
+            (
                 "Use api slash users.",
                 "Use api/users.",
                 "spoken slash command"
@@ -566,6 +586,21 @@ struct RomaCoreChecks {
                 "The first item is setup. The second item is launch.",
                 "The first item is setup. The second item is launch.",
                 "spoken sequence prose guard"
+            ),
+            (
+                "The phrase skip a line is useful.",
+                "The phrase skip a line is useful.",
+                "skip a line prose guard"
+            ),
+            (
+                "Explain how to start a new paragraph in docs.",
+                "Explain how to start a new paragraph in docs.",
+                "start a new paragraph prose guard"
+            ),
+            (
+                "The break here is intentional.",
+                "The break here is intentional.",
+                "break here prose guard"
             ),
             (
                 "I am sorry this happened.",

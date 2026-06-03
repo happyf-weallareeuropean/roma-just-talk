@@ -2,6 +2,7 @@
 
 ## v1.81 - Unreleased
 
+- Added guarded paragraph aliases such as "skip a line", "start a new paragraph", "break here", and "split here".
 - Added spoken sequence list cleanup for dictation like "one ... two ..." and "first ... second ..." with prose guards.
 - Added same-utterance "delete previous word" and "delete last sentence" cleanup commands with prose guards.
 - Added spoken ellipsis and em-dash punctuation cleanup while preserving compact dash tokens.
