@@ -919,7 +919,7 @@ public struct RomaTranscriptionOutputFilter {
             return true
         }
 
-        return ")]}\"'".contains(previousCharacter)
+        return ")]}\"'”’".contains(previousCharacter)
     }
 
     public static func applyInsertionSpacing(_ text: String, context: TextInsertionContext?) -> String {
@@ -4528,7 +4528,7 @@ public struct RomaTranscriptionOutputFilter {
             return false
         }
 
-        let leadingSpaceAfter = CharacterSet(charactersIn: ".,;:!?)]}")
+        let leadingSpaceAfter = CharacterSet(charactersIn: ".,;:!?)]}”’")
         return previousCharacter.isLetter ||
             previousCharacter.isNumber ||
             previousCharacter.unicodeScalars.allSatisfy { leadingSpaceAfter.contains($0) }

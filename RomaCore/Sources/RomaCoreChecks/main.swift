@@ -2162,9 +2162,24 @@ struct RomaCoreChecks {
         )
 
         let midSentenceContext = RomaTranscriptionOutputFilter.TextInsertionContext(precedingText: "...so this")
+        let openSmartQuoteContext = RomaTranscriptionOutputFilter.TextInsertionContext(precedingText: "She said “")
+        let closingSmartQuoteContext = RomaTranscriptionOutputFilter.TextInsertionContext(precedingText: "She said “hello”")
+        let closingSmartSingleQuoteContext = RomaTranscriptionOutputFilter.TextInsertionContext(precedingText: "She said ‘hello’")
         try require(
             RomaTranscriptionOutputFilter.applyInsertionPolish("Model.", context: midSentenceContext) == "model",
             "insertion polish should lowercase final mid-sentence word"
+        )
+        try require(
+            RomaTranscriptionOutputFilter.applyInsertionSpacing("hello", context: openSmartQuoteContext) == "hello",
+            "insertion spacing should not add space after opening smart quotes"
+        )
+        try require(
+            RomaTranscriptionOutputFilter.applyInsertionSpacing("again", context: closingSmartQuoteContext) == " again",
+            "insertion spacing should add space after closing smart quotes"
+        )
+        try require(
+            RomaTranscriptionOutputFilter.applyInsertionSpacing("again", context: closingSmartSingleQuoteContext) == " again",
+            "insertion spacing should add space after closing smart single quotes"
         )
         try require(
             RomaTranscriptionOutputFilter.applyInsertionPolish(
@@ -2276,6 +2291,14 @@ struct RomaCoreChecks {
         try require(
             RomaTranscriptionOutputFilter.applyInsertionPolish("Question mark.", context: midSentenceContext) == "?",
             "insertion polish should attach standalone punctuation commands"
+        )
+        try require(
+            RomaTranscriptionOutputFilter.applyInsertionPolish("Comma.", context: closingSmartQuoteContext) == ",",
+            "insertion polish should attach comma commands after closing smart quotes"
+        )
+        try require(
+            RomaTranscriptionOutputFilter.applyInsertionPolish("Question mark.", context: closingSmartSingleQuoteContext) == "?",
+            "insertion polish should attach question mark commands after closing smart single quotes"
         )
     }
 
