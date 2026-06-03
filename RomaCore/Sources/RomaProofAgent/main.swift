@@ -347,6 +347,7 @@ struct RomaProofAgent {
         print("processed_transcript_length=\(result.processedText.count)")
         print("processed_transcript_text=\(oneLine(result.processedText))")
         print("word_replacements=\(wordReplacements.count)")
+        print("fake_paste_sent=\(await textInsertion.pastedText != nil)")
         print("fake_paste_text=\(oneLine(await textInsertion.pastedText ?? ""))")
         print("paste_text_source=processed_transcript")
     }

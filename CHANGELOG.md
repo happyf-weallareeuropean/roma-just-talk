@@ -2,6 +2,8 @@
 
 ## v1.81 - Unreleased
 
+- Skipped paste when cleanup leaves empty text, preventing filler-only speech from erasing selected text.
+- Removed standalone "you know" and "you know what I mean" filler outputs while preserving question forms.
 - Removed spaced trailing slash, backslash, and pipe artifacts from short final fragments while preserving compact paths.
 - Removed trailing hyphen and dash artifacts from short final fragments.
 - Fixed punctuation spacing before closing quotes so quoted short fragments do not gain an internal trailing space.

@@ -348,6 +348,16 @@ struct RomaCoreChecks {
                 "punctuated long terminal discourse filler"
             ),
             (
+                "you know.",
+                "",
+                "standalone you know filler"
+            ),
+            (
+                "you know what I mean.",
+                "",
+                "standalone you know what I mean filler"
+            ),
+            (
                 "I think this works. I think this works.",
                 "I think this works.",
                 "duplicate short sentence"
@@ -456,6 +466,11 @@ struct RomaCoreChecks {
                 "You know this already.",
                 "You know this already.",
                 "leading you know prose guard"
+            ),
+            (
+                "you know?",
+                "you know?",
+                "standalone you know question guard"
             ),
             (
                 "I mean business.",
@@ -988,6 +1003,33 @@ struct RomaCoreChecks {
             await selectedReplacementInserter.pastedText == "model",
             "pipeline should paste selected replacement text without leading space"
         )
+
+        let fillerOnlyRecorder = FakeRecorder()
+        let fillerOnlyInserter = FakeTextInsertion()
+        let fillerOnlyPipeline = DictationPipeline(
+            recorder: fillerOnlyRecorder,
+            transcriptionService: FakeTranscriptionService(
+                expectedFileName: "filler-only-proof.wav",
+                text: "hmm.... eh..."
+            ),
+            textInsertion: fillerOnlyInserter
+        )
+        let fillerOnlyRequest = DictationPipelineRequest(
+            outputURL: URL(fileURLWithPath: "/tmp/filler-only-proof.wav"),
+            model: model,
+            shouldInsertTranscription: true,
+            textProcessing: DictationTextProcessingConfiguration(
+                removesFillerWords: true,
+                insertionContext: TextInsertionContext(precedingText: "Use ", selectedText: "old")
+            )
+        )
+
+        try await fillerOnlyRecorder.startPreRollBuffering()
+        let fillerOnlyResult = try await fillerOnlyPipeline.runRecordingWindow(fillerOnlyRequest) {}
+
+        try require(fillerOnlyResult.processedText.isEmpty, "pipeline should clean filler-only speech to empty text")
+        try require(fillerOnlyResult.session.insertedText == nil, "pipeline should not store empty inserted text")
+        try require(await fillerOnlyInserter.pastedText == nil, "pipeline should not paste empty cleaned text")
 
         let missingInserterPipeline = DictationPipeline(
             recorder: FakeRecorder(),

@@ -205,6 +205,7 @@ public struct RomaTranscriptionOutputFilter {
     private static let leadingDiscourseFillerPatterns: [(pattern: String, replacement: String)] = [
         (#"(?i)^\s*(?:you\s+know|i\s+mean|like)[,;:…]+[ \t]*"#, "")
     ]
+    private static let standaloneDiscourseFillerPattern = #"(?i)^\s*you[ \t]+know(?:[ \t]+what[ \t]+i[ \t]+mean)?[ \t]*[.,;:…]*\s*$"#
     private static let blockedPreviousWordsForTerminalYouKnow: Set<String> = [
         "do", "does", "did", "don't", "if", "know", "let", "should", "to", "whether", "will", "would"
     ]
@@ -612,6 +613,7 @@ public struct RomaTranscriptionOutputFilter {
     private static func removeFillerWords(from text: String, fillerWords configuredFillerWords: [String]) -> String {
         var filteredText = text
 
+        filteredText = removeStandaloneDiscourseFillers(from: filteredText)
         filteredText = removeLeadingDiscourseFillers(from: filteredText)
         filteredText = removePunctuatedDiscourseFillers(from: filteredText)
         filteredText = removeTerminalDiscourseFillers(from: filteredText)
@@ -644,6 +646,18 @@ public struct RomaTranscriptionOutputFilter {
         }
 
         return filteredText
+    }
+
+    private static func removeStandaloneDiscourseFillers(from text: String) -> String {
+        guard let regex = try? NSRegularExpression(pattern: standaloneDiscourseFillerPattern) else {
+            return text
+        }
+
+        let range = NSRange(text.startIndex..., in: text)
+        guard regex.firstMatch(in: text, range: range) != nil else {
+            return text
+        }
+        return ""
     }
 
     private static func removeLeadingDiscourseFillers(from text: String) -> String {

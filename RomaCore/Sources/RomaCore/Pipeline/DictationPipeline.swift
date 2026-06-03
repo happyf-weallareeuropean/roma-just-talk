@@ -118,7 +118,8 @@ public final class DictationPipeline: @unchecked Sendable {
             let processedText = processText(transcription.text, using: request.textProcessing)
 
             var insertedText: String?
-            if request.shouldInsertTranscription {
+            if request.shouldInsertTranscription,
+               !processedText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
                 try await textInsertion?.pasteAtCursor(processedText)
                 insertedText = processedText
             }

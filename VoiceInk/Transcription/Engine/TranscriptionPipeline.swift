@@ -170,8 +170,12 @@ class TranscriptionPipeline {
             transcription.transcriptionDuration = transcriptionDuration
             let spacedCleanedText = TranscriptionOutputFilter.applyInsertionSpacing(polishedCleanedText, context: insertionContext)
             logCleanupStage("insertion_spacing", before: polishedCleanedText, after: spacedCleanedText)
-            finalPastedText = spacedCleanedText
-            logPastePrepared(source: "transcription", text: spacedCleanedText)
+            if isPasteableText(spacedCleanedText) {
+                finalPastedText = spacedCleanedText
+                logPastePrepared(source: "transcription", text: spacedCleanedText)
+            } else {
+                finalPastedText = nil
+            }
 
             if let enhancementService, enhancementService.isConfigured {
                 let detectionResult = promptDetectionService.analyzeText(text, with: enhancementService)
@@ -205,8 +209,10 @@ class TranscriptionPipeline {
                     transcription.aiRequestUserMessage = enhancementService.lastUserMessageSent
                     let spacedEnhancedText = TranscriptionOutputFilter.applyInsertionSpacing(polishedEnhancedText, context: insertionContext)
                     logCleanupStage("enhancement_insertion_spacing", before: polishedEnhancedText, after: spacedEnhancedText)
-                    finalPastedText = spacedEnhancedText
-                    logPastePrepared(source: "enhancement", text: spacedEnhancedText)
+                    if isPasteableText(spacedEnhancedText) {
+                        finalPastedText = spacedEnhancedText
+                        logPastePrepared(source: "enhancement", text: spacedEnhancedText)
+                    }
                 } catch {
                     let errorDescription = (error as? LocalizedError)?.errorDescription ?? error.localizedDescription
                     transcription.enhancedText = "Enhancement failed: \(errorDescription)"
@@ -270,6 +276,7 @@ class TranscriptionPipeline {
         }
 
         if var textToPaste = finalPastedText,
+           isPasteableText(textToPaste),
            transcription.transcriptionStatus == TranscriptionStatus.completed.rawValue {
             if case .trialExpired = licenseViewModel.licenseState {
                 textToPaste = """
@@ -296,5 +303,9 @@ class TranscriptionPipeline {
         }
 
         saveTranscriptionAndPostCompletion()
+    }
+
+    private func isPasteableText(_ text: String) -> Bool {
+        !text.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
     }
 }
