@@ -593,9 +593,19 @@ struct RomaCoreChecks {
                 "replace phrase with article correction"
             ),
             (
+                "Use old model replace that with the new module.",
+                "Use the new module.",
+                "replace phrase with definite article correction"
+            ),
+            (
                 "Use the old model replace that with a new module.",
                 "Use a new module.",
                 "replace article phrase with multi-word article correction"
+            ),
+            (
+                "Use the old model replace that with the new module.",
+                "Use the new module.",
+                "replace article phrase with definite article correction"
             ),
             (
                 "Use model, sorry I mean module.",
