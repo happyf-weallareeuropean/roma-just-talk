@@ -2,6 +2,7 @@
 
 ## v1.81 - Unreleased
 
+- Attached standalone slash, dot, at-sign, underscore, and hyphen symbol commands during final insertion polish.
 - Recognized hyphenated and compact m-dash/emdash variants during final insertion polish.
 - Attached standalone ellipsis and em dash commands during final insertion polish.
 - Stripped redundant outer punctuation after quoted, smart-quoted, and parenthesized dictated fragments.

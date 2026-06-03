@@ -665,6 +665,15 @@ public struct RomaTranscriptionOutputFilter {
         "m dash": " —",
         "m-dash": " —",
         "mdash": " —",
+        "slash": "/",
+        "forward slash": "/",
+        "backslash": "\\",
+        "back slash": "\\",
+        "dot": ".",
+        "underscore": "_",
+        "at sign": "@",
+        "dash": "-",
+        "hyphen": "-",
         "comma": ",",
         "period": ".",
         "full stop": ".",
@@ -4590,7 +4599,7 @@ public struct RomaTranscriptionOutputFilter {
             return false
         }
 
-        let noLeadingSpaceBefore = CharacterSet(charactersIn: ".,;:!?)]}”’/\\-")
+        let noLeadingSpaceBefore = CharacterSet(charactersIn: ".,;:!?)]}”’/\\-@_")
         if firstCharacter.unicodeScalars.allSatisfy({ noLeadingSpaceBefore.contains($0) }) {
             return false
         }

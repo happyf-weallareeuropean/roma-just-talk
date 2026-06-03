@@ -2163,6 +2163,9 @@ struct RomaCoreChecks {
 
         let midSentenceContext = RomaTranscriptionOutputFilter.TextInsertionContext(precedingText: "...so this")
         let wordContext = RomaTranscriptionOutputFilter.TextInsertionContext(precedingText: "Use")
+        let compactTokenContext = RomaTranscriptionOutputFilter.TextInsertionContext(precedingText: "docs")
+        let emailUserContext = RomaTranscriptionOutputFilter.TextInsertionContext(precedingText: "felix")
+        let variableContext = RomaTranscriptionOutputFilter.TextInsertionContext(precedingText: "user")
         let openSmartQuoteContext = RomaTranscriptionOutputFilter.TextInsertionContext(precedingText: "She said “")
         let closingSmartQuoteContext = RomaTranscriptionOutputFilter.TextInsertionContext(precedingText: "She said “hello”")
         let closingSmartSingleQuoteContext = RomaTranscriptionOutputFilter.TextInsertionContext(precedingText: "She said ‘hello’")
@@ -2349,6 +2352,42 @@ struct RomaCoreChecks {
             "insertion polish should attach standalone compact emdash commands"
         )
         try require(
+            RomaTranscriptionOutputFilter.applyInsertionPolish("Slash.", context: compactTokenContext) == "/",
+            "insertion polish should attach standalone slash commands"
+        )
+        try require(
+            RomaTranscriptionOutputFilter.applyInsertionPolish("Forward slash.", context: compactTokenContext) == "/",
+            "insertion polish should attach standalone forward slash commands"
+        )
+        try require(
+            RomaTranscriptionOutputFilter.applyInsertionPolish("Backslash.", context: compactTokenContext) == "\\",
+            "insertion polish should attach standalone backslash commands"
+        )
+        try require(
+            RomaTranscriptionOutputFilter.applyInsertionPolish("Dot.", context: compactTokenContext) == ".",
+            "insertion polish should attach standalone dot commands"
+        )
+        try require(
+            RomaTranscriptionOutputFilter.applyInsertionPolish("Hyphen.", context: compactTokenContext) == "-",
+            "insertion polish should attach standalone hyphen commands"
+        )
+        try require(
+            RomaTranscriptionOutputFilter.applyInsertionPolish("At sign.", context: emailUserContext) == "@",
+            "insertion polish should attach standalone at sign commands"
+        )
+        try require(
+            RomaTranscriptionOutputFilter.applyInsertionSpacing("@", context: emailUserContext) == "@",
+            "insertion spacing should not add a space before at signs"
+        )
+        try require(
+            RomaTranscriptionOutputFilter.applyInsertionPolish("Underscore.", context: variableContext) == "_",
+            "insertion polish should attach standalone underscore commands"
+        )
+        try require(
+            RomaTranscriptionOutputFilter.applyInsertionSpacing("_", context: variableContext) == "_",
+            "insertion spacing should not add a space before underscores"
+        )
+        try require(
             RomaTranscriptionOutputFilter.applyInsertionPolish(
                 "Ellipsis.",
                 context: RomaTranscriptionOutputFilter.TextInsertionContext(precedingText: "Done. ")
@@ -2361,6 +2400,20 @@ struct RomaCoreChecks {
                 context: RomaTranscriptionOutputFilter.TextInsertionContext(precedingText: "Done. ")
             ) == "M-dash.",
             "insertion polish should not attach standalone m-dash at sentence start"
+        )
+        try require(
+            RomaTranscriptionOutputFilter.applyInsertionPolish(
+                "Slash.",
+                context: RomaTranscriptionOutputFilter.TextInsertionContext(precedingText: "Done. ")
+            ) == "Slash",
+            "insertion polish should not attach standalone slash at sentence start"
+        )
+        try require(
+            RomaTranscriptionOutputFilter.applyInsertionPolish(
+                "At sign.",
+                context: RomaTranscriptionOutputFilter.TextInsertionContext(precedingText: "Done. ")
+            ) == "At sign.",
+            "insertion polish should not attach standalone at sign at sentence start"
         )
         try require(
             RomaTranscriptionOutputFilter.applyInsertionPolish("Comma.", context: closingSmartQuoteContext) == ",",
