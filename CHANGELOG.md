@@ -2,6 +2,7 @@
 
 ## v1.81 - Unreleased
 
+- Unwrapped square-bracketed ASR artifacts even when the model adds trailing punctuation after the closing bracket.
 - Stripped noisy periods inside short quoted final fragments while preserving abbreviations and longer quoted sentences.
 - Removed more terminal ASR outro boilerplate such as "Thanks everyone for watching" and "Don't forget to like and subscribe".
 - Removed chained leading discourse fillers such as "Okay, you know..." and "Yeah, like..." with prose guards.

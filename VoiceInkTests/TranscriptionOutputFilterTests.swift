@@ -23,6 +23,7 @@ struct TranscriptionOutputFilterTests {
         TranscriptionCleanupLevel.setCurrent(.polished)
 
         #expect(TranscriptionOutputFilter.filter("[Model.]") == "Model.")
+        #expect(TranscriptionOutputFilter.filter("[humming].") == "")
         #expect(TranscriptionOutputFilter.filter("[inaudible]") == "")
         #expect(TranscriptionOutputFilter.filter("[blank_audio]") == "")
         #expect(TranscriptionOutputFilter.filter("<|nospeech|>") == "")
@@ -228,8 +229,10 @@ struct TranscriptionOutputFilterTests {
         #expect(TranscriptionOutputFilter.applyInsertionPolish("(Model!).", context: midSentenceContext) == "(model)")
         #expect(TranscriptionOutputFilter.applyInsertionPolish("{Model?}.", context: midSentenceContext) == "{model}")
         #expect(TranscriptionOutputFilter.applyInsertionPolish("[Model.]", context: nil) == "model")
+        #expect(TranscriptionOutputFilter.applyInsertionPolish("[Model.].", context: nil) == "model")
         #expect(TranscriptionOutputFilter.applyInsertionPolish("[Model!]", context: nil) == "model")
         #expect(TranscriptionOutputFilter.applyInsertionPolish("[A final word.]", context: nil) == "a final word")
+        #expect(TranscriptionOutputFilter.applyInsertionPolish("[A final word.].", context: nil) == "a final word")
         #expect(TranscriptionOutputFilter.applyInsertionPolish("[A final word!]", context: nil) == "a final word")
         #expect(TranscriptionOutputFilter.applyInsertionPolish("'Model.'", context: nil) == "'model'")
         #expect(TranscriptionOutputFilter.applyInsertionPolish("\"A final word.\"", context: nil) == "\"a final word\"")

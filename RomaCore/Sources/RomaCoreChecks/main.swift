@@ -392,6 +392,11 @@ struct RomaCoreChecks {
                 "standalone bracketed underscored non-speech artifact"
             ),
             (
+                "[humming].",
+                "",
+                "standalone bracketed non-speech artifact with outer punctuation"
+            ),
+            (
                 "<|nospeech|>",
                 "",
                 "standalone nospeech special token"
@@ -2187,12 +2192,20 @@ struct RomaCoreChecks {
             "insertion polish should unwrap bracketed final fragments"
         )
         try require(
+            RomaTranscriptionOutputFilter.applyInsertionPolish("[Model.].", context: nil) == "model",
+            "insertion polish should unwrap bracketed final fragments with outer punctuation"
+        )
+        try require(
             RomaTranscriptionOutputFilter.applyInsertionPolish("[Model!]", context: nil) == "model",
             "insertion polish should strip noisy punctuation from bracketed final fragments"
         )
         try require(
             RomaTranscriptionOutputFilter.applyInsertionPolish("[A final word.]", context: nil) == "a final word",
             "insertion polish should strip noisy punctuation from bracketed final phrases"
+        )
+        try require(
+            RomaTranscriptionOutputFilter.applyInsertionPolish("[A final word.].", context: nil) == "a final word",
+            "insertion polish should strip noisy punctuation from bracketed final phrases with outer punctuation"
         )
         try require(
             RomaTranscriptionOutputFilter.applyInsertionPolish("[A final word!]", context: nil) == "a final word",

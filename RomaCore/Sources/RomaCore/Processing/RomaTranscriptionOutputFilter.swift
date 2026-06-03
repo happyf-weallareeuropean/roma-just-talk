@@ -3831,18 +3831,10 @@ public struct RomaTranscriptionOutputFilter {
     }
 
     private static func unwrapSquareBracketedWholeOutput(_ text: String) -> String {
-        let trimmedText = text.trimmingCharacters(in: .whitespacesAndNewlines)
-        guard let first = trimmedText.first,
-              let last = trimmedText.last,
-              first == "[",
-              last == "]" else {
+        guard let innerText = wholeSquareBracketedOutputInnerText(in: text) else {
             return text
         }
 
-        let innerStart = trimmedText.index(after: trimmedText.startIndex)
-        let innerEnd = trimmedText.index(before: trimmedText.endIndex)
-        let innerText = String(trimmedText[innerStart..<innerEnd])
-            .trimmingCharacters(in: .whitespacesAndNewlines)
         guard !innerText.isEmpty else { return "" }
 
         if isNonSpeechBracketContent(innerText) {
@@ -3853,8 +3845,37 @@ public struct RomaTranscriptionOutputFilter {
     }
 
     private static func isWholeSquareBracketedOutput(_ text: String) -> Bool {
+        wholeSquareBracketedOutputInnerText(in: text) != nil
+    }
+
+    private static func wholeSquareBracketedOutputInnerText(in text: String) -> String? {
         let trimmedText = text.trimmingCharacters(in: .whitespacesAndNewlines)
-        return trimmedText.first == "[" && trimmedText.last == "]"
+        guard trimmedText.first == "[" else { return nil }
+
+        var closingIndex = trimmedText.index(before: trimmedText.endIndex)
+        while closingIndex > trimmedText.startIndex {
+            let character = trimmedText[closingIndex]
+            if character == "]" {
+                break
+            }
+
+            guard character.unicodeScalars.allSatisfy({
+                removableTrailingFragmentPunctuation.contains($0) ||
+                    removableTrailingSentenceFragmentPunctuation.contains($0)
+            }) else {
+                return nil
+            }
+            closingIndex = trimmedText.index(before: closingIndex)
+        }
+
+        guard closingIndex > trimmedText.startIndex,
+              trimmedText[closingIndex] == "]" else {
+            return nil
+        }
+
+        let innerStart = trimmedText.index(after: trimmedText.startIndex)
+        return String(trimmedText[innerStart..<closingIndex])
+            .trimmingCharacters(in: .whitespacesAndNewlines)
     }
 
     private static func collapseAdjacentRepeatedWords(in text: String) -> String {
