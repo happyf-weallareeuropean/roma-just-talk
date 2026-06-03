@@ -982,6 +982,26 @@ struct RomaCoreChecks {
                 "no actually correction should preserve suffix"
             ),
             (
+                "Let's meet at two o clock wait no three tomorrow.",
+                "Let's meet at three tomorrow.",
+                "wait no correction should replace spoken time phrase"
+            ),
+            (
+                "Let's meet at two o clock wait no three thirty tomorrow.",
+                "Let's meet at three thirty tomorrow.",
+                "wait no correction should preserve suffix after spoken time phrase"
+            ),
+            (
+                "Let's meet at two thirty wait no three o clock tomorrow.",
+                "Let's meet at three o clock tomorrow.",
+                "wait no correction should replace alternate spoken time phrase"
+            ),
+            (
+                "Call at 9 30 a m wait no 10 45 a m tomorrow.",
+                "Call at 10:45 AM tomorrow.",
+                "wait no correction should replace numeric spoken time phrase"
+            ),
+            (
                 "Use model, oops module.",
                 "Use module.",
                 "oops correction"

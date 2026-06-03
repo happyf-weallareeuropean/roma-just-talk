@@ -116,6 +116,11 @@ public struct RomaTranscriptionOutputFilter {
         let replacement: String
     }
 
+    private struct WordToken {
+        let text: String
+        let range: Range<String.Index>
+    }
+
     private enum SpokenCodeCaseStyle {
         case camel
         case snake
@@ -3317,7 +3322,8 @@ public struct RomaTranscriptionOutputFilter {
         let boundedCorrection = boundedLeadingCorrection(
             correction,
             markerText: markerText,
-            in: afterMarker
+            in: afterMarker,
+            beforeMarker: beforeMarker
         )
         let correctionText = String(afterMarker[boundedCorrection.range])
         guard shouldApplyBacktrackingMarker(
@@ -3326,7 +3332,7 @@ public struct RomaTranscriptionOutputFilter {
             correctionText: correctionText
         ),
               let prefix = removeTrailingWords(
-                removalWordCount(for: correctionText, fallback: boundedCorrection.wordCount, beforeMarker: beforeMarker),
+                removalWordCount(for: correctionText, fallback: boundedCorrection.removalWordCount, beforeMarker: beforeMarker),
                 from: beforeMarker
               ) else {
             return nil
@@ -3339,23 +3345,35 @@ public struct RomaTranscriptionOutputFilter {
     private static func boundedLeadingCorrection(
         _ correction: (range: Range<String.Index>, wordCount: Int),
         markerText: String,
-        in text: String
-    ) -> (range: Range<String.Index>, wordCount: Int) {
-        guard correction.wordCount > 1,
-              isSingleWordReplacementBacktrackingMarker(markerText) else {
-            return correction
+        in text: String,
+        beforeMarker: String
+    ) -> (range: Range<String.Index>, wordCount: Int, removalWordCount: Int) {
+        let defaultCorrection = (
+            range: correction.range,
+            wordCount: correction.wordCount,
+            removalWordCount: correction.wordCount
+        )
+        guard isSingleWordReplacementBacktrackingMarker(markerText) else {
+            return defaultCorrection
         }
 
-        var wordEnd = correction.range.lowerBound
-        while wordEnd < correction.range.upperBound, isWordCharacter(text[wordEnd]) {
-            wordEnd = text.index(after: wordEnd)
+        let correctionTokens = wordTokens(in: text, range: correction.range)
+        guard let firstToken = correctionTokens.first else {
+            return defaultCorrection
         }
 
-        guard wordEnd > correction.range.lowerBound else {
-            return correction
+        if let sourceTimeWordCount = trailingSpokenTimeWordCount(in: beforeMarker),
+           let correctionTimeWordCount = leadingSpokenTimeWordCount(in: correctionTokens.map { $0.text }) ??
+            (spokenHourValue(firstToken.text) == nil ? nil : 1) {
+            let timeRange = firstToken.range.lowerBound..<correctionTokens[correctionTimeWordCount - 1].range.upperBound
+            return (timeRange, correctionTimeWordCount, sourceTimeWordCount)
         }
 
-        return (correction.range.lowerBound..<wordEnd, 1)
+        guard correction.wordCount > 1 else {
+            return defaultCorrection
+        }
+
+        return (firstToken.range, 1, 1)
     }
 
     private static func correctionSourceAfterNestedIntro(_ text: String, markerText: String) -> String {
@@ -3424,6 +3442,134 @@ public struct RomaTranscriptionOutputFilter {
         }
 
         return words.reversed()
+    }
+
+    private static func wordTokens(in text: String, range searchRange: Range<String.Index>? = nil) -> [WordToken] {
+        let searchRange = searchRange ?? text.startIndex..<text.endIndex
+        var tokens: [WordToken] = []
+        var index = searchRange.lowerBound
+
+        while index < searchRange.upperBound {
+            while index < searchRange.upperBound, !isWordCharacter(text[index]) {
+                index = text.index(after: index)
+            }
+
+            guard index < searchRange.upperBound else { break }
+
+            let wordStart = index
+            while index < searchRange.upperBound, isWordCharacter(text[index]) {
+                index = text.index(after: index)
+            }
+
+            tokens.append(
+                WordToken(
+                    text: String(text[wordStart..<index]).lowercased(),
+                    range: wordStart..<index
+                )
+            )
+        }
+
+        return tokens
+    }
+
+    private static func trailingSpokenTimeWordCount(in text: String) -> Int? {
+        let words = wordTokens(in: text).map { $0.text }
+        guard words.count >= 2 else { return nil }
+
+        let maxCandidateCount = min(5, words.count)
+        for wordCount in stride(from: maxCandidateCount, through: 2, by: -1) {
+            let candidate = Array(words.suffix(wordCount))
+            if leadingSpokenTimeWordCount(in: candidate) == wordCount {
+                return wordCount
+            }
+        }
+
+        return nil
+    }
+
+    private static func leadingSpokenTimeWordCount(in words: [String]) -> Int? {
+        guard !words.isEmpty,
+              spokenHourValue(words[0]) != nil else {
+            return nil
+        }
+
+        if words.count >= 3,
+           isOClockPhrase(Array(words[1...2])) {
+            return 3
+        }
+
+        if let meridiemWordCount = meridiemWordCount(in: words, startingAt: 1) {
+            return 1 + meridiemWordCount
+        }
+
+        for minuteWordCount in [2, 1] where words.count >= 1 + minuteWordCount {
+            let minuteWords = Array(words[1..<(1 + minuteWordCount)])
+            guard spokenMinuteValue(minuteWords) != nil else { continue }
+
+            let nextIndex = 1 + minuteWordCount
+            if let meridiemWordCount = meridiemWordCount(in: words, startingAt: nextIndex) {
+                return nextIndex + meridiemWordCount
+            }
+
+            return nextIndex
+        }
+
+        return nil
+    }
+
+    private static func isOClockPhrase(_ words: [String]) -> Bool {
+        guard words.count == 2 else { return false }
+        return ["o", "oh"].contains(words[0]) && words[1] == "clock"
+    }
+
+    private static func meridiemWordCount(in words: [String], startingAt startIndex: Int) -> Int? {
+        guard startIndex < words.count else { return nil }
+
+        if ["am", "pm"].contains(words[startIndex]) {
+            return 1
+        }
+
+        guard startIndex + 1 < words.count,
+              ["a", "p"].contains(words[startIndex]),
+              words[startIndex + 1] == "m" else {
+            return nil
+        }
+
+        return 2
+    }
+
+    private static func spokenHourValue(_ word: String) -> Int? {
+        guard let value = spokenNumberValue(word),
+              (1...12).contains(value) else {
+            return nil
+        }
+
+        return value
+    }
+
+    private static func spokenMinuteValue(_ words: [String]) -> Int? {
+        guard !words.isEmpty, words.count <= 2 else { return nil }
+
+        if words.count == 2,
+           ["o", "oh", "zero"].contains(words[0]),
+           let value = spokenNumberValue(words[1]),
+           (0...9).contains(value) {
+            return value
+        }
+
+        let minuteText = words.joined(separator: " ")
+        guard let value = spokenNumberValue(minuteText),
+              (0...59).contains(value) else {
+            return nil
+        }
+
+        if words.count == 1,
+           value < 10,
+           words[0].count != 2 {
+            return nil
+        }
+
+        return value
     }
 
     private static func shouldApplyBacktrackingMarker(
