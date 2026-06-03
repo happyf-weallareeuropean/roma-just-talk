@@ -478,9 +478,19 @@ struct RomaCoreChecks {
                 "delete last line after spoken newline"
             ),
             (
+                "First line new line wrong line delete that line right line.",
+                "First line\nright line.",
+                "delete that line after spoken newline"
+            ),
+            (
                 "First line press enter wrong line undo previous line right line.",
                 "First line\nright line.",
                 "undo previous line after enter command"
+            ),
+            (
+                "First line press enter wrong line undo this line right line.",
+                "First line\nright line.",
+                "undo this line after enter command"
             ),
             (
                 "Intro new paragraph wrong paragraph delete last paragraph right paragraph.",
@@ -488,9 +498,19 @@ struct RomaCoreChecks {
                 "delete last paragraph after spoken paragraph"
             ),
             (
+                "Intro new paragraph wrong paragraph delete that paragraph right paragraph.",
+                "Intro\n\nright paragraph.",
+                "delete that paragraph after spoken paragraph"
+            ),
+            (
                 "Intro skip a line wrong paragraph undo previous paragraph right paragraph.",
                 "Intro\n\nright paragraph.",
                 "undo previous paragraph after skip line"
+            ),
+            (
+                "Intro skip a line wrong paragraph undo this paragraph right paragraph.",
+                "Intro\n\nright paragraph.",
+                "undo this paragraph after skip line"
             ),
             (
                 "Open quote hello comma world close quote.",
@@ -741,6 +761,16 @@ struct RomaCoreChecks {
                 "The delete last paragraph command is useful.",
                 "The delete last paragraph command is useful.",
                 "delete last paragraph prose guard"
+            ),
+            (
+                "The delete that line command is useful.",
+                "The delete that line command is useful.",
+                "delete that line prose guard"
+            ),
+            (
+                "Explain how to remove this paragraph from docs.",
+                "Explain how to remove this paragraph from docs.",
+                "remove this paragraph prose guard"
             ),
             (
                 "The first item is setup. The second item is launch.",
