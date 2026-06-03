@@ -138,6 +138,11 @@ public struct RomaTranscriptionOutputFilter {
         let unitPlacement: SpokenAmountUnitPlacement
     }
 
+    private struct SpokenCompactConnector {
+        let wordCount: Int
+        let output: String
+    }
+
     private enum SpokenCodeCaseStyle {
         case camel
         case snake
@@ -260,6 +265,9 @@ public struct RomaTranscriptionOutputFilter {
     ]
     private static let leadingCurrencySignWords: Set<String> = [
         "dollar", "euro", "pound"
+    ]
+    private static let compactConnectorWords: Set<String> = [
+        "at", "back", "backslash", "dash", "dot", "forward", "hyphen", "sign", "slash", "underscore"
     ]
     private static let blockedNextWordsForSpokenPossessive: Set<String> = [
         "character", "characters", "is", "mark", "marks", "means", "meaning", "suffix", "symbol", "symbols"
@@ -3418,6 +3426,13 @@ public struct RomaTranscriptionOutputFilter {
             return amountCorrection
         }
 
+        if let compactTokenCorrection = boundedSpokenCompactTokenCorrection(
+            beforeMarker: beforeMarker,
+            in: text
+        ) {
+            return compactTokenCorrection
+        }
+
         guard correction.wordCount > 1 else {
             return defaultCorrection
         }
@@ -3779,6 +3794,135 @@ public struct RomaTranscriptionOutputFilter {
         }
 
         return nil
+    }
+
+    private static func boundedSpokenCompactTokenCorrection(
+        beforeMarker: String,
+        in text: String
+    ) -> (
+        range: Range<String.Index>,
+        wordCount: Int,
+        removalWordCount: Int,
+        replacementText: String?
+    )? {
+        guard let sourceWordCount = trailingSpokenCompactTokenWordCount(in: beforeMarker) else {
+            return nil
+        }
+
+        let compactTokens = wordTokens(in: text)
+        let compactWords = compactTokens.map { $0.text }
+        guard let correctionWordCount = leadingSpokenCompactTokenWordCount(in: compactWords) else {
+            return nil
+        }
+
+        let compactRange = compactTokens[0].range.lowerBound..<compactTokens[correctionWordCount - 1].range.upperBound
+        return (compactRange, correctionWordCount, sourceWordCount, nil)
+    }
+
+    private static func trailingSpokenCompactTokenWordCount(in text: String) -> Int? {
+        let words = wordTokens(in: text).map { $0.text }
+        guard words.count >= 3 else { return nil }
+
+        let maxCandidateCount = min(16, words.count)
+        for wordCount in stride(from: maxCandidateCount, through: 3, by: -1) {
+            let candidate = Array(words.suffix(wordCount))
+            if leadingSpokenCompactTokenWordCount(in: candidate) == wordCount {
+                return wordCount
+            }
+        }
+
+        return nil
+    }
+
+    private static func leadingSpokenCompactTokenWordCount(in words: [String]) -> Int? {
+        guard isCompactTokenSegment(words.first) else {
+            return nil
+        }
+
+        var index = 1
+        var connectorCount = 0
+        while index < words.count {
+            guard let connector = spokenCompactConnector(in: words, startingAt: index) else {
+                break
+            }
+
+            let nextSegmentIndex = index + connector.wordCount
+            guard nextSegmentIndex < words.count,
+                  isCompactTokenSegment(words[nextSegmentIndex]),
+                  shouldUseSpokenCompactConnector(
+                    connector.output,
+                    previousWord: words[index - 1],
+                    nextWord: words[nextSegmentIndex]
+                  ) else {
+                break
+            }
+
+            connectorCount += 1
+            index = nextSegmentIndex + 1
+        }
+
+        guard connectorCount > 0 else { return nil }
+        return index
+    }
+
+    private static func spokenCompactConnector(
+        in words: [String],
+        startingAt index: Int
+    ) -> SpokenCompactConnector? {
+        guard index < words.count else { return nil }
+
+        switch words[index] {
+        case "dot":
+            return SpokenCompactConnector(wordCount: 1, output: ".")
+        case "slash":
+            return SpokenCompactConnector(wordCount: 1, output: "/")
+        case "backslash":
+            return SpokenCompactConnector(wordCount: 1, output: "\\")
+        case "underscore":
+            return SpokenCompactConnector(wordCount: 1, output: "_")
+        case "dash", "hyphen":
+            return SpokenCompactConnector(wordCount: 1, output: "-")
+        case "forward" where index + 1 < words.count && words[index + 1] == "slash":
+            return SpokenCompactConnector(wordCount: 2, output: "/")
+        case "back" where index + 1 < words.count && words[index + 1] == "slash":
+            return SpokenCompactConnector(wordCount: 2, output: "\\")
+        case "at" where index + 1 < words.count && words[index + 1] == "sign":
+            return SpokenCompactConnector(wordCount: 2, output: "@")
+        default:
+            return nil
+        }
+    }
+
+    private static func shouldUseSpokenCompactConnector(
+        _ connector: String,
+        previousWord: String,
+        nextWord: String
+    ) -> Bool {
+        switch connector {
+        case ".":
+            return !["a", "an", "the"].contains(previousWord) &&
+                !["matrix", "notation", "plot", "product"].contains(nextWord)
+        case "@":
+            return !["a", "an", "the"].contains(previousWord) && nextWord != "symbol"
+        case "_":
+            return !["a", "an", "the"].contains(previousWord) &&
+                !["command", "commands", "symbol"].contains(nextWord)
+        case "/":
+            return !["command", "commands"].contains(nextWord)
+        case "-":
+            return previousWord != "a" && nextWord != "of"
+        default:
+            return true
+        }
+    }
+
+    private static func isCompactTokenSegment(_ word: String?) -> Bool {
+        guard let word,
+              !compactConnectorWords.contains(word) else {
+            return false
+        }
+
+        return isURLWordToken(word)
     }
 
     private static func trailingSpokenTimeWordCount(in text: String) -> Int? {

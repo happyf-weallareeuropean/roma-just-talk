@@ -2,6 +2,7 @@
 
 ## v1.81 - Unreleased
 
+- Replaced whole spoken compact tokens during self-corrections such as "docs dot example dot com wait no app dot example dot com".
 - Preserved currency and percent units during decimal amount self-corrections such as "nineteen point nine nine dollars wait no twenty".
 - Preserved currency and percent units during amount self-corrections such as "twenty dollars wait no thirty".
 - Preserved month/year context for spoken date self-corrections such as "June second wait no third tomorrow".

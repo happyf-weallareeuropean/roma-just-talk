@@ -1097,6 +1097,26 @@ struct RomaCoreChecks {
                 "wait no correction should preserve percent unit for decimal value"
             ),
             (
+                "Open docs dot example dot com wait no app dot example dot com today.",
+                "Open app.example.com today.",
+                "wait no correction should replace spoken domain phrase"
+            ),
+            (
+                "Open docs dot example dot com slash api wait no docs dot example dot com slash v2 today.",
+                "Open docs.example.com/v2 today.",
+                "wait no correction should replace spoken URL path phrase"
+            ),
+            (
+                "Email old at sign example dot com wait no new at sign example dot com today.",
+                "Email new@example.com today.",
+                "wait no correction should replace spoken email phrase"
+            ),
+            (
+                "Use user underscore id wait no account underscore id today.",
+                "Use account_id today.",
+                "wait no correction should replace spoken identifier phrase"
+            ),
+            (
                 "Use model, oops module.",
                 "Use module.",
                 "oops correction"
