@@ -123,9 +123,21 @@ public struct RomaTranscriptionOutputFilter {
         case pascal
     }
 
+    private enum SpokenTextCaseStyle {
+        case allCaps
+        case lowercase
+        case capitalize
+        case title
+    }
+
     private struct SpokenCodeCaseCommand {
         let pattern: String
         let style: SpokenCodeCaseStyle
+    }
+
+    private struct SpokenTextCaseCommand {
+        let pattern: String
+        let style: SpokenTextCaseStyle
     }
 
     private struct GuardedSpokenFormattingCommand {
@@ -183,6 +195,14 @@ public struct RomaTranscriptionOutputFilter {
     ]
     private static let blockedFirstWordsForSpokenCodeCase: Set<String> = [
         "a", "an", "as", "for", "in", "is", "means", "style", "the", "with"
+    ]
+    private static let allowedPreviousWordsForSpokenTextCase: Set<String> = [
+        "call", "called", "enter", "label", "make", "mark", "named", "paste",
+        "please", "say", "set", "title", "to", "type", "use", "write"
+    ]
+    private static let blockedFirstWordsForSpokenTextCase: Set<String> = [
+        "a", "an", "as", "command", "commands", "for", "in", "is", "means",
+        "phrase", "phrases", "style", "the", "with", "word", "words"
     ]
     private static let dateContextWords: Set<String> = [
         "after", "before", "by", "due", "from", "on", "since", "through", "until"
@@ -473,6 +493,24 @@ public struct RomaTranscriptionOutputFilter {
             style: .pascal
         )
     ]
+    private static let spokenTextCaseCommands = [
+        SpokenTextCaseCommand(
+            pattern: #"(?i)(?<![\p{L}\p{N}])(?:all[ \t]+caps|uppercase|upper[ \t]+case)[ \t]+((?:(?!for\b|from\b|in\b|into\b|on\b|to\b|with\b|is\b|means\b)[\p{L}\p{N}_./@:+#'-]+[ \t]*){1,5})(?=\s+(?:for|from|in|into|on|to|with)\b|[.!?,;:]|$)"#,
+            style: .allCaps
+        ),
+        SpokenTextCaseCommand(
+            pattern: #"(?i)(?<![\p{L}\p{N}])(?:lowercase|lower[ \t]+case)[ \t]+((?:(?!for\b|from\b|in\b|into\b|on\b|to\b|with\b|is\b|means\b)[\p{L}\p{N}_./@:+#'-]+[ \t]*){1,5})(?=\s+(?:for|from|in|into|on|to|with)\b|[.!?,;:]|$)"#,
+            style: .lowercase
+        ),
+        SpokenTextCaseCommand(
+            pattern: #"(?i)(?<![\p{L}\p{N}])(?:capitalize|capitalise)[ \t]+((?:(?!for\b|from\b|in\b|into\b|on\b|to\b|with\b|is\b|means\b)[\p{L}\p{N}_./@:+#'-]+[ \t]*){1,5})(?=\s+(?:for|from|in|into|on|to|with)\b|[.!?,;:]|$)"#,
+            style: .capitalize
+        ),
+        SpokenTextCaseCommand(
+            pattern: #"(?i)(?<![\p{L}\p{N}])title[ \t]+case[ \t]+((?:(?!for\b|from\b|in\b|into\b|on\b|to\b|with\b|is\b|means\b)[\p{L}\p{N}_./@:+#'-]+[ \t]*){1,5})(?=\s+(?:for|from|in|into|on|to|with)\b|[.!?,;:]|$)"#,
+            style: .title
+        )
+    ]
     private static let spokenPunctuationCommands = [
         SpokenPunctuationCommand(
             pattern: #"(?i)(?<![\p{L}\p{N}])(?:ellipsis|dot\s+dot\s+dot|period\s+period\s+period|full\s+stop\s+full\s+stop\s+full\s+stop)(?![\p{L}\p{N}])"#,
@@ -571,6 +609,7 @@ public struct RomaTranscriptionOutputFilter {
         filteredText = applySpokenSymbolCommands(in: filteredText)
         filteredText = applySpokenContractionCommands(in: filteredText)
         filteredText = applySpokenPossessiveCommands(in: filteredText)
+        filteredText = applySpokenTextCaseCommands(in: filteredText)
         filteredText = applySpokenCodeCaseCommands(in: filteredText)
         filteredText = applySpokenMarkdownCommands(in: filteredText)
         if cleanupLevel == .polished {
@@ -1873,6 +1912,111 @@ public struct RomaTranscriptionOutputFilter {
         }
 
         return formattedText
+    }
+
+    private static func applySpokenTextCaseCommands(in text: String) -> String {
+        var formattedText = text
+
+        for command in spokenTextCaseCommands {
+            guard let regex = try? NSRegularExpression(pattern: command.pattern) else {
+                continue
+            }
+
+            let fullRange = NSRange(formattedText.startIndex..., in: formattedText)
+            let matches = regex.matches(in: formattedText, range: fullRange).reversed()
+
+            for match in matches {
+                guard match.numberOfRanges >= 2,
+                      let commandRange = Range(match.range(at: 0), in: formattedText),
+                      let phraseRange = Range(match.range(at: 1), in: formattedText),
+                      shouldApplySpokenTextCaseCommand(in: formattedText, commandRange: commandRange, phraseRange: phraseRange) else {
+                    continue
+                }
+
+                let phrase = String(formattedText[phraseRange])
+                let replacement = formatSpokenTextCasePhrase(phrase, style: command.style)
+                formattedText.replaceSubrange(commandRange.lowerBound..<phraseRange.upperBound, with: replacement)
+            }
+        }
+
+        return formattedText
+    }
+
+    private static func shouldApplySpokenTextCaseCommand(
+        in text: String,
+        commandRange: Range<String.Index>,
+        phraseRange: Range<String.Index>
+    ) -> Bool {
+        let phraseWords = textCaseWords(in: String(text[phraseRange]))
+        guard let firstWord = phraseWords.first,
+              !blockedFirstWordsForSpokenTextCase.contains(firstWord),
+              phraseWords.count <= 5 else {
+            return false
+        }
+
+        let beforeCommand = String(text[..<commandRange.lowerBound])
+            .trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !beforeCommand.isEmpty else {
+            return true
+        }
+
+        if let previousCharacter = beforeCommand.last,
+           ".!?([{:\n".contains(previousCharacter) {
+            return true
+        }
+
+        guard let previousWord = previousWord(in: beforeCommand) else {
+            return false
+        }
+        return allowedPreviousWordsForSpokenTextCase.contains(previousWord)
+    }
+
+    private static func formatSpokenTextCasePhrase(_ phrase: String, style: SpokenTextCaseStyle) -> String {
+        let normalizedPhrase = normalizeWhitespace(phrase)
+        guard !normalizedPhrase.isEmpty else { return normalizedPhrase }
+
+        switch style {
+        case .allCaps:
+            return normalizedPhrase.uppercased()
+        case .lowercase:
+            return normalizedPhrase.lowercased()
+        case .capitalize:
+            return capitalizeFirstTextCaseWord(normalizedPhrase)
+        case .title:
+            return titleCasedTextCasePhrase(normalizedPhrase)
+        }
+    }
+
+    private static func textCaseWords(in phrase: String) -> [String] {
+        phrase
+            .split { !$0.isLetter && !$0.isNumber }
+            .map { String($0).lowercased() }
+    }
+
+    private static func capitalizeFirstTextCaseWord(_ phrase: String) -> String {
+        var result = phrase.lowercased()
+        guard let firstLetterRange = result.rangeOfCharacter(from: .letters) else {
+            return result
+        }
+
+        result.replaceSubrange(firstLetterRange, with: String(result[firstLetterRange]).uppercased())
+        return result
+    }
+
+    private static func titleCasedTextCasePhrase(_ phrase: String) -> String {
+        phrase
+            .split(separator: " ", omittingEmptySubsequences: false)
+            .map { token -> String in
+                let lowercasedToken = String(token).lowercased()
+                guard let firstLetterRange = lowercasedToken.rangeOfCharacter(from: .letters) else {
+                    return lowercasedToken
+                }
+
+                var titleToken = lowercasedToken
+                titleToken.replaceSubrange(firstLetterRange, with: String(titleToken[firstLetterRange]).uppercased())
+                return titleToken
+            }
+            .joined(separator: " ")
     }
 
     private static func shouldApplySpokenCodeCaseCommand(

@@ -350,6 +350,14 @@ struct TranscriptionOutputFilterTests {
 
     @Test func transcriptionFilterAppliesGuardedCodeCaseCommands() async throws {
         TranscriptionCleanupLevel.setCurrent(.polished)
+        #expect(TranscriptionOutputFilter.filter("Use all caps api key.") == "Use API KEY.")
+        #expect(TranscriptionOutputFilter.filter("Please uppercase urgent.") == "Please URGENT.")
+        #expect(TranscriptionOutputFilter.filter("Use lowercase VoiceInk.") == "Use voiceink.")
+        #expect(TranscriptionOutputFilter.filter("Use capitalize felix.") == "Use Felix.")
+        #expect(TranscriptionOutputFilter.filter("Use title case weekly report.") == "Use Weekly Report.")
+        #expect(TranscriptionOutputFilter.filter("All caps is loud.") == "All caps is loud.")
+        #expect(TranscriptionOutputFilter.filter("The all caps command is useful.") == "The all caps command is useful.")
+        #expect(TranscriptionOutputFilter.filter("I prefer lowercase VoiceInk.") == "I prefer lowercase VoiceInk.")
         #expect(TranscriptionOutputFilter.filter("Use camel case user id.") == "Use userId.")
         #expect(TranscriptionOutputFilter.filter("Set variable snake case user id.") == "Set variable user_id.")
         #expect(TranscriptionOutputFilter.filter("Use kebab case user id.") == "Use user-id.")

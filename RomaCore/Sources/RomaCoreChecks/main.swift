@@ -533,6 +533,31 @@ struct RomaCoreChecks {
                 "spoken slash command"
             ),
             (
+                "Use all caps api key.",
+                "Use API KEY.",
+                "all caps text case command"
+            ),
+            (
+                "Please uppercase urgent.",
+                "Please URGENT.",
+                "uppercase text case command"
+            ),
+            (
+                "Use lowercase VoiceInk.",
+                "Use voiceink.",
+                "lowercase text case command"
+            ),
+            (
+                "Use capitalize felix.",
+                "Use Felix.",
+                "capitalize text case command"
+            ),
+            (
+                "Use title case weekly report.",
+                "Use Weekly Report.",
+                "title case text command"
+            ),
+            (
                 ".env file.",
                 ".env file.",
                 "dot-prefixed token guard"
@@ -601,6 +626,21 @@ struct RomaCoreChecks {
                 "The break here is intentional.",
                 "The break here is intentional.",
                 "break here prose guard"
+            ),
+            (
+                "All caps is loud.",
+                "All caps is loud.",
+                "all caps prose guard"
+            ),
+            (
+                "The all caps command is useful.",
+                "The all caps command is useful.",
+                "all caps command prose guard"
+            ),
+            (
+                "I prefer lowercase VoiceInk.",
+                "I prefer lowercase VoiceInk.",
+                "lowercase prose guard"
             ),
             (
                 "I am sorry this happened.",
