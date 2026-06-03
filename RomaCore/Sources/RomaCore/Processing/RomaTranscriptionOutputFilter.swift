@@ -3314,21 +3314,48 @@ public struct RomaTranscriptionOutputFilter {
             return nil
         }
 
-        let correctionText = String(afterMarker[correction.range])
+        let boundedCorrection = boundedLeadingCorrection(
+            correction,
+            markerText: markerText,
+            in: afterMarker
+        )
+        let correctionText = String(afterMarker[boundedCorrection.range])
         guard shouldApplyBacktrackingMarker(
             markerText,
             beforeMarker: beforeMarker,
             correctionText: correctionText
         ),
               let prefix = removeTrailingWords(
-                removalWordCount(for: correctionText, fallback: correction.wordCount, beforeMarker: beforeMarker),
+                removalWordCount(for: correctionText, fallback: boundedCorrection.wordCount, beforeMarker: beforeMarker),
                 from: beforeMarker
               ) else {
             return nil
         }
 
-        let suffix = String(afterMarker[correction.range.upperBound...])
+        let suffix = String(afterMarker[boundedCorrection.range.upperBound...])
         return normalizeBacktrackingWhitespace(join(prefix, correctionText, suffix))
+    }
+
+    private static func boundedLeadingCorrection(
+        _ correction: (range: Range<String.Index>, wordCount: Int),
+        markerText: String,
+        in text: String
+    ) -> (range: Range<String.Index>, wordCount: Int) {
+        guard correction.wordCount > 1,
+              isSingleWordReplacementBacktrackingMarker(markerText) else {
+            return correction
+        }
+
+        var wordEnd = correction.range.lowerBound
+        while wordEnd < correction.range.upperBound, isWordCharacter(text[wordEnd]) {
+            wordEnd = text.index(after: wordEnd)
+        }
+
+        guard wordEnd > correction.range.lowerBound else {
+            return correction
+        }
+
+        return (correction.range.lowerBound..<wordEnd, 1)
     }
 
     private static func correctionSourceAfterNestedIntro(_ text: String, markerText: String) -> String {
@@ -3489,6 +3516,25 @@ public struct RomaTranscriptionOutputFilter {
         return [
             "or actually",
             "or wait no"
+        ].contains(normalizedMarker)
+    }
+
+    private static func isSingleWordReplacementBacktrackingMarker(_ markerText: String) -> Bool {
+        let normalizedMarker = normalizedBacktrackingMarker(markerText)
+        return [
+            "actually no",
+            "actually wait no",
+            "actually wait never mind",
+            "actually wait nevermind",
+            "actually never mind",
+            "actually nevermind",
+            "never mind",
+            "nevermind",
+            "no actually",
+            "no wait",
+            "wait never mind",
+            "wait nevermind",
+            "wait no"
         ].contains(normalizedMarker)
     }
 

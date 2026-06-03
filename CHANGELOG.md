@@ -2,6 +2,7 @@
 
 ## v1.81 - Unreleased
 
+- Preserved trailing sentence continuations after one-word natural self-corrections such as "wait no three tomorrow".
 - Cleaned bounded "or actually" and "or wait no" one-word self-corrections while preserving longer alternatives.
 - Cleaned "actually wait nevermind" self-corrections while preserving literal phrase references.
 - Cleaned composite self-corrections such as "actually wait no" and "wait never mind" with prose guards.

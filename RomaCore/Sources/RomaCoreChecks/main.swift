@@ -972,6 +972,16 @@ struct RomaCoreChecks {
                 "no wait correction"
             ),
             (
+                "Let's meet at two wait no three tomorrow.",
+                "Let's meet at three tomorrow.",
+                "wait no correction should preserve suffix"
+            ),
+            (
+                "Let's meet at two no actually three tomorrow.",
+                "Let's meet at three tomorrow.",
+                "no actually correction should preserve suffix"
+            ),
+            (
                 "Use model, oops module.",
                 "Use module.",
                 "oops correction"
@@ -1117,9 +1127,19 @@ struct RomaCoreChecks {
                 "punctuated actually wait never mind correction"
             ),
             (
+                "Use model actually wait nevermind module today.",
+                "Use module today.",
+                "actually wait nevermind correction should preserve suffix"
+            ),
+            (
                 "Let's meet at two, actually never mind, three.",
                 "Let's meet at three.",
                 "actually never mind correction"
+            ),
+            (
+                "Let's meet at two never mind three tomorrow.",
+                "Let's meet at three tomorrow.",
+                "never mind correction should preserve suffix"
             ),
             (
                 "Use model wait never mind module.",
