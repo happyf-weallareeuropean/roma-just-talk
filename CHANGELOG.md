@@ -2,6 +2,7 @@
 
 ## v1.81 - Unreleased
 
+- Fixed punctuation spacing before closing quotes so quoted short fragments do not gain an internal trailing space.
 - Removed noisy `!` and `?` inside quoted, parenthesized, and braced short final fragments.
 - Removed noisy `!` and `?` from likely short final fragments such as mid-sentence "Model!".
 - Removed leading punctuated discourse fillers such as "you know," and "I mean," without dropping meaningful uses.

@@ -226,6 +226,22 @@ struct RomaCoreChecks {
             "shared insertion polish should trim noisy marks inside braced short fragments"
         )
         try require(
+            RomaTranscriptionOutputFilter.applyInsertionPolish("\"Model!\".", context: midSentenceContext) == "\"model\"",
+            "shared insertion polish should trim trailing periods after quoted noisy fragments"
+        )
+        try require(
+            RomaTranscriptionOutputFilter.applyInsertionPolish("(Model!).", context: midSentenceContext) == "(model)",
+            "shared insertion polish should trim trailing periods after parenthesized noisy fragments"
+        )
+        try require(
+            RomaTranscriptionOutputFilter.applyInsertionPolish("{Model?}.", context: midSentenceContext) == "{model}",
+            "shared insertion polish should trim trailing periods after braced noisy fragments"
+        )
+        try require(
+            RomaTranscriptionOutputFilter.applyInsertionPolish("\"What?\".", context: midSentenceContext) == "\"what?\"",
+            "shared insertion polish should preserve quoted one-word questions"
+        )
+        try require(
             RomaTranscriptionOutputFilter.applyInsertionSpacing("model", context: midSentenceContext) == " model",
             "shared insertion spacing should add a leading space after words"
         )
@@ -417,6 +433,11 @@ struct RomaCoreChecks {
                 "Do you know what I mean?",
                 "Do you know what I mean?",
                 "terminal you know what I mean guard"
+            ),
+            (
+                "\"What?\".",
+                "\"What?\".",
+                "punctuation before closing quote guard"
             )
         ]
 

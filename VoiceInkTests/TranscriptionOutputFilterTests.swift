@@ -59,6 +59,7 @@ struct TranscriptionOutputFilterTests {
         #expect(TranscriptionOutputFilter.filter("Okay. Okay.") == "Okay. Okay.")
         #expect(TranscriptionOutputFilter.filter("I know, I know.") == "I know, I know.")
         #expect(TranscriptionOutputFilter.filter("New York New York is the title.") == "New York New York is the title.")
+        #expect(TranscriptionOutputFilter.filter("\"What?\".") == "\"What?\".")
     }
 
     @Test func insertionPolishUsesCursorContextForMidSentenceFragments() async throws {
@@ -95,9 +96,13 @@ struct TranscriptionOutputFilterTests {
         #expect(TranscriptionOutputFilter.applyInsertionPolish("\"Model!\"", context: midSentenceContext) == "\"model\"")
         #expect(TranscriptionOutputFilter.applyInsertionPolish("(Model!)", context: midSentenceContext) == "(model)")
         #expect(TranscriptionOutputFilter.applyInsertionPolish("{Model?}", context: midSentenceContext) == "{model}")
+        #expect(TranscriptionOutputFilter.applyInsertionPolish("\"Model!\".", context: midSentenceContext) == "\"model\"")
+        #expect(TranscriptionOutputFilter.applyInsertionPolish("(Model!).", context: midSentenceContext) == "(model)")
+        #expect(TranscriptionOutputFilter.applyInsertionPolish("{Model?}.", context: midSentenceContext) == "{model}")
         #expect(TranscriptionOutputFilter.applyInsertionPolish("[Model.]", context: nil) == "model")
         #expect(TranscriptionOutputFilter.applyInsertionPolish("[Model!]", context: nil) == "model")
         #expect(TranscriptionOutputFilter.applyInsertionPolish("What?", context: midSentenceContext) == "what?")
+        #expect(TranscriptionOutputFilter.applyInsertionPolish("\"What?\".", context: midSentenceContext) == "\"what?\"")
         #expect(TranscriptionOutputFilter.applyInsertionPolish(TranscriptionOutputFilter.filter("Open quote model close quote."), context: midSentenceContext) == "\"model\"")
         #expect(TranscriptionOutputFilter.applyInsertionPolish(TranscriptionOutputFilter.filter("Open parenthesis model close parenthesis."), context: midSentenceContext) == "(model)")
         #expect(TranscriptionOutputFilter.applyInsertionPolish("Comma.", context: midSentenceContext) == ",")

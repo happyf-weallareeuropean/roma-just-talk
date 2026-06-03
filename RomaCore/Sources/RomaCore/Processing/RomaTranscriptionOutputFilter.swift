@@ -2166,7 +2166,7 @@ public struct RomaTranscriptionOutputFilter {
         let protectedText = protectURLSpans(in: text)
         let spacedText = protectedText.text
             .replacingOccurrences(of: #"\s+([,.;:!?])"#, with: "$1", options: .regularExpression)
-            .replacingOccurrences(of: #"([,.;:!?])([^\s,.;:!?\]\)}])"#, with: "$1 $2", options: .regularExpression)
+            .replacingOccurrences(of: #"([,.;:!?])([^\s,.;:!?\]\)}"”’])"#, with: "$1 $2", options: .regularExpression)
             .replacingOccurrences(of: #"\s+([)\]\}])"#, with: "$1", options: .regularExpression)
 
         let normalizedText = spacedText
@@ -2832,13 +2832,27 @@ public struct RomaTranscriptionOutputFilter {
     }
 
     private static func isShortFragment(_ text: String) -> Bool {
-        let sentencePunctuation = CharacterSet(charactersIn: "!?")
-        if text.unicodeScalars.contains(where: { sentencePunctuation.contains($0) }) {
-            return isLikelyPunctuatedShortFragment(text) ||
-                isLikelyPunctuatedShortFragmentInsidePreservedBoundary(text)
+        let textWithoutTrailingFragmentPunctuation = removeTrailingFragmentPunctuation(from: text)
+        if isShortPreservedBoundaryFragment(textWithoutTrailingFragmentPunctuation) {
+            return true
         }
 
-        return wordCount(in: text) <= 3
+        let sentencePunctuation = CharacterSet(charactersIn: "!?")
+        if textWithoutTrailingFragmentPunctuation.unicodeScalars.contains(where: { sentencePunctuation.contains($0) }) {
+            return isLikelyPunctuatedShortFragment(textWithoutTrailingFragmentPunctuation) ||
+                isLikelyPunctuatedShortFragmentInsidePreservedBoundary(textWithoutTrailingFragmentPunctuation)
+        }
+
+        return wordCount(in: textWithoutTrailingFragmentPunctuation) <= 3
+    }
+
+    private static func isShortPreservedBoundaryFragment(_ text: String) -> Bool {
+        let trimmedText = text.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard hasPreservedBalancedBoundary(trimmedText) else { return false }
+
+        let innerStart = trimmedText.index(after: trimmedText.startIndex)
+        let innerEnd = trimmedText.index(before: trimmedText.endIndex)
+        return wordCount(in: String(trimmedText[innerStart..<innerEnd])) <= 3
     }
 
     private static func isLikelyPunctuatedShortFragmentInsidePreservedBoundary(_ text: String) -> Bool {
