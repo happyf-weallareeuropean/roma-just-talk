@@ -3662,17 +3662,18 @@ public struct RomaTranscriptionOutputFilter {
             return nil
         }
 
-        let correctionWords = correctionTokens.map { $0.text }
-        if let correctionAmount = leadingSpokenAmount(in: correctionWords) {
-            let amountRange = correctionTokens[0].range.lowerBound..<correctionTokens[correctionAmount.wordCount - 1].range.upperBound
+        let amountTokens = wordTokens(in: text)
+        let amountWords = amountTokens.map { $0.text }
+        if let correctionAmount = leadingSpokenAmount(in: amountWords) {
+            let amountRange = amountTokens[0].range.lowerBound..<amountTokens[correctionAmount.wordCount - 1].range.upperBound
             return (amountRange, correctionAmount.wordCount, sourceAmount.wordCount, nil)
         }
 
-        guard let valueWordCount = leadingAmountValueWordCount(in: correctionWords) else {
+        guard let valueWordCount = leadingAmountValueWordCount(in: amountWords) else {
             return nil
         }
 
-        let valueRange = correctionTokens[0].range.lowerBound..<correctionTokens[valueWordCount - 1].range.upperBound
+        let valueRange = amountTokens[0].range.lowerBound..<amountTokens[valueWordCount - 1].range.upperBound
         let valueText = String(text[valueRange])
         let replacementText: String
         switch sourceAmount.unitPlacement {
@@ -3689,7 +3690,7 @@ public struct RomaTranscriptionOutputFilter {
         let words = wordTokens(in: text).map { $0.text }
         guard words.count >= 2 else { return nil }
 
-        let maxCandidateCount = min(4, words.count)
+        let maxCandidateCount = min(8, words.count)
         for wordCount in stride(from: maxCandidateCount, through: 2, by: -1) {
             let candidate = Array(words.suffix(wordCount))
             if let amount = leadingSpokenAmount(in: candidate),
@@ -3740,6 +3741,10 @@ public struct RomaTranscriptionOutputFilter {
     }
 
     private static func leadingAmountValueWordCount(in words: [String]) -> Int? {
+        if let decimalWordCount = leadingDecimalAmountValueWordCount(in: words) {
+            return decimalWordCount
+        }
+
         for wordCount in [2, 1] where words.count >= wordCount {
             let valueWords = Array(words[0..<wordCount])
             guard spokenNumberValue(valueWords.joined(separator: " ")) != nil else {
@@ -3747,6 +3752,30 @@ public struct RomaTranscriptionOutputFilter {
             }
 
             return wordCount
+        }
+
+        return nil
+    }
+
+    private static func leadingDecimalAmountValueWordCount(in words: [String]) -> Int? {
+        for integerWordCount in [2, 1] where words.count > integerWordCount + 1 {
+            let integerWords = Array(words[0..<integerWordCount])
+            guard spokenNumberValue(integerWords.joined(separator: " ")) != nil,
+                  words[integerWordCount] == "point" else {
+                continue
+            }
+
+            var fractionalWordCount = 0
+            var index = integerWordCount + 1
+            while index < words.count,
+                  fractionalWordCount < 6,
+                  spokenDecimalDigits(words[index]) != nil {
+                fractionalWordCount += 1
+                index += 1
+            }
+
+            guard fractionalWordCount > 0 else { continue }
+            return integerWordCount + 1 + fractionalWordCount
         }
 
         return nil

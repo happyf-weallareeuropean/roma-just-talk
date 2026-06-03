@@ -1062,6 +1062,41 @@ struct RomaCoreChecks {
                 "wait no correction should preserve pound weight wording"
             ),
             (
+                "Pay nineteen point nine nine dollars wait no twenty dollars tomorrow.",
+                "Pay $20 tomorrow.",
+                "wait no correction should replace decimal currency phrase"
+            ),
+            (
+                "Pay twenty dollars wait no nineteen point nine nine dollars tomorrow.",
+                "Pay $19.99 tomorrow.",
+                "wait no correction should insert decimal currency phrase"
+            ),
+            (
+                "Pay nineteen point nine nine dollars wait no twenty tomorrow.",
+                "Pay $20 tomorrow.",
+                "wait no correction should preserve decimal currency unit"
+            ),
+            (
+                "Pay twenty dollars wait no nineteen point nine nine tomorrow.",
+                "Pay $19.99 tomorrow.",
+                "wait no correction should preserve currency unit for decimal value"
+            ),
+            (
+                "Pay dollar sign nineteen point nine nine wait no dollar sign twenty tomorrow.",
+                "Pay $20 tomorrow.",
+                "wait no correction should replace leading decimal currency phrase"
+            ),
+            (
+                "Progress is eighty five point five percent wait no ninety percent done.",
+                "Progress is 90% done.",
+                "wait no correction should replace decimal percent phrase"
+            ),
+            (
+                "Progress is eighty five percent wait no eighty five point five done.",
+                "Progress is 85.5% done.",
+                "wait no correction should preserve percent unit for decimal value"
+            ),
+            (
                 "Use model, oops module.",
                 "Use module.",
                 "oops correction"
