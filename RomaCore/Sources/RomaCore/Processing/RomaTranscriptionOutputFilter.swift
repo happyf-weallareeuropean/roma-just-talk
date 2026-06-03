@@ -275,6 +275,7 @@ public struct RomaTranscriptionOutputFilter {
         (#"(?i)[,;:…]\s+(?:you\s+know|like)[,;:…]+(?=\s)"#, " ")
     ]
     private static let leadingDiscourseFillerPatterns: [(pattern: String, replacement: String)] = [
+        (#"(?i)^\s*(?:ok(?:ay)?|all\s+right|alright|right|yeah)(?:[ \t]*[,;:…]+[ \t]*(?:you\s+know(?:[ \t]+what[ \t]+i[ \t]+mean)?|i\s+mean|like)[ \t]*[,;:…]+)+[ \t]+"#, ""),
         (#"(?i)^\s*(?:ok(?:ay)?|all\s+right|alright|right|yeah)[,;:…]*[ \t]+so[,;:…]*[ \t]+"#, ""),
         (#"(?i)^\s*(?:ok(?:ay)?|all\s+right|alright|right|yeah)(?:[ \t]*[,;:…]+[ \t]*)+so[,;:…]*[ \t]+"#, ""),
         (#"(?i)^\s*(?:you\s+know|i\s+mean|like)[,;:…]+[ \t]*"#, "")
@@ -404,6 +405,9 @@ public struct RomaTranscriptionOutputFilter {
     ]
     private static let blockedSingleWordPrefixesForMakeCallCorrection: Set<String> = [
         "please"
+    ]
+    private static let blockedPrefixesForPlainIMeanCorrection: Set<String> = [
+        "all right", "alright", "ok", "okay", "right", "well", "yeah"
     ]
     private static let blockedPreviousWordsForDeleteCommand: Set<String> = [
         "a", "an", "command", "commands", "shortcut", "shortcuts", "the"
@@ -3308,6 +3312,11 @@ public struct RomaTranscriptionOutputFilter {
             return false
         }
 
+        if isPlainIMeanBacktrackingMarker(markerText),
+           blockedPrefixesForPlainIMeanCorrection.contains(normalizedRepeatedClause(beforeMarker)) {
+            return false
+        }
+
         guard isReplaceOrChangeBacktrackingMarker(markerText) ||
                 isGuardedNaturalBacktrackingMarker(markerText) else {
             return true
@@ -3359,6 +3368,10 @@ public struct RomaTranscriptionOutputFilter {
             "wait i mean",
             "wait i meant"
         ].contains(normalizedMarker)
+    }
+
+    private static func isPlainIMeanBacktrackingMarker(_ markerText: String) -> Bool {
+        normalizedBacktrackingMarker(markerText) == "i mean"
     }
 
     private static func normalizedBacktrackingMarker(_ markerText: String) -> String {

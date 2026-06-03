@@ -2,6 +2,7 @@
 
 ## v1.81 - Unreleased
 
+- Removed chained leading discourse fillers such as "Okay, you know..." and "Yeah, like..." with prose guards.
 - Removed bounded hedge fillers such as "kind of", "sort of", "kinda", and "sorta" when they behave like speech noise.
 - Collapsed inline repeated short phrases such as "I think we should ship we should ship this." with intentional repeat guards.
 - Cleaned natural "wait, actually..." and "wait, I mean..." self-corrections with prose guards.

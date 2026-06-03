@@ -803,6 +803,26 @@ struct RomaCoreChecks {
                 "leading okay pause so filler"
             ),
             (
+                "Okay, you know, this works.",
+                "this works.",
+                "leading okay you know filler chain"
+            ),
+            (
+                "Okay, I mean, this works.",
+                "this works.",
+                "leading okay i mean filler chain"
+            ),
+            (
+                "Yeah, like, this works.",
+                "this works.",
+                "leading yeah like filler chain"
+            ),
+            (
+                "Right, you know what I mean, this works.",
+                "this works.",
+                "leading right long filler chain"
+            ),
+            (
                 "All right, so this works.",
                 "this works.",
                 "leading all right so filler"
@@ -2006,6 +2026,26 @@ struct RomaCoreChecks {
                 "Okay, this works.",
                 "Okay, this works.",
                 "okay prose guard"
+            ),
+            (
+                "Okay, I mean business.",
+                "Okay, I mean business.",
+                "okay i mean prose guard"
+            ),
+            (
+                "All right, I mean business.",
+                "All right, I mean business.",
+                "all right i mean prose guard"
+            ),
+            (
+                "Well, I mean business.",
+                "Well, I mean business.",
+                "well i mean prose guard"
+            ),
+            (
+                "Right, like magic happens.",
+                "Right, like magic happens.",
+                "right like simile guard"
             ),
             (
                 "Right, this works.",
