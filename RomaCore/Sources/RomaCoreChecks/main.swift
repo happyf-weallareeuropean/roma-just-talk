@@ -403,6 +403,26 @@ struct RomaCoreChecks {
                 "scratch that correction"
             ),
             (
+                "Use old model delete last word module.",
+                "Use old module.",
+                "delete last word correction"
+            ),
+            (
+                "Use old model delete previous word module.",
+                "Use old module.",
+                "delete previous word correction"
+            ),
+            (
+                "Use model delete last word.",
+                "Use",
+                "terminal delete last word correction"
+            ),
+            (
+                "First sentence. Wrong sentence. delete last sentence. Right sentence.",
+                "First sentence. Right sentence.",
+                "delete last sentence correction"
+            ),
+            (
                 "Open quote hello comma world close quote.",
                 "\"hello, world\".",
                 "spoken enclosure and punctuation"
@@ -516,6 +536,16 @@ struct RomaCoreChecks {
                 "Delete that file.",
                 "Delete that file.",
                 "delete command prose guard"
+            ),
+            (
+                "The delete last word shortcut is useful.",
+                "The delete last word shortcut is useful.",
+                "delete last word prose guard"
+            ),
+            (
+                "The delete last sentence command is useful.",
+                "The delete last sentence command is useful.",
+                "delete last sentence prose guard"
             ),
             (
                 "I am sorry this happened.",

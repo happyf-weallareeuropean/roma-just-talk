@@ -268,6 +268,8 @@ public struct RomaTranscriptionOutputFilter {
         \s*[,;:]?\s+
         """#
     private static let scratchThatCommandPattern = #"(?i)(?<![\p{L}\p{N}])(?:scratch|strike|delete|remove|erase|undo)\s+that(?:\s*[.!?,;:…]+|(?=\s*$|\s*\n))"#
+    private static let deletePreviousWordCommandPattern = #"(?i)(?<![\p{L}\p{N}])(?:delete|remove|erase|undo)\s+(?:last|previous)\s+word(?:\s*[.!?,;:…]+|(?=\s*$|\s*\n)|\s+)"#
+    private static let deletePreviousSentenceCommandPattern = #"(?i)(?<![\p{L}\p{N}])(?:delete|remove|erase|undo)\s+(?:last|previous)\s+sentence(?:\s*[.!?,;:…]+|(?=\s*$|\s*\n)|\s+)"#
     private static let phraseBoundaryPunctuation = CharacterSet(charactersIn: ".,!?;:…")
     private static let softPhrasePunctuation = CharacterSet(charactersIn: ",;:…")
     private static let wordConnectorCharacters = CharacterSet(charactersIn: "'’ʼ-")
@@ -279,6 +281,12 @@ public struct RomaTranscriptionOutputFilter {
     ]
     private static let blockedFirstCorrectionWordsForReplaceThat: Set<String> = [
         "is", "means"
+    ]
+    private static let blockedPreviousWordsForDeleteCommand: Set<String> = [
+        "a", "an", "command", "commands", "shortcut", "shortcuts", "the"
+    ]
+    private static let blockedNextWordsForDeleteCommand: Set<String> = [
+        "command", "commands", "from", "in", "is", "means", "of", "shortcut", "shortcuts"
     ]
     private static let openQuotePlaceholder = "__VOICEINK_OPEN_QUOTE__"
     private static let closeQuotePlaceholder = "__VOICEINK_CLOSE_QUOTE__"
@@ -2471,6 +2479,8 @@ public struct RomaTranscriptionOutputFilter {
             rewriteCount += 1
         }
 
+        correctedText = applyDeletePreviousWordCommands(in: correctedText)
+        correctedText = applyDeletePreviousSentenceCommands(in: correctedText)
         return applyScratchThatCommands(in: correctedText)
     }
 
@@ -2547,6 +2557,93 @@ public struct RomaTranscriptionOutputFilter {
         }
 
         return correctedText
+    }
+
+    private static func applyDeletePreviousWordCommands(in text: String) -> String {
+        guard let regex = try? NSRegularExpression(pattern: deletePreviousWordCommandPattern) else {
+            return text
+        }
+
+        var correctedText = text
+        var rewriteCount = 0
+
+        while rewriteCount < 8 {
+            let fullRange = NSRange(correctedText.startIndex..., in: correctedText)
+            guard let match = regex.firstMatch(in: correctedText, range: fullRange),
+                  let markerRange = Range(match.range, in: correctedText),
+                  let rewrittenText = rewriteDeletePreviousWordCommand(in: correctedText, markerRange: markerRange),
+                  rewrittenText != correctedText else {
+                break
+            }
+
+            correctedText = rewrittenText
+            rewriteCount += 1
+        }
+
+        return correctedText
+    }
+
+    private static func rewriteDeletePreviousWordCommand(in text: String, markerRange: Range<String.Index>) -> String? {
+        let beforeMarker = String(text[..<markerRange.lowerBound])
+        let afterMarker = String(text[markerRange.upperBound...])
+
+        guard shouldApplyDeleteCommand(beforeMarker: beforeMarker, afterMarker: afterMarker),
+              let prefix = removeTrailingWords(1, from: beforeMarker) else {
+            return nil
+        }
+
+        return normalizeBacktrackingWhitespace(join(prefix, "", afterMarker))
+    }
+
+    private static func applyDeletePreviousSentenceCommands(in text: String) -> String {
+        guard let regex = try? NSRegularExpression(pattern: deletePreviousSentenceCommandPattern) else {
+            return text
+        }
+
+        var correctedText = text
+        var rewriteCount = 0
+
+        while rewriteCount < 8 {
+            let fullRange = NSRange(correctedText.startIndex..., in: correctedText)
+            guard let match = regex.firstMatch(in: correctedText, range: fullRange),
+                  let markerRange = Range(match.range, in: correctedText),
+                  let rewrittenText = rewriteDeletePreviousSentenceCommand(in: correctedText, markerRange: markerRange),
+                  rewrittenText != correctedText else {
+                break
+            }
+
+            correctedText = rewrittenText
+            rewriteCount += 1
+        }
+
+        return correctedText
+    }
+
+    private static func rewriteDeletePreviousSentenceCommand(in text: String, markerRange: Range<String.Index>) -> String? {
+        let beforeMarker = String(text[..<markerRange.lowerBound])
+        let afterMarker = String(text[markerRange.upperBound...])
+
+        guard shouldApplyDeleteCommand(beforeMarker: beforeMarker, afterMarker: afterMarker),
+              let prefix = removeTrailingSentence(from: beforeMarker) else {
+            return nil
+        }
+
+        return normalizeBacktrackingWhitespace(join(prefix, "", afterMarker))
+    }
+
+    private static func shouldApplyDeleteCommand(beforeMarker: String, afterMarker: String) -> Bool {
+        guard wordCount(in: beforeMarker) >= 1,
+              let previousWord = previousWordBeforeSpokenPunctuationCommand(in: beforeMarker),
+              !blockedPreviousWordsForDeleteCommand.contains(previousWord) else {
+            return false
+        }
+
+        if let nextWord = nextWord(in: afterMarker),
+           blockedNextWordsForDeleteCommand.contains(nextWord) {
+            return false
+        }
+
+        return true
     }
 
     private static func rewriteScratchThatCommand(in text: String, markerRange: Range<String.Index>) -> String? {
@@ -2655,6 +2752,33 @@ public struct RomaTranscriptionOutputFilter {
         prefix = prefix.trimmingCharacters(in: .whitespacesAndNewlines)
         prefix = prefix.trimmingCharacters(in: softPhrasePunctuation)
         return prefix
+    }
+
+    private static func removeTrailingSentence(from text: String) -> String? {
+        let trimmedText = text.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard wordCount(in: trimmedText) > 0 else { return nil }
+
+        var scanIndex = trimmedText.endIndex
+        while scanIndex > trimmedText.startIndex {
+            let previousIndex = trimmedText.index(before: scanIndex)
+            let previousCharacter = trimmedText[previousIndex]
+            guard previousCharacter.isWhitespace || ".!?。！？".contains(previousCharacter) else {
+                break
+            }
+            scanIndex = previousIndex
+        }
+
+        while scanIndex > trimmedText.startIndex {
+            let previousIndex = trimmedText.index(before: scanIndex)
+            let previousCharacter = trimmedText[previousIndex]
+            if previousCharacter == "\n" || ".!?。！？".contains(previousCharacter) {
+                return String(trimmedText[..<trimmedText.index(after: previousIndex)])
+                    .trimmingCharacters(in: .whitespacesAndNewlines)
+            }
+            scanIndex = previousIndex
+        }
+
+        return ""
     }
 
     private static func indexBeforeTrailingNoise(in text: String, from endIndex: String.Index) -> String.Index {
