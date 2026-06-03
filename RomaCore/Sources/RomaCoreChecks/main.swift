@@ -333,6 +333,21 @@ struct RomaCoreChecks {
                 "bracketed crosstalk artifact"
             ),
             (
+                "Use [blank audio] now.",
+                "Use now.",
+                "bracketed blank audio artifact"
+            ),
+            (
+                "Use [speaking foreign language] now.",
+                "Use now.",
+                "bracketed speaking foreign language artifact"
+            ),
+            (
+                "Use [laughing] now.",
+                "Use now.",
+                "bracketed laughing artifact"
+            ),
+            (
                 "Use [breath control] now.",
                 "Use [breath control] now.",
                 "bracketed literal breath phrase guard"
@@ -341,6 +356,11 @@ struct RomaCoreChecks {
                 "Use [unclear goal] now.",
                 "Use [unclear goal] now.",
                 "bracketed literal unclear phrase guard"
+            ),
+            (
+                "Use [foreign language class] now.",
+                "Use [foreign language class] now.",
+                "bracketed literal foreign language phrase guard"
             ),
             (
                 "I was like going there.",

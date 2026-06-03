@@ -2,6 +2,7 @@
 
 ## v1.81 - Unreleased
 
+- Removed bracketed ASR artifacts such as "[blank audio]", "[laughing]", and "[speaking foreign language]".
 - Removed more bracketed ASR artifacts such as "[unintelligible]", "(crosstalk)", and "[overlap]".
 - Removed bracketed non-speech artifacts such as "[cough]", "(breathing)", and "{sighing}".
 - Added bounded ", rather," self-correction cleanup while preserving ordinary "rather" prose.
