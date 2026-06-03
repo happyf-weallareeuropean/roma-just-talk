@@ -2,6 +2,7 @@
 
 ## v1.81 - Unreleased
 
+- Added guarded "delete that word" and "undo this word" cleanup aliases.
 - Added guarded spoken punctuation aliases such as "question point", "question sign", and "exclamation sign".
 - Added guarded "delete that line" and "undo this paragraph" cleanup aliases.
 - Added guarded "delete that sentence" and "undo this sentence" cleanup aliases.

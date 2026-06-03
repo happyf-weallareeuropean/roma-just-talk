@@ -433,6 +433,16 @@ struct RomaCoreChecks {
                 "delete previous word correction"
             ),
             (
+                "Use old model delete that word module.",
+                "Use old module.",
+                "delete that word correction"
+            ),
+            (
+                "Use old model undo this word module.",
+                "Use old module.",
+                "undo this word correction"
+            ),
+            (
                 "Use old wrong model delete last two words module.",
                 "Use old module.",
                 "delete last two words correction"
@@ -751,6 +761,16 @@ struct RomaCoreChecks {
                 "The delete last two words shortcut is useful.",
                 "The delete last two words shortcut is useful.",
                 "delete counted words prose guard"
+            ),
+            (
+                "The delete that word shortcut is useful.",
+                "The delete that word shortcut is useful.",
+                "delete that word prose guard"
+            ),
+            (
+                "Explain how to remove this word from docs.",
+                "Explain how to remove this word from docs.",
+                "remove this word prose guard"
             ),
             (
                 "The delete last sentence command is useful.",
