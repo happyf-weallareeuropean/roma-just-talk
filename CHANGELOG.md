@@ -2,6 +2,7 @@
 
 ## v1.81 - Unreleased
 
+- Removed noisy `!` and `?` inside quoted, parenthesized, and braced short final fragments.
 - Removed noisy `!` and `?` from likely short final fragments such as mid-sentence "Model!".
 - Removed leading punctuated discourse fillers such as "you know," and "I mean," without dropping meaningful uses.
 - Removed guarded unpunctuated "like" fillers such as "I was like going" while preserving meaningful uses.

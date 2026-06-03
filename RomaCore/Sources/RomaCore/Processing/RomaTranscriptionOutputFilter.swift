@@ -2803,6 +2803,7 @@ public struct RomaTranscriptionOutputFilter {
 
     private static func removeTrailingShortFragmentPunctuation(from text: String) -> String {
         var result = removeTrailingFragmentPunctuation(from: text)
+        result = removeTrailingSentenceFragmentPunctuationInsidePreservedBoundary(from: result)
         while let lastScalar = result.unicodeScalars.last,
               removableTrailingSentenceFragmentPunctuation.contains(lastScalar),
               isLikelyPunctuatedShortFragment(result) {
@@ -2811,13 +2812,46 @@ public struct RomaTranscriptionOutputFilter {
         return result
     }
 
+    private static func removeTrailingSentenceFragmentPunctuationInsidePreservedBoundary(from text: String) -> String {
+        let trimmedText = text.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard let first = trimmedText.first,
+              let closing = preservedClosingBoundary(for: first),
+              trimmedText.last == closing else {
+            return text
+        }
+
+        let innerStart = trimmedText.index(after: trimmedText.startIndex)
+        let innerEnd = trimmedText.index(before: trimmedText.endIndex)
+        let innerText = String(trimmedText[innerStart..<innerEnd])
+        guard isLikelyPunctuatedShortFragment(innerText) else {
+            return text
+        }
+
+        let cleanedInnerText = removeTrailingShortFragmentPunctuation(from: innerText)
+        return "\(first)\(cleanedInnerText)\(closing)"
+    }
+
     private static func isShortFragment(_ text: String) -> Bool {
         let sentencePunctuation = CharacterSet(charactersIn: "!?")
         if text.unicodeScalars.contains(where: { sentencePunctuation.contains($0) }) {
-            return isLikelyPunctuatedShortFragment(text)
+            return isLikelyPunctuatedShortFragment(text) ||
+                isLikelyPunctuatedShortFragmentInsidePreservedBoundary(text)
         }
 
         return wordCount(in: text) <= 3
+    }
+
+    private static func isLikelyPunctuatedShortFragmentInsidePreservedBoundary(_ text: String) -> Bool {
+        let trimmedText = text.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard let first = trimmedText.first,
+              let closing = preservedClosingBoundary(for: first),
+              trimmedText.last == closing else {
+            return false
+        }
+
+        let innerStart = trimmedText.index(after: trimmedText.startIndex)
+        let innerEnd = trimmedText.index(before: trimmedText.endIndex)
+        return isLikelyPunctuatedShortFragment(String(trimmedText[innerStart..<innerEnd]))
     }
 
     private static func isLikelyPunctuatedShortFragment(_ text: String) -> Bool {

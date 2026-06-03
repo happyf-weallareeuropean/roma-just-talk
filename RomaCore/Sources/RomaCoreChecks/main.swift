@@ -214,6 +214,18 @@ struct RomaCoreChecks {
             "shared insertion polish should preserve one-word question fragments"
         )
         try require(
+            RomaTranscriptionOutputFilter.applyInsertionPolish("\"Model!\"", context: midSentenceContext) == "\"model\"",
+            "shared insertion polish should trim noisy marks inside quoted short fragments"
+        )
+        try require(
+            RomaTranscriptionOutputFilter.applyInsertionPolish("(Model!)", context: midSentenceContext) == "(model)",
+            "shared insertion polish should trim noisy marks inside parenthesized short fragments"
+        )
+        try require(
+            RomaTranscriptionOutputFilter.applyInsertionPolish("{Model?}", context: midSentenceContext) == "{model}",
+            "shared insertion polish should trim noisy marks inside braced short fragments"
+        )
+        try require(
             RomaTranscriptionOutputFilter.applyInsertionSpacing("model", context: midSentenceContext) == " model",
             "shared insertion spacing should add a leading space after words"
         )
