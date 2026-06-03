@@ -3035,7 +3035,7 @@ public struct RomaTranscriptionOutputFilter {
             correctionText: correctionText
         ),
               let prefix = removeTrailingWords(
-                removalWordCount(for: correctionText, fallback: correction.wordCount),
+                removalWordCount(for: correctionText, fallback: correction.wordCount, beforeMarker: beforeMarker),
                 from: beforeMarker
               ) else {
             return nil
@@ -3045,14 +3045,44 @@ public struct RomaTranscriptionOutputFilter {
         return normalizeBacktrackingWhitespace(join(prefix, correctionText, suffix))
     }
 
-    private static func removalWordCount(for correctionText: String, fallback wordCount: Int) -> Int {
+    private static func removalWordCount(for correctionText: String, fallback wordCount: Int, beforeMarker: String) -> Int {
         guard wordCount > 1,
               let firstCorrectionWord = firstWord(in: correctionText),
               ["a", "an", "the"].contains(firstCorrectionWord) else {
             return wordCount
         }
 
-        return wordCount - 1
+        let contentWordCount = wordCount - 1
+        guard trailingWords(contentWordCount + 1, in: beforeMarker).first.map({ ["a", "an", "the"].contains($0) }) == true else {
+            return contentWordCount
+        }
+
+        return wordCount
+    }
+
+    private static func trailingWords(_ count: Int, in text: String) -> [String] {
+        guard count > 0 else { return [] }
+
+        var words: [String] = []
+        var wordEnd = text.endIndex
+
+        while words.count < count {
+            wordEnd = indexBeforeTrailingNoise(in: text, from: wordEnd)
+            guard wordEnd > text.startIndex else { break }
+
+            var wordStart = wordEnd
+            while wordStart > text.startIndex {
+                let previousIndex = text.index(before: wordStart)
+                guard isWordCharacter(text[previousIndex]) else { break }
+                wordStart = previousIndex
+            }
+
+            guard wordStart < wordEnd else { break }
+            words.append(String(text[wordStart..<wordEnd]).lowercased())
+            wordEnd = wordStart
+        }
+
+        return words.reversed()
     }
 
     private static func shouldApplyBacktrackingMarker(
