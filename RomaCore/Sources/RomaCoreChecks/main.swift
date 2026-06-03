@@ -388,6 +388,26 @@ struct RomaCoreChecks {
                 "spoken enclosure and punctuation"
             ),
             (
+                "Hello, comma world.",
+                "Hello, world.",
+                "spoken comma over auto comma"
+            ),
+            (
+                "Hello, comma, world.",
+                "Hello, world.",
+                "spoken comma over repeated auto comma"
+            ),
+            (
+                "Hello! exclamation mark.",
+                "Hello!",
+                "spoken exclamation over auto exclamation"
+            ),
+            (
+                "Are you ready? question mark.",
+                "Are you ready?",
+                "spoken question mark over auto question mark"
+            ),
+            (
                 "Use api slash users.",
                 "Use api/users.",
                 "spoken slash command"

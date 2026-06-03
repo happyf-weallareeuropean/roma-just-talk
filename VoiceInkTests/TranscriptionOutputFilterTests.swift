@@ -62,6 +62,10 @@ struct TranscriptionOutputFilterTests {
         #expect(TranscriptionOutputFilter.filter("Okay. Okay.") == "Okay. Okay.")
         #expect(TranscriptionOutputFilter.filter("I know, I know.") == "I know, I know.")
         #expect(TranscriptionOutputFilter.filter("New York New York is the title.") == "New York New York is the title.")
+        #expect(TranscriptionOutputFilter.filter("Hello, comma world.") == "Hello, world.")
+        #expect(TranscriptionOutputFilter.filter("Hello, comma, world.") == "Hello, world.")
+        #expect(TranscriptionOutputFilter.filter("Hello! exclamation mark.") == "Hello!")
+        #expect(TranscriptionOutputFilter.filter("Are you ready? question mark.") == "Are you ready?")
         #expect(TranscriptionOutputFilter.filter("\"What?\".") == "\"What?\".")
     }
 

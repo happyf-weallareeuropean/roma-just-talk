@@ -2072,10 +2072,9 @@ public struct RomaTranscriptionOutputFilter {
         let beforeCommand = String(text[..<commandRange.lowerBound])
         let afterCommand = String(text[commandRange.upperBound...])
 
-        guard previousWord(in: beforeCommand) != nil else { return false }
+        guard let previousWord = previousWordBeforeSpokenPunctuationCommand(in: beforeCommand) else { return false }
 
-        if let previousWord = previousWord(in: beforeCommand),
-           command.blockedPreviousWords.contains(previousWord) {
+        if command.blockedPreviousWords.contains(previousWord) {
             return false
         }
 
@@ -2179,7 +2178,8 @@ public struct RomaTranscriptionOutputFilter {
 
     private static func normalizePunctuationSpacing(_ text: String) -> String {
         let protectedText = protectURLSpans(in: text)
-        let spacedText = protectedText.text
+        let punctuatedText = normalizeDuplicatePhrasePunctuation(protectedText.text)
+        let spacedText = punctuatedText
             .replacingOccurrences(of: #"\s+([,.;:!?])"#, with: "$1", options: .regularExpression)
             .replacingOccurrences(of: #"([,.;:!?])([^\s,.;:!?\]\)}"”’])"#, with: "$1 $2", options: .regularExpression)
             .replacingOccurrences(of: #"\s+([)\]\}])"#, with: "$1", options: .regularExpression)
@@ -2197,6 +2197,13 @@ public struct RomaTranscriptionOutputFilter {
             )
 
         return restoreProtectedURLSpans(in: normalizedText, urls: protectedText.urls)
+    }
+
+    private static func normalizeDuplicatePhrasePunctuation(_ text: String) -> String {
+        text
+            .replacingOccurrences(of: #"([,;:!?])\1+"#, with: "$1", options: .regularExpression)
+            .replacingOccurrences(of: #"[,;:]+([.!?])"#, with: "$1", options: .regularExpression)
+            .replacingOccurrences(of: #"([.!?])[,;:]+"#, with: "$1", options: .regularExpression)
     }
 
     private static func protectURLSpans(in text: String) -> (text: String, urls: [String]) {
@@ -2232,6 +2239,21 @@ public struct RomaTranscriptionOutputFilter {
 
     private static func previousWord(in text: String) -> String? {
         let endIndex = indexBeforeTrailingNoise(in: text, from: text.endIndex)
+        guard endIndex > text.startIndex else { return nil }
+
+        var wordStart = endIndex
+        while wordStart > text.startIndex {
+            let previousIndex = text.index(before: wordStart)
+            guard isWordCharacter(text[previousIndex]) else { break }
+            wordStart = previousIndex
+        }
+
+        guard wordStart < endIndex else { return nil }
+        return String(text[wordStart..<endIndex]).lowercased()
+    }
+
+    private static func previousWordBeforeSpokenPunctuationCommand(in text: String) -> String? {
+        let endIndex = indexBeforeTrailingPhraseNoise(in: text, from: text.endIndex)
         guard endIndex > text.startIndex else { return nil }
 
         var wordStart = endIndex
@@ -2521,6 +2543,21 @@ public struct RomaTranscriptionOutputFilter {
             let previousIndex = text.index(before: index)
             let previousCharacter = text[previousIndex]
             if previousCharacter.isWhitespace || character(previousCharacter, isIn: softPhrasePunctuation) {
+                index = previousIndex
+                continue
+            }
+            break
+        }
+
+        return index
+    }
+
+    private static func indexBeforeTrailingPhraseNoise(in text: String, from endIndex: String.Index) -> String.Index {
+        var index = endIndex
+        while index > text.startIndex {
+            let previousIndex = text.index(before: index)
+            let previousCharacter = text[previousIndex]
+            if previousCharacter.isWhitespace || character(previousCharacter, isIn: phraseBoundaryPunctuation) {
                 index = previousIndex
                 continue
             }
