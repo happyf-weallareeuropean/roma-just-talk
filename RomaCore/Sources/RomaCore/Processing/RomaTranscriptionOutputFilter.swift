@@ -138,6 +138,7 @@ public struct RomaTranscriptionOutputFilter {
     private static let apostropheLikeCharacters = CharacterSet(charactersIn: "'’‘ʼ＇")
     private static let removableTrailingFragmentPunctuation = CharacterSet(charactersIn: ".,;:…-–—")
     private static let removableTrailingSentenceFragmentPunctuation = CharacterSet(charactersIn: "!?")
+    private static let removableTrailingSpacedFragmentSymbols = "/\\|"
     private static let nonSpeechBracketContents: Set<String> = [
         "applause", "background noise", "inaudible", "laughter", "laughs",
         "music", "noise", "silence", "sound", "static"
@@ -2803,11 +2804,26 @@ public struct RomaTranscriptionOutputFilter {
 
     private static func removeTrailingShortFragmentPunctuation(from text: String) -> String {
         var result = removeTrailingFragmentPunctuation(from: text)
+        result = removeTrailingSpacedFragmentSymbols(from: result)
         result = removeTrailingSentenceFragmentPunctuationInsidePreservedBoundary(from: result)
         while let lastScalar = result.unicodeScalars.last,
               removableTrailingSentenceFragmentPunctuation.contains(lastScalar),
               isLikelyPunctuatedShortFragment(result) {
             result.removeLast()
+        }
+        return result
+    }
+
+    private static func removeTrailingSpacedFragmentSymbols(from text: String) -> String {
+        var result = text.trimmingCharacters(in: .whitespacesAndNewlines)
+        while let lastCharacter = result.last,
+              removableTrailingSpacedFragmentSymbols.contains(lastCharacter) {
+            let symbolIndex = result.index(before: result.endIndex)
+            let prefix = result[..<symbolIndex]
+            guard prefix.last?.isWhitespace == true else {
+                return result
+            }
+            result = String(prefix).trimmingCharacters(in: .whitespacesAndNewlines)
         }
         return result
     }

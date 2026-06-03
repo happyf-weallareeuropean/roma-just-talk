@@ -218,6 +218,18 @@ struct RomaCoreChecks {
             "shared insertion polish should remove noisy dashes from mid-sentence fragments"
         )
         try require(
+            RomaTranscriptionOutputFilter.applyInsertionPolish("Model /", context: midSentenceContext) == "model",
+            "shared insertion polish should remove noisy slashes from mid-sentence fragments"
+        )
+        try require(
+            RomaTranscriptionOutputFilter.applyInsertionPolish("Model \\", context: midSentenceContext) == "model",
+            "shared insertion polish should remove noisy backslashes from mid-sentence fragments"
+        )
+        try require(
+            RomaTranscriptionOutputFilter.applyInsertionPolish("Model |", context: midSentenceContext) == "model",
+            "shared insertion polish should remove noisy pipe symbols from mid-sentence fragments"
+        )
+        try require(
             RomaTranscriptionOutputFilter.applyInsertionPolish("What?", context: midSentenceContext) == "what?",
             "shared insertion polish should preserve one-word question fragments"
         )
@@ -253,6 +265,14 @@ struct RomaCoreChecks {
             RomaTranscriptionOutputFilter.applyInsertionPolish("state-of-the-art", context: midSentenceContext) ==
                 "state-of-the-art",
             "shared insertion polish should preserve internal hyphens"
+        )
+        try require(
+            RomaTranscriptionOutputFilter.applyInsertionPolish("/users", context: midSentenceContext) == "/users",
+            "shared insertion polish should preserve compact path fragments"
+        )
+        try require(
+            RomaTranscriptionOutputFilter.applyInsertionPolish("docs/", context: midSentenceContext) == "docs/",
+            "shared insertion polish should preserve trailing path slash fragments"
         )
         try require(
             RomaTranscriptionOutputFilter.applyInsertionSpacing("model", context: midSentenceContext) == " model",
