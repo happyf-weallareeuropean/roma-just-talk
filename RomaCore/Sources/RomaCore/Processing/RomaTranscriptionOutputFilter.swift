@@ -136,6 +136,8 @@ public struct RomaTranscriptionOutputFilter {
     private static let lowercaseTranscriptionKey = "LowercaseTranscription"
     private static let maxInsertionContextCharacters = 512
     private static let apostropheLikeCharacters = CharacterSet(charactersIn: "'’‘ʼ＇")
+    private static let removableLeadingPausePunctuation = CharacterSet(charactersIn: ".…")
+    private static let removableLeadingFragmentPunctuation = CharacterSet(charactersIn: ".,;:…-–—")
     private static let removableTrailingFragmentPunctuation = CharacterSet(charactersIn: ".,;:…-–—")
     private static let removableTrailingSentenceFragmentPunctuation = CharacterSet(charactersIn: "!?")
     private static let removableTrailingSpacedFragmentSymbols = "/\\|"
@@ -566,6 +568,7 @@ public struct RomaTranscriptionOutputFilter {
 
     public static func applyInsertionPolish(_ text: String, context: TextInsertionContext?) -> String {
         var polishedText = stripBoundaryNoise(from: normalizeWhitespace(text))
+        polishedText = removeLeadingPausePunctuation(from: polishedText)
         guard !polishedText.isEmpty else { return polishedText }
 
         let shouldTreatAsFragment = isShortFragment(polishedText)
@@ -577,6 +580,7 @@ public struct RomaTranscriptionOutputFilter {
         }
 
         if shouldUseFragmentPolish {
+            polishedText = removeLeadingFragmentPunctuation(from: polishedText)
             polishedText = removeTrailingShortFragmentPunctuation(from: polishedText)
         }
 
@@ -2190,7 +2194,7 @@ public struct RomaTranscriptionOutputFilter {
     }
 
     private static func normalizePunctuationSpacing(_ text: String) -> String {
-        let protectedText = protectURLSpans(in: text)
+        let protectedText = protectPunctuationSpacingSpans(in: text)
         let punctuatedText = normalizeDuplicatePhrasePunctuation(protectedText.text)
         let spacedText = punctuatedText
             .replacingOccurrences(of: #"\s+([,.;:!?])"#, with: "$1", options: .regularExpression)
@@ -2209,7 +2213,7 @@ public struct RomaTranscriptionOutputFilter {
                 options: .regularExpression
             )
 
-        return restoreProtectedURLSpans(in: normalizedText, urls: protectedText.urls)
+        return restoreProtectedPunctuationSpacingSpans(in: normalizedText, spans: protectedText.spans)
     }
 
     private static func normalizeDuplicatePhrasePunctuation(_ text: String) -> String {
@@ -2219,15 +2223,15 @@ public struct RomaTranscriptionOutputFilter {
             .replacingOccurrences(of: #"([.!?])[,;:]+"#, with: "$1", options: .regularExpression)
     }
 
-    private static func protectURLSpans(in text: String) -> (text: String, urls: [String]) {
+    private static func protectPunctuationSpacingSpans(in text: String) -> (text: String, spans: [String]) {
         guard let regex = try? NSRegularExpression(
-            pattern: #"(?i)\b(?:https?://|www\.)[A-Za-z0-9._~:/?#\[\]@!$&'()*+,;=%-]+"#
+            pattern: #"(?i)\b(?:https?://|www\.)[A-Za-z0-9._~:/?#\[\]@!$&'()*+,;=%-]+|(?<![\p{L}\p{N}])\.[A-Za-z][A-Za-z0-9._-]{0,63}"#
         ) else {
             return (text, [])
         }
 
         var protectedText = text
-        var urls: [String] = []
+        var spans: [String] = []
         let matches = regex.matches(in: protectedText, range: NSRange(protectedText.startIndex..., in: protectedText))
 
         for match in matches.reversed() {
@@ -2235,17 +2239,17 @@ public struct RomaTranscriptionOutputFilter {
                 continue
             }
 
-            urls.append(String(protectedText[range]))
-            protectedText.replaceSubrange(range, with: "__VOICEINK_URL_\(urls.count - 1)__")
+            spans.append(String(protectedText[range]))
+            protectedText.replaceSubrange(range, with: "__VOICEINK_PUNCT_SPAN_\(spans.count - 1)__")
         }
 
-        return (protectedText, urls)
+        return (protectedText, spans)
     }
 
-    private static func restoreProtectedURLSpans(in text: String, urls: [String]) -> String {
+    private static func restoreProtectedPunctuationSpacingSpans(in text: String, spans: [String]) -> String {
         var restoredText = text
-        for (index, url) in urls.enumerated() {
-            restoredText = restoredText.replacingOccurrences(of: "__VOICEINK_URL_\(index)__", with: url)
+        for (index, span) in spans.enumerated() {
+            restoredText = restoredText.replacingOccurrences(of: "__VOICEINK_PUNCT_SPAN_\(index)__", with: span)
         }
         return restoredText
     }
@@ -2864,6 +2868,41 @@ public struct RomaTranscriptionOutputFilter {
             result.removeLast()
         }
         return result.trimmingCharacters(in: .whitespacesAndNewlines)
+    }
+
+    private static func removeLeadingPausePunctuation(from text: String) -> String {
+        let result = text.trimmingCharacters(in: .whitespacesAndNewlines)
+        var index = result.startIndex
+        var punctuationCount = 0
+        var didSeeEllipsisCharacter = false
+
+        while index < result.endIndex {
+            let character = result[index]
+            guard character.unicodeScalars.allSatisfy({ removableLeadingPausePunctuation.contains($0) }) else {
+                break
+            }
+            punctuationCount += 1
+            if character == "…" {
+                didSeeEllipsisCharacter = true
+            }
+            index = result.index(after: index)
+        }
+
+        guard punctuationCount >= 2 || didSeeEllipsisCharacter else { return result }
+
+        let remainder = String(result[index...]).trimmingCharacters(in: .whitespacesAndNewlines)
+        guard remainder.rangeOfCharacter(from: .alphanumerics) != nil else { return result }
+        return remainder
+    }
+
+    private static func removeLeadingFragmentPunctuation(from text: String) -> String {
+        var result = text.trimmingCharacters(in: .whitespacesAndNewlines)
+        while let firstScalar = result.unicodeScalars.first,
+              removableLeadingFragmentPunctuation.contains(firstScalar) {
+            result.removeFirst()
+            result = result.trimmingCharacters(in: .whitespacesAndNewlines)
+        }
+        return result
     }
 
     private static func removeTrailingShortFragmentPunctuation(from text: String) -> String {

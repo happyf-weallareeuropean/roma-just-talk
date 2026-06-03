@@ -2,6 +2,8 @@
 
 ## v1.81 - Unreleased
 
+- Preserved dot-prefixed tokens like `.env` during punctuation spacing cleanup.
+- Trimmed leading pause ellipses and separator artifacts from insertion fragments.
 - Preserved capitalization and punctuation for full-sentence dictation when cursor context is unavailable.
 - Expanded false-start cleanup for "actually no", "no actually", and "sorry" correction phrases.
 - Collapsed duplicate punctuation when spoken punctuation commands overlap with model-inserted punctuation.

@@ -433,6 +433,11 @@ struct RomaCoreChecks {
                 "spoken slash command"
             ),
             (
+                ".env file.",
+                ".env file.",
+                "dot-prefixed token guard"
+            ),
+            (
                 "Open https colon slash slash docs dot example dot com slash api.",
                 "Open https://docs.example.com/api",
                 "spoken URL command"
@@ -573,8 +578,28 @@ struct RomaCoreChecks {
             "insertion polish should strip noisy punctuation from bracketed final fragments"
         )
         try require(
+            RomaTranscriptionOutputFilter.applyInsertionPolish("... Model.", context: midSentenceContext) == "model",
+            "insertion polish should strip leading ellipsis from short fragments"
+        )
+        try require(
+            RomaTranscriptionOutputFilter.applyInsertionPolish("— Model.", context: midSentenceContext) == "model",
+            "insertion polish should strip leading dashes from short fragments"
+        )
+        try require(
+            RomaTranscriptionOutputFilter.applyInsertionPolish(": Model.", context: midSentenceContext) == "model",
+            "insertion polish should strip leading separators from short fragments"
+        )
+        try require(
             RomaTranscriptionOutputFilter.applyInsertionPolish("This is good.", context: nil) == "This is good.",
             "insertion polish should preserve no-context full sentence capitalization"
+        )
+        try require(
+            RomaTranscriptionOutputFilter.applyInsertionPolish("... This is good.", context: nil) == "This is good.",
+            "insertion polish should strip leading pause ellipsis from full sentences"
+        )
+        try require(
+            RomaTranscriptionOutputFilter.applyInsertionPolish(".env file.", context: nil) == ".env file.",
+            "insertion polish should preserve leading dot tokens"
         )
         try require(
             RomaTranscriptionOutputFilter.applyInsertionPolish(

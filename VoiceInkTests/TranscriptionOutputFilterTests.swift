@@ -66,6 +66,7 @@ struct TranscriptionOutputFilterTests {
         #expect(TranscriptionOutputFilter.filter("Hello, comma, world.") == "Hello, world.")
         #expect(TranscriptionOutputFilter.filter("Hello! exclamation mark.") == "Hello!")
         #expect(TranscriptionOutputFilter.filter("Are you ready? question mark.") == "Are you ready?")
+        #expect(TranscriptionOutputFilter.filter(".env file.") == ".env file.")
         #expect(TranscriptionOutputFilter.filter("\"What?\".") == "\"What?\".")
     }
 
@@ -97,6 +98,9 @@ struct TranscriptionOutputFilterTests {
         #expect(TranscriptionOutputFilter.applyInsertionPolish("Model /", context: midSentenceContext) == "model")
         #expect(TranscriptionOutputFilter.applyInsertionPolish("Model \\", context: midSentenceContext) == "model")
         #expect(TranscriptionOutputFilter.applyInsertionPolish("Model |", context: midSentenceContext) == "model")
+        #expect(TranscriptionOutputFilter.applyInsertionPolish("... Model.", context: midSentenceContext) == "model")
+        #expect(TranscriptionOutputFilter.applyInsertionPolish("— Model.", context: midSentenceContext) == "model")
+        #expect(TranscriptionOutputFilter.applyInsertionPolish(": Model.", context: midSentenceContext) == "model")
         #expect(TranscriptionOutputFilter.applyInsertionSpacing("model", context: selectedMidSentenceContext) == "model")
         #expect(TranscriptionOutputFilter.applyInsertionSpacing("model", context: openParenthesisContext) == "model")
         #expect(TranscriptionOutputFilter.applyInsertionSpacing("(model)", context: wordBeforeParenthesisContext) == " (model)")
@@ -129,6 +133,8 @@ struct TranscriptionOutputFilterTests {
         #expect(TranscriptionOutputFilter.applyInsertionPolish("Model.", context: newLineContext) == "Model")
         #expect(TranscriptionOutputFilter.applyInsertionPolish("Model.", context: nil) == "model")
         #expect(TranscriptionOutputFilter.applyInsertionPolish("This is good.", context: nil) == "This is good.")
+        #expect(TranscriptionOutputFilter.applyInsertionPolish("... This is good.", context: nil) == "This is good.")
+        #expect(TranscriptionOutputFilter.applyInsertionPolish(".env file.", context: nil) == ".env file.")
         #expect(TranscriptionOutputFilter.applyInsertionPolish("VoiceInk.", context: nil) == "VoiceInk")
     }
 
