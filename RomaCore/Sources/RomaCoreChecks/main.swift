@@ -428,6 +428,31 @@ struct RomaCoreChecks {
                 "bracketed underscored blank audio artifact"
             ),
             (
+                "Use [no_speech] now.",
+                "Use now.",
+                "bracketed underscored no speech artifact"
+            ),
+            (
+                "Use [no-speech] now.",
+                "Use now.",
+                "bracketed hyphenated no speech artifact"
+            ),
+            (
+                "Use [empty_audio] now.",
+                "Use now.",
+                "bracketed underscored empty audio artifact"
+            ),
+            (
+                "Use [no sound] now.",
+                "Use now.",
+                "bracketed no sound artifact"
+            ),
+            (
+                "Use [silent] now.",
+                "Use now.",
+                "bracketed silent artifact"
+            ),
+            (
                 "Use [speaking foreign language] now.",
                 "Use now.",
                 "bracketed speaking foreign language artifact"
@@ -486,6 +511,16 @@ struct RomaCoreChecks {
                 "Use [unclear goal] now.",
                 "Use [unclear goal] now.",
                 "bracketed literal unclear phrase guard"
+            ),
+            (
+                "Use [speech notes] now.",
+                "Use [speech notes] now.",
+                "bracketed literal speech phrase guard"
+            ),
+            (
+                "Use [sound design] now.",
+                "Use [sound design] now.",
+                "bracketed literal sound phrase guard"
             ),
             (
                 "Use [foreign language class] now.",

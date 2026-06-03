@@ -181,8 +181,9 @@ public struct RomaTranscriptionOutputFilter {
         "applause", "background music", "background noise", "beep", "beeping",
         "blank audio", "breath", "breathing", "clapping", "cough", "coughing",
         "crosstalk", "foreign language", "inaudible", "indistinct", "keyboard typing",
-        "laughter", "laughing", "laughs", "music", "noise", "no audio", "overlap",
-        "overlapping", "phone ringing", "ringing", "sigh", "sighing", "silence",
+        "empty audio", "laughter", "laughing", "laughs", "music", "noise",
+        "no audio", "no sound", "no speech", "overlap", "overlapping",
+        "phone ringing", "ringing", "sigh", "sighing", "silence", "silent",
         "sneeze", "sneezing", "sound", "speaking foreign language", "static",
         "typing", "unclear", "unintelligible"
     ]

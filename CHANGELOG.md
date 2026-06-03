@@ -2,6 +2,7 @@
 
 ## v1.81 - Unreleased
 
+- Removed more bracketed no-speech ASR artifacts such as "[no_speech]", "[empty_audio]", and "[no sound]".
 - Added bounded ", make it..." self-correction cleanup with guards for polite command prose.
 - Added bounded "replace it with" and "change it to" cleanup with guards for ordinary command prose.
 - Added bounded ", instead..." self-correction cleanup while preserving "instead of" prose.
