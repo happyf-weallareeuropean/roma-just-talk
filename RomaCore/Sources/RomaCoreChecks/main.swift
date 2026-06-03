@@ -3271,6 +3271,72 @@ struct RomaCoreChecks {
             "pipeline should paste bracketed artifact polish"
         )
 
+        let quotedFragmentRecorder = FakeRecorder()
+        let quotedFragmentInserter = FakeTextInsertion()
+        let quotedFragmentPipeline = DictationPipeline(
+            recorder: quotedFragmentRecorder,
+            transcriptionService: FakeTranscriptionService(
+                expectedFileName: "quoted-fragment-proof.wav",
+                text: "\"Model!\"."
+            ),
+            textInsertion: quotedFragmentInserter
+        )
+        let quotedFragmentRequest = DictationPipelineRequest(
+            outputURL: URL(fileURLWithPath: "/tmp/quoted-fragment-proof.wav"),
+            model: model,
+            shouldInsertTranscription: true,
+            textProcessing: DictationTextProcessingConfiguration(
+                insertionContext: TextInsertionContext(precedingText: "...so this")
+            )
+        )
+
+        try await quotedFragmentRecorder.startPreRollBuffering()
+        let quotedFragmentResult = try await quotedFragmentPipeline.runRecordingWindow(
+            quotedFragmentRequest
+        ) {}
+
+        try require(
+            quotedFragmentResult.processedText == " \"model\"",
+            "pipeline should clean quoted noisy mid-sentence final fragments"
+        )
+        try require(
+            await quotedFragmentInserter.pastedText == " \"model\"",
+            "pipeline should paste quoted noisy mid-sentence final fragments"
+        )
+
+        let smartQuotedFragmentRecorder = FakeRecorder()
+        let smartQuotedFragmentInserter = FakeTextInsertion()
+        let smartQuotedFragmentPipeline = DictationPipeline(
+            recorder: smartQuotedFragmentRecorder,
+            transcriptionService: FakeTranscriptionService(
+                expectedFileName: "smart-quoted-fragment-proof.wav",
+                text: "“Model.”."
+            ),
+            textInsertion: smartQuotedFragmentInserter
+        )
+        let smartQuotedFragmentRequest = DictationPipelineRequest(
+            outputURL: URL(fileURLWithPath: "/tmp/smart-quoted-fragment-proof.wav"),
+            model: model,
+            shouldInsertTranscription: true,
+            textProcessing: DictationTextProcessingConfiguration(
+                insertionContext: TextInsertionContext(precedingText: "...so this")
+            )
+        )
+
+        try await smartQuotedFragmentRecorder.startPreRollBuffering()
+        let smartQuotedFragmentResult = try await smartQuotedFragmentPipeline.runRecordingWindow(
+            smartQuotedFragmentRequest
+        ) {}
+
+        try require(
+            smartQuotedFragmentResult.processedText == " “model”",
+            "pipeline should clean smart-quoted noisy mid-sentence final fragments"
+        )
+        try require(
+            await smartQuotedFragmentInserter.pastedText == " “model”",
+            "pipeline should paste smart-quoted noisy mid-sentence final fragments"
+        )
+
         let properNameReplacementRecorder = FakeRecorder()
         let properNameReplacementInserter = FakeTextInsertion()
         let properNameReplacementPipeline = DictationPipeline(

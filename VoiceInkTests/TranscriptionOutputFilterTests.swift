@@ -235,6 +235,7 @@ struct TranscriptionOutputFilterTests {
         #expect(TranscriptionOutputFilter.applyInsertionSpacing("]", context: wordBeforeParenthesisContext) == "]")
         #expect(TranscriptionOutputFilter.applyInsertionSpacing("}", context: wordBeforeParenthesisContext) == "}")
         #expect(TranscriptionOutputFilter.applyInsertionPolish("\"Model\".", context: midSentenceContext) == "\"model\"")
+        #expect(TranscriptionOutputFilter.applyInsertionPolish("“Model.”.", context: midSentenceContext) == "“model”")
         #expect(TranscriptionOutputFilter.applyInsertionPolish("(Model).", context: midSentenceContext) == "(model)")
         #expect(TranscriptionOutputFilter.applyInsertionPolish("{Model}.", context: midSentenceContext) == "{model}")
         #expect(TranscriptionOutputFilter.applyInsertionPolish("'Model.'", context: midSentenceContext) == "'model'")
