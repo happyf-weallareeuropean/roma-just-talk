@@ -423,6 +423,16 @@ struct RomaCoreChecks {
                 "scratch that correction"
             ),
             (
+                "Wrong phrase cancel that. Right phrase.",
+                "Right phrase.",
+                "cancel that correction"
+            ),
+            (
+                "Wrong phrase disregard that. Right phrase.",
+                "Right phrase.",
+                "disregard that correction"
+            ),
+            (
                 "Use old model delete last word module.",
                 "Use old module.",
                 "delete last word correction"
@@ -941,6 +951,16 @@ struct RomaCoreChecks {
                 "Scratch that itch.",
                 "Scratch that itch.",
                 "scratch command prose guard"
+            ),
+            (
+                "Cancel that meeting.",
+                "Cancel that meeting.",
+                "cancel that prose guard"
+            ),
+            (
+                "Disregard that warning.",
+                "Disregard that warning.",
+                "disregard that prose guard"
             ),
             (
                 "New York New York is the title.",

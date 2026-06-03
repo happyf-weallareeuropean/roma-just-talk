@@ -228,6 +228,8 @@ struct TranscriptionOutputFilterTests {
         #expect(TranscriptionOutputFilter.filter("Never mind what I said.") == "Never mind what I said.")
         #expect(TranscriptionOutputFilter.filter("Wrong phrase scratch that. Right phrase.") == "Right phrase.")
         #expect(TranscriptionOutputFilter.filter("Keep this. Wrong phrase scratch that. Next sentence.") == "Keep this. Next sentence.")
+        #expect(TranscriptionOutputFilter.filter("Wrong phrase cancel that. Right phrase.") == "Right phrase.")
+        #expect(TranscriptionOutputFilter.filter("Wrong phrase disregard that. Right phrase.") == "Right phrase.")
         #expect(TranscriptionOutputFilter.filter("Wrong phrase delete that. Right phrase.") == "Right phrase.")
         #expect(TranscriptionOutputFilter.filter("Wrong phrase undo that. Right phrase.") == "Right phrase.")
         #expect(TranscriptionOutputFilter.filter("Wrong phrase strike that. Right phrase.") == "Right phrase.")
@@ -261,6 +263,8 @@ struct TranscriptionOutputFilterTests {
         #expect(TranscriptionOutputFilter.filter("Explain how to remove this sentence from docs.") == "Explain how to remove this sentence from docs.")
         #expect(TranscriptionOutputFilter.filter("Scratch that itch.") == "Scratch that itch.")
         #expect(TranscriptionOutputFilter.filter("Scratch that.") == "Scratch that.")
+        #expect(TranscriptionOutputFilter.filter("Cancel that meeting.") == "Cancel that meeting.")
+        #expect(TranscriptionOutputFilter.filter("Disregard that warning.") == "Disregard that warning.")
     }
 
     @Test func transcriptionFilterAppliesSpokenFormattingCommands() async throws {

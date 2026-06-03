@@ -2,6 +2,7 @@
 
 ## v1.81 - Unreleased
 
+- Added terminal "cancel that" and "disregard that" correction aliases.
 - Accepted natural delete-command phrasing such as "delete the last word" and "remove the previous sentence".
 - Added guarded "delete that word" and "undo this word" cleanup aliases.
 - Added guarded spoken punctuation aliases such as "question point", "question sign", and "exclamation sign".
