@@ -742,10 +742,15 @@ public struct RomaTranscriptionOutputFilter {
     }
 
     private static func isNonSpeechBracketContent(_ text: String) -> Bool {
-        let normalizedText = text
+        let normalizedText = normalizedBracketContent(text)
+        return nonSpeechBracketContents.contains(normalizedText) || isTranscriptSpeakerLabel(normalizedText)
+    }
+
+    private static func normalizedBracketContent(_ text: String) -> String {
+        text
             .trimmingCharacters(in: CharacterSet(charactersIn: ".!?,;:… ").union(.whitespacesAndNewlines))
             .lowercased()
-        return nonSpeechBracketContents.contains(normalizedText) || isTranscriptSpeakerLabel(normalizedText)
+            .replacingOccurrences(of: #"[\s_-]+"#, with: " ", options: .regularExpression)
     }
 
     private static func isTranscriptSpeakerLabel(_ text: String) -> Bool {

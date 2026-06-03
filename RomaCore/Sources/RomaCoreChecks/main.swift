@@ -338,9 +338,19 @@ struct RomaCoreChecks {
                 "bracketed blank audio artifact"
             ),
             (
+                "Use [blank_audio] now.",
+                "Use now.",
+                "bracketed underscored blank audio artifact"
+            ),
+            (
                 "Use [speaking foreign language] now.",
                 "Use now.",
                 "bracketed speaking foreign language artifact"
+            ),
+            (
+                "Use [speaking-foreign-language] now.",
+                "Use now.",
+                "bracketed hyphenated speaking foreign language artifact"
             ),
             (
                 "Use [laughing] now.",
@@ -353,9 +363,19 @@ struct RomaCoreChecks {
                 "bracketed keyboard typing artifact"
             ),
             (
+                "Use [keyboard-typing] now.",
+                "Use now.",
+                "bracketed hyphenated keyboard typing artifact"
+            ),
+            (
                 "Use [phone ringing] now.",
                 "Use now.",
                 "bracketed phone ringing artifact"
+            ),
+            (
+                "Use (phone_ringing) now.",
+                "Use now.",
+                "bracketed underscored phone ringing artifact"
             ),
             (
                 "Use [beeping] now.",
@@ -391,6 +411,11 @@ struct RomaCoreChecks {
                 "Use [typing speed] now.",
                 "Use [typing speed] now.",
                 "bracketed literal typing phrase guard"
+            ),
+            (
+                "Use [typing-speed] now.",
+                "Use [typing-speed] now.",
+                "bracketed literal hyphenated typing phrase guard"
             ),
             (
                 "Use [speaker notes] now.",
