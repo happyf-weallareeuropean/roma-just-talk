@@ -333,7 +333,7 @@ public struct RomaTranscriptionOutputFilter {
         \s*[,;:]?\s+
         """#
     private static let scratchThatCommandPattern = #"(?i)(?<![\p{L}\p{N}])(?:scratch|strike|delete|remove|erase|undo)\s+that(?:\s*[.!?,;:…]+|(?=\s*$|\s*\n))"#
-    private static let deletePreviousWordCommandPattern = #"(?i)(?<![\p{L}\p{N}])(?:delete|remove|erase|undo)\s+(?:last|previous)\s+word(?:\s*[.!?,;:…]+|(?=\s*$|\s*\n)|\s+)"#
+    private static let deletePreviousWordCommandPattern = #"(?i)(?<![\p{L}\p{N}])(?:delete|remove|erase|undo)\s+(?:last|previous)(?:\s+(\d|one|two|three|four|five))?\s+words?(?:\s*[.!?,;:…]+|(?=\s*$|\s*\n)|\s+)"#
     private static let deletePreviousSentenceCommandPattern = #"(?i)(?<![\p{L}\p{N}])(?:delete|remove|erase|undo)\s+(?:last|previous)\s+sentence(?:\s*[.!?,;:…]+|(?=\s*$|\s*\n)|\s+)"#
     private static let phraseBoundaryPunctuation = CharacterSet(charactersIn: ".,!?;:…")
     private static let softPhrasePunctuation = CharacterSet(charactersIn: ",;:…")
@@ -2877,7 +2877,7 @@ public struct RomaTranscriptionOutputFilter {
             let fullRange = NSRange(correctedText.startIndex..., in: correctedText)
             guard let match = regex.firstMatch(in: correctedText, range: fullRange),
                   let markerRange = Range(match.range, in: correctedText),
-                  let rewrittenText = rewriteDeletePreviousWordCommand(in: correctedText, markerRange: markerRange),
+                  let rewrittenText = rewriteDeletePreviousWordCommand(in: correctedText, match: match, markerRange: markerRange),
                   rewrittenText != correctedText else {
                 break
             }
@@ -2889,16 +2889,31 @@ public struct RomaTranscriptionOutputFilter {
         return correctedText
     }
 
-    private static func rewriteDeletePreviousWordCommand(in text: String, markerRange: Range<String.Index>) -> String? {
+    private static func rewriteDeletePreviousWordCommand(
+        in text: String,
+        match: NSTextCheckingResult,
+        markerRange: Range<String.Index>
+    ) -> String? {
         let beforeMarker = String(text[..<markerRange.lowerBound])
         let afterMarker = String(text[markerRange.upperBound...])
+        let deletedWordCount = deletePreviousWordCount(in: text, match: match)
 
         guard shouldApplyDeleteCommand(beforeMarker: beforeMarker, afterMarker: afterMarker),
-              let prefix = removeTrailingWords(1, from: beforeMarker) else {
+              let prefix = removeTrailingWords(deletedWordCount, from: beforeMarker) else {
             return nil
         }
 
         return normalizeBacktrackingWhitespace(join(prefix, "", afterMarker))
+    }
+
+    private static func deletePreviousWordCount(in text: String, match: NSTextCheckingResult) -> Int {
+        guard let countText = optionalMatchText(in: text, match: match, rangeIndex: 1),
+              let count = spokenNumberValue(countText),
+              (1...5).contains(count) else {
+            return 1
+        }
+
+        return count
     }
 
     private static func applyDeletePreviousSentenceCommands(in text: String) -> String {

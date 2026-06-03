@@ -413,9 +413,29 @@ struct RomaCoreChecks {
                 "delete previous word correction"
             ),
             (
+                "Use old wrong model delete last two words module.",
+                "Use old module.",
+                "delete last two words correction"
+            ),
+            (
+                "Use old wrong model undo previous three words module.",
+                "Use module.",
+                "undo previous three words correction"
+            ),
+            (
+                "Use old wrong model delete last 2 words module.",
+                "Use old module.",
+                "delete last digit-count words correction"
+            ),
+            (
                 "Use model delete last word.",
                 "Use",
                 "terminal delete last word correction"
+            ),
+            (
+                "Use old model delete last two words.",
+                "Use",
+                "terminal delete last two words correction"
             ),
             (
                 "First sentence. Wrong sentence. delete last sentence. Right sentence.",
@@ -601,6 +621,11 @@ struct RomaCoreChecks {
                 "The delete last word shortcut is useful.",
                 "The delete last word shortcut is useful.",
                 "delete last word prose guard"
+            ),
+            (
+                "The delete last two words shortcut is useful.",
+                "The delete last two words shortcut is useful.",
+                "delete counted words prose guard"
             ),
             (
                 "The delete last sentence command is useful.",
