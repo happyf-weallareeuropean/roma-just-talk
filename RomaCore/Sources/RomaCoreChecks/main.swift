@@ -2166,6 +2166,7 @@ struct RomaCoreChecks {
         let compactTokenContext = RomaTranscriptionOutputFilter.TextInsertionContext(precedingText: "docs")
         let emailUserContext = RomaTranscriptionOutputFilter.TextInsertionContext(precedingText: "felix")
         let variableContext = RomaTranscriptionOutputFilter.TextInsertionContext(precedingText: "user")
+        let unmatchedStraightQuoteContext = RomaTranscriptionOutputFilter.TextInsertionContext(precedingText: "She said \"hello")
         let openSmartQuoteContext = RomaTranscriptionOutputFilter.TextInsertionContext(precedingText: "She said “")
         let closingSmartQuoteContext = RomaTranscriptionOutputFilter.TextInsertionContext(precedingText: "She said “hello”")
         let closingSmartSingleQuoteContext = RomaTranscriptionOutputFilter.TextInsertionContext(precedingText: "She said ‘hello’")
@@ -2422,6 +2423,52 @@ struct RomaCoreChecks {
         try require(
             RomaTranscriptionOutputFilter.applyInsertionPolish("Question mark.", context: closingSmartSingleQuoteContext) == "?",
             "insertion polish should attach question mark commands after closing smart single quotes"
+        )
+        try require(
+            RomaTranscriptionOutputFilter.applyInsertionPolish("Open quote.", context: wordContext) == "\"",
+            "insertion polish should attach standalone open quote commands"
+        )
+        try require(
+            RomaTranscriptionOutputFilter.applyInsertionSpacing("\"", context: wordContext) == " \"",
+            "insertion spacing should add a space before standalone opening straight quotes"
+        )
+        try require(
+            RomaTranscriptionOutputFilter.applyInsertionPolish("Close quote.", context: unmatchedStraightQuoteContext) == "\"",
+            "insertion polish should attach standalone close quote commands"
+        )
+        try require(
+            RomaTranscriptionOutputFilter.applyInsertionSpacing("\"", context: unmatchedStraightQuoteContext) == "\"",
+            "insertion spacing should attach standalone closing straight quotes"
+        )
+        try require(
+            RomaTranscriptionOutputFilter.applyInsertionPolish(
+                RomaTranscriptionOutputFilter.filter("Close quote."),
+                context: unmatchedStraightQuoteContext
+            ) == "\"",
+            "insertion polish should strip auto periods after filtered standalone quote commands"
+        )
+        try require(
+            RomaTranscriptionOutputFilter.applyInsertionPolish("Open parenthesis.", context: wordContext) == "(",
+            "insertion polish should attach standalone open parenthesis commands"
+        )
+        try require(
+            RomaTranscriptionOutputFilter.applyInsertionSpacing("(", context: wordContext) == " (",
+            "insertion spacing should add a space before standalone opening parenthesis commands"
+        )
+        try require(
+            RomaTranscriptionOutputFilter.applyInsertionPolish("Close bracket.", context: variableContext) == "]",
+            "insertion polish should attach standalone close bracket commands"
+        )
+        try require(
+            RomaTranscriptionOutputFilter.applyInsertionSpacing("]", context: variableContext) == "]",
+            "insertion spacing should attach standalone closing bracket commands"
+        )
+        try require(
+            RomaTranscriptionOutputFilter.applyInsertionPolish(
+                RomaTranscriptionOutputFilter.filter("Open bracket."),
+                context: wordContext
+            ) == "[",
+            "insertion polish should strip auto periods after filtered standalone bracket commands"
         )
     }
 

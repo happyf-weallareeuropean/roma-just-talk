@@ -686,6 +686,48 @@ public struct RomaTranscriptionOutputFilter {
         "semicolon": ";",
         "colon": ":"
     ]
+    private static let standaloneSpokenEnclosureOutputs = [
+        "open quote": "\"",
+        "start quote": "\"",
+        "open quotation mark": "\"",
+        "open quotation marks": "\"",
+        "start quotation mark": "\"",
+        "start quotation marks": "\"",
+        "close quote": "\"",
+        "end quote": "\"",
+        "close quotation mark": "\"",
+        "close quotation marks": "\"",
+        "end quotation mark": "\"",
+        "end quotation marks": "\"",
+        "open paren": "(",
+        "open parenthesis": "(",
+        "open parentheses": "(",
+        "left paren": "(",
+        "left parenthesis": "(",
+        "left parentheses": "(",
+        "close paren": ")",
+        "close parenthesis": ")",
+        "close parentheses": ")",
+        "right paren": ")",
+        "right parenthesis": ")",
+        "right parentheses": ")",
+        "open bracket": "[",
+        "open square bracket": "[",
+        "left bracket": "[",
+        "left square bracket": "[",
+        "close bracket": "]",
+        "close square bracket": "]",
+        "right bracket": "]",
+        "right square bracket": "]",
+        "open brace": "{",
+        "open curly brace": "{",
+        "left brace": "{",
+        "left curly brace": "{",
+        "close brace": "}",
+        "close curly brace": "}",
+        "right brace": "}",
+        "right curly brace": "}"
+    ]
 
     public static func filter(
         _ text: String,
@@ -876,6 +918,11 @@ public struct RomaTranscriptionOutputFilter {
 
     public static func applyInsertionPolish(_ text: String, context: TextInsertionContext?) -> String {
         let normalizedText = normalizeWhitespace(text)
+        if context != nil,
+           let enclosure = standaloneSpokenEnclosureOutput(in: normalizedText) {
+            return enclosure
+        }
+
         let wasWholeSquareBracketedOutput = isWholeSquareBracketedOutput(normalizedText)
         var polishedText = stripBoundaryNoise(from: normalizedText)
         polishedText = removeRedundantOuterPunctuationAfterPreservedBoundary(from: polishedText)
@@ -929,6 +976,27 @@ public struct RomaTranscriptionOutputFilter {
             .replacingOccurrences(of: #"\s+"#, with: " ", options: .regularExpression)
 
         return standaloneSpokenPunctuationOutputs[normalizedText]
+    }
+
+    private static func standaloneSpokenEnclosureOutput(in text: String) -> String? {
+        let normalizedText = normalizeWhitespace(text)
+            .trimmingCharacters(in: .punctuationCharacters.union(.whitespacesAndNewlines))
+            .lowercased()
+            .replacingOccurrences(of: #"\s+"#, with: " ", options: .regularExpression)
+
+        if let output = standaloneSpokenEnclosureOutputs[normalizedText] {
+            return output
+        }
+
+        let trimmedText = text.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard trimmedText.count == 2,
+              trimmedText.last == ".",
+              let firstCharacter = trimmedText.first,
+              "()[]{}\"".contains(firstCharacter) else {
+            return nil
+        }
+
+        return String(firstCharacter)
     }
 
     private static func canAttachStandalonePunctuation(after precedingText: String) -> Bool {
@@ -4599,6 +4667,11 @@ public struct RomaTranscriptionOutputFilter {
             return false
         }
 
+        if text == "\"",
+           hasUnclosedStraightDoubleQuote(in: context.precedingText) {
+            return false
+        }
+
         let noLeadingSpaceBefore = CharacterSet(charactersIn: ".,;:!?)]}”’/\\-@_")
         if firstCharacter.unicodeScalars.allSatisfy({ noLeadingSpaceBefore.contains($0) }) {
             return false
@@ -4613,6 +4686,15 @@ public struct RomaTranscriptionOutputFilter {
         return previousCharacter.isLetter ||
             previousCharacter.isNumber ||
             previousCharacter.unicodeScalars.allSatisfy { leadingSpaceAfter.contains($0) }
+    }
+
+    private static func hasUnclosedStraightDoubleQuote(in precedingText: String) -> Bool {
+        let linePrefix = currentLinePrefix(in: precedingText)
+        let quoteCount = linePrefix.reduce(0) { count, character in
+            character == "\"" ? count + 1 : count
+        }
+
+        return quoteCount % 2 == 1
     }
 
     private static func normalizeWhitespace(_ text: String) -> String {
