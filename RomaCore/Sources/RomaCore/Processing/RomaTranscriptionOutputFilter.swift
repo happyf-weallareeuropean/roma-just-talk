@@ -380,6 +380,12 @@ public struct RomaTranscriptionOutputFilter {
             replacement: "\n",
             blockedPreviousWords: ["command", "commands", "how", "phrase", "phrases", "say", "saying", "the", "to", "word", "words"],
             blockedNextWords: ["command", "commands", "from", "in", "is", "means", "of", "phrase", "phrases", "shortcut", "shortcuts"]
+        ),
+        GuardedSpokenFormattingCommand(
+            pattern: #"(?i)(?<![\p{L}\p{N}])(?:press|hit|tap)\s+(?:the\s+)?tab(?:\s+key)?(?![\p{L}\p{N}])"#,
+            replacement: "\t",
+            blockedPreviousWords: ["command", "commands", "how", "phrase", "phrases", "say", "saying", "the", "to", "word", "words"],
+            blockedNextWords: ["command", "commands", "from", "in", "is", "means", "of", "phrase", "phrases", "shortcut", "shortcuts"]
         )
     ]
     private static let spokenEnclosureCommands: [(pattern: String, replacement: String)] = [
@@ -2746,6 +2752,7 @@ public struct RomaTranscriptionOutputFilter {
 
     private static func normalizeSpokenFormattingSpacing(_ text: String) -> String {
         let formattedText = text
+            .replacingOccurrences(of: #"[ \t]*\t[ \t]*"#, with: "\t", options: .regularExpression)
             .replacingOccurrences(of: #"[ \t]*\n[ \t]*"#, with: "\n", options: .regularExpression)
             .replacingOccurrences(of: #"\n{2,}(?=- )"#, with: "\n", options: .regularExpression)
             .replacingOccurrences(of: #"\n{3,}"#, with: "\n\n", options: .regularExpression)

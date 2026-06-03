@@ -558,6 +558,16 @@ struct RomaCoreChecks {
                 "hit return key line command"
             ),
             (
+                "Column one press tab column two.",
+                "Column one\tcolumn two.",
+                "press tab command"
+            ),
+            (
+                "Column one hit tab key column two.",
+                "Column one\tcolumn two.",
+                "hit tab key command"
+            ),
+            (
                 "Use api slash users.",
                 "Use api/users.",
                 "spoken slash command"
@@ -671,6 +681,16 @@ struct RomaCoreChecks {
                 "Explain how to press enter in docs.",
                 "Explain how to press enter in docs.",
                 "press enter prose guard"
+            ),
+            (
+                "The press tab shortcut is useful.",
+                "The press tab shortcut is useful.",
+                "press tab shortcut prose guard"
+            ),
+            (
+                "Explain how to press tab in docs.",
+                "Explain how to press tab in docs.",
+                "press tab prose guard"
             ),
             (
                 "All caps is loud.",
