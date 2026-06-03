@@ -868,9 +868,29 @@ struct RomaCoreChecks {
                 "standalone listening boilerplate"
             ),
             (
+                "Thanks everyone for watching.",
+                "",
+                "standalone everyone watching boilerplate"
+            ),
+            (
                 "Okay. Thanks for listening.",
                 "Okay.",
                 "terminal listening boilerplate"
+            ),
+            (
+                "Okay. Thanks so much for listening!",
+                "Okay.",
+                "terminal emphatic listening boilerplate"
+            ),
+            (
+                "Okay. Don't forget to like and subscribe.",
+                "Okay.",
+                "terminal like and subscribe boilerplate"
+            ),
+            (
+                "Okay. Be sure to like and subscribe.",
+                "Okay.",
+                "terminal be sure subscribe boilerplate"
             ),
             (
                 "Thank you for listening carefully.",
@@ -878,9 +898,29 @@ struct RomaCoreChecks {
                 "listening prose guard"
             ),
             (
+                "Thank you everyone for listening carefully.",
+                "Thank you everyone for listening carefully.",
+                "everyone listening prose guard"
+            ),
+            (
                 "End with thanks for listening.",
                 "End with thanks for listening.",
                 "embedded listening prose guard"
+            ),
+            (
+                "End with thanks everyone for watching.",
+                "End with thanks everyone for watching.",
+                "embedded everyone watching prose guard"
+            ),
+            (
+                "Please subscribe to the newsletter.",
+                "Please subscribe to the newsletter.",
+                "subscribe newsletter prose guard"
+            ),
+            (
+                "Be sure to like and subscribe to updates.",
+                "Be sure to like and subscribe to updates.",
+                "like subscribe updates prose guard"
             ),
             (
                 "you know.",

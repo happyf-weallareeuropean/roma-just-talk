@@ -261,7 +261,7 @@ public struct RomaTranscriptionOutputFilter {
     ]
     private static let asrBoilerplatePatterns: [(pattern: String, replacement: String)] = [
         (
-            #"(?im)(^|(?<=[.!?])\s+|\n)\s*(?:thank\s+you\s+for\s+(?:watching|listening)|thanks\s+for\s+(?:watching|listening)|please\s+subscribe|like\s+and\s+subscribe|don't\s+forget\s+to\s+subscribe)(?:[.!?]+)?(?=\s*$|\n)"#,
+            #"(?im)(^|(?<=[.!?])\s+|\n)\s*(?:thank\s+you(?:\s+(?:all|everyone|so\s+much))?\s+for\s+(?:watching|listening)|thanks(?:\s+(?:all|everyone|so\s+much))?\s+for\s+(?:watching|listening)|please\s+(?:like\s+and\s+)?subscribe|like\s+and\s+subscribe|(?:don't\s+forget|be\s+sure)\s+to\s+(?:like\s+and\s+)?subscribe)(?:[.!?]+)?(?=\s*$|\n)"#,
             "$1"
         ),
         (

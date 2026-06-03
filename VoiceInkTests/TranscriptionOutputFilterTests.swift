@@ -684,13 +684,21 @@ struct TranscriptionOutputFilterTests {
         #expect(TranscriptionOutputFilter.filter("Thank you for watching.") == "")
         #expect(TranscriptionOutputFilter.filter("Thanks for listening.") == "")
         #expect(TranscriptionOutputFilter.filter("Thank you for listening.") == "")
+        #expect(TranscriptionOutputFilter.filter("Thanks everyone for watching.") == "")
         #expect(TranscriptionOutputFilter.filter("Okay. Thank you for watching.") == "Okay.")
         #expect(TranscriptionOutputFilter.filter("Okay. Thanks for listening.") == "Okay.")
+        #expect(TranscriptionOutputFilter.filter("Okay. Thanks so much for listening!") == "Okay.")
+        #expect(TranscriptionOutputFilter.filter("Okay. Don't forget to like and subscribe.") == "Okay.")
+        #expect(TranscriptionOutputFilter.filter("Okay. Be sure to like and subscribe.") == "Okay.")
         #expect(TranscriptionOutputFilter.filter("Ship it.\nSubtitles by Amara.org community") == "Ship it.")
         #expect(TranscriptionOutputFilter.filter("Thank you for helping.") == "Thank you for helping.")
         #expect(TranscriptionOutputFilter.filter("Thank you for listening carefully.") == "Thank you for listening carefully.")
+        #expect(TranscriptionOutputFilter.filter("Thank you everyone for listening carefully.") == "Thank you everyone for listening carefully.")
         #expect(TranscriptionOutputFilter.filter("End with thanks for listening.") == "End with thanks for listening.")
+        #expect(TranscriptionOutputFilter.filter("End with thanks everyone for watching.") == "End with thanks everyone for watching.")
         #expect(TranscriptionOutputFilter.filter("End with thank you for watching.") == "End with thank you for watching.")
+        #expect(TranscriptionOutputFilter.filter("Please subscribe to the newsletter.") == "Please subscribe to the newsletter.")
+        #expect(TranscriptionOutputFilter.filter("Be sure to like and subscribe to updates.") == "Be sure to like and subscribe to updates.")
     }
 
     @Test func transcriptionFilterAppliesConservativeSpokenPunctuationCommands() async throws {
