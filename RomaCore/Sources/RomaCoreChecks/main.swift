@@ -1288,6 +1288,14 @@ struct RomaCoreChecks {
             "insertion polish should strip noisy punctuation from bracketed final fragments"
         )
         try require(
+            RomaTranscriptionOutputFilter.applyInsertionPolish("[A final word.]", context: nil) == "a final word",
+            "insertion polish should strip noisy punctuation from bracketed final phrases"
+        )
+        try require(
+            RomaTranscriptionOutputFilter.applyInsertionPolish("[A final word!]", context: nil) == "a final word",
+            "insertion polish should strip noisy sentence marks from bracketed final phrases"
+        )
+        try require(
             RomaTranscriptionOutputFilter.applyInsertionPolish("... Model.", context: midSentenceContext) == "model",
             "insertion polish should strip leading ellipsis from short fragments"
         )

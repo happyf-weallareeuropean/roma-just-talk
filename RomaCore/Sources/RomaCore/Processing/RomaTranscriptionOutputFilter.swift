@@ -765,21 +765,30 @@ public struct RomaTranscriptionOutputFilter {
     }
 
     public static func applyInsertionPolish(_ text: String, context: TextInsertionContext?) -> String {
-        var polishedText = stripBoundaryNoise(from: normalizeWhitespace(text))
+        let normalizedText = normalizeWhitespace(text)
+        let wasWholeSquareBracketedOutput = isWholeSquareBracketedOutput(normalizedText)
+        var polishedText = stripBoundaryNoise(from: normalizedText)
         polishedText = removeLeadingPausePunctuation(from: polishedText)
         guard !polishedText.isEmpty else { return polishedText }
 
-        let shouldTreatAsFragment = isShortFragment(polishedText)
+        let shouldTreatAsFragment = isShortFragment(polishedText) ||
+            (wasWholeSquareBracketedOutput &&
+                isShortFragment(removeTrailingNoisyFragmentPunctuation(from: polishedText)))
         let shouldUseFragmentPolish: Bool
         if let context, isContinuingSentence(after: context.precedingText) {
             shouldUseFragmentPolish = shouldTreatAsFragment
         } else {
-            shouldUseFragmentPolish = shouldTreatAsFragment && isSingleWordFinalFragment(polishedText)
+            shouldUseFragmentPolish = shouldTreatAsFragment &&
+                (wasWholeSquareBracketedOutput || isSingleWordFinalFragment(polishedText))
         }
 
         if shouldUseFragmentPolish {
             polishedText = removeLeadingFragmentPunctuation(from: polishedText)
-            polishedText = removeTrailingShortFragmentPunctuation(from: polishedText)
+            if wasWholeSquareBracketedOutput {
+                polishedText = removeTrailingNoisyFragmentPunctuation(from: polishedText)
+            } else {
+                polishedText = removeTrailingShortFragmentPunctuation(from: polishedText)
+            }
         }
 
         if let context,
@@ -3511,6 +3520,11 @@ public struct RomaTranscriptionOutputFilter {
         return innerText
     }
 
+    private static func isWholeSquareBracketedOutput(_ text: String) -> Bool {
+        let trimmedText = text.trimmingCharacters(in: .whitespacesAndNewlines)
+        return trimmedText.first == "[" && trimmedText.last == "]"
+    }
+
     private static func collapseAdjacentRepeatedWords(in text: String) -> String {
         let parts = text.split(separator: " ", omittingEmptySubsequences: false).map(String.init)
         var result: [String] = []
@@ -3797,6 +3811,16 @@ public struct RomaTranscriptionOutputFilter {
             result.removeLast()
         }
         return result
+    }
+
+    private static func removeTrailingNoisyFragmentPunctuation(from text: String) -> String {
+        var result = removeTrailingFragmentPunctuation(from: text)
+        result = removeTrailingSpacedFragmentSymbols(from: result)
+        while let lastScalar = result.unicodeScalars.last,
+              removableTrailingSentenceFragmentPunctuation.contains(lastScalar) {
+            result.removeLast()
+        }
+        return result.trimmingCharacters(in: .whitespacesAndNewlines)
     }
 
     private static func removeTrailingSpacedFragmentSymbols(from text: String) -> String {
