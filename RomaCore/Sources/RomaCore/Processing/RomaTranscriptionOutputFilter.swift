@@ -338,6 +338,7 @@ public struct RomaTranscriptionOutputFilter {
         (?:
             (?:[,;:…]|\.\.\.)\s*actually\s+no\s*[,;:]? |
             (?:[,;:…]|\.\.\.)\s*actually\s+make\s+it\s*[,;:]? |
+            (?:[,;:…]|\.\.\.)\s*better\s+make\s+it\s*[,;:]? |
             (?:[,;:…]|\.\.\.)\s*actually |
             (?:[,;:…]|\.\.\.)\s*no\s*[,;:]?\s+actually\s*[,;:]? |
             sorry\s+not\s+that\s*[,;:]?\s+actually |
