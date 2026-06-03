@@ -1177,6 +1177,21 @@ struct RomaCoreChecks {
                 "wait no correction should replace inline code argument"
             ),
             (
+                "Markdown link VoiceInk docs to docs dot example dot com slash api wait no Roma docs.",
+                "[Roma docs](docs.example.com/api)",
+                "wait no correction should replace markdown link label"
+            ),
+            (
+                "Markdown link VoiceInk docs to docs dot example dot com slash api wait no docs dot example dot com slash v2.",
+                "[VoiceInk docs](docs.example.com/v2)",
+                "wait no correction should replace markdown link target"
+            ),
+            (
+                "Markdown link VoiceInk docs to docs dot example dot com slash api wait no to docs dot example dot com slash v2.",
+                "[VoiceInk docs](docs.example.com/v2)",
+                "wait no correction should replace markdown link target after repeated to"
+            ),
+            (
                 "Use model, oops module.",
                 "Use module.",
                 "oops correction"

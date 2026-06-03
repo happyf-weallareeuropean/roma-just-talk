@@ -169,6 +169,13 @@ public struct RomaTranscriptionOutputFilter {
         let kind: SpokenMarkdownCommandKind
     }
 
+    private struct SpokenMarkdownLinkTail {
+        let wordCount: Int
+        let commandText: String
+        let labelText: String
+        let targetText: String
+    }
+
     private enum SpokenCodeCaseStyle {
         case camel
         case snake
@@ -3452,13 +3459,6 @@ public struct RomaTranscriptionOutputFilter {
             return amountCorrection
         }
 
-        if let compactTokenCorrection = boundedSpokenCompactTokenCorrection(
-            beforeMarker: beforeMarker,
-            in: text
-        ) {
-            return compactTokenCorrection
-        }
-
         if let codeCaseCorrection = boundedSpokenCodeCaseCorrection(
             beforeMarker: beforeMarker,
             correctionTokens: correctionTokens
@@ -3471,6 +3471,20 @@ public struct RomaTranscriptionOutputFilter {
             correctionTokens: correctionTokens
         ) {
             return markdownCorrection
+        }
+
+        if let markdownLinkCorrection = boundedSpokenMarkdownLinkCorrection(
+            beforeMarker: beforeMarker,
+            in: text
+        ) {
+            return markdownLinkCorrection
+        }
+
+        if let compactTokenCorrection = boundedSpokenCompactTokenCorrection(
+            beforeMarker: beforeMarker,
+            in: text
+        ) {
+            return compactTokenCorrection
         }
 
         guard correction.wordCount > 1 else {
@@ -3826,6 +3840,148 @@ public struct RomaTranscriptionOutputFilter {
         case .inlineCode:
             return !words.contains(where: isBlockedInlineCodeWord)
         }
+    }
+
+    private static func boundedSpokenMarkdownLinkCorrection(
+        beforeMarker: String,
+        in text: String
+    ) -> (
+        range: Range<String.Index>,
+        wordCount: Int,
+        removalWordCount: Int,
+        replacementText: String?
+    )? {
+        guard let sourceTail = trailingSpokenMarkdownLinkTail(in: beforeMarker) else {
+            return nil
+        }
+
+        let correctionTokens = wordTokens(in: text)
+        let correctionWords = correctionTokens.map { $0.text }
+        if let targetWordCount = leadingMarkdownLinkTargetCorrectionWordCount(in: correctionWords) {
+            let targetRange = correctionTokens[0].range.lowerBound..<correctionTokens[targetWordCount - 1].range.upperBound
+            let targetTextStart = correctionWords.first == "to" && targetWordCount > 1
+                ? correctionTokens[1].range.lowerBound
+                : targetRange.lowerBound
+            let targetText = String(text[targetTextStart..<targetRange.upperBound])
+            return (
+                targetRange,
+                targetWordCount,
+                sourceTail.wordCount,
+                "\(sourceTail.commandText) \(sourceTail.labelText) to \(targetText)"
+            )
+        }
+
+        guard let labelWordCount = leadingMarkdownLinkLabelWordCount(in: correctionWords) else {
+            return nil
+        }
+
+        let labelRange = correctionTokens[0].range.lowerBound..<correctionTokens[labelWordCount - 1].range.upperBound
+        let labelText = String(text[labelRange])
+        return (
+            labelRange,
+            labelWordCount,
+            sourceTail.wordCount,
+            "\(sourceTail.commandText) \(labelText) to \(sourceTail.targetText)"
+        )
+    }
+
+    private static func trailingSpokenMarkdownLinkTail(in text: String) -> SpokenMarkdownLinkTail? {
+        let tokens = wordTokens(in: text)
+        guard tokens.count >= 4 else { return nil }
+
+        let maxCandidateCount = min(12, tokens.count)
+        for wordCount in stride(from: maxCandidateCount, through: 4, by: -1) {
+            let candidateTokens = Array(tokens.suffix(wordCount))
+            let candidate = candidateTokens.map { $0.text }
+            guard let linkIndex = leadingMarkdownLinkCommandWordCount(in: candidate),
+                  let toIndex = candidate[linkIndex...].firstIndex(of: "to"),
+                  toIndex > linkIndex,
+                  toIndex < candidate.endIndex - 1 else {
+                continue
+            }
+
+            let labelWords = Array(candidate[linkIndex..<toIndex])
+            let targetWords = Array(candidate[candidate.index(after: toIndex)..<candidate.endIndex])
+            guard isMarkdownLinkLabelWords(labelWords),
+                  isMarkdownLinkTargetWords(targetWords) else {
+                continue
+            }
+
+            let commandText = String(text[candidateTokens[0].range.lowerBound..<candidateTokens[linkIndex - 1].range.upperBound])
+            let labelText = String(text[candidateTokens[linkIndex].range.lowerBound..<candidateTokens[toIndex - 1].range.upperBound])
+            let targetText = String(text[candidateTokens[toIndex + 1].range.lowerBound..<candidateTokens[wordCount - 1].range.upperBound])
+            return SpokenMarkdownLinkTail(
+                wordCount: wordCount,
+                commandText: commandText,
+                labelText: labelText,
+                targetText: targetText
+            )
+        }
+
+        return nil
+    }
+
+    private static func leadingMarkdownLinkCommandWordCount(in words: [String]) -> Int? {
+        if words.count >= 2, words[0] == "markdown", words[1] == "link" {
+            return 2
+        }
+        guard words.first == "link" else { return nil }
+        return 1
+    }
+
+    private static func leadingMarkdownLinkLabelWordCount(in words: [String]) -> Int? {
+        let maxWordCount = min(6, words.count)
+        for wordCount in stride(from: maxWordCount, through: 1, by: -1) {
+            let candidate = Array(words.prefix(wordCount))
+            guard isMarkdownLinkLabelWords(candidate) else { continue }
+            return wordCount
+        }
+
+        return nil
+    }
+
+    private static func leadingMarkdownLinkTargetCorrectionWordCount(in words: [String]) -> Int? {
+        if words.first == "to",
+           let targetWordCount = leadingMarkdownLinkTargetWordCount(in: Array(words.dropFirst())) {
+            return 1 + targetWordCount
+        }
+
+        return leadingMarkdownLinkTargetWordCount(in: words)
+    }
+
+    private static func leadingMarkdownLinkTargetWordCount(in words: [String]) -> Int? {
+        let maxWordCount = min(8, words.count)
+        for wordCount in stride(from: maxWordCount, through: 1, by: -1) {
+            let candidate = Array(words.prefix(wordCount))
+            guard isMarkdownLinkTargetWords(candidate) else { continue }
+            return wordCount
+        }
+
+        return nil
+    }
+
+    private static func isMarkdownLinkLabelWords(_ words: [String]) -> Bool {
+        guard let firstWord = words.first,
+              !blockedFirstWordsForSpokenCodeCase.contains(firstWord),
+              words.count <= 6 else {
+            return false
+        }
+
+        return !words.contains("to")
+    }
+
+    private static func isMarkdownLinkTargetWords(_ words: [String]) -> Bool {
+        guard !words.isEmpty,
+              words.count <= 8 else {
+            return false
+        }
+
+        let target = words.joined(separator: " ")
+        if isMarkdownLinkTarget(target) {
+            return true
+        }
+
+        return spokenURLTarget(target, allowLocalhost: true) != nil
     }
 
     private static func wordTokens(in text: String, range searchRange: Range<String.Index>? = nil) -> [WordToken] {
