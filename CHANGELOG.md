@@ -2,6 +2,7 @@
 
 ## v1.81 - Unreleased
 
+- Added bounded "scratch that out" and "scratch last word/sentence" cleanup aliases.
 - Removed leaked Whisper language tokens such as "<|en|>", "<|zh|>", and "<|haw|>".
 - Removed leaked Whisper control tokens such as "<|startoftranscript|>", "<|notimestamps|>", and "<|0.00|>".
 - Removed leaked ASR special tokens such as "<|nospeech|>", "<|no_speech|>", and "<|endoftext|>".

@@ -863,6 +863,11 @@ struct RomaCoreChecks {
                 "scratch that correction"
             ),
             (
+                "Wrong phrase scratch that out. Right phrase.",
+                "Right phrase.",
+                "scratch that out correction"
+            ),
+            (
                 "Wrong phrase cancel that. Right phrase.",
                 "Right phrase.",
                 "cancel that correction"
@@ -918,6 +923,11 @@ struct RomaCoreChecks {
                 "undo this word correction"
             ),
             (
+                "Use old model scratch last word module.",
+                "Use old module.",
+                "scratch last word correction"
+            ),
+            (
                 "Use old wrong model delete last two words module.",
                 "Use old module.",
                 "delete last two words correction"
@@ -966,6 +976,11 @@ struct RomaCoreChecks {
                 "First sentence. Wrong sentence. undo this sentence. Right sentence.",
                 "First sentence. Right sentence.",
                 "undo this sentence correction"
+            ),
+            (
+                "First sentence. Wrong sentence. scratch last sentence. Right sentence.",
+                "First sentence. Right sentence.",
+                "scratch last sentence correction"
             ),
             (
                 "First line new line wrong line delete last line right line.",
