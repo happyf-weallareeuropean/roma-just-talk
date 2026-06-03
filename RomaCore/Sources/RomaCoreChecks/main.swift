@@ -428,6 +428,11 @@ struct RomaCoreChecks {
                 "delete last word correction"
             ),
             (
+                "Use old model delete the last word module.",
+                "Use old module.",
+                "delete the last word correction"
+            ),
+            (
                 "Use old model delete previous word module.",
                 "Use old module.",
                 "delete previous word correction"
@@ -446,6 +451,11 @@ struct RomaCoreChecks {
                 "Use old wrong model delete last two words module.",
                 "Use old module.",
                 "delete last two words correction"
+            ),
+            (
+                "Use old wrong model undo the previous two words module.",
+                "Use old module.",
+                "undo the previous two words correction"
             ),
             (
                 "Use old wrong model undo previous three words module.",
@@ -473,6 +483,11 @@ struct RomaCoreChecks {
                 "delete last sentence correction"
             ),
             (
+                "First sentence. Wrong sentence. remove the previous sentence. Right sentence.",
+                "First sentence. Right sentence.",
+                "remove the previous sentence correction"
+            ),
+            (
                 "First sentence. Wrong sentence. delete that sentence. Right sentence.",
                 "First sentence. Right sentence.",
                 "delete that sentence correction"
@@ -486,6 +501,11 @@ struct RomaCoreChecks {
                 "First line new line wrong line delete last line right line.",
                 "First line\nright line.",
                 "delete last line after spoken newline"
+            ),
+            (
+                "First line new line wrong line delete the previous line right line.",
+                "First line\nright line.",
+                "delete the previous line after spoken newline"
             ),
             (
                 "First line new line wrong line delete that line right line.",
@@ -506,6 +526,11 @@ struct RomaCoreChecks {
                 "Intro new paragraph wrong paragraph delete last paragraph right paragraph.",
                 "Intro\n\nright paragraph.",
                 "delete last paragraph after spoken paragraph"
+            ),
+            (
+                "Intro new paragraph wrong paragraph remove the previous paragraph right paragraph.",
+                "Intro\n\nright paragraph.",
+                "remove the previous paragraph after spoken paragraph"
             ),
             (
                 "Intro new paragraph wrong paragraph delete that paragraph right paragraph.",
@@ -758,6 +783,11 @@ struct RomaCoreChecks {
                 "delete last word prose guard"
             ),
             (
+                "The delete the last word shortcut is useful.",
+                "The delete the last word shortcut is useful.",
+                "delete the last word prose guard"
+            ),
+            (
                 "The delete last two words shortcut is useful.",
                 "The delete last two words shortcut is useful.",
                 "delete counted words prose guard"
@@ -778,6 +808,11 @@ struct RomaCoreChecks {
                 "delete last sentence prose guard"
             ),
             (
+                "Explain how to remove the previous sentence from docs.",
+                "Explain how to remove the previous sentence from docs.",
+                "remove the previous sentence prose guard"
+            ),
+            (
                 "The delete that sentence command is useful.",
                 "The delete that sentence command is useful.",
                 "delete that sentence prose guard"
@@ -796,6 +831,16 @@ struct RomaCoreChecks {
                 "The delete last paragraph command is useful.",
                 "The delete last paragraph command is useful.",
                 "delete last paragraph prose guard"
+            ),
+            (
+                "Explain how to undo the previous line in docs.",
+                "Explain how to undo the previous line in docs.",
+                "undo the previous line prose guard"
+            ),
+            (
+                "Explain how to remove the previous paragraph from docs.",
+                "Explain how to remove the previous paragraph from docs.",
+                "remove the previous paragraph prose guard"
             ),
             (
                 "The delete that line command is useful.",
