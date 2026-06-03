@@ -346,6 +346,8 @@ public struct RomaTranscriptionOutputFilter {
         \s*
         (?:
             (?:[,;:…]|\.\.\.)?\s*actually\s+wait\s*[,;:]?\s+no\s*[,;:]? |
+            (?:[,;:…]|\.\.\.)?\s*actually\s+wait\s*[,;:]?\s+never\s*mind\s*[,;:]? |
+            (?:[,;:…]|\.\.\.)?\s*actually\s+wait\s*[,;:]?\s+nevermind\s*[,;:]? |
             (?:[,;:…]|\.\.\.)?\s*actually\s+never\s*mind\s*[,;:]? |
             (?:[,;:…]|\.\.\.)?\s*actually\s+nevermind\s*[,;:]? |
             (?:[,;:…]|\.\.\.)\s*actually\s+no\s*[,;:]? |
@@ -3457,6 +3459,8 @@ public struct RomaTranscriptionOutputFilter {
         let normalizedMarker = normalizedBacktrackingMarker(markerText)
         return [
             "actually wait no",
+            "actually wait never mind",
+            "actually wait nevermind",
             "actually never mind",
             "actually nevermind",
             "no i mean",

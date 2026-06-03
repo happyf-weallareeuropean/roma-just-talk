@@ -1107,6 +1107,16 @@ struct RomaCoreChecks {
                 "punctuated actually wait no correction"
             ),
             (
+                "Use model actually wait nevermind module.",
+                "Use module.",
+                "actually wait nevermind correction"
+            ),
+            (
+                "Use model, actually wait, never mind module.",
+                "Use module.",
+                "punctuated actually wait never mind correction"
+            ),
+            (
                 "Let's meet at two, actually never mind, three.",
                 "Let's meet at three.",
                 "actually never mind correction"
@@ -1875,6 +1885,11 @@ struct RomaCoreChecks {
                 "The phrase actually wait no is useful.",
                 "The phrase actually wait no is useful.",
                 "actually wait no phrase guard"
+            ),
+            (
+                "The phrase actually wait nevermind is useful.",
+                "The phrase actually wait nevermind is useful.",
+                "actually wait nevermind phrase guard"
             ),
             (
                 "Please never mind the details.",
