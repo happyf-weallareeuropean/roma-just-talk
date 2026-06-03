@@ -870,7 +870,9 @@ public struct RomaTranscriptionOutputFilter {
             shouldUseFragmentPolish = shouldTreatAsFragment
         } else {
             shouldUseFragmentPolish = shouldTreatAsFragment &&
-                (wasWholeSquareBracketedOutput || isSingleWordFinalFragment(polishedText))
+                (wasWholeSquareBracketedOutput ||
+                    isSingleWordFinalFragment(polishedText) ||
+                    isShortNoisyBoundaryFinalFragment(polishedText))
         }
 
         if shouldUseFragmentPolish {
@@ -4298,12 +4300,46 @@ public struct RomaTranscriptionOutputFilter {
         let innerStart = trimmedText.index(after: trimmedText.startIndex)
         let innerEnd = trimmedText.index(before: trimmedText.endIndex)
         let innerText = String(trimmedText[innerStart..<innerEnd])
-        guard isLikelyPunctuatedShortFragment(innerText) else {
+        guard shouldRemoveNoisySentencePunctuationInsideBoundary(innerText) else {
             return text
         }
 
         let cleanedInnerText = removeTrailingShortFragmentPunctuation(from: innerText)
         return "\(first)\(cleanedInnerText)\(closing)"
+    }
+
+    private static func isShortNoisyBoundaryFinalFragment(_ text: String) -> Bool {
+        let trimmedText = text.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard let first = trimmedText.first,
+              let closing = preservedClosingBoundary(for: first),
+              trimmedText.last == closing else {
+            return false
+        }
+
+        let innerStart = trimmedText.index(after: trimmedText.startIndex)
+        let innerEnd = trimmedText.index(before: trimmedText.endIndex)
+        return shouldRemoveNoisySentencePunctuationInsideBoundary(String(trimmedText[innerStart..<innerEnd]))
+    }
+
+    private static func shouldRemoveNoisySentencePunctuationInsideBoundary(_ text: String) -> Bool {
+        if isLikelyPunctuatedShortFragment(text) {
+            return true
+        }
+
+        let trimmedText = text.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard trimmedText.last == ".",
+              !trimmedText.hasSuffix("...") else {
+            return false
+        }
+
+        let baseText = String(trimmedText.dropLast()).trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !baseText.isEmpty,
+              !baseText.contains(".") else {
+            return false
+        }
+
+        let baseWordCount = wordCount(in: baseText)
+        return baseWordCount >= 1 && baseWordCount <= 3
     }
 
     private static func isShortFragment(_ text: String) -> Bool {
@@ -4437,16 +4473,17 @@ public struct RomaTranscriptionOutputFilter {
     }
 
     private static func shouldLowercaseInitialWord(_ word: String, force: Bool) -> Bool {
-        guard let firstCharacter = word.first, firstCharacter.isUppercase else {
+        let comparisonWord = word.trimmingCharacters(in: apostropheLikeCharacters)
+        guard let firstCharacter = comparisonWord.first, firstCharacter.isUppercase else {
             return false
         }
 
-        if word == "I" { return false }
-        if word.count > 1 && word.allSatisfy({ !$0.isLetter || $0.isUppercase }) { return false }
-        if word.dropFirst().contains(where: { $0.isUppercase }) { return false }
+        if comparisonWord == "I" { return false }
+        if comparisonWord.count > 1 && comparisonWord.allSatisfy({ !$0.isLetter || $0.isUppercase }) { return false }
+        if comparisonWord.dropFirst().contains(where: { $0.isUppercase }) { return false }
 
         if force { return true }
-        return likelyLowercaseFragments.contains(word.lowercased())
+        return likelyLowercaseFragments.contains(comparisonWord.lowercased())
     }
 
     private static func needsLeadingSpace(before text: String, context: TextInsertionContext) -> Bool {

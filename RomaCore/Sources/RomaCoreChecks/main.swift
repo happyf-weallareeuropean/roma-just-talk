@@ -258,6 +258,10 @@ struct RomaCoreChecks {
             "shared insertion polish should trim trailing periods after braced noisy fragments"
         )
         try require(
+            RomaTranscriptionOutputFilter.applyInsertionPolish("'Model.'", context: midSentenceContext) == "'model'",
+            "shared insertion polish should trim noisy periods inside single-quoted short fragments"
+        )
+        try require(
             RomaTranscriptionOutputFilter.applyInsertionPolish("\"What?\".", context: midSentenceContext) == "\"what?\"",
             "shared insertion polish should preserve quoted one-word questions"
         )
@@ -2193,6 +2197,25 @@ struct RomaCoreChecks {
         try require(
             RomaTranscriptionOutputFilter.applyInsertionPolish("[A final word!]", context: nil) == "a final word",
             "insertion polish should strip noisy sentence marks from bracketed final phrases"
+        )
+        try require(
+            RomaTranscriptionOutputFilter.applyInsertionPolish("'Model.'", context: nil) == "'model'",
+            "insertion polish should strip noisy periods inside single-quoted final words"
+        )
+        try require(
+            RomaTranscriptionOutputFilter.applyInsertionPolish("\"A final word.\"", context: nil) == "\"a final word\"",
+            "insertion polish should strip noisy periods inside quoted final phrases"
+        )
+        try require(
+            RomaTranscriptionOutputFilter.applyInsertionPolish("\"U.S.\"", context: nil) == "\"U.S.\"",
+            "insertion polish should preserve quoted abbreviation periods"
+        )
+        try require(
+            RomaTranscriptionOutputFilter.applyInsertionPolish(
+                "\"This is a longer sentence.\"",
+                context: nil
+            ) == "\"This is a longer sentence.\"",
+            "insertion polish should preserve quoted full-sentence periods"
         )
         try require(
             RomaTranscriptionOutputFilter.applyInsertionPolish("... Model.", context: midSentenceContext) == "model",

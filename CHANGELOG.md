@@ -2,6 +2,7 @@
 
 ## v1.81 - Unreleased
 
+- Stripped noisy periods inside short quoted final fragments while preserving abbreviations and longer quoted sentences.
 - Removed more terminal ASR outro boilerplate such as "Thanks everyone for watching" and "Don't forget to like and subscribe".
 - Removed chained leading discourse fillers such as "Okay, you know..." and "Yeah, like..." with prose guards.
 - Removed bounded hedge fillers such as "kind of", "sort of", "kinda", and "sorta" when they behave like speech noise.
