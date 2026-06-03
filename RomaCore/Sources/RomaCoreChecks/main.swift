@@ -408,6 +408,26 @@ struct RomaCoreChecks {
                 "inline endoftext special token"
             ),
             (
+                "Use <|startoftranscript|> now.",
+                "Use now.",
+                "inline startoftranscript special token"
+            ),
+            (
+                "Use <|notimestamps|> now.",
+                "Use now.",
+                "inline notimestamps special token"
+            ),
+            (
+                "Use <|transcribe|> now.",
+                "Use now.",
+                "inline transcribe special token"
+            ),
+            (
+                "Use <|0.00|> now.",
+                "Use now.",
+                "inline timestamp special token"
+            ),
+            (
                 "Use <model> now.",
                 "Use <model> now.",
                 "angle token literal guard"
