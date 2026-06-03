@@ -345,6 +345,9 @@ public struct RomaTranscriptionOutputFilter {
         (?ix)
         \s*
         (?:
+            (?:[,;:…]|\.\.\.)?\s*actually\s+wait\s*[,;:]?\s+no\s*[,;:]? |
+            (?:[,;:…]|\.\.\.)?\s*actually\s+never\s*mind\s*[,;:]? |
+            (?:[,;:…]|\.\.\.)?\s*actually\s+nevermind\s*[,;:]? |
             (?:[,;:…]|\.\.\.)\s*actually\s+no\s*[,;:]? |
             (?:[,;:…]|\.\.\.)\s*actually\s+make\s+it\s*[,;:]? |
             (?:[,;:…]|\.\.\.)\s*better\s+make\s+it\s*[,;:]? |
@@ -365,6 +368,8 @@ public struct RomaTranscriptionOutputFilter {
             replace\s+(?:that|it)\s+with |
             change\s+(?:that|it)\s+to |
             scratch\s+that(?!\s+out\b) |
+            (?:[,;:…]|\.\.\.)?\s*wait\s*[,;:]?\s+never\s*mind\s*[,;:]? |
+            (?:[,;:…]|\.\.\.)?\s*wait\s*[,;:]?\s+nevermind\s*[,;:]? |
             wait\s+no |
             (?:[,;:…]|\.\.\.)\s*wait\s*[,;:]?\s+actually\s*[,;:]? |
             (?:[,;:…]|\.\.\.)\s*wait\s*[,;:]?\s+i\s+mean\s*[,;:]? |
@@ -3451,12 +3456,19 @@ public struct RomaTranscriptionOutputFilter {
     private static func isGuardedNaturalBacktrackingMarker(_ markerText: String) -> Bool {
         let normalizedMarker = normalizedBacktrackingMarker(markerText)
         return [
+            "actually wait no",
+            "actually never mind",
+            "actually nevermind",
             "no i mean",
             "no i meant",
             "no actually",
             "wait actually",
             "wait i mean",
-            "wait i meant"
+            "wait i meant",
+            "wait never mind",
+            "wait nevermind",
+            "never mind",
+            "nevermind"
         ].contains(normalizedMarker)
     }
 

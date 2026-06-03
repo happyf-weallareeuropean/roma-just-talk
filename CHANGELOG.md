@@ -2,6 +2,7 @@
 
 ## v1.81 - Unreleased
 
+- Cleaned composite self-corrections such as "actually wait no" and "wait never mind" with prose guards.
 - Attached standalone quote, parenthesis, bracket, and brace commands during final insertion polish.
 - Attached standalone slash, dot, at-sign, underscore, and hyphen symbol commands during final insertion polish.
 - Recognized hyphenated and compact m-dash/emdash variants during final insertion polish.
