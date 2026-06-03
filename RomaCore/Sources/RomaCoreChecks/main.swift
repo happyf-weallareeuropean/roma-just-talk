@@ -628,6 +628,16 @@ struct RomaCoreChecks {
                 "bounded rather correction"
             ),
             (
+                "Use model, instead module.",
+                "Use module.",
+                "bounded instead correction"
+            ),
+            (
+                "Use old model, instead the new module.",
+                "Use the new module.",
+                "bounded instead article correction"
+            ),
+            (
                 "Use model replace that with module.",
                 "Use module.",
                 "replace that with correction"
@@ -1266,6 +1276,16 @@ struct RomaCoreChecks {
                 "I would rather wait.",
                 "I would rather wait.",
                 "rather prose guard"
+            ),
+            (
+                "Use model instead of module.",
+                "Use model instead of module.",
+                "instead of prose guard"
+            ),
+            (
+                "I would instead wait.",
+                "I would instead wait.",
+                "instead prose guard"
             ),
             (
                 "Scratch that itch.",
