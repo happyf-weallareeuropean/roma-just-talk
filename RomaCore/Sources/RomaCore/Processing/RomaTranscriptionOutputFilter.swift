@@ -340,6 +340,7 @@ public struct RomaTranscriptionOutputFilter {
             change\s+that\s+to |
             scratch\s+that |
             wait\s+no |
+            (?:[,;:…]|\.\.\.)\s*no\s*[,;:]?\s+wait\s*[,;:]? |
             never\s*mind |
             nevermind |
             sorry\s+not\s+that |

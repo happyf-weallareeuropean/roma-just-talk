@@ -207,6 +207,7 @@ struct TranscriptionOutputFilterTests {
     @Test func transcriptionFilterAppliesBoundedBacktrackingCorrections() async throws {
         TranscriptionCleanupLevel.setCurrent(.polished)
         #expect(TranscriptionOutputFilter.filter("Let's meet at two, wait no, three.") == "Let's meet at three.")
+        #expect(TranscriptionOutputFilter.filter("Let's meet at two, no wait, three.") == "Let's meet at three.")
         #expect(TranscriptionOutputFilter.filter("The meeting is on Tuesday, sorry not that, actually Wednesday.") == "The meeting is on Wednesday.")
         #expect(TranscriptionOutputFilter.filter("Use model wait no models.") == "Use models.")
         #expect(TranscriptionOutputFilter.filter("Let's meet at two... actually three.") == "Let's meet at three.")
@@ -224,6 +225,7 @@ struct TranscriptionOutputFilterTests {
         #expect(TranscriptionOutputFilter.filter("The command change that to is useful.") == "The command change that to is useful.")
         #expect(TranscriptionOutputFilter.filter("I actually think this works.") == "I actually think this works.")
         #expect(TranscriptionOutputFilter.filter("I mean this is wrong wait no right.") == "I mean this is right.")
+        #expect(TranscriptionOutputFilter.filter("There is no wait time.") == "There is no wait time.")
         #expect(TranscriptionOutputFilter.filter("I am sorry this happened.") == "I am sorry this happened.")
         #expect(TranscriptionOutputFilter.filter("Never mind what I said.") == "Never mind what I said.")
         #expect(TranscriptionOutputFilter.filter("Wrong phrase scratch that. Right phrase.") == "Right phrase.")

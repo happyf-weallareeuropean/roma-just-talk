@@ -393,6 +393,11 @@ struct RomaCoreChecks {
                 "wait no correction"
             ),
             (
+                "Let's meet at two, no wait, three.",
+                "Let's meet at three.",
+                "no wait correction"
+            ),
+            (
                 "Let's meet at two, no actually three.",
                 "Let's meet at three.",
                 "no actually correction"
@@ -966,6 +971,11 @@ struct RomaCoreChecks {
                 "I am sorry this happened.",
                 "I am sorry this happened.",
                 "sorry prose guard"
+            ),
+            (
+                "There is no wait time.",
+                "There is no wait time.",
+                "no wait prose guard"
             ),
             (
                 "Scratch that itch.",
