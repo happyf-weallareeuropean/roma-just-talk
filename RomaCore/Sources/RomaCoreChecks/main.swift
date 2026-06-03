@@ -433,6 +433,16 @@ struct RomaCoreChecks {
                 "disregard that correction"
             ),
             (
+                "Wrong phrase ignore that. Right phrase.",
+                "Right phrase.",
+                "ignore that correction"
+            ),
+            (
+                "Wrong phrase forget that. Right phrase.",
+                "Right phrase.",
+                "forget that correction"
+            ),
+            (
                 "Use old model delete last word module.",
                 "Use old module.",
                 "delete last word correction"
@@ -961,6 +971,16 @@ struct RomaCoreChecks {
                 "Disregard that warning.",
                 "Disregard that warning.",
                 "disregard that prose guard"
+            ),
+            (
+                "Ignore that warning.",
+                "Ignore that warning.",
+                "ignore that prose guard"
+            ),
+            (
+                "Forget that idea.",
+                "Forget that idea.",
+                "forget that prose guard"
             ),
             (
                 "New York New York is the title.",

@@ -351,7 +351,7 @@ public struct RomaTranscriptionOutputFilter {
         )
         \s*[,;:]?\s+
         """#
-    private static let scratchThatCommandPattern = #"(?i)(?<![\p{L}\p{N}])(?:scratch|strike|delete|remove|erase|undo|cancel|disregard)\s+that(?:\s*[.!?,;:…]+|(?=\s*$|\s*\n))"#
+    private static let scratchThatCommandPattern = #"(?i)(?<![\p{L}\p{N}])(?:scratch|strike|delete|remove|erase|undo|cancel|disregard|ignore|forget)\s+that(?:\s*[.!?,;:…]+|(?=\s*$|\s*\n))"#
     private static let deletePreviousWordCommandPattern = #"(?i)(?<![\p{L}\p{N}])(?:delete|remove|erase|undo)\s+(?:(?:the\s+)?(?:last|previous)(?:\s+(\d|one|two|three|four|five))?|that|this)\s+words?(?:\s*[.!?,;:…]+|(?=\s*$|\s*\n)|\s+)"#
     private static let deletePreviousLineCommandPattern = #"(?i)(?<![\p{L}\p{N}])(?:delete|remove|erase|undo)\s+(?:(?:the\s+)?(?:last|previous)|that|this)\s+line(?:\s*[.!?,;:…]+|(?=\s*$|\s*\n)|\s+)"#
     private static let deletePreviousParagraphCommandPattern = #"(?i)(?<![\p{L}\p{N}])(?:delete|remove|erase|undo)\s+(?:(?:the\s+)?(?:last|previous)|that|this)\s+paragraph(?:\s*[.!?,;:…]+|(?=\s*$|\s*\n)|\s+)"#
