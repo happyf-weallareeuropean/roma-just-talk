@@ -2,6 +2,7 @@
 
 ## v1.81 - Unreleased
 
+- Removed standalone bracketed ASR artifacts and speaker labels such as "[blank_audio]" and "[speaker 1]".
 - Normalized bracketed ASR labels with underscores or hyphens, such as "[blank_audio]" and "[keyboard-typing]".
 - Removed bracketed transcript speaker labels such as "[speaker 1]" and "(Speaker_00)".
 - Removed bracketed sound-effect artifacts such as "[keyboard typing]", "[phone ringing]", and "[beeping]".

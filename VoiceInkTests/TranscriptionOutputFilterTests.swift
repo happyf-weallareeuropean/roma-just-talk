@@ -24,6 +24,9 @@ struct TranscriptionOutputFilterTests {
 
         #expect(TranscriptionOutputFilter.filter("[Model.]") == "Model.")
         #expect(TranscriptionOutputFilter.filter("[inaudible]") == "")
+        #expect(TranscriptionOutputFilter.filter("[blank_audio]") == "")
+        #expect(TranscriptionOutputFilter.filter("[speaker 1]") == "")
+        #expect(TranscriptionOutputFilter.filter("(Speaker_00)") == "")
         #expect(TranscriptionOutputFilter.filter("(breathing)") == "")
         #expect(TranscriptionOutputFilter.filter("Use [inaudible] now.") == "Use now.")
         #expect(TranscriptionOutputFilter.filter("Use [cough] now.") == "Use now.")

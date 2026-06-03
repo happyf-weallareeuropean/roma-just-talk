@@ -313,6 +313,21 @@ struct RomaCoreChecks {
                 "hyphenated pause sounds"
             ),
             (
+                "[blank_audio]",
+                "",
+                "standalone bracketed underscored non-speech artifact"
+            ),
+            (
+                "[speaker 1]",
+                "",
+                "standalone bracketed speaker number label"
+            ),
+            (
+                "(Speaker_00)",
+                "",
+                "standalone bracketed speaker underscore label"
+            ),
+            (
                 "Use [cough] now.",
                 "Use now.",
                 "bracketed cough artifact"

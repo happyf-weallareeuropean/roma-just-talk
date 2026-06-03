@@ -3504,10 +3504,7 @@ public struct RomaTranscriptionOutputFilter {
             .trimmingCharacters(in: .whitespacesAndNewlines)
         guard !innerText.isEmpty else { return "" }
 
-        let normalizedInner = innerText
-            .trimmingCharacters(in: CharacterSet(charactersIn: ".!?,;:… ").union(.whitespacesAndNewlines))
-            .lowercased()
-        if nonSpeechBracketContents.contains(normalizedInner) {
+        if isNonSpeechBracketContent(innerText) {
             return ""
         }
 
