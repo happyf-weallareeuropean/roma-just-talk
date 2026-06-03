@@ -845,6 +845,10 @@ public struct RomaTranscriptionOutputFilter {
 
     private static func removeFillerWords(from text: String, fillerWords configuredFillerWords: [String]) -> String {
         var filteredText = text
+        let hadLeadingFillerNoise = startsWithRemovableLeadingFillerNoise(
+            filteredText,
+            fillerWords: configuredFillerWords
+        )
 
         filteredText = removeStandaloneDiscourseFillers(from: filteredText)
         filteredText = removeLeadingDiscourseFillers(from: filteredText)
@@ -885,8 +889,30 @@ public struct RomaTranscriptionOutputFilter {
         }
 
         filteredText = removeLeadingDiscourseFillers(from: filteredText)
+        if hadLeadingFillerNoise {
+            filteredText = removeLeadingFragmentPunctuation(from: filteredText)
+        }
 
         return filteredText
+    }
+
+    private static func startsWithRemovableLeadingFillerNoise(_ text: String, fillerWords configuredFillerWords: [String]) -> Bool {
+        let fillerWords = Set(configuredFillerWords + defaultFillerWords)
+            .map { NSRegularExpression.escapedPattern(for: $0.trimmingCharacters(in: .whitespacesAndNewlines)) }
+            .filter { !$0.isEmpty }
+            .sorted { $0.count > $1.count }
+            .joined(separator: "|")
+        let pauseNoise = #"m+h+m+|m+[\s-]+h+m+|u+h+[\s-]+h*u+h+|u+h+[\s-]+u+h+|u+m+[\s-]+h+m+|u+h+|u+m+|h+m+|m+h+|m{2,}|e+h+|e+r+|a+h+|h+uh+"#
+        let discourseNoise = #"you[ \t]+know|i[ \t]+mean|like|ok(?:ay)?|all[ \t]+right|alright|right|yeah"#
+        let pattern = #"(?i)^\s*(?:"# + [pauseNoise, discourseNoise, fillerWords]
+            .filter { !$0.isEmpty }
+            .joined(separator: "|") + #")(?:[.,;:!?…–—-]|\s)+"#
+
+        guard let regex = try? NSRegularExpression(pattern: pattern) else {
+            return false
+        }
+
+        return regex.firstMatch(in: text, range: NSRange(text.startIndex..., in: text)) != nil
     }
 
     private static func removeStandaloneDiscourseFillers(from text: String) -> String {

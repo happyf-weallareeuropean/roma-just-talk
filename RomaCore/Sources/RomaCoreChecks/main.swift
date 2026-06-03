@@ -328,6 +328,26 @@ struct RomaCoreChecks {
                 "hyphenated pause sounds"
             ),
             (
+                "hmm — I think this works.",
+                "I think this works.",
+                "leading pause filler with dash separator"
+            ),
+            (
+                "eh... : this works.",
+                "this works.",
+                "leading pause filler with colon separator"
+            ),
+            (
+                "— I think this works.",
+                "— I think this works.",
+                "leading dash without filler guard"
+            ),
+            (
+                "- item one.",
+                "- item one",
+                "leading list marker without filler guard"
+            ),
+            (
                 "This, um, works.",
                 "This works.",
                 "embedded comma pause filler"
