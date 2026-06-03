@@ -845,6 +845,12 @@ public struct RomaTranscriptionOutputFilter {
         filteredText = removeTerminalDiscourseFillers(from: filteredText)
         filteredText = removeUnpunctuatedLikeFillers(from: filteredText)
 
+        let embeddedPausePattern = #"(?i)(?<=[\p{L}\p{N}])[,;:…][ \t]+(?:u+h+|u+m+|h+m+|m+h+|m{2,}|e+h+|e+r+|a+h+|h+uh+)(?:[.,;:!?…]+)?(?=[ \t]+[\p{L}\p{N}])"#
+        if let regex = try? NSRegularExpression(pattern: embeddedPausePattern) {
+            let range = NSRange(filteredText.startIndex..., in: filteredText)
+            filteredText = regex.stringByReplacingMatches(in: filteredText, options: [], range: range, withTemplate: "")
+        }
+
         let joinedPausePattern = #"(?i)(?<![\p{L}\p{N}])(?:m+h+m+|m+[\s-]+h+m+|u+h+[\s-]+h*u+h+|u+h+[\s-]+u+h+|u+m+[\s-]+h+m+)(?:[.,;:!?…]+)?(?![\p{L}\p{N}])"#
         if let regex = try? NSRegularExpression(pattern: joinedPausePattern) {
             let range = NSRange(filteredText.startIndex..., in: filteredText)

@@ -313,6 +313,21 @@ struct RomaCoreChecks {
                 "hyphenated pause sounds"
             ),
             (
+                "This, um, works.",
+                "This works.",
+                "embedded comma pause filler"
+            ),
+            (
+                "This; eh, works.",
+                "This works.",
+                "embedded semicolon pause filler"
+            ),
+            (
+                "This… hmm, works.",
+                "This works.",
+                "embedded ellipsis pause filler"
+            ),
+            (
                 "[blank_audio]",
                 "",
                 "standalone bracketed underscored non-speech artifact"
@@ -1203,6 +1218,11 @@ struct RomaCoreChecks {
                 "like simile guard"
             ),
             (
+                "This, however, works.",
+                "This, however, works.",
+                "embedded comma prose guard"
+            ),
+            (
                 "I lost twenty pounds.",
                 "I lost twenty pounds.",
                 "currency cleanup weight guard"
@@ -1277,11 +1297,34 @@ struct RomaCoreChecks {
         )
         try require(
             RomaTranscriptionOutputFilter.filter(
+                "This, um, works.",
+                cleanupLevel: .raw,
+                removesFillerWords: true
+            ) == "This, um, works.",
+            "raw cleanup should preserve embedded pause punctuation"
+        )
+        try require(
+            RomaTranscriptionOutputFilter.filter(
                 "Wrong phrase scratch that. Right phrase.",
                 cleanupLevel: .light,
                 removesFillerWords: true
             ) == "Wrong phrase scratch that. Right phrase.",
             "light cleanup should preserve backtracking erase commands"
+        )
+        try require(
+            RomaTranscriptionOutputFilter.filter(
+                "This, um, works.",
+                cleanupLevel: .light,
+                removesFillerWords: true
+            ) == "This, um, works.",
+            "light cleanup should preserve embedded pause punctuation"
+        )
+        try require(
+            RomaTranscriptionOutputFilter.filter(
+                "This, um, works.",
+                removesFillerWords: true
+            ) == "This works.",
+            "polished cleanup should remove embedded pause punctuation"
         )
 
         let midSentenceContext = RomaTranscriptionOutputFilter.TextInsertionContext(precedingText: "...so this")

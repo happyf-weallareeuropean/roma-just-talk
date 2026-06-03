@@ -57,6 +57,9 @@ struct TranscriptionOutputFilterTests {
         #expect(TranscriptionOutputFilter.filter("mm-hmm... uh-huh, I think so.") == "I think so.")
         #expect(TranscriptionOutputFilter.filter("uh-uh... not that.") == "not that.")
         #expect(TranscriptionOutputFilter.filter("mhmm, this works.") == "this works.")
+        #expect(TranscriptionOutputFilter.filter("This, um, works.") == "This works.")
+        #expect(TranscriptionOutputFilter.filter("This; eh, works.") == "This works.")
+        #expect(TranscriptionOutputFilter.filter("This… hmm, works.") == "This works.")
         #expect(TranscriptionOutputFilter.filter("I was, like, going there.") == "I was going there.")
         #expect(TranscriptionOutputFilter.filter("I was like going there.") == "I was going there.")
         #expect(TranscriptionOutputFilter.filter("We are like almost done.") == "We are almost done.")
@@ -77,6 +80,7 @@ struct TranscriptionOutputFilterTests {
         #expect(TranscriptionOutputFilter.filter("you know what I mean.") == "")
         #expect(TranscriptionOutputFilter.filter("I like this model.") == "I like this model.")
         #expect(TranscriptionOutputFilter.filter("This is like magic.") == "This is like magic.")
+        #expect(TranscriptionOutputFilter.filter("This, however, works.") == "This, however, works.")
         #expect(TranscriptionOutputFilter.filter("Do you know this?") == "Do you know this?")
         #expect(TranscriptionOutputFilter.filter("Tell me if you know.") == "Tell me if you know.")
         #expect(TranscriptionOutputFilter.filter("you know?") == "you know?")
@@ -215,6 +219,7 @@ struct TranscriptionOutputFilterTests {
 
         TranscriptionCleanupLevel.setCurrent(.raw)
         #expect(TranscriptionOutputFilter.filter("hmm... Hello comma world. Hello comma world.") == "hmm... Hello comma world. Hello comma world.")
+        #expect(TranscriptionOutputFilter.filter("This, um, works.") == "This, um, works.")
         #expect(TranscriptionOutputFilter.filter("I can apostrophe t go.") == "I can apostrophe t go.")
         #expect(TranscriptionOutputFilter.filter("Felix apostrophe s laptop.") == "Felix apostrophe s laptop.")
         #expect(TranscriptionOutputFilter.filter("Wrong phrase scratch that. Right phrase.") == "Wrong phrase scratch that. Right phrase.")
@@ -223,6 +228,7 @@ struct TranscriptionOutputFilterTests {
 
         TranscriptionCleanupLevel.setCurrent(.light)
         #expect(TranscriptionOutputFilter.filter("hmm... Hello comma world.") == "hmm... Hello, world.")
+        #expect(TranscriptionOutputFilter.filter("This, um, works.") == "This, um, works.")
         #expect(TranscriptionOutputFilter.filter("I can apostrophe t go.") == "I can't go.")
         #expect(TranscriptionOutputFilter.filter("Felix apostrophe s laptop.") == "Felix's laptop.")
         #expect(TranscriptionOutputFilter.filter("Wrong phrase scratch that. Right phrase.") == "Wrong phrase scratch that. Right phrase.")
@@ -234,6 +240,7 @@ struct TranscriptionOutputFilterTests {
 
         TranscriptionCleanupLevel.setCurrent(.polished)
         #expect(TranscriptionOutputFilter.filter("hmm... Hello comma world.") == "Hello, world.")
+        #expect(TranscriptionOutputFilter.filter("This, um, works.") == "This works.")
         #expect(TranscriptionOutputFilter.filter("Let's meet at two, wait no, three.") == "Let's meet at three.")
         #expect(TranscriptionOutputFilter.filter("I think I think this works.") == "I think this works.")
         #expect(TranscriptionOutputFilter.filter("I think this works, I think this works.") == "I think this works.")
