@@ -2,6 +2,7 @@
 
 ## v1.81 - Unreleased
 
+- Added terminal "cut that" and "drop that" correction aliases.
 - Added terminal "ignore that" and "forget that" correction aliases.
 - Added terminal "cancel that" and "disregard that" correction aliases.
 - Accepted natural delete-command phrasing such as "delete the last word" and "remove the previous sentence".
