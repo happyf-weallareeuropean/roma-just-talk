@@ -583,6 +583,11 @@ struct RomaCoreChecks {
                 "sorry i meant correction"
             ),
             (
+                "Use model, make that module.",
+                "Use module.",
+                "make that correction"
+            ),
+            (
                 "Set color blue, sorry red.",
                 "Set color red.",
                 "sorry correction"
@@ -1231,6 +1236,16 @@ struct RomaCoreChecks {
                 "I meant what I said.",
                 "I meant what I said.",
                 "i meant prose guard"
+            ),
+            (
+                "Please make that red.",
+                "Please make that red.",
+                "make that prose guard"
+            ),
+            (
+                "We can make that work.",
+                "We can make that work.",
+                "make that clause prose guard"
             ),
             (
                 "This, however, works.",

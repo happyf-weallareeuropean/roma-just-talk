@@ -2,6 +2,7 @@
 
 ## v1.81 - Unreleased
 
+- Added bounded "make that..." self-correction cleanup for phrases such as "Use model, make that module.".
 - Added bounded "I meant..." self-correction cleanup for phrases such as "Use model, I meant module.".
 - Removed embedded pause fillers with their dangling punctuation, such as "This, um, works.".
 - Removed leading discourse fillers with embedded pauses, such as "Okay, um, so..." and "Yeah, hmm, so...".
