@@ -310,6 +310,10 @@ try {
         swift run RomaProofAgent windows-paste-doctor
     }
 
+    Invoke-Step "windows permission doctor" {
+        swift run RomaProofAgent windows-permission-doctor
+    }
+
     Invoke-Step "windows secret doctor" {
         swift run RomaProofAgent windows-secret-doctor
     }

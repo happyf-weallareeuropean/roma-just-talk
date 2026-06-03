@@ -61,6 +61,7 @@ Reusable now:
 - `WindowsHotKey.proofToggle` and the Windows-only `WindowsRegisterHotKeyProof` source define the first `RegisterHotKey` toggle proof path.
 - `WindowsLowLevelKeyboardHookProof` now defines the first `WH_KEYBOARD_LL` hold-to-talk keydown/keyup proof path.
 - `WindowsClipboardPayload` and the Windows-only `WindowsPasteProof` source define the first `CF_UNICODETEXT` plus `SendInput` paste proof path.
+- `WindowsPermissionSurface` now lives in `RomaCore` as the shared permission/native-limit descriptor for laptop proof output.
 - `WindowsDPAPISecretStore` now lives in `RomaCore` as the first Windows API-key storage adapter.
 - `CoreAudioRecorder` already outputs the right streaming shape: 16 kHz mono Int16 PCM chunks and a WAV file with a 3 second pre-roll buffer, and now reuses `RomaCore.PCMPreRollBuffer`.
 
@@ -137,6 +138,7 @@ Windows is not macOS TCC.
 - Screen/window context: skip for MVP. Screen OCR/context has a separate permission and product-risk surface on both platforms.
 
 Minimum Windows MVP permission surface: microphone + shortcut + clipboard/paste. Do not start with screen capture, browser URL detection, media control, or app-aware modes.
+Run `swift run RomaProofAgent windows-permission-doctor` or `RomaWindowsAgent doctor` to print the shared permission surface before laptop smoke tests.
 
 ## First Implementation Plan
 
@@ -258,6 +260,7 @@ swift run RomaProofAgent miniaudio-capture-doctor
 swift run RomaProofAgent miniaudio-record-proof --out mic-proof.wav --seconds 2
 swift run RomaProofAgent transcribe-proof-doctor
 swift run RomaProofAgent dictation-pipeline-proof --out pipeline-proof.wav --text "hmm... just talk." --replace "just talk=roma-just-talk"
+swift run RomaProofAgent dictation-pipeline-proof --out mid-sentence-proof.wav --text "Model." --preceding-text "...so this"
 swift run RomaProofAgent transcribe-proof --audio mic-proof.wav --endpoint https://api.groq.com/openai/v1/audio/transcriptions --model whisper-large-v3-turbo --api-key-env GROQ_API_KEY
 swift run RomaProofAgent windows-hotkey-doctor
 swift run RomaProofAgent windows-hotkey-proof
@@ -265,6 +268,7 @@ swift run RomaProofAgent windows-keyboard-hook-doctor
 swift run RomaProofAgent windows-keyboard-hook-proof --timeout 15
 swift run RomaProofAgent windows-paste-doctor
 swift run RomaProofAgent windows-paste-proof --text "roma just talk proof"
+swift run RomaProofAgent windows-permission-doctor
 swift run RomaProofAgent windows-secret-doctor
 swift run RomaProofAgent windows-secret-proof --dir C:\tmp\roma-secrets
 swift run RomaProofAgent windows-secret-save-from-env --dir C:\tmp\roma-secrets --key groq --value-env GROQ_API_KEY

@@ -20,6 +20,7 @@ struct RomaCoreChecks {
         try await checkWindowsDictationRuntimeDescriptor()
         try checkWindowsClipboardPayloadIsCFUnicodeText()
         try checkWindowsDPAPISecretStoreContract()
+        try checkWindowsPermissionSurface()
         try checkTranscriptionRequestMetadata()
         try await checkDictationPipelineTranscribesAndInserts()
         try await checkFakeAdaptersSatisfyCorePorts()
@@ -701,6 +702,27 @@ struct RomaCoreChecks {
             } catch WindowsDPAPISecretError.unsupported {
             }
         }
+    }
+
+    private static func checkWindowsPermissionSurface() throws {
+        let surface = WindowsPermissionSurface.minimumMVP
+
+        try require(
+            surface.minimumPermissions == ["microphone", "hotkey", "clipboard"],
+            "Windows MVP permission surface should stay minimal"
+        )
+        try require(
+            surface.microphoneSettingsPath.contains("Microphone"),
+            "Windows permission surface should point users to microphone settings"
+        )
+        try require(
+            surface.requiresDesktopAppMicrophoneAccess,
+            "Windows microphone proof should require desktop app microphone access"
+        )
+        try require(!surface.hotKeyPermissionPrompt, "RegisterHotKey should not be documented as a prompt flow")
+        try require(!surface.pastePermissionPrompt, "SendInput paste should not be documented as a prompt flow")
+        try require(surface.pasteIntegrityLimit == "equal_or_lower", "paste integrity limit should be explicit")
+        try require(!surface.screenCaptureRequired, "Windows MVP should not require screen capture")
     }
 
     private static func checkTranscriptionRequestMetadata() throws {

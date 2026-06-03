@@ -23,6 +23,8 @@ struct RomaProofAgent {
             printWindowsPasteDoctor()
         case "windows-paste-proof":
             try runWindowsPasteProof(arguments: Array(arguments.dropFirst()))
+        case "windows-permission-doctor":
+            printWindowsPermissionDoctor()
         case "windows-secret-doctor":
             printWindowsSecretDoctor()
         case "windows-secret-proof":
@@ -56,6 +58,7 @@ struct RomaProofAgent {
         print("windows_register_hotkey_adapter_source=true")
         print("windows_low_level_keyboard_hook_source=true")
         print("windows_paste_adapter_source=true")
+        print("windows_permission_surface_source=true")
         print("windows_dpapi_secret_store_source=true")
         print("miniaudio_capture_adapter_source=true")
         print("openai_compatible_transcription_source=true")
@@ -139,6 +142,19 @@ struct RomaProofAgent {
         #else
         print("windows_paste_runtime=false")
         #endif
+    }
+
+    private static func printWindowsPermissionDoctor() {
+        let surface = WindowsPermissionSurface.minimumMVP
+
+        print("platform=\(platformName)")
+        print("minimum_permission_surface=\(surface.minimumPermissions.joined(separator: ","))")
+        print("microphone_settings=\(surface.microphoneSettingsPath)")
+        print("desktop_app_microphone_access_required=\(surface.requiresDesktopAppMicrophoneAccess)")
+        print("hotkey_permission_prompt=\(surface.hotKeyPermissionPrompt)")
+        print("paste_permission_prompt=\(surface.pastePermissionPrompt)")
+        print("paste_integrity_limit=\(surface.pasteIntegrityLimit)")
+        print("screen_capture_required=\(surface.screenCaptureRequired)")
     }
 
     private static func printWindowsSecretDoctor() {
@@ -290,6 +306,12 @@ struct RomaProofAgent {
         let outputURL = URL(fileURLWithPath: try value(after: "--out", in: arguments))
         let rawText = optionalValue(after: "--text", in: arguments) ?? "hmm... just talk."
         let wordReplacements = try replacementRules(from: arguments)
+        let insertionContext = optionalValue(after: "--preceding-text", in: arguments).map {
+            TextInsertionContext(
+                precedingText: $0,
+                selectedText: optionalValue(after: "--selected-text", in: arguments)
+            )
+        }
         let recorder = ProofRecorder()
         let textInsertion = ProofTextInsertion()
         let service = ProofTranscriptionService(text: rawText)
@@ -311,7 +333,8 @@ struct RomaProofAgent {
                 model: model,
                 shouldInsertTranscription: true,
                 textProcessing: DictationTextProcessingConfiguration(
-                    wordReplacements: wordReplacements
+                    wordReplacements: wordReplacements,
+                    insertionContext: insertionContext
                 )
             )
         ) {}
@@ -319,6 +342,8 @@ struct RomaProofAgent {
         print("wrote=\(result.session.recordedAudio.fileURL.path)")
         print("raw_transcript_length=\(rawText.count)")
         print("raw_transcript_text=\(oneLine(rawText))")
+        print("preceding_text=\(oneLine(insertionContext?.precedingText ?? ""))")
+        print("selected_text=\(oneLine(insertionContext?.selectedText ?? ""))")
         print("processed_transcript_length=\(result.processedText.count)")
         print("processed_transcript_text=\(oneLine(result.processedText))")
         print("word_replacements=\(wordReplacements.count)")
@@ -529,6 +554,7 @@ struct RomaProofAgent {
         print("  RomaProofAgent windows-keyboard-hook-proof --timeout 15")
         print("  RomaProofAgent windows-paste-doctor")
         print("  RomaProofAgent windows-paste-proof --text \"roma just talk proof\"")
+        print("  RomaProofAgent windows-permission-doctor")
         print("  RomaProofAgent windows-secret-doctor")
         print("  RomaProofAgent windows-secret-proof --dir C:\\tmp\\roma-secrets")
         print("  RomaProofAgent windows-secret-save-from-env --dir C:\\tmp\\roma-secrets --key groq --value-env GROQ_API_KEY")
@@ -536,6 +562,7 @@ struct RomaProofAgent {
         print("  RomaProofAgent windows-dictation-proof --out proof.wav --hold-hook --timeout 15 --endpoint https://api.example.com/v1/audio/transcriptions --model whisper-large-v3-turbo --api-key-env OPENAI_API_KEY [--paste]")
         print("  RomaProofAgent windows-dictation-proof --out proof.wav --seconds 2 --endpoint https://api.example.com/v1/audio/transcriptions --model whisper-large-v3-turbo --api-key-name groq --secret-dir C:\\tmp\\roma-secrets [--paste]")
         print("  RomaProofAgent dictation-pipeline-proof --out proof.wav --text \"hmm... just talk.\" --replace \"just talk=roma-just-talk\"")
+        print("  RomaProofAgent dictation-pipeline-proof --out proof.wav --text \"Model.\" --preceding-text \"...so this\"")
         print("  RomaProofAgent miniaudio-capture-doctor")
         print("  RomaProofAgent miniaudio-record-proof --out proof.wav --seconds 2")
         print("  RomaProofAgent transcribe-proof-doctor")

@@ -30,6 +30,8 @@ struct RomaWindowsAgent {
     }
 
     private static func printDoctor() {
+        let permissionSurface = WindowsPermissionSurface.minimumMVP
+
         print("agent=roma-windows-agent")
         print("platform=\(platformName)")
         print("runtime_available=\(WindowsDictationRuntime.isRuntimeAvailable)")
@@ -43,8 +45,13 @@ struct RomaWindowsAgent {
         print("clipboard_restore=text_only_after_delay")
         print("secret_store=dpapi")
         print("config_default=\(RomaWindowsAgentConfiguration.defaultURL().path)")
-        print("minimum_permission_surface=microphone,hotkey,clipboard")
-        print("screen_capture=false")
+        print("minimum_permission_surface=\(permissionSurface.minimumPermissions.joined(separator: ","))")
+        print("microphone_settings=\(permissionSurface.microphoneSettingsPath)")
+        print("desktop_app_microphone_access_required=\(permissionSurface.requiresDesktopAppMicrophoneAccess)")
+        print("hotkey_permission_prompt=\(permissionSurface.hotKeyPermissionPrompt)")
+        print("paste_permission_prompt=\(permissionSurface.pastePermissionPrompt)")
+        print("paste_integrity_limit=\(permissionSurface.pasteIntegrityLimit)")
+        print("screen_capture_required=\(permissionSurface.screenCaptureRequired)")
     }
 
     private static func runDictation(arguments: [String]) async throws {

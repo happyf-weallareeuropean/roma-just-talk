@@ -50,6 +50,7 @@ jobs:
           test -s "$RUNNER_TEMP/roma-pipeline-proof.wav"
           swift run RomaProofAgent windows-hotkey-doctor
           swift run RomaProofAgent windows-paste-doctor
+          swift run RomaProofAgent windows-permission-doctor
 
   windows:
     name: RomaCore Windows
