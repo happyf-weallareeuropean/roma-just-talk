@@ -148,6 +148,10 @@ public struct RomaTranscriptionOutputFilter {
         let previousWord: String
     }
 
+    private struct SpokenCodeCaseTail {
+        let argumentWordCount: Int
+    }
+
     private enum SpokenCodeCaseStyle {
         case camel
         case snake
@@ -3438,6 +3442,13 @@ public struct RomaTranscriptionOutputFilter {
             return compactTokenCorrection
         }
 
+        if let codeCaseCorrection = boundedSpokenCodeCaseCorrection(
+            beforeMarker: beforeMarker,
+            correctionTokens: correctionTokens
+        ) {
+            return codeCaseCorrection
+        }
+
         guard correction.wordCount > 1 else {
             return defaultCorrection
         }
@@ -3511,6 +3522,87 @@ public struct RomaTranscriptionOutputFilter {
         }
 
         return words.reversed()
+    }
+
+    private static func boundedSpokenCodeCaseCorrection(
+        beforeMarker: String,
+        correctionTokens: [WordToken]
+    ) -> (
+        range: Range<String.Index>,
+        wordCount: Int,
+        removalWordCount: Int,
+        replacementText: String?
+    )? {
+        guard let sourceTail = trailingSpokenCodeCaseTail(in: beforeMarker),
+              let correctionWordCount = leadingCodeCaseArgumentWordCount(in: correctionTokens.map { $0.text }) else {
+            return nil
+        }
+
+        let correctionRange = correctionTokens[0].range.lowerBound..<correctionTokens[correctionWordCount - 1].range.upperBound
+        return (correctionRange, correctionWordCount, sourceTail.argumentWordCount, nil)
+    }
+
+    private static func trailingSpokenCodeCaseTail(in text: String) -> SpokenCodeCaseTail? {
+        let words = wordTokens(in: text).map { $0.text }
+        guard words.count >= 3 else { return nil }
+
+        let maxCandidateCount = min(7, words.count)
+        for wordCount in stride(from: maxCandidateCount, through: 3, by: -1) {
+            let candidate = Array(words.suffix(wordCount))
+            guard let styleWordCount = leadingCodeCaseStyleWordCount(in: candidate),
+                  candidate.count > styleWordCount else {
+                continue
+            }
+
+            let argumentWords = Array(candidate.dropFirst(styleWordCount))
+            guard isCodeCaseArgumentWords(argumentWords) else {
+                continue
+            }
+
+            return SpokenCodeCaseTail(argumentWordCount: argumentWords.count)
+        }
+
+        return nil
+    }
+
+    private static func leadingCodeCaseArgumentWordCount(in words: [String]) -> Int? {
+        let maxArgumentWordCount = min(5, words.count)
+        for wordCount in stride(from: maxArgumentWordCount, through: 1, by: -1) {
+            let candidate = Array(words.prefix(wordCount))
+            guard isCodeCaseArgumentWords(candidate) else { continue }
+            return wordCount
+        }
+
+        return nil
+    }
+
+    private static func leadingCodeCaseStyleWordCount(in words: [String]) -> Int? {
+        guard words.count >= 2,
+              words[1] == "case" else {
+            return nil
+        }
+
+        if ["camel", "snake", "pascal"].contains(words[0]) {
+            return 2
+        }
+
+        if ["kebab", "dash", "hyphen"].contains(words[0]) {
+            return 2
+        }
+
+        return nil
+    }
+
+    private static func isCodeCaseArgumentWords(_ words: [String]) -> Bool {
+        guard let firstWord = words.first,
+              !blockedFirstWordsForSpokenCodeCase.contains(firstWord),
+              words.count <= 5 else {
+            return false
+        }
+
+        return words.allSatisfy { word in
+            !["for", "from", "in", "into", "on", "to", "with"].contains(word)
+        }
     }
 
     private static func wordTokens(in text: String, range searchRange: Range<String.Index>? = nil) -> [WordToken] {

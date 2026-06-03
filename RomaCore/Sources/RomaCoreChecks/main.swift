@@ -1137,6 +1137,26 @@ struct RomaCoreChecks {
                 "wait no correction should replace spoken identifier suffix"
             ),
             (
+                "Use camel case user id wait no account id.",
+                "Use accountId.",
+                "wait no correction should replace camel case argument"
+            ),
+            (
+                "Set variable snake case user id wait no account id.",
+                "Set variable account_id.",
+                "wait no correction should replace snake case argument"
+            ),
+            (
+                "Use kebab case user id wait no account id.",
+                "Use account-id.",
+                "wait no correction should replace kebab case argument"
+            ),
+            (
+                "Use pascal case user profile wait no account owner.",
+                "Use AccountOwner.",
+                "wait no correction should replace pascal case argument"
+            ),
+            (
                 "Use model, oops module.",
                 "Use module.",
                 "oops correction"

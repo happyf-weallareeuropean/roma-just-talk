@@ -2,6 +2,7 @@
 
 ## v1.81 - Unreleased
 
+- Replaced spoken code-case command arguments during self-corrections such as "camel case user id wait no account id".
 - Preserved compact-token prefixes during connector-led self-corrections such as "docs dot example dot com wait no dot org".
 - Replaced whole spoken compact tokens during self-corrections such as "docs dot example dot com wait no app dot example dot com".
 - Preserved currency and percent units during decimal amount self-corrections such as "nineteen point nine nine dollars wait no twenty".
