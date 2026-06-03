@@ -202,6 +202,15 @@ struct RomaCoreChecks {
             "shared insertion polish should lowercase mid-sentence fragments"
         )
         try require(
+            RomaTranscriptionOutputFilter.applyInsertionPolish("Felix.", context: midSentenceContext) == "Felix",
+            "shared insertion polish should preserve proper-name mid-sentence fragments"
+        )
+        try require(
+            RomaTranscriptionOutputFilter.applyInsertionPolish("Felix is ready.", context: midSentenceContext) ==
+                "Felix is ready",
+            "shared insertion polish should preserve proper-name mid-sentence phrase starts"
+        )
+        try require(
             RomaTranscriptionOutputFilter.applyInsertionPolish("Model!", context: midSentenceContext) == "model",
             "shared insertion polish should remove noisy exclamation marks from mid-sentence fragments"
         )
@@ -3219,6 +3228,46 @@ struct RomaCoreChecks {
         try require(
             await midSentenceInserter.pastedText == " model",
             "pipeline should paste mid-sentence polished text"
+        )
+
+        let properNameReplacementRecorder = FakeRecorder()
+        let properNameReplacementInserter = FakeTextInsertion()
+        let properNameReplacementPipeline = DictationPipeline(
+            recorder: properNameReplacementRecorder,
+            transcriptionService: FakeTranscriptionService(
+                expectedFileName: "proper-name-replacement-proof.wav",
+                text: "felix."
+            ),
+            textInsertion: properNameReplacementInserter
+        )
+        let properNameReplacementRequest = DictationPipelineRequest(
+            outputURL: URL(fileURLWithPath: "/tmp/proper-name-replacement-proof.wav"),
+            model: model,
+            shouldInsertTranscription: true,
+            textProcessing: DictationTextProcessingConfiguration(
+                wordReplacements: [
+                    RomaWordReplacementRule(originalText: "felix", replacementText: "Felix")
+                ],
+                insertionContext: TextInsertionContext(precedingText: "I met")
+            )
+        )
+
+        try await properNameReplacementRecorder.startPreRollBuffering()
+        let properNameReplacementResult = try await properNameReplacementPipeline.runRecordingWindow(
+            properNameReplacementRequest
+        ) {}
+
+        try require(
+            properNameReplacementResult.processedText == " Felix",
+            "pipeline should preserve proper-name replacement casing during mid-sentence polish"
+        )
+        try require(
+            properNameReplacementResult.session.insertedText == " Felix",
+            "pipeline session should store proper-name replacement casing"
+        )
+        try require(
+            await properNameReplacementInserter.pastedText == " Felix",
+            "pipeline should paste proper-name replacement casing"
         )
 
         let selectedReplacementRecorder = FakeRecorder()

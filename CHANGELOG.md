@@ -2,6 +2,7 @@
 
 ## v1.81 - Unreleased
 
+- Preserved proper-name casing from word replacements during mid-sentence insertion polish.
 - Replaced spoken text-case command arguments during self-corrections such as "title case weekly report wait no release notes".
 - Replaced spoken markdown link labels and targets during self-corrections such as "markdown link docs to example dot com wait no guide".
 - Replaced spoken markdown command arguments during self-corrections such as "heading two roadmap wait no release notes".
