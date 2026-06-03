@@ -2341,11 +2341,26 @@ struct RomaCoreChecks {
             "insertion polish should attach standalone em dash commands"
         )
         try require(
+            RomaTranscriptionOutputFilter.applyInsertionPolish("M-dash.", context: midSentenceContext) == " —",
+            "insertion polish should attach standalone hyphenated m-dash commands"
+        )
+        try require(
+            RomaTranscriptionOutputFilter.applyInsertionPolish("Emdash.", context: midSentenceContext) == " —",
+            "insertion polish should attach standalone compact emdash commands"
+        )
+        try require(
             RomaTranscriptionOutputFilter.applyInsertionPolish(
                 "Ellipsis.",
                 context: RomaTranscriptionOutputFilter.TextInsertionContext(precedingText: "Done. ")
             ) == "Ellipsis",
             "insertion polish should not attach standalone ellipsis at sentence start"
+        )
+        try require(
+            RomaTranscriptionOutputFilter.applyInsertionPolish(
+                "M-dash.",
+                context: RomaTranscriptionOutputFilter.TextInsertionContext(precedingText: "Done. ")
+            ) == "M-dash.",
+            "insertion polish should not attach standalone m-dash at sentence start"
         )
         try require(
             RomaTranscriptionOutputFilter.applyInsertionPolish("Comma.", context: closingSmartQuoteContext) == ",",
