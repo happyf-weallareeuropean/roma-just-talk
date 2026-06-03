@@ -333,6 +333,26 @@ struct RomaCoreChecks {
                 "leading like filler"
             ),
             (
+                "Okay so this works.",
+                "this works.",
+                "leading okay so filler"
+            ),
+            (
+                "All right, so this works.",
+                "this works.",
+                "leading all right so filler"
+            ),
+            (
+                "Right so this works.",
+                "this works.",
+                "leading right so filler"
+            ),
+            (
+                "Yeah, so this works.",
+                "this works.",
+                "leading yeah so filler"
+            ),
+            (
                 "This works you know.",
                 "This works.",
                 "terminal discourse filler"
@@ -806,6 +826,16 @@ struct RomaCoreChecks {
                 "I mean business.",
                 "I mean business.",
                 "leading i mean prose guard"
+            ),
+            (
+                "Okay, this works.",
+                "Okay, this works.",
+                "okay prose guard"
+            ),
+            (
+                "Right, this works.",
+                "Right, this works.",
+                "right prose guard"
             ),
             (
                 "Do you know what I mean?",

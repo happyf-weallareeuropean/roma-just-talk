@@ -249,6 +249,7 @@ public struct RomaTranscriptionOutputFilter {
         (#"(?i)[,;:…]\s+(?:you\s+know|like)[,;:…]+(?=\s)"#, " ")
     ]
     private static let leadingDiscourseFillerPatterns: [(pattern: String, replacement: String)] = [
+        (#"(?i)^\s*(?:ok(?:ay)?|all\s+right|alright|right|yeah)[,;:…]*[ \t]+so[,;:…]*[ \t]+"#, ""),
         (#"(?i)^\s*(?:you\s+know|i\s+mean|like)[,;:…]+[ \t]*"#, "")
     ]
     private static let standaloneDiscourseFillerPattern = #"(?i)^\s*you[ \t]+know(?:[ \t]+what[ \t]+i[ \t]+mean)?[ \t]*[.,;:…]*\s*$"#
