@@ -593,6 +593,11 @@ struct RomaCoreChecks {
                 "make that correction"
             ),
             (
+                "Use model, call it module.",
+                "Use module.",
+                "call it correction"
+            ),
+            (
                 "Set color blue, sorry red.",
                 "Set color red.",
                 "sorry correction"
@@ -1256,6 +1261,16 @@ struct RomaCoreChecks {
                 "We can make that work.",
                 "We can make that work.",
                 "make that clause prose guard"
+            ),
+            (
+                "Please call it module.",
+                "Please call it module.",
+                "call it prose guard"
+            ),
+            (
+                "We can call it done.",
+                "We can call it done.",
+                "call it clause prose guard"
             ),
             (
                 "This, however, works.",

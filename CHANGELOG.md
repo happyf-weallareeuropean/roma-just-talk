@@ -2,6 +2,7 @@
 
 ## v1.81 - Unreleased
 
+- Added bounded "call it..." self-correction cleanup for phrases such as "Use model, call it module.".
 - Added bounded "I should say..." self-correction cleanup for phrases such as "Use model, I should say module.".
 - Added bounded "make that..." self-correction cleanup for phrases such as "Use model, make that module.".
 - Added bounded "I meant..." self-correction cleanup for phrases such as "Use model, I meant module.".

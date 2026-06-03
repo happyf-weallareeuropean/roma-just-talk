@@ -346,6 +346,7 @@ public struct RomaTranscriptionOutputFilter {
             (?:[,;:…]|\.\.\.)\s*i\s+meant\s*[,;:]? |
             (?:[,;:…]|\.\.\.)\s*i\s+should\s+say\s*[,;:]? |
             (?:[,;:…]|\.\.\.)\s*make\s+that\s*[,;:]? |
+            (?:[,;:…]|\.\.\.)\s*call\s+it\s*[,;:]? |
             replace\s+that\s+with |
             change\s+that\s+to |
             scratch\s+that |
