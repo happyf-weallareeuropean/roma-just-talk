@@ -152,6 +152,11 @@ public struct RomaTranscriptionOutputFilter {
         let argumentWordCount: Int
     }
 
+    private struct SpokenTextCaseTail {
+        let wordCount: Int
+        let style: SpokenTextCaseStyle
+    }
+
     private enum SpokenMarkdownCommandKind {
         case line
         case inlineCode
@@ -3459,6 +3464,14 @@ public struct RomaTranscriptionOutputFilter {
             return amountCorrection
         }
 
+        if let textCaseCorrection = boundedSpokenTextCaseCorrection(
+            beforeMarker: beforeMarker,
+            correctionTokens: correctionTokens,
+            in: text
+        ) {
+            return textCaseCorrection
+        }
+
         if let codeCaseCorrection = boundedSpokenCodeCaseCorrection(
             beforeMarker: beforeMarker,
             correctionTokens: correctionTokens
@@ -3560,6 +3573,131 @@ public struct RomaTranscriptionOutputFilter {
         }
 
         return words.reversed()
+    }
+
+    private static func boundedSpokenTextCaseCorrection(
+        beforeMarker: String,
+        correctionTokens: [WordToken],
+        in text: String
+    ) -> (
+        range: Range<String.Index>,
+        wordCount: Int,
+        removalWordCount: Int,
+        replacementText: String?
+    )? {
+        guard let sourceTail = trailingSpokenTextCaseTail(in: beforeMarker),
+              let correctionWordCount = leadingTextCaseArgumentWordCount(in: correctionTokens.map { $0.text }) else {
+            return nil
+        }
+
+        let correctionRange = correctionTokens[0].range.lowerBound..<correctionTokens[correctionWordCount - 1].range.upperBound
+        let replacement = formatSpokenTextCasePhrase(String(text[correctionRange]), style: sourceTail.style)
+        return (correctionRange, correctionWordCount, sourceTail.wordCount, replacement)
+    }
+
+    private static func trailingSpokenTextCaseTail(in text: String) -> SpokenTextCaseTail? {
+        let tokens = wordTokens(in: text)
+        guard tokens.count >= 2 else { return nil }
+
+        let maxCandidateCount = min(7, tokens.count)
+        for wordCount in stride(from: maxCandidateCount, through: 2, by: -1) {
+            let candidateTokens = Array(tokens.suffix(wordCount))
+            let candidateWords = candidateTokens.map { $0.text }
+            guard let style = leadingTextCaseStyle(in: candidateWords),
+                  candidateWords.count > style.wordCount,
+                  shouldUseSpokenTextCaseCommandTail(
+                    in: text,
+                    commandStart: candidateTokens[0].range.lowerBound
+                  ) else {
+                continue
+            }
+
+            let argumentWords = Array(candidateWords.dropFirst(style.wordCount))
+            guard isTextCaseArgumentWords(argumentWords) else {
+                continue
+            }
+
+            return SpokenTextCaseTail(wordCount: wordCount, style: style.style)
+        }
+
+        return nil
+    }
+
+    private static func leadingTextCaseArgumentWordCount(in words: [String]) -> Int? {
+        var maxArgumentWordCount = min(5, words.count)
+        while maxArgumentWordCount > 1,
+              isCommandArgumentContinuationWord(words[maxArgumentWordCount - 1]) {
+            maxArgumentWordCount -= 1
+        }
+
+        for wordCount in stride(from: maxArgumentWordCount, through: 1, by: -1) {
+            let candidate = Array(words.prefix(wordCount))
+            guard isTextCaseArgumentWords(candidate) else { continue }
+            return wordCount
+        }
+
+        return nil
+    }
+
+    private static func leadingTextCaseStyle(in words: [String]) -> (wordCount: Int, style: SpokenTextCaseStyle)? {
+        guard let firstWord = words.first else { return nil }
+
+        switch firstWord {
+        case "uppercase":
+            return (1, .allCaps)
+        case "upper" where words.count >= 2 && words[1] == "case":
+            return (2, .allCaps)
+        case "all" where words.count >= 2 && words[1] == "caps":
+            return (2, .allCaps)
+        case "lowercase":
+            return (1, .lowercase)
+        case "lower" where words.count >= 2 && words[1] == "case":
+            return (2, .lowercase)
+        case "capitalize", "capitalise":
+            return (1, .capitalize)
+        case "title" where words.count >= 2 && words[1] == "case":
+            return (2, .title)
+        default:
+            return nil
+        }
+    }
+
+    private static func shouldUseSpokenTextCaseCommandTail(
+        in text: String,
+        commandStart: String.Index
+    ) -> Bool {
+        let beforeCommand = String(text[..<commandStart])
+            .trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !beforeCommand.isEmpty else {
+            return true
+        }
+
+        if let previousCharacter = beforeCommand.last,
+           ".!?([{:\n".contains(previousCharacter) {
+            return true
+        }
+
+        guard let previousWord = previousWord(in: beforeCommand) else {
+            return false
+        }
+
+        return allowedPreviousWordsForSpokenTextCase.contains(previousWord)
+    }
+
+    private static func isTextCaseArgumentWords(_ words: [String]) -> Bool {
+        guard let firstWord = words.first,
+              !blockedFirstWordsForSpokenTextCase.contains(firstWord),
+              words.count <= 5 else {
+            return false
+        }
+
+        return words.allSatisfy { word in
+            !["for", "from", "in", "into", "is", "means", "on", "to", "with"].contains(word)
+        }
+    }
+
+    private static func isCommandArgumentContinuationWord(_ word: String) -> Bool {
+        ["again", "later", "now", "please", "today", "tomorrow"].contains(word)
     }
 
     private static func boundedSpokenCodeCaseCorrection(

@@ -1157,6 +1157,26 @@ struct RomaCoreChecks {
                 "wait no correction should replace pascal case argument"
             ),
             (
+                "Use title case weekly report wait no release notes.",
+                "Use Release Notes.",
+                "wait no correction should replace title case argument"
+            ),
+            (
+                "Use all caps urgent wait no high priority now.",
+                "Use HIGH PRIORITY now.",
+                "wait no correction should replace all caps argument"
+            ),
+            (
+                "Use lowercase VoiceInk wait no ROMA today.",
+                "Use roma today.",
+                "wait no correction should replace lowercase argument"
+            ),
+            (
+                "Use capitalize felix wait no roma tomorrow.",
+                "Use Roma tomorrow.",
+                "wait no correction should replace capitalize argument"
+            ),
+            (
                 "Heading two roadmap wait no release notes.",
                 "## release notes",
                 "wait no correction should replace markdown heading argument"
