@@ -692,6 +692,7 @@ public struct RomaTranscriptionOutputFilter {
         filteredText = applySpokenMarkdownCommands(in: filteredText)
         if cleanupLevel == .polished {
             filteredText = collapseAdjacentRepeatedWords(in: filteredText)
+            filteredText = collapseSeparatorRepeatedWords(in: filteredText)
             filteredText = collapseRepeatedShortPhrases(in: filteredText)
             filteredText = collapseRepeatedShortClauses(in: filteredText)
             filteredText = collapseRepeatedShortSentences(in: filteredText)
@@ -3656,6 +3657,46 @@ public struct RomaTranscriptionOutputFilter {
         }
 
         return removingTrailingRepeatSeparator(from: previousToken)
+    }
+
+    private static func collapseSeparatorRepeatedWords(in text: String) -> String {
+        guard let regex = try? NSRegularExpression(
+            pattern: #"(?i)(?<![\p{L}\p{N}])([\p{L}\p{N}][\p{L}\p{N}'’ʼ-]{0,63})[ \t]+(?:[,;:…–—-]|\.\.\.)+[ \t]+\1(?=[ \t]+[\p{L}\p{N}]|[.!?,;:…]|\s*$)"#
+        ) else {
+            return text
+        }
+
+        var collapsedText = text
+        var rewriteCount = 0
+
+        while rewriteCount < 4 {
+            let range = NSRange(collapsedText.startIndex..., in: collapsedText)
+            let matches = regex.matches(in: collapsedText, range: range).reversed()
+            var didRewrite = false
+
+            for match in matches {
+                guard match.numberOfRanges >= 2,
+                      let fullRange = Range(match.range(at: 0), in: collapsedText),
+                      let wordRange = Range(match.range(at: 1), in: collapsedText) else {
+                    continue
+                }
+
+                let word = String(collapsedText[wordRange])
+                let normalizedWord = word.lowercased()
+                guard (normalizedWord.count > 1 || normalizedWord == "i"),
+                      !preservedRepeatedWords.contains(normalizedWord) else {
+                    continue
+                }
+
+                collapsedText.replaceSubrange(fullRange, with: word)
+                didRewrite = true
+            }
+
+            guard didRewrite else { break }
+            rewriteCount += 1
+        }
+
+        return collapsedText
     }
 
     private static func hasTrailingSentencePunctuation(_ token: String) -> Bool {

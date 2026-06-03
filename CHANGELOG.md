@@ -2,6 +2,7 @@
 
 ## v1.81 - Unreleased
 
+- Collapsed stuttered separator repeats such as "I - I think" while preserving intentional repeats and single-letter prose.
 - Removed orphaned leading dash/colon separators left after leading pause fillers such as "hmm —".
 - Removed stale comma/ellipsis punctuation when collapsing repeated words such as "I, I think".
 - Preserved article replacement intent when both old and new self-correction phrases include articles, such as "the model" to "a module".

@@ -323,6 +323,26 @@ struct RomaCoreChecks {
                 "preserved punctuated repeated word"
             ),
             (
+                "I - I think this works.",
+                "I think this works.",
+                "separator repeated pronoun"
+            ),
+            (
+                "This — this works.",
+                "This works.",
+                "dash separated repeated word"
+            ),
+            (
+                "x - x is zero.",
+                "x - x is zero.",
+                "single-letter separator repeat guard"
+            ),
+            (
+                "No - no, this is wrong.",
+                "No - no, this is wrong.",
+                "preserved separator repeated word"
+            ),
+            (
                 "mm-hmm... uh-huh, I think so.",
                 "I think so.",
                 "hyphenated pause sounds"

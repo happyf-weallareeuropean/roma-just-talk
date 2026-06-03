@@ -250,6 +250,10 @@ struct TranscriptionOutputFilterTests {
         #expect(TranscriptionOutputFilter.filter("I, I think this works.") == "I think this works.")
         #expect(TranscriptionOutputFilter.filter("This this.") == "This.")
         #expect(TranscriptionOutputFilter.filter("No, no, this is wrong.") == "No, no, this is wrong.")
+        #expect(TranscriptionOutputFilter.filter("I - I think this works.") == "I think this works.")
+        #expect(TranscriptionOutputFilter.filter("This — this works.") == "This works.")
+        #expect(TranscriptionOutputFilter.filter("x - x is zero.") == "x - x is zero.")
+        #expect(TranscriptionOutputFilter.filter("No - no, this is wrong.") == "No - no, this is wrong.")
         #expect(TranscriptionOutputFilter.filter("I think this works, I think this works.") == "I think this works.")
     }
 
