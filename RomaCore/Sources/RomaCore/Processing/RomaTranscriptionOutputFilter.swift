@@ -3969,7 +3969,7 @@ public struct RomaTranscriptionOutputFilter {
 
     private static func collapseRepeatedShortPhrases(in text: String) -> String {
         guard let regex = try? NSRegularExpression(
-            pattern: #"(?i)(^|(?<=[.!?])\s+|\n)((?:[^\s,;:.!?\n]+[ \t]+){1,4}[^\s,;:.!?\n]+)[ \t]+\2(?=[ \t]+[^\s,;:.!?\n]+|[.!?]|\s*$)"#
+            pattern: #"(?i)(^|(?<=[.!?])\s+|\n|(?<=[ \t]))((?:[^\s,;:.!?\n]+[ \t]+){1,4}[^\s,;:.!?\n]+)[ \t]+\2(?=[ \t]+[^\s,;:.!?\n]+|[.!?]|\s*$)"#
         ) else {
             return text
         }
@@ -4013,7 +4013,7 @@ public struct RomaTranscriptionOutputFilter {
 
     private static func collapseRepeatedShortClauses(in text: String) -> String {
         guard let regex = try? NSRegularExpression(
-            pattern: #"(?i)(^|(?<=[.!?])\s+|\n)([^,;:.!?\n]{5,120}?)[ \t]*[,;:][ \t]+\2(?=[.!?]|\s|$)"#
+            pattern: #"(?i)(^|(?<=[.!?])\s+|\n|(?<=[ \t]))([^,;:.!?\n]{5,120}?)[ \t]*[,;:][ \t]+\2(?=[.!?]|\s|$)"#
         ) else {
             return text
         }

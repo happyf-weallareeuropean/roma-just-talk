@@ -863,6 +863,16 @@ struct RomaCoreChecks {
                 "repeated short phrase"
             ),
             (
+                "I think we should ship we should ship this.",
+                "I think we should ship this.",
+                "inline repeated short phrase"
+            ),
+            (
+                "I think this is, this is ready.",
+                "I think this is ready.",
+                "inline comma repeated short phrase"
+            ),
+            (
                 "Let's meet at two, wait no, three.",
                 "Let's meet at three.",
                 "wait no correction"
@@ -1806,6 +1816,16 @@ struct RomaCoreChecks {
                 "New York New York is the title.",
                 "New York New York is the title.",
                 "intentional repeated phrase guard"
+            ),
+            (
+                "I saw New York New York in the title.",
+                "I saw New York New York in the title.",
+                "inline intentional repeated phrase guard"
+            ),
+            (
+                "He said I know, I know.",
+                "He said I know, I know.",
+                "inline intentional repeated clause guard"
             ),
             (
                 "Use dot notation.",
