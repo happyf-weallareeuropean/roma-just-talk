@@ -1280,6 +1280,27 @@ struct RomaCoreChecks {
             "insertion polish should lowercase final mid-sentence word"
         )
         try require(
+            RomaTranscriptionOutputFilter.applyInsertionPolish(
+                "Model is actually ready.",
+                context: midSentenceContext
+            ) == "model is actually ready",
+            "insertion polish should strip auto period from longer mid-sentence fragments"
+        )
+        try require(
+            RomaTranscriptionOutputFilter.applyInsertionPolish(
+                "Model is actually ready!",
+                context: midSentenceContext
+            ) == "model is actually ready!",
+            "insertion polish should preserve explicit emphatic mid-sentence fragments"
+        )
+        try require(
+            RomaTranscriptionOutputFilter.applyInsertionPolish(
+                "First sentence. Second sentence.",
+                context: midSentenceContext
+            ) == "first sentence. Second sentence.",
+            "insertion polish should preserve trailing period on multi-sentence mid-sentence text"
+        )
+        try require(
             RomaTranscriptionOutputFilter.applyInsertionPolish("[Model.]", context: nil) == "model",
             "insertion polish should unwrap bracketed final fragments"
         )
@@ -1312,6 +1333,11 @@ struct RomaCoreChecks {
             "insertion polish should preserve no-context full sentence capitalization"
         )
         try require(
+            RomaTranscriptionOutputFilter.applyInsertionPolish("Model is actually ready.", context: nil) ==
+                "Model is actually ready.",
+            "insertion polish should preserve no-context longer sentence punctuation"
+        )
+        try require(
             RomaTranscriptionOutputFilter.applyInsertionPolish("... This is good.", context: nil) == "This is good.",
             "insertion polish should strip leading pause ellipsis from full sentences"
         )
@@ -1325,6 +1351,13 @@ struct RomaCoreChecks {
                 context: RomaTranscriptionOutputFilter.TextInsertionContext(precedingText: "Done. ")
             ) == "This is good.",
             "insertion polish should preserve sentence-start full sentence punctuation"
+        )
+        try require(
+            RomaTranscriptionOutputFilter.applyInsertionPolish(
+                "Model is actually ready.",
+                context: RomaTranscriptionOutputFilter.TextInsertionContext(precedingText: "Done. ")
+            ) == "Model is actually ready.",
+            "insertion polish should preserve longer sentence-start punctuation"
         )
         try require(
             RomaTranscriptionOutputFilter.applyInsertionPolish("Question mark.", context: midSentenceContext) == "?",

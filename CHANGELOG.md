@@ -2,6 +2,7 @@
 
 ## v1.81 - Unreleased
 
+- Stripped auto-added trailing periods from longer mid-sentence fragments while preserving sentence-start punctuation.
 - Stripped noisy terminal punctuation from short whole-bracket final phrases such as "[A final word.]".
 - Removed standalone bracketed ASR artifacts and speaker labels such as "[blank_audio]" and "[speaker 1]".
 - Normalized bracketed ASR labels with underscores or hyphens, such as "[blank_audio]" and "[keyboard-typing]".

@@ -801,6 +801,7 @@ public struct RomaTranscriptionOutputFilter {
             guard isContinuingSentence(after: context.precedingText) else {
                 return polishedText
             }
+            polishedText = removeTrailingContinuationPeriod(from: polishedText)
             return lowercaseInitialWordIfSafe(in: polishedText, force: true)
         }
 
@@ -3821,6 +3822,31 @@ public struct RomaTranscriptionOutputFilter {
             result.removeLast()
         }
         return result.trimmingCharacters(in: .whitespacesAndNewlines)
+    }
+
+    private static func removeTrailingContinuationPeriod(from text: String) -> String {
+        let result = text.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard result.last == ".",
+              !result.hasSuffix("...") else {
+            return text
+        }
+
+        let withoutFinalPeriod = String(result.dropLast()).trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !withoutFinalPeriod.isEmpty,
+              !hasInternalSentenceBoundary(withoutFinalPeriod) else {
+            return text
+        }
+
+        return withoutFinalPeriod
+    }
+
+    private static func hasInternalSentenceBoundary(_ text: String) -> Bool {
+        guard let regex = try? NSRegularExpression(pattern: #"[.!?]\s+"#) else {
+            return false
+        }
+
+        let range = NSRange(text.startIndex..., in: text)
+        return regex.firstMatch(in: text, range: range) != nil
     }
 
     private static func removeTrailingSpacedFragmentSymbols(from text: String) -> String {
