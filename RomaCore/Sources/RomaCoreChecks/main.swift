@@ -202,6 +202,18 @@ struct RomaCoreChecks {
             "shared insertion polish should lowercase mid-sentence fragments"
         )
         try require(
+            RomaTranscriptionOutputFilter.applyInsertionPolish("Model!", context: midSentenceContext) == "model",
+            "shared insertion polish should remove noisy exclamation marks from mid-sentence fragments"
+        )
+        try require(
+            RomaTranscriptionOutputFilter.applyInsertionPolish("Model?", context: midSentenceContext) == "model",
+            "shared insertion polish should remove noisy question marks from mid-sentence fragments"
+        )
+        try require(
+            RomaTranscriptionOutputFilter.applyInsertionPolish("What?", context: midSentenceContext) == "what?",
+            "shared insertion polish should preserve one-word question fragments"
+        )
+        try require(
             RomaTranscriptionOutputFilter.applyInsertionSpacing("model", context: midSentenceContext) == " model",
             "shared insertion spacing should add a leading space after words"
         )
@@ -429,6 +441,10 @@ struct RomaCoreChecks {
         try require(
             RomaTranscriptionOutputFilter.applyInsertionPolish("[Model.]", context: nil) == "model",
             "insertion polish should unwrap bracketed final fragments"
+        )
+        try require(
+            RomaTranscriptionOutputFilter.applyInsertionPolish("[Model!]", context: nil) == "model",
+            "insertion polish should strip noisy punctuation from bracketed final fragments"
         )
         try require(
             RomaTranscriptionOutputFilter.applyInsertionPolish("Question mark.", context: midSentenceContext) == "?",

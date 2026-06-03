@@ -137,6 +137,7 @@ public struct RomaTranscriptionOutputFilter {
     private static let maxInsertionContextCharacters = 512
     private static let apostropheLikeCharacters = CharacterSet(charactersIn: "'’‘ʼ＇")
     private static let removableTrailingFragmentPunctuation = CharacterSet(charactersIn: ".,;:…")
+    private static let removableTrailingSentenceFragmentPunctuation = CharacterSet(charactersIn: "!?")
     private static let nonSpeechBracketContents: Set<String> = [
         "applause", "background noise", "inaudible", "laughter", "laughs",
         "music", "noise", "silence", "sound", "static"
@@ -176,6 +177,9 @@ public struct RomaTranscriptionOutputFilter {
         "so", "some", "that", "the", "then", "there", "this", "to", "use", "was",
         "we", "what", "when", "where", "which", "will", "with", "work", "would",
         "yeah", "you"
+    ]
+    private static let preservedSingleWordQuestionFragments: Set<String> = [
+        "how", "what", "when", "where", "which", "who", "why"
     ]
     
     private static let nonSpeechBracketPatterns = [
@@ -559,7 +563,7 @@ public struct RomaTranscriptionOutputFilter {
 
         let shouldTreatAsFragment = isShortFragment(polishedText)
         if shouldTreatAsFragment {
-            polishedText = removeTrailingFragmentPunctuation(from: polishedText)
+            polishedText = removeTrailingShortFragmentPunctuation(from: polishedText)
         }
 
         if let context,
@@ -2797,13 +2801,42 @@ public struct RomaTranscriptionOutputFilter {
         return result
     }
 
+    private static func removeTrailingShortFragmentPunctuation(from text: String) -> String {
+        var result = removeTrailingFragmentPunctuation(from: text)
+        while let lastScalar = result.unicodeScalars.last,
+              removableTrailingSentenceFragmentPunctuation.contains(lastScalar),
+              isLikelyPunctuatedShortFragment(result) {
+            result.removeLast()
+        }
+        return result
+    }
+
     private static func isShortFragment(_ text: String) -> Bool {
         let sentencePunctuation = CharacterSet(charactersIn: "!?")
         if text.unicodeScalars.contains(where: { sentencePunctuation.contains($0) }) {
-            return false
+            return isLikelyPunctuatedShortFragment(text)
         }
 
         return wordCount(in: text) <= 3
+    }
+
+    private static func isLikelyPunctuatedShortFragment(_ text: String) -> Bool {
+        let trimmedText = text.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard let lastScalar = trimmedText.unicodeScalars.last,
+              removableTrailingSentenceFragmentPunctuation.contains(lastScalar) else {
+            return false
+        }
+
+        let baseText = trimmedText.trimmingCharacters(
+            in: removableTrailingSentenceFragmentPunctuation.union(.whitespacesAndNewlines)
+        )
+        guard wordCount(in: baseText) == 1 else { return false }
+
+        let normalizedText = normalizedRepeatedClause(baseText)
+        guard !preservedSingleWordQuestionFragments.contains(normalizedText) else {
+            return false
+        }
+        return likelyLowercaseFragments.contains(normalizedText)
     }
 
     private static func wordCount(in text: String) -> Int {
