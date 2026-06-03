@@ -2,6 +2,7 @@
 
 ## v1.81 - Unreleased
 
+- Added bounded "replace it with" and "change it to" cleanup with guards for ordinary command prose.
 - Added bounded ", instead..." self-correction cleanup while preserving "instead of" prose.
 - Collapsed stuttered separator repeats such as "I - I think" while preserving intentional repeats and single-letter prose.
 - Removed orphaned leading dash/colon separators left after leading pause fillers such as "hmm —".

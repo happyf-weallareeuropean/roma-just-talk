@@ -643,9 +643,19 @@ struct RomaCoreChecks {
                 "replace that with correction"
             ),
             (
+                "Use model replace it with module.",
+                "Use module.",
+                "replace it with correction"
+            ),
+            (
                 "Use model replace that with a module.",
                 "Use a module.",
                 "replace that with article correction"
+            ),
+            (
+                "Set color blue change it to red.",
+                "Set color red.",
+                "change it to correction"
             ),
             (
                 "Use the model replace that with a module.",
@@ -671,6 +681,11 @@ struct RomaCoreChecks {
                 "Use the old model replace that with the new module.",
                 "Use the new module.",
                 "replace article phrase with definite article correction"
+            ),
+            (
+                "Use the old model replace it with the new module.",
+                "Use the new module.",
+                "replace it article phrase with definite article correction"
             ),
             (
                 "Use model, sorry I mean module.",
@@ -1098,9 +1113,34 @@ struct RomaCoreChecks {
                 "replace command prose guard"
             ),
             (
+                "The phrase replace it with is useful.",
+                "The phrase replace it with is useful.",
+                "replace it command prose guard"
+            ),
+            (
                 "The command change that to is useful.",
                 "The command change that to is useful.",
                 "change command prose guard"
+            ),
+            (
+                "The command change it to is useful.",
+                "The command change it to is useful.",
+                "change it command prose guard"
+            ),
+            (
+                "Please change that to red.",
+                "Please change that to red.",
+                "single-prefix change that prose guard"
+            ),
+            (
+                "Please change it to red.",
+                "Please change it to red.",
+                "single-prefix change it prose guard"
+            ),
+            (
+                "Please replace it with red.",
+                "Please replace it with red.",
+                "single-prefix replace it prose guard"
             ),
             (
                 "Delete that file.",

@@ -349,8 +349,8 @@ public struct RomaTranscriptionOutputFilter {
             (?:[,;:…]|\.\.\.)\s*i\s+should\s+say\s*[,;:]? |
             (?:[,;:…]|\.\.\.)\s*make\s+that\s*[,;:]? |
             (?:[,;:…]|\.\.\.)\s*call\s+it\s*[,;:]? |
-            replace\s+that\s+with |
-            change\s+that\s+to |
+            replace\s+(?:that|it)\s+with |
+            change\s+(?:that|it)\s+to |
             scratch\s+that |
             wait\s+no |
             (?:[,;:…]|\.\.\.)\s*no\s*[,;:]?\s+wait\s*[,;:]? |
@@ -3118,8 +3118,12 @@ public struct RomaTranscriptionOutputFilter {
         beforeMarker: String,
         correctionText: String
     ) -> Bool {
-        guard isReplaceThatBacktrackingMarker(markerText) else {
+        guard isReplaceOrChangeBacktrackingMarker(markerText) else {
             return true
+        }
+
+        guard wordCount(in: beforeMarker) >= 2 else {
+            return false
         }
 
         if let previousWord = previousWord(in: beforeMarker),
@@ -3135,11 +3139,16 @@ public struct RomaTranscriptionOutputFilter {
         return true
     }
 
-    private static func isReplaceThatBacktrackingMarker(_ markerText: String) -> Bool {
+    private static func isReplaceOrChangeBacktrackingMarker(_ markerText: String) -> Bool {
         let normalizedMarker = normalizeWhitespace(markerText)
             .trimmingCharacters(in: CharacterSet(charactersIn: ",;: "))
             .lowercased()
-        return normalizedMarker == "replace that with" || normalizedMarker == "change that to"
+        return [
+            "replace that with",
+            "replace it with",
+            "change that to",
+            "change it to"
+        ].contains(normalizedMarker)
     }
 
     private static func applyScratchThatCommands(in text: String) -> String {
