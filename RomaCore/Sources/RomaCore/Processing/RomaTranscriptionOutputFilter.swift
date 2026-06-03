@@ -4518,7 +4518,7 @@ public struct RomaTranscriptionOutputFilter {
             return false
         }
 
-        let noLeadingSpaceBefore = CharacterSet(charactersIn: ".,;:!?)]}/\\-")
+        let noLeadingSpaceBefore = CharacterSet(charactersIn: ".,;:!?)]}”’/\\-")
         if firstCharacter.unicodeScalars.allSatisfy({ noLeadingSpaceBefore.contains($0) }) {
             return false
         }

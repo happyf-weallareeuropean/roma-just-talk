@@ -2162,6 +2162,7 @@ struct RomaCoreChecks {
         )
 
         let midSentenceContext = RomaTranscriptionOutputFilter.TextInsertionContext(precedingText: "...so this")
+        let wordContext = RomaTranscriptionOutputFilter.TextInsertionContext(precedingText: "Use")
         let openSmartQuoteContext = RomaTranscriptionOutputFilter.TextInsertionContext(precedingText: "She said “")
         let closingSmartQuoteContext = RomaTranscriptionOutputFilter.TextInsertionContext(precedingText: "She said “hello”")
         let closingSmartSingleQuoteContext = RomaTranscriptionOutputFilter.TextInsertionContext(precedingText: "She said ‘hello’")
@@ -2180,6 +2181,22 @@ struct RomaCoreChecks {
         try require(
             RomaTranscriptionOutputFilter.applyInsertionSpacing("again", context: closingSmartSingleQuoteContext) == " again",
             "insertion spacing should add space after closing smart single quotes"
+        )
+        try require(
+            RomaTranscriptionOutputFilter.applyInsertionSpacing("”", context: wordContext) == "”",
+            "insertion spacing should not add space before closing smart quotes"
+        )
+        try require(
+            RomaTranscriptionOutputFilter.applyInsertionSpacing("’", context: wordContext) == "’",
+            "insertion spacing should not add space before closing smart single quotes"
+        )
+        try require(
+            RomaTranscriptionOutputFilter.applyInsertionSpacing("]", context: wordContext) == "]",
+            "insertion spacing should not add space before closing brackets"
+        )
+        try require(
+            RomaTranscriptionOutputFilter.applyInsertionSpacing("}", context: wordContext) == "}",
+            "insertion spacing should not add space before closing braces"
         )
         try require(
             RomaTranscriptionOutputFilter.applyInsertionPolish(

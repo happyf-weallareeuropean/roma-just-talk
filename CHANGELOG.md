@@ -2,6 +2,7 @@
 
 ## v1.81 - Unreleased
 
+- Avoided inserting spaces before dictated smart closing quotes, brackets, and braces.
 - Attached spoken punctuation commands and next-word spacing correctly after smart closing quotes.
 - Unwrapped square-bracketed ASR artifacts even when the model adds trailing punctuation after the closing bracket.
 - Stripped noisy periods inside short quoted final fragments while preserving abbreviations and longer quoted sentences.
