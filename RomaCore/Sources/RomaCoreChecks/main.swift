@@ -453,6 +453,16 @@ struct RomaCoreChecks {
                 "undo previous line after enter command"
             ),
             (
+                "Intro new paragraph wrong paragraph delete last paragraph right paragraph.",
+                "Intro\n\nright paragraph.",
+                "delete last paragraph after spoken paragraph"
+            ),
+            (
+                "Intro skip a line wrong paragraph undo previous paragraph right paragraph.",
+                "Intro\n\nright paragraph.",
+                "undo previous paragraph after skip line"
+            ),
+            (
                 "Open quote hello comma world close quote.",
                 "\"hello, world\".",
                 "spoken enclosure and punctuation"
@@ -666,6 +676,11 @@ struct RomaCoreChecks {
                 "The delete last line command is useful.",
                 "The delete last line command is useful.",
                 "delete last line prose guard"
+            ),
+            (
+                "The delete last paragraph command is useful.",
+                "The delete last paragraph command is useful.",
+                "delete last paragraph prose guard"
             ),
             (
                 "The first item is setup. The second item is launch.",

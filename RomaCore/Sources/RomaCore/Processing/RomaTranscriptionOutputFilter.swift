@@ -335,6 +335,7 @@ public struct RomaTranscriptionOutputFilter {
     private static let scratchThatCommandPattern = #"(?i)(?<![\p{L}\p{N}])(?:scratch|strike|delete|remove|erase|undo)\s+that(?:\s*[.!?,;:…]+|(?=\s*$|\s*\n))"#
     private static let deletePreviousWordCommandPattern = #"(?i)(?<![\p{L}\p{N}])(?:delete|remove|erase|undo)\s+(?:last|previous)(?:\s+(\d|one|two|three|four|five))?\s+words?(?:\s*[.!?,;:…]+|(?=\s*$|\s*\n)|\s+)"#
     private static let deletePreviousLineCommandPattern = #"(?i)(?<![\p{L}\p{N}])(?:delete|remove|erase|undo)\s+(?:last|previous)\s+line(?:\s*[.!?,;:…]+|(?=\s*$|\s*\n)|\s+)"#
+    private static let deletePreviousParagraphCommandPattern = #"(?i)(?<![\p{L}\p{N}])(?:delete|remove|erase|undo)\s+(?:last|previous)\s+paragraph(?:\s*[.!?,;:…]+|(?=\s*$|\s*\n)|\s+)"#
     private static let deletePreviousSentenceCommandPattern = #"(?i)(?<![\p{L}\p{N}])(?:delete|remove|erase|undo)\s+(?:last|previous)\s+sentence(?:\s*[.!?,;:…]+|(?=\s*$|\s*\n)|\s+)"#
     private static let phraseBoundaryPunctuation = CharacterSet(charactersIn: ".,!?;:…")
     private static let softPhrasePunctuation = CharacterSet(charactersIn: ",;:…")
@@ -615,6 +616,7 @@ public struct RomaTranscriptionOutputFilter {
         filteredText = applySpokenFormattingCommands(in: filteredText)
         if cleanupLevel == .polished {
             filteredText = applyDeletePreviousLineCommands(in: filteredText)
+            filteredText = applyDeletePreviousParagraphCommands(in: filteredText)
         }
         filteredText = applySpokenEnclosureCommands(in: filteredText)
         filteredText = applySpokenURLCommands(in: filteredText)
@@ -2969,6 +2971,42 @@ public struct RomaTranscriptionOutputFilter {
         return joinLineDeletion(prefix: prefix, suffix: afterMarker)
     }
 
+    private static func applyDeletePreviousParagraphCommands(in text: String) -> String {
+        guard let regex = try? NSRegularExpression(pattern: deletePreviousParagraphCommandPattern) else {
+            return text
+        }
+
+        var correctedText = text
+        var rewriteCount = 0
+
+        while rewriteCount < 8 {
+            let fullRange = NSRange(correctedText.startIndex..., in: correctedText)
+            guard let match = regex.firstMatch(in: correctedText, range: fullRange),
+                  let markerRange = Range(match.range, in: correctedText),
+                  let rewrittenText = rewriteDeletePreviousParagraphCommand(in: correctedText, markerRange: markerRange),
+                  rewrittenText != correctedText else {
+                break
+            }
+
+            correctedText = rewrittenText
+            rewriteCount += 1
+        }
+
+        return correctedText
+    }
+
+    private static func rewriteDeletePreviousParagraphCommand(in text: String, markerRange: Range<String.Index>) -> String? {
+        let beforeMarker = String(text[..<markerRange.lowerBound])
+        let afterMarker = String(text[markerRange.upperBound...])
+
+        guard shouldApplyDeleteCommand(beforeMarker: beforeMarker, afterMarker: afterMarker),
+              let prefix = removeTrailingParagraph(from: beforeMarker) else {
+            return nil
+        }
+
+        return joinLineDeletion(prefix: prefix, suffix: afterMarker)
+    }
+
     private static func applyDeletePreviousSentenceCommands(in text: String) -> String {
         guard let regex = try? NSRegularExpression(pattern: deletePreviousSentenceCommandPattern) else {
             return text
@@ -3141,6 +3179,23 @@ public struct RomaTranscriptionOutputFilter {
         guard wordCount(in: removedLine) > 0 else { return nil }
 
         return String(trimmedText[...lastNewlineIndex])
+    }
+
+    private static func removeTrailingParagraph(from text: String) -> String? {
+        let trimmedText = text.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard wordCount(in: trimmedText) > 0 else { return nil }
+
+        guard let separatorRange = trimmedText.range(
+            of: #"\n{2,}"#,
+            options: [.regularExpression, .backwards]
+        ) else {
+            return ""
+        }
+
+        let removedParagraph = String(trimmedText[separatorRange.upperBound...])
+        guard wordCount(in: removedParagraph) > 0 else { return nil }
+
+        return String(trimmedText[..<separatorRange.upperBound])
     }
 
     private static func removeTrailingSentence(from text: String) -> String? {
