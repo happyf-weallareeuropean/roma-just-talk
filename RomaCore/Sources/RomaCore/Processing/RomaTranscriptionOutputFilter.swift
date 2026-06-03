@@ -178,11 +178,13 @@ public struct RomaTranscriptionOutputFilter {
     private static let removableTrailingSentenceFragmentPunctuation = CharacterSet(charactersIn: "!?")
     private static let removableTrailingSpacedFragmentSymbols = "/\\|"
     private static let nonSpeechBracketContents: Set<String> = [
-        "applause", "background noise", "blank audio", "breath", "breathing", "cough",
-        "coughing", "crosstalk", "foreign language", "inaudible", "indistinct",
+        "applause", "background music", "background noise", "beep", "beeping",
+        "blank audio", "breath", "breathing", "clapping", "cough", "coughing",
+        "crosstalk", "foreign language", "inaudible", "indistinct", "keyboard typing",
         "laughter", "laughing", "laughs", "music", "noise", "no audio", "overlap",
-        "overlapping", "sigh", "sighing", "silence", "sneeze", "sneezing", "sound",
-        "speaking foreign language", "static", "unclear", "unintelligible"
+        "overlapping", "phone ringing", "ringing", "sigh", "sighing", "silence",
+        "sneeze", "sneezing", "sound", "speaking foreign language", "static",
+        "typing", "unclear", "unintelligible"
     ]
     private static let preservedRepeatedWords: Set<String> = [
         "ha", "haha", "no", "ok", "okay", "really", "so", "very", "yes"

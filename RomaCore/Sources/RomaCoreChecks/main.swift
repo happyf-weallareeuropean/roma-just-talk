@@ -348,6 +348,21 @@ struct RomaCoreChecks {
                 "bracketed laughing artifact"
             ),
             (
+                "Use [keyboard typing] now.",
+                "Use now.",
+                "bracketed keyboard typing artifact"
+            ),
+            (
+                "Use [phone ringing] now.",
+                "Use now.",
+                "bracketed phone ringing artifact"
+            ),
+            (
+                "Use [beeping] now.",
+                "Use now.",
+                "bracketed beeping artifact"
+            ),
+            (
                 "Use [breath control] now.",
                 "Use [breath control] now.",
                 "bracketed literal breath phrase guard"
@@ -361,6 +376,11 @@ struct RomaCoreChecks {
                 "Use [foreign language class] now.",
                 "Use [foreign language class] now.",
                 "bracketed literal foreign language phrase guard"
+            ),
+            (
+                "Use [typing speed] now.",
+                "Use [typing speed] now.",
+                "bracketed literal typing phrase guard"
             ),
             (
                 "I was like going there.",

@@ -2,6 +2,7 @@
 
 ## v1.81 - Unreleased
 
+- Removed bracketed sound-effect artifacts such as "[keyboard typing]", "[phone ringing]", and "[beeping]".
 - Removed bracketed ASR artifacts such as "[blank audio]", "[laughing]", and "[speaking foreign language]".
 - Removed more bracketed ASR artifacts such as "[unintelligible]", "(crosstalk)", and "[overlap]".
 - Removed bracketed non-speech artifacts such as "[cough]", "(breathing)", and "{sighing}".
