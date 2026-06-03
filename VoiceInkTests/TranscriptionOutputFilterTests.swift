@@ -244,6 +244,8 @@ struct TranscriptionOutputFilterTests {
         #expect(TranscriptionOutputFilter.applyInsertionPolish("\"Model!\".", context: midSentenceContext) == "\"model\"")
         #expect(TranscriptionOutputFilter.applyInsertionPolish("(Model!).", context: midSentenceContext) == "(model)")
         #expect(TranscriptionOutputFilter.applyInsertionPolish("{Model?}.", context: midSentenceContext) == "{model}")
+        #expect(TranscriptionOutputFilter.applyInsertionPolish("[Model.]", context: midSentenceContext) == "model")
+        #expect(TranscriptionOutputFilter.applyInsertionPolish("[A final word.]", context: midSentenceContext) == "a final word")
         #expect(TranscriptionOutputFilter.applyInsertionPolish("[Model.]", context: nil) == "model")
         #expect(TranscriptionOutputFilter.applyInsertionPolish("[Model.].", context: nil) == "model")
         #expect(TranscriptionOutputFilter.applyInsertionPolish("[Model!]", context: nil) == "model")

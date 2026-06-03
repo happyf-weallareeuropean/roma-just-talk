@@ -3230,6 +3230,47 @@ struct RomaCoreChecks {
             "pipeline should paste mid-sentence polished text"
         )
 
+        let bracketedFragmentRecorder = FakeRecorder()
+        let bracketedFragmentInserter = FakeTextInsertion()
+        let bracketedFragmentPipeline = DictationPipeline(
+            recorder: bracketedFragmentRecorder,
+            transcriptionService: FakeTranscriptionService(
+                expectedFileName: "bracketed-fragment-proof.wav",
+                text: "[Model.]"
+            ),
+            textInsertion: bracketedFragmentInserter
+        )
+        let bracketedFragmentRequest = DictationPipelineRequest(
+            outputURL: URL(fileURLWithPath: "/tmp/bracketed-fragment-proof.wav"),
+            model: model,
+            shouldInsertTranscription: true,
+            textProcessing: DictationTextProcessingConfiguration(
+                insertionContext: TextInsertionContext(precedingText: "...so this")
+            )
+        )
+
+        try await bracketedFragmentRecorder.startPreRollBuffering()
+        let bracketedFragmentResult = try await bracketedFragmentPipeline.runRecordingWindow(
+            bracketedFragmentRequest
+        ) {}
+
+        try require(
+            bracketedFragmentResult.session.rawText == "[Model.]",
+            "pipeline should preserve raw bracketed STT artifact text"
+        )
+        try require(
+            bracketedFragmentResult.processedText == " model",
+            "pipeline should unwrap bracketed STT artifacts during mid-sentence polish"
+        )
+        try require(
+            bracketedFragmentResult.session.insertedText == " model",
+            "pipeline session should store bracketed artifact polish"
+        )
+        try require(
+            await bracketedFragmentInserter.pastedText == " model",
+            "pipeline should paste bracketed artifact polish"
+        )
+
         let properNameReplacementRecorder = FakeRecorder()
         let properNameReplacementInserter = FakeTextInsertion()
         let properNameReplacementPipeline = DictationPipeline(

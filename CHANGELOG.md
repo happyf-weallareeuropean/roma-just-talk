@@ -2,6 +2,7 @@
 
 ## v1.81 - Unreleased
 
+- Covered bracketed STT final-fragment cleanup through the dictation pipeline for mid-sentence insertion.
 - Preserved proper-name casing from word replacements during mid-sentence insertion polish.
 - Replaced spoken text-case command arguments during self-corrections such as "title case weekly report wait no release notes".
 - Replaced spoken markdown link labels and targets during self-corrections such as "markdown link docs to example dot com wait no guide".
