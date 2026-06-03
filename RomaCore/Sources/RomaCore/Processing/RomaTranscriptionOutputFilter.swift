@@ -214,6 +214,15 @@ public struct RomaTranscriptionOutputFilter {
         "character", "characters", "is", "mark", "marks", "means", "meaning", "suffix", "symbol", "symbols"
     ]
     private static let spokenPossessivePattern = #"(?i)(?<![\p{L}\p{N}])([\p{L}\p{N}][\p{L}\p{N}'’ʼ-]{0,63})\s+apostrophe\s+s(?=\s+[\p{L}\p{N}])"#
+    private static let spokenNoSpaceCommandPattern = #"(?i)(?<![\p{L}\p{N}])([\p{L}\p{N}][\p{L}\p{N}'’ʼ-]{0,63})[ \t]+no[ \t]+spaces?[ \t]+([\p{L}\p{N}][\p{L}\p{N}'’ʼ-]{0,63})(?![\p{L}\p{N}])"#
+    private static let blockedPreviousWordsForSpokenNoSpace: Set<String> = [
+        "a", "an", "are", "be", "has", "have", "is", "need", "needs", "should",
+        "that", "the", "there", "want", "wants", "was", "were"
+    ]
+    private static let blockedNextWordsForSpokenNoSpace: Set<String> = [
+        "available", "before", "between", "command", "commands", "from", "here",
+        "in", "is", "left", "needed", "of", "shortcut", "shortcuts", "there", "to"
+    ]
     private static let likelyLowercaseFragments: Set<String> = [
         "a", "about", "after", "again", "all", "also", "an", "and", "any", "are",
         "as", "at", "back", "be", "because", "but", "by", "can", "case", "code",
@@ -628,6 +637,7 @@ public struct RomaTranscriptionOutputFilter {
         filteredText = applySpokenSymbolCommands(in: filteredText)
         filteredText = applySpokenContractionCommands(in: filteredText)
         filteredText = applySpokenPossessiveCommands(in: filteredText)
+        filteredText = applySpokenNoSpaceCommands(in: filteredText)
         filteredText = applySpokenTextCaseCommands(in: filteredText)
         filteredText = applySpokenCodeCaseCommands(in: filteredText)
         filteredText = applySpokenMarkdownCommands(in: filteredText)
@@ -1903,6 +1913,45 @@ public struct RomaTranscriptionOutputFilter {
         }
 
         return "\(prefix)\(command.output)\(suffix)"
+    }
+
+    private static func applySpokenNoSpaceCommands(in text: String) -> String {
+        guard let regex = try? NSRegularExpression(pattern: spokenNoSpaceCommandPattern) else {
+            return text
+        }
+
+        var compactText = text
+        var rewriteCount = 0
+
+        while rewriteCount < 8 {
+            let fullRange = NSRange(compactText.startIndex..., in: compactText)
+            let matches = regex.matches(in: compactText, range: fullRange)
+            var didRewrite = false
+
+            for match in matches.reversed() {
+                guard match.numberOfRanges >= 3,
+                      let fullRange = Range(match.range(at: 0), in: compactText),
+                      let previousRange = Range(match.range(at: 1), in: compactText),
+                      let nextRange = Range(match.range(at: 2), in: compactText) else {
+                    continue
+                }
+
+                let previousWord = String(compactText[previousRange]).lowercased()
+                let nextWord = String(compactText[nextRange]).lowercased()
+                guard !blockedPreviousWordsForSpokenNoSpace.contains(previousWord),
+                      !blockedNextWordsForSpokenNoSpace.contains(nextWord) else {
+                    continue
+                }
+
+                compactText.replaceSubrange(fullRange, with: "\(compactText[previousRange])\(compactText[nextRange])")
+                didRewrite = true
+            }
+
+            guard didRewrite else { break }
+            rewriteCount += 1
+        }
+
+        return compactText
     }
 
     private static func applySpokenCodeCaseCommands(in text: String) -> String {

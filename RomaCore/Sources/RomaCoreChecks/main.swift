@@ -613,6 +613,16 @@ struct RomaCoreChecks {
                 "spoken slash command"
             ),
             (
+                "Use chat no space GPT today.",
+                "Use chatGPT today.",
+                "spoken no space command"
+            ),
+            (
+                "Use happy no space f no space coding.",
+                "Use happyfcoding.",
+                "chained spoken no space command"
+            ),
+            (
                 "Use all caps api key.",
                 "Use API KEY.",
                 "all caps text case command"
@@ -721,6 +731,21 @@ struct RomaCoreChecks {
                 "The break here is intentional.",
                 "The break here is intentional.",
                 "break here prose guard"
+            ),
+            (
+                "There is no space here.",
+                "There is no space here.",
+                "no space grammar guard"
+            ),
+            (
+                "I want no spaces here.",
+                "I want no spaces here.",
+                "no spaces grammar guard"
+            ),
+            (
+                "The no space command is useful.",
+                "The no space command is useful.",
+                "no space command prose guard"
             ),
             (
                 "The press enter shortcut is useful.",
