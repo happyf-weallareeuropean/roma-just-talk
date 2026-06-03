@@ -414,6 +414,14 @@ public struct RomaTranscriptionOutputFilter {
     ]
     private static let spokenPunctuationCommands = [
         SpokenPunctuationCommand(
+            pattern: #"(?i)(?<![\p{L}\p{N}])(?:ellipsis|dot\s+dot\s+dot|period\s+period\s+period|full\s+stop\s+full\s+stop\s+full\s+stop)(?![\p{L}\p{N}])"#,
+            output: "..."
+        ),
+        SpokenPunctuationCommand(
+            pattern: #"(?i)(?<![\p{L}\p{N}])(?:em\s+dash|m\s+dash)(?![\p{L}\p{N}])"#,
+            output: " —"
+        ),
+        SpokenPunctuationCommand(
             pattern: #"(?i)(?<![\p{L}\p{N}])question\s+mark(?![\p{L}\p{N}])"#,
             output: "?"
         ),
@@ -2291,6 +2299,16 @@ public struct RomaTranscriptionOutputFilter {
             of: #"(\d)\.\s+(?=\d)"#,
             with: "$1.",
             options: .regularExpression
+            )
+            .replacingOccurrences(
+                of: #"\.\s+\.\s+\."#,
+                with: "...",
+                options: .regularExpression
+            )
+            .replacingOccurrences(
+                of: #"\.{4,}"#,
+                with: "...",
+                options: .regularExpression
             )
             .replacingOccurrences(
                 of: #"(\b\d{1,2}):\s+(\d{2}\s+(?:AM|PM)\b)"#,

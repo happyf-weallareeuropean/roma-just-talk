@@ -458,6 +458,26 @@ struct RomaCoreChecks {
                 "spoken question mark over auto question mark"
             ),
             (
+                "Wait ellipsis maybe.",
+                "Wait... maybe.",
+                "spoken ellipsis command"
+            ),
+            (
+                "Wait dot dot dot maybe.",
+                "Wait... maybe.",
+                "spoken dot dot dot command"
+            ),
+            (
+                "Wait em dash maybe.",
+                "Wait — maybe.",
+                "spoken em dash command"
+            ),
+            (
+                "Use model dash name.",
+                "Use model-name.",
+                "compact dash command guard"
+            ),
+            (
                 "Use api slash users.",
                 "Use api/users.",
                 "spoken slash command"

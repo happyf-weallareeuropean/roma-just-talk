@@ -2,6 +2,7 @@
 
 ## v1.81 - Unreleased
 
+- Added spoken ellipsis and em-dash punctuation cleanup while preserving compact dash tokens.
 - Added "put/wrap/enclose ... in ..." cleanup for quotes, parentheses, brackets, and braces.
 - Added paired "quote ... unquote" and "single quote ... single quote" cleanup for dictated enclosures.
 - Preserved dot-prefixed tokens like `.env` during punctuation spacing cleanup.
