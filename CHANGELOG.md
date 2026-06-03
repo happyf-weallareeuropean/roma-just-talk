@@ -2,6 +2,7 @@
 
 ## v1.81 - Unreleased
 
+- Removed leading punctuated discourse fillers such as "you know," and "I mean," without dropping meaningful uses.
 - Removed guarded unpunctuated "like" fillers such as "I was like going" while preserving meaningful uses.
 - Removed terminal discourse fillers such as "you know" and "you know what I mean" when they are throwaway speech tails, while preserving meaningful uses.
 - Fixed cursor-context fallback around emoji and non-ASCII text so insertion cleanup still lowercases and spaces mid-sentence dictation correctly.

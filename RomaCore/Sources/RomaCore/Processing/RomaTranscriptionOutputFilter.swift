@@ -197,6 +197,9 @@ public struct RomaTranscriptionOutputFilter {
         (#"(?i)[,;:…]\s+(?:you\s+know|like)[,;:…]*([.!?])\s*$"#, "$1"),
         (#"(?i)[,;:…]\s+(?:you\s+know|like)[,;:…]+(?=\s)"#, " ")
     ]
+    private static let leadingDiscourseFillerPatterns: [(pattern: String, replacement: String)] = [
+        (#"(?i)^\s*(?:you\s+know|i\s+mean|like)[,;:…]+[ \t]*"#, "")
+    ]
     private static let blockedPreviousWordsForTerminalYouKnow: Set<String> = [
         "do", "does", "did", "don't", "if", "know", "let", "should", "to", "whether", "will", "would"
     ]
@@ -604,6 +607,7 @@ public struct RomaTranscriptionOutputFilter {
     private static func removeFillerWords(from text: String, fillerWords configuredFillerWords: [String]) -> String {
         var filteredText = text
 
+        filteredText = removeLeadingDiscourseFillers(from: filteredText)
         filteredText = removePunctuatedDiscourseFillers(from: filteredText)
         filteredText = removeTerminalDiscourseFillers(from: filteredText)
         filteredText = removeUnpunctuatedLikeFillers(from: filteredText)
@@ -632,6 +636,26 @@ public struct RomaTranscriptionOutputFilter {
                 let range = NSRange(filteredText.startIndex..., in: filteredText)
                 filteredText = regex.stringByReplacingMatches(in: filteredText, options: [], range: range, withTemplate: "")
             }
+        }
+
+        return filteredText
+    }
+
+    private static func removeLeadingDiscourseFillers(from text: String) -> String {
+        var filteredText = text
+
+        for pattern in leadingDiscourseFillerPatterns {
+            guard let regex = try? NSRegularExpression(pattern: pattern.pattern) else {
+                continue
+            }
+
+            let range = NSRange(filteredText.startIndex..., in: filteredText)
+            filteredText = regex.stringByReplacingMatches(
+                in: filteredText,
+                options: [],
+                range: range,
+                withTemplate: pattern.replacement
+            )
         }
 
         return filteredText

@@ -245,6 +245,21 @@ struct RomaCoreChecks {
                 "unpunctuated like filler"
             ),
             (
+                "You know, this works.",
+                "this works.",
+                "leading you know filler"
+            ),
+            (
+                "I mean, this works.",
+                "this works.",
+                "leading i mean filler"
+            ),
+            (
+                "Like, this works.",
+                "this works.",
+                "leading like filler"
+            ),
+            (
                 "This works you know.",
                 "This works.",
                 "terminal discourse filler"
@@ -363,6 +378,16 @@ struct RomaCoreChecks {
                 "I know you know.",
                 "I know you know.",
                 "terminal you know guard"
+            ),
+            (
+                "You know this already.",
+                "You know this already.",
+                "leading you know prose guard"
+            ),
+            (
+                "I mean business.",
+                "I mean business.",
+                "leading i mean prose guard"
             ),
             (
                 "Do you know what I mean?",
