@@ -553,6 +553,11 @@ struct RomaCoreChecks {
                 "no actually correction"
             ),
             (
+                "Use model, actually make it module.",
+                "Use module.",
+                "actually make it correction"
+            ),
+            (
                 "Let's meet at two, actually no, three.",
                 "Let's meet at three.",
                 "actually no correction"
@@ -1246,6 +1251,11 @@ struct RomaCoreChecks {
                 "I meant what I said.",
                 "I meant what I said.",
                 "i meant prose guard"
+            ),
+            (
+                "We can actually make it work.",
+                "We can actually make it work.",
+                "actually make it prose guard"
             ),
             (
                 "I should say this carefully.",
