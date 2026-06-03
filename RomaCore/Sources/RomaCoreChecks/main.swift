@@ -1027,6 +1027,41 @@ struct RomaCoreChecks {
                 "wait no correction should replace full spoken date with year"
             ),
             (
+                "Pay twenty dollars wait no thirty dollars tomorrow.",
+                "Pay $30 tomorrow.",
+                "wait no correction should replace spoken currency phrase"
+            ),
+            (
+                "Pay twenty dollars wait no thirty tomorrow.",
+                "Pay $30 tomorrow.",
+                "wait no correction should preserve spoken currency unit"
+            ),
+            (
+                "Pay 20 dollars wait no 25 dollars tomorrow.",
+                "Pay $25 tomorrow.",
+                "wait no correction should replace numeric currency phrase"
+            ),
+            (
+                "Pay dollar sign twenty wait no dollar sign thirty tomorrow.",
+                "Pay $30 tomorrow.",
+                "wait no correction should replace leading currency sign phrase"
+            ),
+            (
+                "Progress is eighty five percent wait no ninety percent done.",
+                "Progress is 90% done.",
+                "wait no correction should replace spoken percent phrase"
+            ),
+            (
+                "Progress is eighty five percent wait no ninety done.",
+                "Progress is 90% done.",
+                "wait no correction should preserve spoken percent unit"
+            ),
+            (
+                "I lost twenty pounds wait no thirty pounds.",
+                "I lost thirty pounds.",
+                "wait no correction should preserve pound weight wording"
+            ),
+            (
                 "Use model, oops module.",
                 "Use module.",
                 "oops correction"

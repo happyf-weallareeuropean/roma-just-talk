@@ -127,6 +127,17 @@ public struct RomaTranscriptionOutputFilter {
         let yearWord: String?
     }
 
+    private enum SpokenAmountUnitPlacement {
+        case prefix
+        case suffix
+    }
+
+    private struct SpokenAmountCandidate {
+        let wordCount: Int
+        let unitText: String
+        let unitPlacement: SpokenAmountUnitPlacement
+    }
+
     private enum SpokenCodeCaseStyle {
         case camel
         case snake
@@ -242,6 +253,13 @@ public struct RomaTranscriptionOutputFilter {
     ]
     private static let poundWeightContextWords: Set<String> = [
         "dropped", "gain", "gained", "lose", "losing", "lost", "shed", "weigh", "weighed", "weighs"
+    ]
+    private static let trailingAmountUnitWords: Set<String> = [
+        "buck", "bucks", "dollar", "dollars", "eur", "euro", "euros",
+        "gbp", "percent", "pound", "pounds", "usd"
+    ]
+    private static let leadingCurrencySignWords: Set<String> = [
+        "dollar", "euro", "pound"
     ]
     private static let blockedNextWordsForSpokenPossessive: Set<String> = [
         "character", "characters", "is", "mark", "marks", "means", "meaning", "suffix", "symbol", "symbols"
@@ -3392,6 +3410,14 @@ public struct RomaTranscriptionOutputFilter {
             return dateCorrection
         }
 
+        if let amountCorrection = boundedSpokenAmountCorrection(
+            beforeMarker: beforeMarker,
+            correctionTokens: correctionTokens,
+            in: text
+        ) {
+            return amountCorrection
+        }
+
         guard correction.wordCount > 1 else {
             return defaultCorrection
         }
@@ -3619,6 +3645,111 @@ public struct RomaTranscriptionOutputFilter {
         }
 
         return (1000...9999).contains(value)
+    }
+
+    private static func boundedSpokenAmountCorrection(
+        beforeMarker: String,
+        correctionTokens: [WordToken],
+        in text: String
+    ) -> (
+        range: Range<String.Index>,
+        wordCount: Int,
+        removalWordCount: Int,
+        replacementText: String?
+    )? {
+        guard let sourceAmount = trailingSpokenAmount(in: beforeMarker),
+              !correctionTokens.isEmpty else {
+            return nil
+        }
+
+        let correctionWords = correctionTokens.map { $0.text }
+        if let correctionAmount = leadingSpokenAmount(in: correctionWords) {
+            let amountRange = correctionTokens[0].range.lowerBound..<correctionTokens[correctionAmount.wordCount - 1].range.upperBound
+            return (amountRange, correctionAmount.wordCount, sourceAmount.wordCount, nil)
+        }
+
+        guard let valueWordCount = leadingAmountValueWordCount(in: correctionWords) else {
+            return nil
+        }
+
+        let valueRange = correctionTokens[0].range.lowerBound..<correctionTokens[valueWordCount - 1].range.upperBound
+        let valueText = String(text[valueRange])
+        let replacementText: String
+        switch sourceAmount.unitPlacement {
+        case .prefix:
+            replacementText = "\(sourceAmount.unitText) \(valueText)"
+        case .suffix:
+            replacementText = "\(valueText) \(sourceAmount.unitText)"
+        }
+
+        return (valueRange, valueWordCount, sourceAmount.wordCount, replacementText)
+    }
+
+    private static func trailingSpokenAmount(in text: String) -> SpokenAmountCandidate? {
+        let words = wordTokens(in: text).map { $0.text }
+        guard words.count >= 2 else { return nil }
+
+        let maxCandidateCount = min(4, words.count)
+        for wordCount in stride(from: maxCandidateCount, through: 2, by: -1) {
+            let candidate = Array(words.suffix(wordCount))
+            if let amount = leadingSpokenAmount(in: candidate),
+               amount.wordCount == wordCount {
+                return amount
+            }
+        }
+
+        return nil
+    }
+
+    private static func leadingSpokenAmount(in words: [String]) -> SpokenAmountCandidate? {
+        if words.count >= 3,
+           leadingCurrencySignWords.contains(words[0]),
+           words[1] == "sign",
+           let valueWordCount = leadingAmountValueWordCount(in: Array(words.dropFirst(2))) {
+            return SpokenAmountCandidate(
+                wordCount: 2 + valueWordCount,
+                unitText: "\(words[0]) sign",
+                unitPlacement: .prefix
+            )
+        }
+
+        guard let valueWordCount = leadingAmountValueWordCount(in: words),
+              words.count > valueWordCount else {
+            return nil
+        }
+
+        if trailingAmountUnitWords.contains(words[valueWordCount]) {
+            return SpokenAmountCandidate(
+                wordCount: valueWordCount + 1,
+                unitText: words[valueWordCount],
+                unitPlacement: .suffix
+            )
+        }
+
+        if words.count > valueWordCount + 1,
+           words[valueWordCount] == "per",
+           words[valueWordCount + 1] == "cent" {
+            return SpokenAmountCandidate(
+                wordCount: valueWordCount + 2,
+                unitText: "per cent",
+                unitPlacement: .suffix
+            )
+        }
+
+        return nil
+    }
+
+    private static func leadingAmountValueWordCount(in words: [String]) -> Int? {
+        for wordCount in [2, 1] where words.count >= wordCount {
+            let valueWords = Array(words[0..<wordCount])
+            guard spokenNumberValue(valueWords.joined(separator: " ")) != nil else {
+                continue
+            }
+
+            return wordCount
+        }
+
+        return nil
     }
 
     private static func trailingSpokenTimeWordCount(in text: String) -> Int? {

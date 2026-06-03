@@ -2,6 +2,7 @@
 
 ## v1.81 - Unreleased
 
+- Preserved currency and percent units during amount self-corrections such as "twenty dollars wait no thirty".
 - Preserved month/year context for spoken date self-corrections such as "June second wait no third tomorrow".
 - Replaced full spoken time phrases during natural self-corrections such as "two o clock wait no three thirty tomorrow".
 - Preserved trailing sentence continuations after one-word natural self-corrections such as "wait no three tomorrow".
