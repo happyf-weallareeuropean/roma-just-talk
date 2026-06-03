@@ -588,6 +588,16 @@ struct RomaCoreChecks {
                 "split here paragraph command"
             ),
             (
+                "First thing new sentence second thing.",
+                "First thing. Second thing.",
+                "new sentence command"
+            ),
+            (
+                "First thing next sentence API stays uppercase.",
+                "First thing. API stays uppercase.",
+                "next sentence command preserves acronym case"
+            ),
+            (
                 "First press enter second.",
                 "First\nsecond.",
                 "press enter line command"
@@ -731,6 +741,16 @@ struct RomaCoreChecks {
                 "The break here is intentional.",
                 "The break here is intentional.",
                 "break here prose guard"
+            ),
+            (
+                "The new sentence command is useful.",
+                "The new sentence command is useful.",
+                "new sentence command prose guard"
+            ),
+            (
+                "Explain how to start a new sentence in docs.",
+                "Explain how to start a new sentence in docs.",
+                "new sentence docs prose guard"
             ),
             (
                 "There is no space here.",

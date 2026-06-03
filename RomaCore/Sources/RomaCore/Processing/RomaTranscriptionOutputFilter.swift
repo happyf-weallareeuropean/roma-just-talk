@@ -380,6 +380,15 @@ public struct RomaTranscriptionOutputFilter {
         (#"(?i)(?<![\p{L}\p{N}])newline(?![\p{L}\p{N}])"#, "\n"),
         (#"(?i)(?<![\p{L}\p{N}])(?:new\s+bullet|bullet\s+point|bullet)(?![\p{L}\p{N}])"#, "\n- ")
     ]
+    private static let spokenSentenceBoundaryCommandPattern = #"(?i)(?<![\p{L}\p{N}])(?:new|next)\s+sentence(?:\s*[.!?,;:…]+|(?=\s*$|\s*\n)|\s+)"#
+    private static let blockedPreviousWordsForSpokenSentenceBoundary: Set<String> = [
+        "a", "an", "command", "commands", "how", "phrase", "phrases", "say",
+        "saying", "start", "the", "to", "word", "words"
+    ]
+    private static let blockedNextWordsForSpokenSentenceBoundary: Set<String> = [
+        "command", "commands", "from", "in", "is", "means", "of", "phrase",
+        "phrases", "shortcut", "shortcuts"
+    ]
     private static let guardedSpokenFormattingCommands = [
         GuardedSpokenFormattingCommand(
             pattern: #"(?i)(?<![\p{L}\p{N}])(?:skip\s+a\s+line|blank\s+line|paragraph\s+break|start\s+a\s+new\s+paragraph|break\s+here|split\s+here)(?![\p{L}\p{N}])"#,
@@ -936,6 +945,7 @@ public struct RomaTranscriptionOutputFilter {
         }
 
         formattedText = applyGuardedSpokenFormattingCommands(in: formattedText)
+        formattedText = applySpokenSentenceBoundaryCommands(in: formattedText)
         return normalizeSpokenFormattingSpacing(formattedText)
     }
 
@@ -970,6 +980,73 @@ public struct RomaTranscriptionOutputFilter {
         }
 
         return formattedText
+    }
+
+    private static func applySpokenSentenceBoundaryCommands(in text: String) -> String {
+        guard let regex = try? NSRegularExpression(pattern: spokenSentenceBoundaryCommandPattern) else {
+            return text
+        }
+
+        var formattedText = text
+        var rewriteCount = 0
+
+        while rewriteCount < 8 {
+            let matches = regex.matches(in: formattedText, range: NSRange(formattedText.startIndex..., in: formattedText))
+            var nextText: String?
+
+            for match in matches {
+                guard let matchRange = Range(match.range, in: formattedText),
+                      let rewrittenText = rewriteSpokenSentenceBoundaryCommand(
+                        in: formattedText,
+                        commandRange: matchRange
+                      ),
+                      rewrittenText != formattedText else {
+                    continue
+                }
+
+                nextText = rewrittenText
+                break
+            }
+
+            guard let nextText else {
+                break
+            }
+
+            formattedText = nextText
+            rewriteCount += 1
+        }
+
+        return formattedText
+    }
+
+    private static func rewriteSpokenSentenceBoundaryCommand(
+        in text: String,
+        commandRange: Range<String.Index>
+    ) -> String? {
+        let beforeCommand = String(text[..<commandRange.lowerBound])
+        let afterCommand = String(text[commandRange.upperBound...])
+
+        guard let previousWord = previousWord(in: beforeCommand),
+              !blockedPreviousWordsForSpokenSentenceBoundary.contains(previousWord),
+              let nextWord = nextWord(in: afterCommand),
+              !blockedNextWordsForSpokenSentenceBoundary.contains(nextWord) else {
+            return nil
+        }
+
+        var prefix = beforeCommand.trimmingCharacters(in: .whitespacesAndNewlines)
+        prefix = prefix.trimmingCharacters(in: softPhrasePunctuation)
+        var suffix = afterCommand.trimmingCharacters(in: .whitespacesAndNewlines)
+        suffix = suffix.trimmingCharacters(in: softPhrasePunctuation)
+
+        guard !prefix.isEmpty, !suffix.isEmpty else {
+            return nil
+        }
+
+        if let lastCharacter = prefix.last, !".!?".contains(lastCharacter) {
+            prefix += "."
+        }
+
+        return "\(prefix) \(uppercaseFirstLetterPreservingRest(in: suffix))"
     }
 
     private static func applySpokenEnclosureCommands(in text: String) -> String {
@@ -2063,6 +2140,16 @@ public struct RomaTranscriptionOutputFilter {
 
     private static func capitalizeFirstTextCaseWord(_ phrase: String) -> String {
         var result = phrase.lowercased()
+        guard let firstLetterRange = result.rangeOfCharacter(from: .letters) else {
+            return result
+        }
+
+        result.replaceSubrange(firstLetterRange, with: String(result[firstLetterRange]).uppercased())
+        return result
+    }
+
+    private static func uppercaseFirstLetterPreservingRest(in text: String) -> String {
+        var result = text
         guard let firstLetterRange = result.rangeOfCharacter(from: .letters) else {
             return result
         }
