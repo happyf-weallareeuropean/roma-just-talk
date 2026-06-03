@@ -292,6 +292,11 @@ public struct RomaTranscriptionOutputFilter {
         "looking", "maybe", "not", "probably", "really", "saying", "so", "sort",
         "sorta", "thinking", "trying", "using", "waiting", "working"
     ]
+    private static let allowedNextWordsForUnpunctuatedHedgeFiller: Set<String> = [
+        "actually", "almost", "basically", "close", "done", "fine", "going",
+        "good", "just", "maybe", "not", "probably", "ready", "really",
+        "thinking", "trying", "waiting", "working"
+    ]
     private static let inlineNumberedListMarkerPattern = #"(?<![\p{L}\p{N}])\d{1,2}\.\s+(?=\S)"#
     private static let spokenSequenceListMarkerPattern = #"(?i)(?<![\p{L}\p{N}])(one|two|three|four|five|six|seven|eight|nine|first|second|third|fourth|fifth|sixth|seventh|eighth|ninth)(?:[.)])?[ \t]+(?=\S)"#
     private static let spokenSequenceListMarkerValues: [String: Int] = [
@@ -929,6 +934,7 @@ public struct RomaTranscriptionOutputFilter {
         filteredText = removePunctuatedDiscourseFillers(from: filteredText)
         filteredText = removeTerminalDiscourseFillers(from: filteredText)
         filteredText = removeUnpunctuatedLikeFillers(from: filteredText)
+        filteredText = removeUnpunctuatedHedgeFillers(from: filteredText)
         filteredText = preserveBacktrackingMarkersAfterPauseFillers(in: filteredText)
 
         let embeddedPausePattern = #"(?i)(?<=[\p{L}\p{N}])[,;:…][ \t]+(?:u+h+|u+m+|h+m+|m+h+|m{2,}|e+h+|e+r+|a+h+|h+uh+)(?:[.,;:!?…]+)?(?=[ \t]+[\p{L}\p{N}])"#
@@ -1114,6 +1120,37 @@ public struct RomaTranscriptionOutputFilter {
                   let nextWord = nextWord(in: suffix),
                   allowedPreviousWordsForUnpunctuatedLikeFiller.contains(previousWord),
                   allowedNextWordsForUnpunctuatedLikeFiller.contains(nextWord) else {
+                continue
+            }
+
+            filteredText.replaceSubrange(matchRange, with: "")
+        }
+
+        return filteredText
+    }
+
+    private static func removeUnpunctuatedHedgeFillers(from text: String) -> String {
+        guard let regex = try? NSRegularExpression(
+            pattern: #"(?i)(?<![\p{L}\p{N}])(?:kind[ \t]+of|sort[ \t]+of|kinda|sorta)(?:[ \t]*[,;:…]+)?(?![\p{L}\p{N}])"#
+        ) else {
+            return text
+        }
+
+        var filteredText = text
+        let range = NSRange(filteredText.startIndex..., in: filteredText)
+        let matches = regex.matches(in: filteredText, range: range).reversed()
+
+        for match in matches {
+            guard let matchRange = Range(match.range, in: filteredText) else {
+                continue
+            }
+
+            let prefix = String(filteredText[..<matchRange.lowerBound])
+            let suffix = String(filteredText[matchRange.upperBound...])
+            guard let previousWord = previousWord(in: prefix),
+                  let nextWord = nextWord(in: suffix),
+                  allowedPreviousWordsForUnpunctuatedLikeFiller.contains(previousWord),
+                  allowedNextWordsForUnpunctuatedHedgeFiller.contains(nextWord) else {
                 continue
             }
 

@@ -758,6 +758,26 @@ struct RomaCoreChecks {
                 "unpunctuated like filler"
             ),
             (
+                "We are kind of almost done.",
+                "We are almost done.",
+                "unpunctuated kind of hedge filler"
+            ),
+            (
+                "This is sort of really close.",
+                "This is really close.",
+                "unpunctuated sort of hedge filler"
+            ),
+            (
+                "It is kinda basically ready.",
+                "It is basically ready.",
+                "unpunctuated kinda hedge filler"
+            ),
+            (
+                "They are sorta just waiting.",
+                "They are just waiting.",
+                "unpunctuated sorta hedge filler"
+            ),
+            (
                 "You know, this works.",
                 "this works.",
                 "leading you know filler"
@@ -1866,6 +1886,21 @@ struct RomaCoreChecks {
                 "This is like magic.",
                 "This is like magic.",
                 "like simile guard"
+            ),
+            (
+                "This is a kind of model.",
+                "This is a kind of model.",
+                "kind of noun guard"
+            ),
+            (
+                "I like that sort of work.",
+                "I like that sort of work.",
+                "sort of noun guard"
+            ),
+            (
+                "This is kind of magic.",
+                "This is kind of magic.",
+                "kind of unlisted adjective guard"
             ),
             (
                 "I meant what I said.",
