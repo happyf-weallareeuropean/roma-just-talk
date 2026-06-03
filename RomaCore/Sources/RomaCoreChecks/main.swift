@@ -618,6 +618,16 @@ struct RomaCoreChecks {
                 "better make it correction"
             ),
             (
+                "Use model, make it module.",
+                "Use module.",
+                "make it correction"
+            ),
+            (
+                "Use model, make it a module.",
+                "Use a module.",
+                "make it article correction"
+            ),
+            (
                 "Let's meet at two, actually no, three.",
                 "Let's meet at three.",
                 "actually no correction"
@@ -711,6 +721,21 @@ struct RomaCoreChecks {
                 "Use model, make that module.",
                 "Use module.",
                 "make that correction"
+            ),
+            (
+                "Please, make it red.",
+                "Please, make it red.",
+                "single-prefix polite make it guard"
+            ),
+            (
+                "Please, make that red.",
+                "Please, make that red.",
+                "single-prefix polite make that guard"
+            ),
+            (
+                "Please, call it module.",
+                "Please, call it module.",
+                "single-prefix polite call it guard"
             ),
             (
                 "Use model, call it module.",

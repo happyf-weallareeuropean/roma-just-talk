@@ -348,6 +348,7 @@ public struct RomaTranscriptionOutputFilter {
             (?:[,;:…]|\.\.\.)\s*i\s+meant\s*[,;:]? |
             (?:[,;:…]|\.\.\.)\s*i\s+should\s+say\s*[,;:]? |
             (?:[,;:…]|\.\.\.)\s*make\s+that\s*[,;:]? |
+            (?:[,;:…]|\.\.\.)\s*make\s+it\s*[,;:]? |
             (?:[,;:…]|\.\.\.)\s*call\s+it\s*[,;:]? |
             replace\s+(?:that|it)\s+with |
             change\s+(?:that|it)\s+to |
@@ -383,6 +384,9 @@ public struct RomaTranscriptionOutputFilter {
     ]
     private static let blockedFirstCorrectionWordsForReplaceThat: Set<String> = [
         "is", "means"
+    ]
+    private static let blockedSingleWordPrefixesForMakeCallCorrection: Set<String> = [
+        "please"
     ]
     private static let blockedPreviousWordsForDeleteCommand: Set<String> = [
         "a", "an", "command", "commands", "shortcut", "shortcuts", "the"
@@ -3118,6 +3122,13 @@ public struct RomaTranscriptionOutputFilter {
         beforeMarker: String,
         correctionText: String
     ) -> Bool {
+        if isMakeOrCallBacktrackingMarker(markerText),
+           wordCount(in: beforeMarker) == 1,
+           let previousWord = previousWord(in: beforeMarker),
+           blockedSingleWordPrefixesForMakeCallCorrection.contains(previousWord) {
+            return false
+        }
+
         guard isReplaceOrChangeBacktrackingMarker(markerText) else {
             return true
         }
@@ -3148,6 +3159,17 @@ public struct RomaTranscriptionOutputFilter {
             "replace it with",
             "change that to",
             "change it to"
+        ].contains(normalizedMarker)
+    }
+
+    private static func isMakeOrCallBacktrackingMarker(_ markerText: String) -> Bool {
+        let normalizedMarker = normalizeWhitespace(markerText)
+            .trimmingCharacters(in: CharacterSet(charactersIn: ",;: "))
+            .lowercased()
+        return [
+            "make that",
+            "make it",
+            "call it"
         ].contains(normalizedMarker)
     }
 
