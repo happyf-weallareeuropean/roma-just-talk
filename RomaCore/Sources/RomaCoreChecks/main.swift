@@ -573,6 +573,17 @@ struct RomaCoreChecks {
             "insertion polish should strip noisy punctuation from bracketed final fragments"
         )
         try require(
+            RomaTranscriptionOutputFilter.applyInsertionPolish("This is good.", context: nil) == "This is good.",
+            "insertion polish should preserve no-context full sentence capitalization"
+        )
+        try require(
+            RomaTranscriptionOutputFilter.applyInsertionPolish(
+                "This is good.",
+                context: RomaTranscriptionOutputFilter.TextInsertionContext(precedingText: "Done. ")
+            ) == "This is good.",
+            "insertion polish should preserve sentence-start full sentence punctuation"
+        )
+        try require(
             RomaTranscriptionOutputFilter.applyInsertionPolish("Question mark.", context: midSentenceContext) == "?",
             "insertion polish should attach standalone punctuation commands"
         )

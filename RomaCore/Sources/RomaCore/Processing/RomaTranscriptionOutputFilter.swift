@@ -569,7 +569,14 @@ public struct RomaTranscriptionOutputFilter {
         guard !polishedText.isEmpty else { return polishedText }
 
         let shouldTreatAsFragment = isShortFragment(polishedText)
-        if shouldTreatAsFragment {
+        let shouldUseFragmentPolish: Bool
+        if let context, isContinuingSentence(after: context.precedingText) {
+            shouldUseFragmentPolish = shouldTreatAsFragment
+        } else {
+            shouldUseFragmentPolish = shouldTreatAsFragment && isSingleWordFinalFragment(polishedText)
+        }
+
+        if shouldUseFragmentPolish {
             polishedText = removeTrailingShortFragmentPunctuation(from: polishedText)
         }
 
@@ -586,6 +593,7 @@ public struct RomaTranscriptionOutputFilter {
             return lowercaseInitialWordIfSafe(in: polishedText, force: true)
         }
 
+        guard shouldUseFragmentPolish else { return polishedText }
         return lowercaseInitialWordIfSafe(in: polishedText, force: false)
     }
 
@@ -2925,6 +2933,23 @@ public struct RomaTranscriptionOutputFilter {
         let innerStart = trimmedText.index(after: trimmedText.startIndex)
         let innerEnd = trimmedText.index(before: trimmedText.endIndex)
         return wordCount(in: String(trimmedText[innerStart..<innerEnd])) <= 3
+    }
+
+    private static func isSingleWordFinalFragment(_ text: String) -> Bool {
+        let trimmedText = text.trimmingCharacters(
+            in: removableTrailingFragmentPunctuation
+                .union(removableTrailingSentenceFragmentPunctuation)
+                .union(.whitespacesAndNewlines)
+        )
+        guard !trimmedText.isEmpty else { return false }
+
+        if hasPreservedBalancedBoundary(trimmedText) {
+            let innerStart = trimmedText.index(after: trimmedText.startIndex)
+            let innerEnd = trimmedText.index(before: trimmedText.endIndex)
+            return wordCount(in: String(trimmedText[innerStart..<innerEnd])) == 1
+        }
+
+        return wordCount(in: trimmedText) == 1
     }
 
     private static func isLikelyPunctuatedShortFragmentInsidePreservedBoundary(_ text: String) -> Bool {
