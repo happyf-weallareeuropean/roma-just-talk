@@ -2,6 +2,7 @@
 
 ## v1.81 - Unreleased
 
+- Added "put/wrap/enclose ... in ..." cleanup for quotes, parentheses, brackets, and braces.
 - Added paired "quote ... unquote" and "single quote ... single quote" cleanup for dictated enclosures.
 - Preserved dot-prefixed tokens like `.env` during punctuation spacing cleanup.
 - Trimmed leading pause ellipses and separator artifacts from insertion fragments.

@@ -307,6 +307,7 @@ public struct RomaTranscriptionOutputFilter {
     ]
     private static let spokenDoubleQuotePairPattern = #"(?i)(?<![\p{L}\p{N}])quote[ \t]+([^.!?\n]{1,160}?)[ \t]+unquote([.!?])?(?![\p{L}\p{N}])"#
     private static let spokenSingleQuotePairPattern = #"(?i)(?<![\p{L}\p{N}])single[ \t]+quote[ \t]+([^.!?\n]{1,160}?)[ \t]+single[ \t]+quote([.!?])?(?![\p{L}\p{N}])"#
+    private static let spokenPutEnclosurePattern = #"(?i)(?<![\p{L}\p{N}])(?:put|wrap|enclose)[ \t]+([^.!?\n]{1,120}?)[ \t]+(?:in|inside)[ \t]+(single[ \t]+quotes?|quotes?|quotation[ \t]+marks?|parentheses|parenthesis|parens?|brackets?|square[ \t]+brackets?|braces?|curly[ \t]+braces?)([.!?])?(?![\p{L}\p{N}])"#
     private static let spokenSymbolCommands = [
         SpokenSymbolCommand(
             pattern: #"(?i)(?<![\p{L}\p{N}])(?:forward\s+slash|slash)(?![\p{L}\p{N}])"#,
@@ -822,6 +823,7 @@ public struct RomaTranscriptionOutputFilter {
     private static func applySpokenQuotePairCommands(in text: String) -> String {
         var quotedText = replaceSpokenQuotePairs(in: text, pattern: spokenDoubleQuotePairPattern, opening: "\"", closing: "\"")
         quotedText = replaceSpokenQuotePairs(in: quotedText, pattern: spokenSingleQuotePairPattern, opening: "'", closing: "'")
+        quotedText = replaceSpokenPutEnclosures(in: quotedText)
         return quotedText
     }
 
@@ -853,6 +855,51 @@ public struct RomaTranscriptionOutputFilter {
         }
 
         return quotedText
+    }
+
+    private static func replaceSpokenPutEnclosures(in text: String) -> String {
+        guard let regex = try? NSRegularExpression(pattern: spokenPutEnclosurePattern) else {
+            return text
+        }
+
+        var enclosedText = text
+        let matches = regex.matches(in: enclosedText, range: NSRange(enclosedText.startIndex..., in: enclosedText))
+
+        for match in matches.reversed() {
+            guard match.numberOfRanges >= 4,
+                  let fullRange = Range(match.range(at: 0), in: enclosedText),
+                  let contentRange = Range(match.range(at: 1), in: enclosedText),
+                  let targetRange = Range(match.range(at: 2), in: enclosedText),
+                  let boundary = spokenEnclosureBoundary(for: String(enclosedText[targetRange])) else {
+                continue
+            }
+
+            let content = String(enclosedText[contentRange]).trimmingCharacters(in: .whitespacesAndNewlines)
+            guard !content.isEmpty else { continue }
+
+            let punctuation = optionalMatchText(in: enclosedText, match: match, rangeIndex: 3) ?? ""
+            enclosedText.replaceSubrange(fullRange, with: "\(boundary.opening)\(content)\(boundary.closing)\(punctuation)")
+        }
+
+        return enclosedText
+    }
+
+    private static func spokenEnclosureBoundary(for text: String) -> (opening: String, closing: String)? {
+        let normalizedText = normalizeWhitespace(text).lowercased()
+        switch normalizedText {
+        case "single quote", "single quotes":
+            return ("'", "'")
+        case "quote", "quotes", "quotation mark", "quotation marks":
+            return ("\"", "\"")
+        case "parenthesis", "parentheses", "paren", "parens":
+            return ("(", ")")
+        case "bracket", "brackets", "square bracket", "square brackets":
+            return ("[", "]")
+        case "brace", "braces", "curly brace", "curly braces":
+            return ("{", "}")
+        default:
+            return nil
+        }
     }
 
     private static func normalizeSpokenEnclosureSpacing(_ text: String) -> String {
@@ -2882,9 +2929,22 @@ public struct RomaTranscriptionOutputFilter {
 
         let innerStart = trimmedText.index(after: trimmedText.startIndex)
         let innerEnd = trimmedText.index(before: trimmedText.endIndex)
-        return !trimmedText[innerStart..<innerEnd]
+        let innerText = trimmedText[innerStart..<innerEnd]
+        guard !innerText
             .trimmingCharacters(in: .whitespacesAndNewlines)
-            .isEmpty
+            .isEmpty else {
+            return false
+        }
+
+        if first == "[" {
+            guard let lastInnerScalar = innerText.trimmingCharacters(in: .whitespacesAndNewlines).unicodeScalars.last else {
+                return false
+            }
+            return !removableTrailingFragmentPunctuation.contains(lastInnerScalar) &&
+                !removableTrailingSentenceFragmentPunctuation.contains(lastInnerScalar)
+        }
+
+        return true
     }
 
     private static func preservedClosingBoundary(for opening: Character) -> Character? {
@@ -2894,6 +2954,7 @@ public struct RomaTranscriptionOutputFilter {
         case "“": return "”"
         case "‘": return "’"
         case "(": return ")"
+        case "[": return "]"
         case "{": return "}"
         default: return nil
         }

@@ -418,6 +418,26 @@ struct RomaCoreChecks {
                 "single quote pair enclosure"
             ),
             (
+                "Put model in parentheses.",
+                "(model).",
+                "put in parentheses enclosure"
+            ),
+            (
+                "Put model in brackets.",
+                "[model].",
+                "put in brackets enclosure"
+            ),
+            (
+                "Wrap user id in braces.",
+                "{user id}.",
+                "wrap in braces enclosure"
+            ),
+            (
+                "Put hello comma world in quotes.",
+                "\"hello, world\".",
+                "put in quotes enclosure"
+            ),
+            (
                 "Hello, comma world.",
                 "Hello, world.",
                 "spoken comma over auto comma"
@@ -501,6 +521,11 @@ struct RomaCoreChecks {
                 "Quote from the docs.",
                 "Quote from the docs.",
                 "quote prose guard"
+            ),
+            (
+                "The value in parentheses is optional.",
+                "The value in parentheses is optional.",
+                "in parentheses prose guard"
             ),
             (
                 "This is like magic.",

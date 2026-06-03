@@ -267,11 +267,16 @@ struct TranscriptionOutputFilterTests {
         #expect(TranscriptionOutputFilter.filter("Open quote hello comma world close quote.") == "\"hello, world\".")
         #expect(TranscriptionOutputFilter.filter("Quote hello comma world unquote.") == "\"hello, world\".")
         #expect(TranscriptionOutputFilter.filter("Single quote hello comma world single quote.") == "'hello, world'.")
+        #expect(TranscriptionOutputFilter.filter("Put model in parentheses.") == "(model).")
+        #expect(TranscriptionOutputFilter.filter("Put model in brackets.") == "[model].")
+        #expect(TranscriptionOutputFilter.filter("Wrap user id in braces.") == "{user id}.")
+        #expect(TranscriptionOutputFilter.filter("Put hello comma world in quotes.") == "\"hello, world\".")
         #expect(TranscriptionOutputFilter.filter("Use open parenthesis model close parenthesis now.") == "Use (model) now.")
         #expect(TranscriptionOutputFilter.filter("Use open bracket model close bracket now.") == "Use [model] now.")
         #expect(TranscriptionOutputFilter.filter("Use open brace user id colon one close brace now.") == "Use {user id: one} now.")
         #expect(TranscriptionOutputFilter.filter("The quote field stays.") == "The quote field stays.")
         #expect(TranscriptionOutputFilter.filter("Quote from the docs.") == "Quote from the docs.")
+        #expect(TranscriptionOutputFilter.filter("The value in parentheses is optional.") == "The value in parentheses is optional.")
     }
 
     @Test func transcriptionFilterAppliesGuardedSpokenSymbolCommands() async throws {
