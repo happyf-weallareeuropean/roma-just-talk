@@ -313,6 +313,21 @@ struct RomaCoreChecks {
                 "hyphenated pause sounds"
             ),
             (
+                "Use [cough] now.",
+                "Use now.",
+                "bracketed cough artifact"
+            ),
+            (
+                "Use {sighing} now.",
+                "Use now.",
+                "bracketed sigh artifact"
+            ),
+            (
+                "Use [breath control] now.",
+                "Use [breath control] now.",
+                "bracketed literal breath phrase guard"
+            ),
+            (
                 "I was like going there.",
                 "I was going there.",
                 "unpunctuated like filler"
