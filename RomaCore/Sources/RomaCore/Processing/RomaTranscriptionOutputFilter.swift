@@ -152,6 +152,23 @@ public struct RomaTranscriptionOutputFilter {
         let argumentWordCount: Int
     }
 
+    private enum SpokenMarkdownCommandKind {
+        case line
+        case inlineCode
+    }
+
+    private struct SpokenMarkdownCommand {
+        let wordCount: Int
+        let maxArgumentWordCount: Int
+        let kind: SpokenMarkdownCommandKind
+    }
+
+    private struct SpokenMarkdownTail {
+        let argumentWordCount: Int
+        let maxCorrectionWordCount: Int
+        let kind: SpokenMarkdownCommandKind
+    }
+
     private enum SpokenCodeCaseStyle {
         case camel
         case snake
@@ -3449,6 +3466,13 @@ public struct RomaTranscriptionOutputFilter {
             return codeCaseCorrection
         }
 
+        if let markdownCorrection = boundedSpokenMarkdownCorrection(
+            beforeMarker: beforeMarker,
+            correctionTokens: correctionTokens
+        ) {
+            return markdownCorrection
+        }
+
         guard correction.wordCount > 1 else {
             return defaultCorrection
         }
@@ -3602,6 +3626,205 @@ public struct RomaTranscriptionOutputFilter {
 
         return words.allSatisfy { word in
             !["for", "from", "in", "into", "on", "to", "with"].contains(word)
+        }
+    }
+
+    private static func boundedSpokenMarkdownCorrection(
+        beforeMarker: String,
+        correctionTokens: [WordToken]
+    ) -> (
+        range: Range<String.Index>,
+        wordCount: Int,
+        removalWordCount: Int,
+        replacementText: String?
+    )? {
+        guard let sourceTail = trailingSpokenMarkdownTail(in: beforeMarker),
+              let correctionWordCount = leadingMarkdownArgumentWordCount(
+                in: correctionTokens.map { $0.text },
+                maxWordCount: sourceTail.maxCorrectionWordCount,
+                kind: sourceTail.kind
+              ) else {
+            return nil
+        }
+
+        let correctionRange = correctionTokens[0].range.lowerBound..<correctionTokens[correctionWordCount - 1].range.upperBound
+        return (correctionRange, correctionWordCount, sourceTail.argumentWordCount, nil)
+    }
+
+    private static func trailingSpokenMarkdownTail(in text: String) -> SpokenMarkdownTail? {
+        let tokens = wordTokens(in: text)
+        let words = tokens.map { $0.text }
+        guard tokens.count >= 2 else { return nil }
+
+        let maxCandidateCount = min(10, tokens.count)
+        for wordCount in stride(from: maxCandidateCount, through: 2, by: -1) {
+            let candidateTokens = Array(tokens.suffix(wordCount))
+            let candidateWords = Array(words.suffix(wordCount))
+            guard let command = leadingMarkdownCommand(in: candidateWords),
+                  candidateWords.count > command.wordCount,
+                  shouldUseSpokenMarkdownCommandTail(
+                    command,
+                    in: text,
+                    commandStart: candidateTokens[0].range.lowerBound
+                  ) else {
+                continue
+            }
+
+            let argumentWords = Array(candidateWords.dropFirst(command.wordCount))
+            guard isMarkdownArgumentWords(
+                argumentWords,
+                maxWordCount: command.maxArgumentWordCount,
+                kind: command.kind
+            ) else {
+                continue
+            }
+
+            return SpokenMarkdownTail(
+                argumentWordCount: argumentWords.count,
+                maxCorrectionWordCount: command.maxArgumentWordCount,
+                kind: command.kind
+            )
+        }
+
+        return nil
+    }
+
+    private static func leadingMarkdownArgumentWordCount(
+        in words: [String],
+        maxWordCount: Int,
+        kind: SpokenMarkdownCommandKind
+    ) -> Int? {
+        let maxArgumentWordCount = min(maxWordCount, words.count)
+        for wordCount in stride(from: maxArgumentWordCount, through: 1, by: -1) {
+            let candidate = Array(words.prefix(wordCount))
+            guard isMarkdownArgumentWords(candidate, maxWordCount: maxWordCount, kind: kind) else {
+                continue
+            }
+
+            return wordCount
+        }
+
+        return nil
+    }
+
+    private static func leadingMarkdownCommand(in words: [String]) -> SpokenMarkdownCommand? {
+        guard let firstWord = words.first else { return nil }
+
+        if ["heading", "header"].contains(firstWord),
+           words.count >= 2,
+           ["one", "two", "three", "1", "2", "3"].contains(words[1]) {
+            return SpokenMarkdownCommand(wordCount: 2, maxArgumentWordCount: 8, kind: .line)
+        }
+
+        if ["todo", "checkbox"].contains(firstWord) {
+            return SpokenMarkdownCommand(wordCount: 1, maxArgumentWordCount: 8, kind: .line)
+        }
+
+        if words.count >= 2,
+           firstWord == "to",
+           words[1] == "do" {
+            return SpokenMarkdownCommand(wordCount: 2, maxArgumentWordCount: 8, kind: .line)
+        }
+
+        if words.count >= 2,
+           firstWord == "check",
+           words[1] == "box" {
+            return SpokenMarkdownCommand(wordCount: 2, maxArgumentWordCount: 8, kind: .line)
+        }
+
+        if firstWord == "unchecked" {
+            if words.count >= 3,
+               words[1] == "check",
+               words[2] == "box" {
+                return SpokenMarkdownCommand(wordCount: 3, maxArgumentWordCount: 8, kind: .line)
+            }
+
+            if words.count >= 2,
+               ["task", "checkbox"].contains(words[1]) {
+                return SpokenMarkdownCommand(wordCount: 2, maxArgumentWordCount: 8, kind: .line)
+            }
+        }
+
+        if ["checked", "done", "completed"].contains(firstWord) {
+            if words.count >= 3,
+               words[1] == "check",
+               words[2] == "box" {
+                return SpokenMarkdownCommand(wordCount: 3, maxArgumentWordCount: 8, kind: .line)
+            }
+
+            if words.count >= 2,
+               ["task", "checkbox"].contains(words[1]) {
+                return SpokenMarkdownCommand(wordCount: 2, maxArgumentWordCount: 8, kind: .line)
+            }
+        }
+
+        if words.count >= 2,
+           firstWord == "inline",
+           words[1] == "code" {
+            return SpokenMarkdownCommand(wordCount: 2, maxArgumentWordCount: 4, kind: .inlineCode)
+        }
+
+        return nil
+    }
+
+    private static func shouldUseSpokenMarkdownCommandTail(
+        _ command: SpokenMarkdownCommand,
+        in text: String,
+        commandStart: String.Index
+    ) -> Bool {
+        switch command.kind {
+        case .line:
+            return isAtMarkdownLineCommandStart(in: text, commandStart: commandStart)
+        case .inlineCode:
+            return hasInlineCodeCommandContext(in: text, commandStart: commandStart)
+        }
+    }
+
+    private static func isAtMarkdownLineCommandStart(in text: String, commandStart: String.Index) -> Bool {
+        let prefix = String(text[..<commandStart])
+        guard let lastNewline = prefix.lastIndex(where: { $0.isNewline }) else {
+            return prefix.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+        }
+
+        let afterNewline = prefix[prefix.index(after: lastNewline)...]
+        return afterNewline.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+    }
+
+    private static func hasInlineCodeCommandContext(in text: String, commandStart: String.Index) -> Bool {
+        let beforeCommand = String(text[..<commandStart])
+            .trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !beforeCommand.isEmpty else {
+            return true
+        }
+
+        if let previousCharacter = beforeCommand.last,
+           ".!?([{:\n".contains(previousCharacter) {
+            return true
+        }
+
+        guard let previousWord = previousWord(in: beforeCommand) else {
+            return false
+        }
+
+        return allowedPreviousWordsForSpokenCodeCase.contains(previousWord) || previousWord == "write"
+    }
+
+    private static func isMarkdownArgumentWords(
+        _ words: [String],
+        maxWordCount: Int,
+        kind: SpokenMarkdownCommandKind
+    ) -> Bool {
+        guard let firstWord = words.first,
+              !blockedFirstWordsForSpokenCodeCase.contains(firstWord),
+              words.count <= maxWordCount else {
+            return false
+        }
+
+        switch kind {
+        case .line:
+            return true
+        case .inlineCode:
+            return !words.contains(where: isBlockedInlineCodeWord)
         }
     }
 

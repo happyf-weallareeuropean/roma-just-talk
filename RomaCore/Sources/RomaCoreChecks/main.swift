@@ -1157,6 +1157,26 @@ struct RomaCoreChecks {
                 "wait no correction should replace pascal case argument"
             ),
             (
+                "Heading two roadmap wait no release notes.",
+                "## release notes",
+                "wait no correction should replace markdown heading argument"
+            ),
+            (
+                "Todo buy milk wait no call mom.",
+                "- [ ] call mom",
+                "wait no correction should replace markdown todo argument"
+            ),
+            (
+                "Checked task review PR wait no ship release.",
+                "- [x] ship release",
+                "wait no correction should replace checked markdown task argument"
+            ),
+            (
+                "Use inline code user id wait no account id.",
+                "Use `account id`.",
+                "wait no correction should replace inline code argument"
+            ),
+            (
                 "Use model, oops module.",
                 "Use module.",
                 "oops correction"
