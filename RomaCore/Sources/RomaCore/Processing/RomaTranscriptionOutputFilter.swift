@@ -347,6 +347,7 @@ public struct RomaTranscriptionOutputFilter {
             sorry\s+no |
             (?:[,;:…]|\.\.\.)\s*sorry\s*[,;:]? |
             no\s*[,;:]?\s+sorry |
+            (?:[,;:…]|\.\.\.)\s*rather\s*[,;:]? |
             or\s+rather |
             i\s+mean
         )

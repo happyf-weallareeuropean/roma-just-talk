@@ -408,6 +408,11 @@ struct RomaCoreChecks {
                 "actually no correction"
             ),
             (
+                "Use model, rather, module.",
+                "Use module.",
+                "bounded rather correction"
+            ),
+            (
                 "Use model replace that with module.",
                 "Use module.",
                 "replace that with correction"
@@ -976,6 +981,11 @@ struct RomaCoreChecks {
                 "There is no wait time.",
                 "There is no wait time.",
                 "no wait prose guard"
+            ),
+            (
+                "I would rather wait.",
+                "I would rather wait.",
+                "rather prose guard"
             ),
             (
                 "Scratch that itch.",

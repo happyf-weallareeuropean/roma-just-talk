@@ -2,6 +2,7 @@
 
 ## v1.81 - Unreleased
 
+- Added bounded ", rather," self-correction cleanup while preserving ordinary "rather" prose.
 - Added bounded ", no wait," self-correction cleanup while preserving normal "no wait time" prose.
 - Added terminal "cut that" and "drop that" correction aliases.
 - Added terminal "ignore that" and "forget that" correction aliases.
