@@ -2,6 +2,7 @@
 
 ## v1.81 - Unreleased
 
+- Expanded false-start cleanup for "actually no", "no actually", and "sorry" correction phrases.
 - Collapsed duplicate punctuation when spoken punctuation commands overlap with model-inserted punctuation.
 - Skipped paste when cleanup leaves empty text, preventing filler-only speech from erasing selected text.
 - Removed standalone "you know" and "you know what I mean" filler outputs while preserving question forms.

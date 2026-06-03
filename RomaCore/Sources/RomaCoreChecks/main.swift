@@ -373,9 +373,29 @@ struct RomaCoreChecks {
                 "wait no correction"
             ),
             (
+                "Let's meet at two, no actually three.",
+                "Let's meet at three.",
+                "no actually correction"
+            ),
+            (
+                "Let's meet at two, actually no, three.",
+                "Let's meet at three.",
+                "actually no correction"
+            ),
+            (
                 "Use model replace that with module.",
                 "Use module.",
                 "replace that with correction"
+            ),
+            (
+                "Use model, sorry I mean module.",
+                "Use module.",
+                "sorry i mean correction"
+            ),
+            (
+                "Set color blue, sorry red.",
+                "Set color red.",
+                "sorry correction"
             ),
             (
                 "Wrong phrase scratch that. Right phrase.",
@@ -441,6 +461,11 @@ struct RomaCoreChecks {
                 "Delete that file.",
                 "Delete that file.",
                 "delete command prose guard"
+            ),
+            (
+                "I am sorry this happened.",
+                "I am sorry this happened.",
+                "sorry prose guard"
             ),
             (
                 "Scratch that itch.",

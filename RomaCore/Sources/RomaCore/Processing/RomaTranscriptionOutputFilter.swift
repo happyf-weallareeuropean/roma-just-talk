@@ -244,8 +244,12 @@ public struct RomaTranscriptionOutputFilter {
         (?ix)
         \s*
         (?:
+            (?:[,;:…]|\.\.\.)\s*actually\s+no\s*[,;:]? |
             (?:[,;:…]|\.\.\.)\s*actually |
+            (?:[,;:…]|\.\.\.)\s*no\s*[,;:]?\s+actually\s*[,;:]? |
             sorry\s+not\s+that\s*[,;:]?\s+actually |
+            (?:[,;:…]|\.\.\.)\s*sorry\s*[,;:]?\s+i\s+mean\s*[,;:]? |
+            sorry\s*[,;:]?\s+i\s+mean\s*[,;:]? |
             replace\s+that\s+with |
             change\s+that\s+to |
             scratch\s+that |
@@ -254,6 +258,7 @@ public struct RomaTranscriptionOutputFilter {
             nevermind |
             sorry\s+not\s+that |
             sorry\s+no |
+            (?:[,;:…]|\.\.\.)\s*sorry\s*[,;:]? |
             no\s*[,;:]?\s+sorry |
             or\s+rather |
             i\s+mean
