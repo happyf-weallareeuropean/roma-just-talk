@@ -26,7 +26,9 @@ param(
     [switch]$UsePackagedWhisperMock,
     [switch]$RunDictation,
     [switch]$CreateShortcut,
+    [switch]$CreateStartupShortcut,
     [string]$ShortcutDir = "",
+    [string]$StartupShortcutDir = "",
     [switch]$DoctorOnly
 )
 
@@ -207,6 +209,15 @@ function Write-ProofReport {
     if (![string]::IsNullOrWhiteSpace($ShortcutDir)) {
         $shortcutPath = Join-Path $ShortcutDir "Roma Just Talk Agent.lnk"
     }
+    $startupShortcutPath = ""
+    if (![string]::IsNullOrWhiteSpace($StartupShortcutDir)) {
+        $startupShortcutPath = Join-Path $StartupShortcutDir "Roma Just Talk Agent.lnk"
+    } elseif ($CreateStartupShortcut) {
+        $startup = [System.Environment]::GetFolderPath("Startup")
+        if (![string]::IsNullOrWhiteSpace($startup)) {
+            $startupShortcutPath = Join-Path $startup "Roma Just Talk Agent.lnk"
+        }
+    }
 
     $report = [ordered]@{
         generated_at = (Get-Date).ToUniversalTime().ToString("o")
@@ -215,6 +226,7 @@ function Write-ProofReport {
         run_dictation = $RunDictation.IsPresent
         paste_dictation = $PasteDictation.IsPresent
         create_shortcut = $CreateShortcut.IsPresent
+        create_startup_shortcut = $CreateStartupShortcut.IsPresent
         restore_clipboard = $RestoreClipboard.IsPresent
         no_restore_clipboard = $NoRestoreClipboard.IsPresent
         os = [ordered]@{
@@ -235,6 +247,9 @@ function Write-ProofReport {
     }
     if (![string]::IsNullOrWhiteSpace($shortcutPath)) {
         $report["shortcut"] = Get-FileProof -Path $shortcutPath
+    }
+    if (![string]::IsNullOrWhiteSpace($startupShortcutPath)) {
+        $report["startup_shortcut"] = Get-FileProof -Path $startupShortcutPath
     }
 
     $report |
@@ -463,6 +478,12 @@ if ($CreateShortcut) {
     $installArgs += "-CreateShortcut"
     if (![string]::IsNullOrWhiteSpace($ShortcutDir)) {
         $installArgs += @("-ShortcutDir", $ShortcutDir)
+    }
+}
+if ($CreateStartupShortcut) {
+    $installArgs += "-CreateStartupShortcut"
+    if (![string]::IsNullOrWhiteSpace($StartupShortcutDir)) {
+        $installArgs += @("-StartupShortcutDir", $StartupShortcutDir)
     }
 }
 

@@ -25,9 +25,12 @@ param(
     [switch]$RunDictation,
     [switch]$SkipSmoke,
     [switch]$CreateShortcut,
+    [switch]$CreateStartupShortcut,
     [switch]$AllowSmokeShortcut,
     [string]$ShortcutDir = "",
-    [string]$ShortcutName = "Roma Just Talk Agent.lnk"
+    [string]$ShortcutName = "Roma Just Talk Agent.lnk",
+    [string]$StartupShortcutDir = "",
+    [string]$StartupShortcutName = "Roma Just Talk Agent.lnk"
 )
 
 $ErrorActionPreference = "Stop"
@@ -64,6 +67,39 @@ function Require-File {
     if (!(Test-Path -LiteralPath $Path)) {
         throw "Required file was not found: $Path"
     }
+}
+
+function New-AgentShortcut {
+    param(
+        [Parameter(Mandatory = $true)]
+        [string]$ShortcutPath,
+        [Parameter(Mandatory = $true)]
+        [string]$RunScript,
+        [Parameter(Mandatory = $true)]
+        [string]$ConfigPath,
+        [Parameter(Mandatory = $true)]
+        [string]$WorkingDirectory,
+        [Parameter(Mandatory = $true)]
+        [string]$Description
+    )
+
+    $shell = New-Object -ComObject WScript.Shell
+    $shortcut = $shell.CreateShortcut($ShortcutPath)
+    $shortcut.TargetPath = "powershell.exe"
+    $shortcut.Arguments = "-NoProfile -ExecutionPolicy Bypass -File `"$RunScript`" -ConfigPath `"$ConfigPath`""
+    $shortcut.WorkingDirectory = $WorkingDirectory
+    $shortcut.Description = $Description
+    $shortcut.WindowStyle = 7
+    $shortcut.Save()
+
+    Require-File -Path $ShortcutPath
+    $savedShortcut = $shell.CreateShortcut($ShortcutPath)
+    if (!$savedShortcut.Arguments.Contains("-ConfigPath") -or
+        !$savedShortcut.Arguments.Contains($ConfigPath)) {
+        throw "Shortcut does not reference config path: $ConfigPath"
+    }
+
+    return $savedShortcut
 }
 
 if ([string]::IsNullOrWhiteSpace($PackageDir)) {
@@ -264,44 +300,60 @@ if (!$SkipSmoke) {
     }
 }
 
-if ($CreateShortcut) {
+if ($CreateShortcut -or $CreateStartupShortcut) {
     Invoke-Step "create user shortcut" {
         if (!$shortcutHasRunnableConfig -and !$AllowSmokeShortcut) {
-            throw "CreateShortcut requires cloud Endpoint/Model with ApiKeyEnv/ApiKeyName, local WhisperCLI/WhisperModel, or -SkipSmoke with -ConfigPath"
+            throw "Shortcut creation requires cloud Endpoint/Model with ApiKeyEnv/ApiKeyName, local WhisperCLI/WhisperModel, or -SkipSmoke with -ConfigPath"
         }
         if ([System.Environment]::OSVersion.Platform -ne [System.PlatformID]::Win32NT) {
-            throw "CreateShortcut is only available on Windows"
+            throw "Shortcut creation is only available on Windows"
         }
-        if ([string]::IsNullOrWhiteSpace($ShortcutDir)) {
-            $programs = [System.Environment]::GetFolderPath("Programs")
-            if ([string]::IsNullOrWhiteSpace($programs)) {
-                throw "Start Menu Programs folder was not found"
-            }
-            $ShortcutDir = Join-Path $programs "Roma Just Talk"
-        }
-        $ShortcutDir = Resolve-FullPath -Path $ShortcutDir
-        New-Item -ItemType Directory -Force -Path $ShortcutDir | Out-Null
-
-        $shortcutPath = Join-Path $ShortcutDir $ShortcutName
         $runScript = Join-Path $InstallDir "run-windows-agent.ps1"
         Require-File -Path $runScript
 
-        $shell = New-Object -ComObject WScript.Shell
-        $shortcut = $shell.CreateShortcut($shortcutPath)
-        $shortcut.TargetPath = "powershell.exe"
-        $shortcut.Arguments = "-NoProfile -ExecutionPolicy Bypass -File `"$runScript`" -ConfigPath `"$ConfigPath`""
-        $shortcut.WorkingDirectory = $InstallDir
-        $shortcut.Description = "Start roma-just-talk Windows dictation agent"
-        $shortcut.Save()
+        if ($CreateShortcut) {
+            if ([string]::IsNullOrWhiteSpace($ShortcutDir)) {
+                $programs = [System.Environment]::GetFolderPath("Programs")
+                if ([string]::IsNullOrWhiteSpace($programs)) {
+                    throw "Start Menu Programs folder was not found"
+                }
+                $ShortcutDir = Join-Path $programs "Roma Just Talk"
+            }
+            $ShortcutDir = Resolve-FullPath -Path $ShortcutDir
+            New-Item -ItemType Directory -Force -Path $ShortcutDir | Out-Null
 
-        Require-File -Path $shortcutPath
-        $savedShortcut = $shell.CreateShortcut($shortcutPath)
-        if (!$savedShortcut.Arguments.Contains("-ConfigPath") -or
-            !$savedShortcut.Arguments.Contains($ConfigPath)) {
-            throw "Shortcut does not reference config path: $ConfigPath"
+            $shortcutPath = Join-Path $ShortcutDir $ShortcutName
+            $savedShortcut = New-AgentShortcut `
+                -ShortcutPath $shortcutPath `
+                -RunScript $runScript `
+                -ConfigPath $ConfigPath `
+                -WorkingDirectory $InstallDir `
+                -Description "Start roma-just-talk Windows dictation agent"
+            Write-Host "shortcut=$shortcutPath"
+            Write-Host "shortcut_args=$($savedShortcut.Arguments)"
         }
-        Write-Host "shortcut=$shortcutPath"
-        Write-Host "shortcut_args=$($savedShortcut.Arguments)"
+
+        if ($CreateStartupShortcut) {
+            if ([string]::IsNullOrWhiteSpace($StartupShortcutDir)) {
+                $startup = [System.Environment]::GetFolderPath("Startup")
+                if ([string]::IsNullOrWhiteSpace($startup)) {
+                    throw "Startup folder was not found"
+                }
+                $StartupShortcutDir = $startup
+            }
+            $StartupShortcutDir = Resolve-FullPath -Path $StartupShortcutDir
+            New-Item -ItemType Directory -Force -Path $StartupShortcutDir | Out-Null
+
+            $startupShortcutPath = Join-Path $StartupShortcutDir $StartupShortcutName
+            $savedStartupShortcut = New-AgentShortcut `
+                -ShortcutPath $startupShortcutPath `
+                -RunScript $runScript `
+                -ConfigPath $ConfigPath `
+                -WorkingDirectory $InstallDir `
+                -Description "Start roma-just-talk Windows dictation agent at login"
+            Write-Host "startup_shortcut=$startupShortcutPath"
+            Write-Host "startup_shortcut_args=$($savedStartupShortcut.Arguments)"
+        }
     }
 }
 

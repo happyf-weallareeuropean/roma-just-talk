@@ -4,6 +4,7 @@ param(
     [string]$ExpectedMode = "",
     [switch]$RequireInstall,
     [switch]$RequireShortcut,
+    [switch]$RequireStartupShortcut,
     [switch]$RequirePackagedMock,
     [switch]$RequireHoldHook,
     [switch]$RequireCloudConfig,
@@ -128,6 +129,10 @@ if ($RequireInstall) {
 
 if ($RequireShortcut) {
     Assert-FileProof -Proof (Require-Property -Object $report -Name "shortcut") -Name "shortcut"
+}
+
+if ($RequireStartupShortcut) {
+    Assert-FileProof -Proof (Require-Property -Object $report -Name "startup_shortcut") -Name "startup_shortcut"
 }
 
 if ($RequireHoldHook) {

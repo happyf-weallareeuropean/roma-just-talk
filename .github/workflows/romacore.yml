@@ -238,6 +238,8 @@ jobs:
             -UsePackagedWhisperMock `
             -CreateShortcut `
             -ShortcutDir "$env:RUNNER_TEMP\roma-wrapper-shortcuts" `
+            -CreateStartupShortcut `
+            -StartupShortcutDir "$env:RUNNER_TEMP\roma-wrapper-startup" `
             -RestoreClipboard `
             -ClipboardRestoreDelaySeconds 0
 
@@ -246,6 +248,7 @@ jobs:
             -ExpectedMode packaged-whisper-mock `
             -RequireInstall `
             -RequireShortcut `
+            -RequireStartupShortcut `
             -RequirePackagedMock `
             -RequireHoldHook `
             -RequireWhisperConfig
