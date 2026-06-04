@@ -2960,6 +2960,31 @@ struct RomaCoreChecks {
                 "leading like article comparison guard"
             ),
             (
+                "Basically this is ready.",
+                "this is ready.",
+                "leading basically filler before this clause"
+            ),
+            (
+                "Basically, I think this works.",
+                "I think this works.",
+                "punctuated leading basically filler before i clause"
+            ),
+            (
+                "Basically it is ready.",
+                "it is ready.",
+                "leading basically filler before it clause"
+            ),
+            (
+                "Basically a model is just a function.",
+                "Basically a model is just a function.",
+                "leading basically article noun phrase guard"
+            ),
+            (
+                "Basically the model is ready.",
+                "Basically the model is ready.",
+                "leading basically determiner noun phrase guard"
+            ),
+            (
                 "There is no wait time.",
                 "There is no wait time.",
                 "no wait prose guard"

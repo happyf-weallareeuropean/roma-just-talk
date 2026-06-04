@@ -1279,6 +1279,7 @@ public struct RomaTranscriptionOutputFilter {
         filteredText = removeStandaloneDiscourseFillers(from: filteredText)
         filteredText = removeLeadingDiscourseFillers(from: filteredText)
         filteredText = removeLeadingUnpunctuatedLikeFiller(from: filteredText)
+        filteredText = removeLeadingBasicallyFiller(from: filteredText)
         filteredText = removePunctuatedDiscourseFillers(from: filteredText)
         filteredText = removeTerminalDiscourseFillers(from: filteredText)
         filteredText = removeUnpunctuatedLikeFillers(from: filteredText)
@@ -1435,6 +1436,27 @@ public struct RomaTranscriptionOutputFilter {
     }
 
     private static func isLeadingLikeFollowedByClauseStarter(_ text: String) -> Bool {
+        isLeadingFillerFollowedByClauseStarter(text)
+    }
+
+    private static func removeLeadingBasicallyFiller(from text: String) -> String {
+        let trimmedText = text.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard let regex = try? NSRegularExpression(pattern: #"(?i)^basically(?:[ \t]*[,;:…]+)?[ \t]+"#),
+              let match = regex.firstMatch(in: trimmedText, range: NSRange(trimmedText.startIndex..., in: trimmedText)),
+              let matchRange = Range(match.range, in: trimmedText) else {
+            return text
+        }
+
+        let suffix = String(trimmedText[matchRange.upperBound...])
+            .trimmingCharacters(in: .whitespacesAndNewlines)
+        guard isLeadingFillerFollowedByClauseStarter(suffix) else {
+            return text
+        }
+
+        return suffix
+    }
+
+    private static func isLeadingFillerFollowedByClauseStarter(_ text: String) -> Bool {
         let tokens = wordTokens(in: text)
         guard tokens.count >= 2 else { return false }
 
