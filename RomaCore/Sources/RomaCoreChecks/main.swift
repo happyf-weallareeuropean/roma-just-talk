@@ -1501,6 +1501,36 @@ struct RomaCoreChecks {
                 "punctuated long terminal discourse filler"
             ),
             (
+                "This works, um yeah.",
+                "This works.",
+                "terminal pause plus acknowledgement filler"
+            ),
+            (
+                "This works, yeah okay.",
+                "This works.",
+                "terminal acknowledgement chain filler"
+            ),
+            (
+                "This works, right okay.",
+                "This works.",
+                "terminal reversed acknowledgement chain filler"
+            ),
+            (
+                "This works, yeah right.",
+                "This works, yeah right.",
+                "terminal literal yeah-right guard"
+            ),
+            (
+                "This works okay.",
+                "This works okay.",
+                "terminal okay prose guard"
+            ),
+            (
+                "This works, right?",
+                "This works, right?",
+                "terminal right question guard"
+            ),
+            (
                 "The EHM project stays.",
                 "The EHM project stays.",
                 "all-caps ehm acronym prose guard"

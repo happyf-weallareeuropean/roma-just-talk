@@ -2,6 +2,7 @@
 
 ## v1.81 - Unreleased
 
+- Dropped trailing pause and acknowledgement filler tails such as "this works, um yeah.".
 - Dropped filler-only pause plus acknowledgement chains such as "uh okay yeah.".
 - Dropped filler-only pause plus acknowledgement fragments such as "um yeah.".
 - Lowercased generated short tech nouns after acronyms in mid-sentence fragments.

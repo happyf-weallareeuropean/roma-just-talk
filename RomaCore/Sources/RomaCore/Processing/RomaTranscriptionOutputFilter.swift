@@ -1295,6 +1295,7 @@ public struct RomaTranscriptionOutputFilter {
         filteredText = removeLeadingSoFiller(from: filteredText)
         filteredText = removePunctuatedDiscourseFillers(from: filteredText)
         filteredText = removeTerminalDiscourseFillers(from: filteredText)
+        filteredText = removeTerminalAcknowledgementFillers(from: filteredText)
         filteredText = removeUnpunctuatedLikeFillers(from: filteredText)
         filteredText = removeUnpunctuatedHedgeFillers(from: filteredText)
         filteredText = preserveBacktrackingMarkersAfterPauseFillers(in: filteredText)
@@ -1660,6 +1661,34 @@ public struct RomaTranscriptionOutputFilter {
         guard wordCount(in: trimmedPrefix) >= 2,
               let previousWord = previousWord(in: trimmedPrefix),
               !blockedPreviousWordsForTerminalYouKnow.contains(previousWord) else {
+            return text
+        }
+
+        return "\(trimmedPrefix)\(String(text[punctuationRange]))"
+    }
+
+    private static func removeTerminalAcknowledgementFillers(from text: String) -> String {
+        guard let regex = try? NSRegularExpression(
+            pattern: #"(?i)^([\s\S]*?)(?:[,;:…]|\.\.\.)[ \t]+(?:m+h+m+|m+[\s-]+h+m+|u+h+[\s-]+h*u+h+|u+h+[\s-]+u+h+|u+m+[\s-]+h+m+|u+h+|u+m+|h+m+|m+h+|m{2,}|(?-i:[aA]h+[eE][mM]+|[eE]h+[mM]+|[eE][hH]+m+)|e+h+|e+r+|a+h+|h+uh+)?(?:[.,;:!?…]+)?[ \t]*((?:(?:ok(?:ay)?|all[ \t]+right|alright|right|yeah)(?:[ \t]*(?:[,;:…]+|\.\.\.))?[ \t]*)+)([.!])\s*$"#
+        ) else {
+            return text
+        }
+
+        let range = NSRange(text.startIndex..., in: text)
+        guard let match = regex.firstMatch(in: text, range: range),
+              match.numberOfRanges >= 4,
+              let prefixRange = Range(match.range(at: 1), in: text),
+              let acknowledgementRange = Range(match.range(at: 2), in: text),
+              let punctuationRange = Range(match.range(at: 3), in: text) else {
+            return text
+        }
+
+        let trimmedPrefix = String(text[prefixRange])
+            .trimmingCharacters(in: .whitespacesAndNewlines)
+            .trimmingCharacters(in: softPhrasePunctuation)
+            .trimmingCharacters(in: .whitespacesAndNewlines)
+        guard wordCount(in: trimmedPrefix) >= 2,
+              !isLiteralYeahRightAcknowledgementChain(String(text[acknowledgementRange])) else {
             return text
         }
 
