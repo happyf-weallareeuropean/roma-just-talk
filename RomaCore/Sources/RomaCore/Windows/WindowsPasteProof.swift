@@ -16,6 +16,7 @@ public enum WindowsPasteProofError: Error, Equatable, CustomStringConvertible {
     case foregroundInvalidArgument(processID: UInt32)
     case foregroundWindowNotFound(processID: UInt32)
     case foregroundActivationFailed(processID: UInt32, errorCode: UInt32)
+    case invalidRestoreDelay(TimeInterval)
 
     public var description: String {
         switch self {
@@ -43,6 +44,8 @@ public enum WindowsPasteProofError: Error, Equatable, CustomStringConvertible {
             return "No visible foreground target window was found for process id \(processID)"
         case .foregroundActivationFailed(let processID, let errorCode):
             return "SetForegroundWindow failed for process id \(processID) with GetLastError=\(errorCode)"
+        case .invalidRestoreDelay(let seconds):
+            return "Clipboard restore delay must be finite and between 0 and \(WindowsClipboardRestoreConfiguration.maximumRestoreDelaySeconds) seconds; got \(seconds)"
         }
     }
 }
@@ -198,10 +201,13 @@ public enum WindowsPasteProof {
         insertedText: String,
         delaySeconds: TimeInterval
     ) throws -> WindowsClipboardRestoreStatus {
-        let delayMilliseconds = min(max(delaySeconds, 0) * 1_000, Double(UInt32.max))
-        let milliseconds = DWORD(delayMilliseconds)
+        guard let milliseconds = WindowsClipboardRestoreConfiguration.restoreDelayMilliseconds(
+            fromSeconds: delaySeconds
+        ) else {
+            throw WindowsPasteProofError.invalidRestoreDelay(delaySeconds)
+        }
         if milliseconds > 0 {
-            Sleep(milliseconds)
+            Sleep(DWORD(milliseconds))
         }
 
         guard try currentClipboardText() == insertedText else {

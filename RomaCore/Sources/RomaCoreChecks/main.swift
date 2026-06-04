@@ -4629,6 +4629,32 @@ struct RomaCoreChecks {
             "Windows clipboard restore configuration should use the shared default delay"
         )
         try require(
+            WindowsClipboardRestoreConfiguration.restoreDelayMilliseconds(fromSeconds: 0.75) == 750,
+            "Windows clipboard restore delay conversion should use shared milliseconds"
+        )
+        try require(
+            WindowsClipboardRestoreConfiguration.restoreDelayMilliseconds(
+                fromSeconds: WindowsClipboardRestoreConfiguration.defaultRestoreDelaySeconds
+            ) == 2_000,
+            "Windows clipboard restore default delay should convert to milliseconds"
+        )
+        try require(
+            WindowsClipboardRestoreConfiguration.restoreDelayMilliseconds(
+                fromSeconds: WindowsClipboardRestoreConfiguration.maximumRestoreDelaySeconds
+            ) == UInt32.max,
+            "Windows clipboard restore maximum delay should fit Sleep milliseconds"
+        )
+        try require(
+            WindowsClipboardRestoreConfiguration.restoreDelayMilliseconds(fromSeconds: .nan) == nil,
+            "Windows clipboard restore delay conversion should reject NaN"
+        )
+        try require(
+            WindowsClipboardRestoreConfiguration.restoreDelayMilliseconds(
+                fromSeconds: WindowsClipboardRestoreConfiguration.maximumRestoreDelaySeconds + 0.001
+            ) == nil,
+            "Windows clipboard restore delay conversion should reject values above Sleep range"
+        )
+        try require(
             RomaWindowsAgentConfiguration().clipboardRestoreConfiguration().restoreDelaySeconds ==
                 WindowsClipboardRestoreConfiguration.defaultRestoreDelaySeconds,
             "Windows agent clipboard restore configuration should use the shared default delay"
@@ -5692,6 +5718,11 @@ struct RomaCoreChecks {
                 "restoreDelaySeconds: TimeInterval = WindowsClipboardRestoreConfiguration.defaultRestoreDelaySeconds"
             ),
             "Windows paste proof options should share the clipboard restore delay default"
+        )
+        try require(
+            pasteProofSource.contains("WindowsClipboardRestoreConfiguration.restoreDelayMilliseconds") &&
+                !pasteProofSource.contains("min(max(delaySeconds, 0)"),
+            "Windows paste proof should share clipboard restore delay validation"
         )
         try require(
             keyboardHookSource.contains(

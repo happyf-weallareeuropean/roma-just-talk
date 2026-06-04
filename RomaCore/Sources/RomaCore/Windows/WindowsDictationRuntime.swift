@@ -170,9 +170,7 @@ public enum WindowsDictationRuntime {
             return
         }
         let delaySeconds = configuration.restoreDelaySeconds
-        guard delaySeconds.isFinite,
-              delaySeconds >= 0,
-              delaySeconds <= WindowsClipboardRestoreConfiguration.maximumRestoreDelaySeconds else {
+        guard WindowsClipboardRestoreConfiguration.restoreDelayMilliseconds(fromSeconds: delaySeconds) != nil else {
             throw WindowsDictationRuntimeError.invalidClipboardRestoreDelay(delaySeconds)
         }
     }

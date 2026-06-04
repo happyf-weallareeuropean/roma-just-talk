@@ -14,6 +14,15 @@ public struct WindowsClipboardRestoreConfiguration: Codable, Equatable, Hashable
         self.restoreClipboard = restoreClipboard
         self.restoreDelaySeconds = restoreDelaySeconds
     }
+
+    public static func restoreDelayMilliseconds(fromSeconds seconds: TimeInterval) -> UInt32? {
+        guard seconds.isFinite,
+              seconds >= 0,
+              seconds <= maximumRestoreDelaySeconds else {
+            return nil
+        }
+        return UInt32(seconds * 1_000)
+    }
 }
 
 public enum WindowsClipboardPayload {
