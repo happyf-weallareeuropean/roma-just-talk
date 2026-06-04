@@ -1172,6 +1172,10 @@ public struct RomaTranscriptionOutputFilter {
         }
 
         if shouldUseFragmentPolish {
+            if let activeContext,
+               shouldRemoveLeadingGeneratedFragmentMarker(after: activeContext.precedingText) {
+                polishedText = removeLeadingGeneratedFragmentMarker(from: polishedText)
+            }
             polishedText = removeLeadingFragmentPunctuation(from: polishedText)
             if wasWholeSquareBracketedOutput {
                 polishedText = removeTrailingNoisyFragmentPunctuation(from: polishedText)
@@ -6607,6 +6611,88 @@ public struct RomaTranscriptionOutputFilter {
             result = String(result[symbolEndIndex...]).trimmingCharacters(in: .whitespacesAndNewlines)
         }
         return result
+    }
+
+    private static func shouldRemoveLeadingGeneratedFragmentMarker(after precedingText: String) -> Bool {
+        guard isContinuingSentence(after: precedingText) else { return false }
+
+        let linePrefix = currentLinePrefix(in: precedingText)
+            .trimmingCharacters(in: .whitespacesAndNewlines)
+        guard let lastCharacter = linePrefix.last else { return false }
+        return lastCharacter != ":" && lastCharacter != "："
+    }
+
+    private static func removeLeadingGeneratedFragmentMarker(from text: String) -> String {
+        let trimmedText = text.trimmingCharacters(in: .whitespacesAndNewlines)
+
+        if let hashUnwrappedText = removeLeadingHashFragmentMarker(from: trimmedText) {
+            return hashUnwrappedText
+        }
+
+        if let numberedUnwrappedText = removeLeadingNumberedFragmentMarker(from: trimmedText) {
+            return numberedUnwrappedText
+        }
+
+        return text
+    }
+
+    private static func removeLeadingHashFragmentMarker(from text: String) -> String? {
+        var markerEnd = text.startIndex
+        var markerCount = 0
+        while markerEnd < text.endIndex,
+              text[markerEnd] == "#",
+              markerCount < 6 {
+            markerCount += 1
+            markerEnd = text.index(after: markerEnd)
+        }
+
+        guard markerCount > 0,
+              markerEnd < text.endIndex,
+              text[markerEnd].isWhitespace else {
+            return nil
+        }
+
+        let candidateText = String(text[markerEnd...])
+            .trimmingCharacters(in: .whitespacesAndNewlines)
+        guard isNoisyMarkedShortFragment(candidateText) else { return nil }
+        return candidateText
+    }
+
+    private static func removeLeadingNumberedFragmentMarker(from text: String) -> String? {
+        var markerEnd = text.startIndex
+        var digitCount = 0
+        while markerEnd < text.endIndex,
+              text[markerEnd].isNumber,
+              digitCount < 3 {
+            digitCount += 1
+            markerEnd = text.index(after: markerEnd)
+        }
+
+        guard digitCount > 0,
+              markerEnd < text.endIndex,
+              text[markerEnd] == "." || text[markerEnd] == ")" else {
+            return nil
+        }
+
+        let whitespaceStart = text.index(after: markerEnd)
+        guard whitespaceStart < text.endIndex,
+              text[whitespaceStart].isWhitespace else {
+            return nil
+        }
+
+        let candidateText = String(text[whitespaceStart...])
+            .trimmingCharacters(in: .whitespacesAndNewlines)
+        guard isNoisyMarkedShortFragment(candidateText) else { return nil }
+        return candidateText
+    }
+
+    private static func isNoisyMarkedShortFragment(_ text: String) -> Bool {
+        guard !text.isEmpty,
+              isShortFragment(text),
+              removeTrailingNoisyFragmentPunctuation(from: text) != text else {
+            return false
+        }
+        return true
     }
 
     private static func removeTrailingShortFragmentPunctuation(from text: String) -> String {

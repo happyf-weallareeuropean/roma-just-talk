@@ -243,6 +243,7 @@ struct RomaCoreChecks {
 
     private static func checkTranscriptionOutputFilter() throws {
         let midSentenceContext = RomaTranscriptionOutputFilter.TextInsertionContext(precedingText: "...so this")
+        let listIntroContext = RomaTranscriptionOutputFilter.TextInsertionContext(precedingText: "Tasks:")
         let sentenceStartContext = RomaTranscriptionOutputFilter.TextInsertionContext(precedingText: "Done. ")
         let selectedMidSentenceContext = RomaTranscriptionOutputFilter.TextInsertionContext(
             precedingText: "Use ",
@@ -484,6 +485,26 @@ struct RomaCoreChecks {
         try require(
             RomaTranscriptionOutputFilter.applyInsertionPolish("• Model.", context: midSentenceContext) == "model",
             "shared insertion polish should remove leading bullet fragment noise"
+        )
+        try require(
+            RomaTranscriptionOutputFilter.applyInsertionPolish("1. Model.", context: midSentenceContext) == "model",
+            "shared insertion polish should remove generated numbered fragment markers"
+        )
+        try require(
+            RomaTranscriptionOutputFilter.applyInsertionPolish("1) Model.", context: midSentenceContext) == "model",
+            "shared insertion polish should remove generated parenthesized number markers"
+        )
+        try require(
+            RomaTranscriptionOutputFilter.applyInsertionPolish("# Model.", context: midSentenceContext) == "model",
+            "shared insertion polish should remove generated heading fragment markers"
+        )
+        try require(
+            RomaTranscriptionOutputFilter.applyInsertionPolish("1. Model.", context: listIntroContext) == "1. model",
+            "shared insertion polish should preserve numbered markers after list introducers"
+        )
+        try require(
+            RomaTranscriptionOutputFilter.applyInsertionPolish("# Model.", context: listIntroContext) == "# model",
+            "shared insertion polish should preserve heading markers after list introducers"
         )
         try require(
             RomaTranscriptionOutputFilter.applyInsertionPolish("【Model.】", context: midSentenceContext) == "model",
@@ -3314,6 +3335,7 @@ struct RomaCoreChecks {
         )
 
         let midSentenceContext = RomaTranscriptionOutputFilter.TextInsertionContext(precedingText: "...so this")
+        let listIntroContext = RomaTranscriptionOutputFilter.TextInsertionContext(precedingText: "Tasks:")
         let wordContext = RomaTranscriptionOutputFilter.TextInsertionContext(precedingText: "Use")
         let compactTokenContext = RomaTranscriptionOutputFilter.TextInsertionContext(precedingText: "docs")
         let emailUserContext = RomaTranscriptionOutputFilter.TextInsertionContext(precedingText: "felix")
@@ -3463,6 +3485,26 @@ struct RomaCoreChecks {
         try require(
             RomaTranscriptionOutputFilter.applyInsertionPolish("• Model.", context: midSentenceContext) == "model",
             "insertion polish should remove leading bullet fragment noise"
+        )
+        try require(
+            RomaTranscriptionOutputFilter.applyInsertionPolish("1. Model.", context: midSentenceContext) == "model",
+            "insertion polish should remove generated numbered fragment markers"
+        )
+        try require(
+            RomaTranscriptionOutputFilter.applyInsertionPolish("1) Model.", context: midSentenceContext) == "model",
+            "insertion polish should remove generated parenthesized number markers"
+        )
+        try require(
+            RomaTranscriptionOutputFilter.applyInsertionPolish("# Model.", context: midSentenceContext) == "model",
+            "insertion polish should remove generated heading fragment markers"
+        )
+        try require(
+            RomaTranscriptionOutputFilter.applyInsertionPolish("1. Model.", context: listIntroContext) == "1. model",
+            "insertion polish should preserve numbered markers after list introducers"
+        )
+        try require(
+            RomaTranscriptionOutputFilter.applyInsertionPolish("# Model.", context: listIntroContext) == "# model",
+            "insertion polish should preserve heading markers after list introducers"
         )
         try require(
             RomaTranscriptionOutputFilter.applyInsertionPolish("'Model.'", context: nil) == "'model'",
