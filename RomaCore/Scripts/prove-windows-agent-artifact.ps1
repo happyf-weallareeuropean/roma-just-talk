@@ -174,6 +174,43 @@ function Get-FileProof {
     }
 }
 
+function Get-ShortcutProof {
+    param(
+        [Parameter(Mandatory = $true)]
+        [string]$Path,
+        [Parameter(Mandatory = $true)]
+        [string]$RunScriptPath,
+        [string]$ConfigPath = "",
+        [Parameter(Mandatory = $true)]
+        [string]$WorkingDirectory
+    )
+
+    $proof = Get-FileProof -Path $Path
+    if (!$proof["exists"] -or
+        [System.Environment]::OSVersion.Platform -ne [System.PlatformID]::Win32NT) {
+        return $proof
+    }
+
+    $shell = New-Object -ComObject WScript.Shell
+    $shortcut = $shell.CreateShortcut($Path)
+    $targetPath = [string]$shortcut.TargetPath
+    $arguments = [string]$shortcut.Arguments
+    $savedWorkingDirectory = [string]$shortcut.WorkingDirectory
+
+    $proof["target_path"] = $targetPath
+    $proof["arguments"] = $arguments
+    $proof["working_directory"] = $savedWorkingDirectory
+    $proof["description"] = [string]$shortcut.Description
+    $proof["window_style"] = [int]$shortcut.WindowStyle
+    $proof["target_is_powershell"] = $targetPath.EndsWith("powershell.exe", [System.StringComparison]::OrdinalIgnoreCase)
+    $proof["references_run_script"] = ![string]::IsNullOrWhiteSpace($RunScriptPath) -and $arguments.Contains($RunScriptPath)
+    $proof["references_config_path"] = ![string]::IsNullOrWhiteSpace($ConfigPath) -and $arguments.Contains($ConfigPath)
+    $proof["has_config_path_argument"] = $arguments.Contains("-ConfigPath")
+    $proof["working_directory_is_install_dir"] = $savedWorkingDirectory.Equals($WorkingDirectory, [System.StringComparison]::OrdinalIgnoreCase)
+
+    return $proof
+}
+
 function Wait-ProcessMainWindow {
     param(
         [Parameter(Mandatory = $true)]
@@ -483,6 +520,7 @@ function Write-ProofReport {
             $startupShortcutPath = Join-Path $startup "Roma Just Talk Agent.lnk"
         }
     }
+    $installedRunScriptPath = Join-Path $InstallDir "run-windows-agent.ps1"
 
     $report = [ordered]@{
         generated_at = (Get-Date).ToUniversalTime().ToString("o")
@@ -524,10 +562,18 @@ function Write-ProofReport {
         manifest = $script:artifactManifest
     }
     if (![string]::IsNullOrWhiteSpace($shortcutPath)) {
-        $report["shortcut"] = Get-FileProof -Path $shortcutPath
+        $report["shortcut"] = Get-ShortcutProof `
+            -Path $shortcutPath `
+            -RunScriptPath $installedRunScriptPath `
+            -ConfigPath $ConfigPath `
+            -WorkingDirectory $InstallDir
     }
     if (![string]::IsNullOrWhiteSpace($startupShortcutPath)) {
-        $report["startup_shortcut"] = Get-FileProof -Path $startupShortcutPath
+        $report["startup_shortcut"] = Get-ShortcutProof `
+            -Path $startupShortcutPath `
+            -RunScriptPath $installedRunScriptPath `
+            -ConfigPath $ConfigPath `
+            -WorkingDirectory $InstallDir
     }
     if ($RunDictation) {
         $report["dictation_runtime"] = Get-DictationRuntimeProof

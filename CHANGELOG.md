@@ -2,11 +2,13 @@
 
 ## v1.81 - Unreleased
 
+- Cleaned tight hyphenated repeated-word stutters such as "I-I think".
 - Cleaned bounded "let me rephrase" self-corrections.
 - Cleaned bounded "on second thought" self-corrections.
 - Cleaned leading slash, backslash, and pipe separator noise from short mid-sentence fragments.
 - Cleaned bounded "hold on" and "hang on" hesitation self-corrections.
 - Cleaned bounded bare "wait" self-corrections such as "Use model, wait module.".
+- Strengthened Windows proof reports to verify shortcut and startup-shortcut launch arguments.
 - Strengthened Windows proof reports to require hold-hook keydown/key-up evidence during dictation.
 - Added artifact-wrapper proof-report checks for packaged Windows native doctors.
 - Added artifact-wrapper proof-report checks for packaged `RomaProofAgent.exe` source coverage.
