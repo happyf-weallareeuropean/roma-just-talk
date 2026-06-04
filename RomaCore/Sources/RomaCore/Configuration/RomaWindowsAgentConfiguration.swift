@@ -1,6 +1,9 @@
 import Foundation
 
 public struct RomaWindowsAgentConfiguration: Codable, Equatable, Sendable {
+    public static let maximumRecordSeconds = Double(UInt64.max / 1_000_000_000)
+    public static let maximumHoldTimeoutSeconds = Double(UInt32.max) / 1_000
+
     public var endpoint: String?
     public var model: String?
     public var apiKeyEnvironment: String?
@@ -332,13 +335,18 @@ public struct RomaWindowsAgentConfiguration: Codable, Equatable, Sendable {
     }
 
     public func validate() throws {
-        if let recordSeconds, recordSeconds <= 0 {
-            throw RomaCommandLineOptionsError.invalidOptionValue("--seconds")
-        }
-        if let holdTimeoutSeconds, holdTimeoutSeconds <= 0 {
-            throw RomaCommandLineOptionsError.invalidOptionValue("--timeout")
-        }
-        if let clipboardRestoreDelaySeconds, clipboardRestoreDelaySeconds < 0 {
+        try validatePositiveFiniteDuration(
+            recordSeconds,
+            option: "--seconds",
+            maximum: Self.maximumRecordSeconds
+        )
+        try validatePositiveFiniteDuration(
+            holdTimeoutSeconds,
+            option: "--timeout",
+            maximum: Self.maximumHoldTimeoutSeconds
+        )
+        if let clipboardRestoreDelaySeconds,
+           !clipboardRestoreDelaySeconds.isFinite || clipboardRestoreDelaySeconds < 0 {
             throw RomaCommandLineOptionsError.invalidOptionValue("--clipboard-restore-delay")
         }
         if restoreClipboardAfterPaste == false, clipboardRestoreDelaySeconds != nil {
@@ -361,5 +369,18 @@ public struct RomaWindowsAgentConfiguration: Codable, Equatable, Sendable {
             throw RomaCommandLineOptionsError.missingOption(option)
         }
         return value
+    }
+
+    private func validatePositiveFiniteDuration(
+        _ value: Double?,
+        option: String,
+        maximum: Double
+    ) throws {
+        guard let value else {
+            return
+        }
+        guard value.isFinite, value > 0, value <= maximum else {
+            throw RomaCommandLineOptionsError.invalidOptionValue(option)
+        }
     }
 }

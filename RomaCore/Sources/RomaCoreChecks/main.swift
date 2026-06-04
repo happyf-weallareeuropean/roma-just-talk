@@ -4488,6 +4488,34 @@ struct RomaCoreChecks {
         }
 
         do {
+            try RomaWindowsAgentConfiguration(recordSeconds: .infinity).validate()
+            throw CheckFailure("config should reject non-finite toggle record duration")
+        } catch RomaCommandLineOptionsError.invalidOptionValue {
+        }
+
+        do {
+            try RomaWindowsAgentConfiguration(
+                recordSeconds: RomaWindowsAgentConfiguration.maximumRecordSeconds + 1
+            ).validate()
+            throw CheckFailure("config should reject oversized toggle record duration")
+        } catch RomaCommandLineOptionsError.invalidOptionValue {
+        }
+
+        do {
+            try RomaWindowsAgentConfiguration(
+                holdTimeoutSeconds: RomaWindowsAgentConfiguration.maximumHoldTimeoutSeconds + 1
+            ).validate()
+            throw CheckFailure("config should reject oversized hold timeout")
+        } catch RomaCommandLineOptionsError.invalidOptionValue {
+        }
+
+        do {
+            try RomaWindowsAgentConfiguration(clipboardRestoreDelaySeconds: .nan).validate()
+            throw CheckFailure("config should reject non-finite clipboard restore delay")
+        } catch RomaCommandLineOptionsError.invalidOptionValue {
+        }
+
+        do {
             try RomaWindowsAgentConfiguration(
                 endpoint: "https://api.example.com/v1/audio/transcriptions",
                 model: "cloud-model",

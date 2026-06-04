@@ -125,7 +125,8 @@ struct RomaProofAgent {
         let timeoutMilliseconds = UInt32(try positiveDoubleValue(
             after: "--timeout",
             in: arguments,
-            default: 15
+            default: 15,
+            maximum: RomaWindowsAgentConfiguration.maximumHoldTimeoutSeconds
         ) * 1_000)
         let chord = WindowsLowLevelKeyboardHookChord.proofHold
 
@@ -262,11 +263,17 @@ struct RomaProofAgent {
 
     private static func runWindowsDictationProof(arguments: [String]) async throws {
         let outputURL = URL(fileURLWithPath: try value(after: "--out", in: arguments))
-        let seconds = try positiveDoubleValue(after: "--seconds", in: arguments, default: 2)
+        let seconds = try positiveDoubleValue(
+            after: "--seconds",
+            in: arguments,
+            default: 2,
+            maximum: RomaWindowsAgentConfiguration.maximumRecordSeconds
+        )
         let timeoutMilliseconds = UInt32(try positiveDoubleValue(
             after: "--timeout",
             in: arguments,
-            default: 15
+            default: 15,
+            maximum: RomaWindowsAgentConfiguration.maximumHoldTimeoutSeconds
         ) * 1_000)
         let endpointText = try value(after: "--endpoint", in: arguments)
         let modelName = try value(after: "--model", in: arguments)
@@ -482,7 +489,12 @@ struct RomaProofAgent {
 
     private static func runMiniaudioRecordProof(arguments: [String]) async throws {
         let outputURL = URL(fileURLWithPath: try value(after: "--out", in: arguments))
-        let seconds = try positiveDoubleValue(after: "--seconds", in: arguments, default: 2)
+        let seconds = try positiveDoubleValue(
+            after: "--seconds",
+            in: arguments,
+            default: 2,
+            maximum: RomaWindowsAgentConfiguration.maximumRecordSeconds
+        )
         let recorder = MiniaudioCaptureRecorder()
 
         try await recorder.startPreRollBuffering()
@@ -672,10 +684,11 @@ struct RomaProofAgent {
     private static func positiveDoubleValue(
         after option: String,
         in arguments: [String],
-        default defaultValue: Double
+        default defaultValue: Double,
+        maximum: Double
     ) throws -> Double {
         let value = try doubleValue(after: option, in: arguments, default: defaultValue)
-        guard value > 0 else {
+        guard value.isFinite, value > 0, value <= maximum else {
             throw AgentError.invalidOptionValue(option)
         }
 
