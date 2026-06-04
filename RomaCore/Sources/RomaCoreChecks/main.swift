@@ -276,6 +276,14 @@ struct RomaCoreChecks {
             "shared insertion polish should remove trailing generated quotes after final punctuation"
         )
         try require(
+            RomaTranscriptionOutputFilter.applyInsertionPolish("Model!\"", context: midSentenceContext) == "model",
+            "shared insertion polish should remove trailing generated quotes after emphatic punctuation"
+        )
+        try require(
+            RomaTranscriptionOutputFilter.applyInsertionPolish("Model!”", context: midSentenceContext) == "model",
+            "shared insertion polish should remove trailing smart quotes after emphatic punctuation"
+        )
+        try require(
             RomaTranscriptionOutputFilter.applyInsertionPolish("The Model.", context: midSentenceContext) ==
                 "the model",
             "shared insertion polish should lowercase title-cased mid-sentence phrases"
@@ -4051,6 +4059,22 @@ struct RomaCoreChecks {
         try require(
             RomaTranscriptionOutputFilter.applyInsertionPolish("Model.\"", context: midSentenceContext) == "model",
             "insertion polish should remove trailing generated quotes after final punctuation"
+        )
+        try require(
+            RomaTranscriptionOutputFilter.applyInsertionPolish("Model!\"", context: midSentenceContext) == "model",
+            "insertion polish should remove trailing generated quotes after emphatic punctuation"
+        )
+        try require(
+            RomaTranscriptionOutputFilter.applyInsertionPolish("Model!”", context: midSentenceContext) == "model",
+            "insertion polish should remove trailing smart quotes after emphatic punctuation"
+        )
+        try require(
+            RomaTranscriptionOutputFilter.applyInsertionPolish("Model?\"", context: midSentenceContext) == "model",
+            "insertion polish should remove trailing generated quotes after noisy question punctuation"
+        )
+        try require(
+            RomaTranscriptionOutputFilter.applyInsertionPolish("What?\"", context: midSentenceContext) == "what?\"",
+            "insertion polish should preserve trailing quotes after question words"
         )
         try require(
             RomaTranscriptionOutputFilter.applyInsertionPolish("U.S.\"", context: midSentenceContext) == "U.S.",

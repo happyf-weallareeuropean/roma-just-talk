@@ -326,6 +326,10 @@ struct TranscriptionOutputFilterTests {
 
         #expect(TranscriptionOutputFilter.applyInsertionPolish("Model.", context: midSentenceContext) == "model")
         #expect(TranscriptionOutputFilter.applyInsertionPolish("Model.\"", context: midSentenceContext) == "model")
+        #expect(TranscriptionOutputFilter.applyInsertionPolish("Model!\"", context: midSentenceContext) == "model")
+        #expect(TranscriptionOutputFilter.applyInsertionPolish("Model!”", context: midSentenceContext) == "model")
+        #expect(TranscriptionOutputFilter.applyInsertionPolish("Model?\"", context: midSentenceContext) == "model")
+        #expect(TranscriptionOutputFilter.applyInsertionPolish("What?\"", context: midSentenceContext) == "what?\"")
         #expect(TranscriptionOutputFilter.applyInsertionPolish("U.S.\"", context: midSentenceContext) == "U.S.")
         #expect(TranscriptionOutputFilter.applyInsertionPolish("The Model.", context: midSentenceContext) == "the model")
         #expect(TranscriptionOutputFilter.applyInsertionPolish("A Final Word.", context: midSentenceContext) == "a final word")

@@ -7561,7 +7561,9 @@ public struct RomaTranscriptionOutputFilter {
             let quoteIndex = result.index(before: result.endIndex)
             let beforeQuote = String(result[..<quoteIndex]).trimmingCharacters(in: .whitespacesAndNewlines)
             guard let punctuation = beforeQuote.unicodeScalars.last,
-                  removableTrailingFragmentPunctuation.contains(punctuation) else {
+                  removableTrailingFragmentPunctuation.contains(punctuation) ||
+                    (removableTrailingSentenceFragmentPunctuation.contains(punctuation) &&
+                        isLikelyPunctuatedShortFragment(beforeQuote)) else {
                 break
             }
 
@@ -7813,7 +7815,11 @@ public struct RomaTranscriptionOutputFilter {
     }
 
     private static func isShortFragment(_ text: String) -> Bool {
-        let textWithoutTrailingFragmentPunctuation = removeTrailingFragmentPunctuation(from: text)
+        let withoutTrailingFragmentPunctuation = removeTrailingFragmentPunctuation(from: text)
+        let withoutTrailingQuote = removeTrailingQuoteAfterFragmentPunctuation(from: withoutTrailingFragmentPunctuation)
+        let textWithoutTrailingFragmentPunctuation = withoutTrailingQuote == withoutTrailingFragmentPunctuation
+            ? withoutTrailingFragmentPunctuation
+            : removeTrailingFragmentPunctuation(from: withoutTrailingQuote)
         if isShortPreservedBoundaryFragment(textWithoutTrailingFragmentPunctuation) {
             return true
         }
