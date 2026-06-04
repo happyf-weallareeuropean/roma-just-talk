@@ -222,6 +222,12 @@ jobs:
       - name: Package Windows agent
         run: .\Scripts\package-windows-agent.ps1 -OutputDir "$env:RUNNER_TEMP\roma-windows-agent"
 
+      - name: Verify Windows agent artifact wrapper
+        run: |
+          & "$env:RUNNER_TEMP\roma-windows-agent\prove-windows-agent-artifact.ps1" `
+            -PackageDir "$env:RUNNER_TEMP\roma-windows-agent" `
+            -DoctorOnly
+
       - name: Upload proof artifacts
         uses: actions/upload-artifact@v4
         with:
