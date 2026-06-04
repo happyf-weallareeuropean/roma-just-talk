@@ -178,6 +178,8 @@ try {
     $installScriptOutput = Join-Path $OutputDir "install-windows-agent.ps1"
     $proofScriptSource = Join-Path $PSScriptRoot "prove-windows-agent-artifact.ps1"
     $proofScriptOutput = Join-Path $OutputDir "prove-windows-agent-artifact.ps1"
+    $laptopProofScriptSource = Join-Path $PSScriptRoot "run-windows-laptop-proof.ps1"
+    $laptopProofScriptOutput = Join-Path $OutputDir "run-windows-laptop-proof.ps1"
     $checkReportScriptSource = Join-Path $PSScriptRoot "check-windows-proof-report.ps1"
     $checkReportScriptOutput = Join-Path $OutputDir "check-windows-proof-report.ps1"
     $checkSetScriptSource = Join-Path $PSScriptRoot "check-windows-proof-set.ps1"
@@ -240,6 +242,8 @@ try {
         Write-Host "install_script=$installScriptOutput"
         Copy-Item -LiteralPath $proofScriptSource -Destination $proofScriptOutput -Force
         Write-Host "proof_script=$proofScriptOutput"
+        Copy-Item -LiteralPath $laptopProofScriptSource -Destination $laptopProofScriptOutput -Force
+        Write-Host "laptop_proof_script=$laptopProofScriptOutput"
         Copy-Item -LiteralPath $checkReportScriptSource -Destination $checkReportScriptOutput -Force
         Write-Host "check_report_script=$checkReportScriptOutput"
         Copy-Item -LiteralPath $checkSetScriptSource -Destination $checkSetScriptOutput -Force
@@ -329,6 +333,7 @@ try {
         "run_script=$runScriptOutput",
         "install_script=$installScriptOutput",
         "proof_script=$proofScriptOutput",
+        "laptop_proof_script=$laptopProofScriptOutput",
         "check_report_script=$checkReportScriptOutput",
         "check_set_script=$checkSetScriptOutput",
         "swift_runtime_dir=$($swiftRuntime.Directory)",
