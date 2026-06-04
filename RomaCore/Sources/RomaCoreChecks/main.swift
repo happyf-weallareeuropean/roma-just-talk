@@ -656,6 +656,21 @@ struct RomaCoreChecks {
                 "hyphenated pause sounds"
             ),
             (
+                "um yeah this works.",
+                "this works.",
+                "leading pause plus yeah acknowledgement filler"
+            ),
+            (
+                "uh okay I think this works.",
+                "I think this works.",
+                "leading pause plus okay acknowledgement filler"
+            ),
+            (
+                "hmm all right this works.",
+                "this works.",
+                "leading pause plus all right acknowledgement filler"
+            ),
+            (
                 "hmm — I think this works.",
                 "I think this works.",
                 "leading pause filler with dash separator"
@@ -3604,6 +3619,21 @@ struct RomaCoreChecks {
                 "Okay yeah the model is ready.",
                 "Okay yeah the model is ready.",
                 "leading okay yeah determiner noun phrase guard"
+            ),
+            (
+                "Yeah this works.",
+                "Yeah this works.",
+                "single yeah acknowledgement prose guard"
+            ),
+            (
+                "um yeah the model is ready.",
+                "yeah the model is ready.",
+                "pause plus yeah determiner noun phrase guard"
+            ),
+            (
+                "um yeah right this works.",
+                "yeah right this works.",
+                "pause plus literal yeah right guard"
             ),
             (
                 "Yeah right this works.",

@@ -1278,6 +1278,10 @@ public struct RomaTranscriptionOutputFilter {
             filteredText,
             fillerWords: configuredFillerWords
         )
+        let hadLeadingPauseFillerNoise = startsWithRemovableLeadingPauseFillerNoise(
+            filteredText,
+            fillerWords: configuredFillerWords
+        )
 
         filteredText = removeStandaloneDiscourseFillers(from: filteredText)
         filteredText = removeLeadingDiscourseFillers(from: filteredText)
@@ -1326,6 +1330,9 @@ public struct RomaTranscriptionOutputFilter {
         }
 
         filteredText = removeLeadingDiscourseFillers(from: filteredText)
+        if hadLeadingPauseFillerNoise {
+            filteredText = removeLeadingSingleAcknowledgementFiller(from: filteredText)
+        }
         if hadLeadingFillerNoise {
             filteredText = removeLeadingFragmentPunctuation(from: filteredText)
         }
@@ -1393,6 +1400,24 @@ public struct RomaTranscriptionOutputFilter {
         return regex.firstMatch(in: text, range: NSRange(text.startIndex..., in: text)) != nil
     }
 
+    private static func startsWithRemovableLeadingPauseFillerNoise(_ text: String, fillerWords configuredFillerWords: [String]) -> Bool {
+        let fillerWords = Set(configuredFillerWords + defaultFillerWords)
+            .map { NSRegularExpression.escapedPattern(for: $0.trimmingCharacters(in: .whitespacesAndNewlines)) }
+            .filter { !$0.isEmpty }
+            .sorted { $0.count > $1.count }
+            .joined(separator: "|")
+        let pauseNoise = #"m+h+m+|m+[\s-]+h+m+|u+h+[\s-]+h*u+h+|u+h+[\s-]+u+h+|u+m+[\s-]+h+m+|u+h+|u+m+|h+m+|m+h+|m{2,}|(?-i:[aA]h+[eE][mM]+|[eE]h+[mM]+|[eE][hH]+m+)|e+h+|e+r+|a+h+|h+uh+"#
+        let pattern = #"(?i)^\s*(?:"# + [pauseNoise, fillerWords]
+            .filter { !$0.isEmpty }
+            .joined(separator: "|") + #")(?:[.,;:!?…–—-]|\s)+"#
+
+        guard let regex = try? NSRegularExpression(pattern: pattern) else {
+            return false
+        }
+
+        return regex.firstMatch(in: text, range: NSRange(text.startIndex..., in: text)) != nil
+    }
+
     private static func removeStandaloneDiscourseFillers(from text: String) -> String {
         guard let regex = try? NSRegularExpression(pattern: standaloneDiscourseFillerPattern) else {
             return text
@@ -1423,6 +1448,25 @@ public struct RomaTranscriptionOutputFilter {
         }
 
         return filteredText
+    }
+
+    private static func removeLeadingSingleAcknowledgementFiller(from text: String) -> String {
+        let trimmedText = text.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard let regex = try? NSRegularExpression(
+            pattern: #"(?i)^(?:ok(?:ay)?|all[ \t]+right|alright|right|yeah)(?:[ \t]*(?:[,;:…]+|\.\.\.))?[ \t]+"#
+        ),
+              let match = regex.firstMatch(in: trimmedText, range: NSRange(trimmedText.startIndex..., in: trimmedText)),
+              let matchRange = Range(match.range, in: trimmedText) else {
+            return text
+        }
+
+        let suffix = String(trimmedText[matchRange.upperBound...])
+            .trimmingCharacters(in: .whitespacesAndNewlines)
+        guard isLeadingFillerFollowedByClauseStarter(suffix) else {
+            return text
+        }
+
+        return suffix
     }
 
     private static func removeLeadingAcknowledgementFillerChain(from text: String) -> String {
