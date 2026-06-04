@@ -388,17 +388,25 @@ public struct RomaTranscriptionOutputFilter {
     ]
     private static let likelyLowercaseFragments: Set<String> = [
         "a", "about", "after", "again", "all", "also", "an", "and", "any", "app", "are",
-        "as", "at", "back", "be", "because", "but", "by", "can", "case", "client", "code", "config",
-        "class", "classes", "constant", "constants", "could", "data", "did", "do", "does", "done",
-        "enum", "enums", "file", "files", "final", "first", "folder", "folders", "for", "from", "function", "functions",
-        "get", "go", "got", "had", "has", "have", "here", "how", "if", "in",
-        "is", "it", "just", "last", "like", "make", "maybe", "mean", "model",
-        "models", "module", "modules", "method", "methods", "need", "next", "not", "now", "of", "on", "one", "or", "out",
-        "page", "parser", "phrase", "phrases", "prompt", "property", "properties", "put", "really", "request", "response", "right",
-        "router", "screen", "second", "see", "server", "service", "setting", "should", "single", "so", "some",
-        "that", "the", "then", "there", "third", "this", "to", "token", "tool", "use", "view", "was",
-        "variable", "variables", "we", "what", "when", "where", "which", "will", "window", "with", "word", "words", "work",
-        "would", "yeah", "you"
+        "argument", "arguments", "array", "arrays", "as", "at", "back", "be", "because", "branch", "branches",
+        "bug", "bugs", "button", "buttons", "but", "by", "cache", "caches", "can", "case", "class", "classes",
+        "client", "code", "command", "commands", "commit", "commits", "component", "components", "config",
+        "constant", "constants", "could", "data", "database", "databases", "dictionary", "dictionaries",
+        "did", "diff", "diffs", "do", "does", "done", "email", "emails", "endpoint", "endpoints", "enum",
+        "enums", "error", "errors", "field", "fields", "file", "files", "final", "first", "flag", "flags",
+        "folder", "folders", "for", "from", "function", "functions", "get", "go", "got", "had", "has", "have",
+        "here", "how", "if", "in", "input", "inputs", "is", "it", "issue", "issues", "just", "key", "keys",
+        "last", "like", "line", "lines", "make", "maybe", "mean", "message", "messages", "method", "methods",
+        "model", "models", "module", "modules", "name", "names", "need", "next", "not", "now", "of", "on", "one",
+        "option", "options", "or", "out", "output", "outputs", "package", "packages", "page", "parameter",
+        "parameters", "parser", "path", "paths", "payload", "payloads", "phrase", "phrases", "project", "projects",
+        "prompt", "property", "properties", "protocol", "protocols", "put", "really", "repo", "repos", "repository",
+        "repositories", "request", "response", "result", "results", "right", "route", "routes", "router", "screen",
+        "script", "scripts", "second", "see", "server", "service", "setting", "settings", "should", "single", "so",
+        "some", "state", "states", "struct", "structs", "that", "the", "then", "there", "third", "this", "ticket",
+        "tickets", "to", "token", "tool", "type", "types", "use", "user", "users", "value", "values", "variable",
+        "variables", "view", "was", "we", "what", "when", "where", "which", "will", "window", "with", "word", "words",
+        "work", "workspace", "workspaces", "would", "yeah", "you"
     ]
     private static let sentenceBoundaryContinuationPreviousWords: Set<String> = [
         "a", "about", "after", "an", "and", "are", "as", "at", "be", "been", "being",

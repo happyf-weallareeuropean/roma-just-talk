@@ -284,6 +284,22 @@ struct RomaCoreChecks {
             "shared insertion polish should lowercase all-caps ordinary code nouns"
         )
         try require(
+            RomaTranscriptionOutputFilter.applyInsertionPolish("COMPONENT.", context: midSentenceContext) == "component",
+            "shared insertion polish should lowercase all-caps ordinary product nouns"
+        )
+        try require(
+            RomaTranscriptionOutputFilter.applyInsertionPolish("ENDPOINT.", context: midSentenceContext) == "endpoint",
+            "shared insertion polish should lowercase all-caps ordinary API nouns"
+        )
+        try require(
+            RomaTranscriptionOutputFilter.applyInsertionPolish("PAYLOAD.", context: midSentenceContext) == "payload",
+            "shared insertion polish should lowercase all-caps ordinary data nouns"
+        )
+        try require(
+            RomaTranscriptionOutputFilter.applyInsertionPolish("ERROR.", context: midSentenceContext) == "error",
+            "shared insertion polish should lowercase all-caps ordinary status nouns"
+        )
+        try require(
             RomaTranscriptionOutputFilter.applyInsertionPolish("Model.\"", context: midSentenceContext) == "model",
             "shared insertion polish should remove trailing generated quotes after final punctuation"
         )
@@ -311,6 +327,10 @@ struct RomaCoreChecks {
         try require(
             RomaTranscriptionOutputFilter.applyInsertionPolish("Swift.", context: midSentenceContext) == "Swift",
             "shared insertion polish should preserve product and language names"
+        )
+        try require(
+            RomaTranscriptionOutputFilter.applyInsertionPolish("GitHub.", context: midSentenceContext) == "GitHub",
+            "shared insertion polish should preserve product names with internal capitals"
         )
         try require(
             RomaTranscriptionOutputFilter.applyInsertionPolish(

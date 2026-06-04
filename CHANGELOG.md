@@ -2,6 +2,7 @@
 
 ## v1.81 - Unreleased
 
+- Lowercased more all-caps ordinary code and product fragments such as "ENDPOINT" and "PAYLOAD" mid-sentence.
 - Lowercased additional all-caps ordinary tech fragments such as "MODULE" mid-sentence.
 - Lowercased all-caps ordinary short fragments mid-sentence while preserving acronyms.
 - Dropped unpunctuated terminal clarification filler tails such as "This works if that makes sense".
