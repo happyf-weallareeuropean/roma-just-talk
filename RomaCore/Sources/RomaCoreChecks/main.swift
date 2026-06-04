@@ -281,6 +281,31 @@ struct RomaCoreChecks {
             "shared insertion polish should preserve acronyms inside mid-sentence phrases"
         )
         try require(
+            RomaTranscriptionOutputFilter.applyInsertionPolish(
+                "The LLM Router.",
+                context: midSentenceContext
+            ) == "the LLM router",
+            "shared insertion polish should lowercase generated tech nouns after acronyms"
+        )
+        try require(
+            RomaTranscriptionOutputFilter.applyInsertionPolish(
+                "The iOS App.",
+                context: midSentenceContext
+            ) == "the iOS app",
+            "shared insertion polish should lowercase generated tech nouns after mixed-case product tokens"
+        )
+        try require(
+            RomaTranscriptionOutputFilter.applyInsertionPolish(
+                "The URL Parser.",
+                context: midSentenceContext
+            ) == "the URL parser",
+            "shared insertion polish should lowercase generated parser nouns after acronyms"
+        )
+        try require(
+            RomaTranscriptionOutputFilter.applyInsertionPolish("New York.", context: midSentenceContext) == "New York",
+            "shared insertion polish should preserve proper-name mid-sentence phrases"
+        )
+        try require(
             RomaTranscriptionOutputFilter.applyInsertionPolish("Felix.", context: midSentenceContext) == "Felix",
             "shared insertion polish should preserve proper-name mid-sentence fragments"
         )
@@ -3815,6 +3840,34 @@ struct RomaCoreChecks {
         )
         try require(
             RomaTranscriptionOutputFilter.applyInsertionPolish(
+                "The LLM Router.",
+                context: midSentenceContext
+            ) == "the LLM router",
+            "insertion polish should lowercase title-cased tech nouns after acronyms"
+        )
+        try require(
+            RomaTranscriptionOutputFilter.applyInsertionPolish(
+                "The iOS App.",
+                context: midSentenceContext
+            ) == "the iOS app",
+            "insertion polish should lowercase title-cased tech nouns after mixed-case product tokens"
+        )
+        try require(
+            RomaTranscriptionOutputFilter.applyInsertionPolish(
+                "The URL Parser.",
+                context: midSentenceContext
+            ) == "the URL parser",
+            "insertion polish should lowercase title-cased parser nouns after acronyms"
+        )
+        try require(
+            RomaTranscriptionOutputFilter.applyInsertionPolish(
+                "New York.",
+                context: midSentenceContext
+            ) == "New York",
+            "insertion polish should preserve proper-name short mid-sentence phrases"
+        )
+        try require(
+            RomaTranscriptionOutputFilter.applyInsertionPolish(
                 "Model is actually ready!",
                 context: midSentenceContext
             ) == "model is actually ready!",
@@ -5101,6 +5154,10 @@ struct RomaCoreChecks {
             contentsOf: scriptsRoot.appendingPathComponent("package-windows-agent.ps1"),
             encoding: .utf8
         )
+        let installScript = try String(
+            contentsOf: scriptsRoot.appendingPathComponent("install-windows-agent.ps1"),
+            encoding: .utf8
+        )
         let foregroundSource = try String(
             contentsOf: packageRoot.appendingPathComponent("Sources/CWindowsSupport/roma_windows_foreground.c"),
             encoding: .utf8
@@ -5238,6 +5295,11 @@ struct RomaCoreChecks {
             laptopProofScript.contains("cloudStartupShortcutDir") &&
                 laptopProofScript.contains("localStartupShortcutDir"),
             "Windows laptop proof runner should keep cloud and local startup shortcut proofs separate"
+        )
+        try require(
+            installScript.contains("Assert-InstalledAgentNotRunning") &&
+                installScript.contains("close the listener before reinstalling or upgrading"),
+            "Windows installer should fail early when the installed listener is running"
         )
         try require(
             checkSetScript.contains("proof_session_id"),

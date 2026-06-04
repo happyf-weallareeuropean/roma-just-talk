@@ -2,6 +2,7 @@
 
 ## v1.81 - Unreleased
 
+- Lowercased generated short tech nouns after acronyms in mid-sentence fragments.
 - Cleaned quoted or angle-wrapped bracket artifacts around short mid-sentence fragments.
 - Cleaned single "yeah/okay/right" acknowledgements after leading pause fillers.
 - Cleaned "scratch this" correction commands while preserving ordinary "delete that/this" prose.
@@ -38,6 +39,7 @@
 - Hardened Windows targeted paste foreground activation with `AttachThreadInput` before `SetForegroundWindow`.
 - Required full Windows laptop proof reports to share one proof session id.
 - Kept cloud and local Windows laptop startup shortcut proofs in separate proof-owned directories.
+- Made the Windows installer fail early when the installed listener executable is still running.
 - Hardened the Windows laptop proof runner to fail early outside Windows or with missing local whisper files.
 - Strengthened full Windows laptop proof-set validation to require the reports come from the same machine and packaged artifact.
 - Added a package identity fingerprint to Windows artifact proof reports and full laptop proof-set validation.

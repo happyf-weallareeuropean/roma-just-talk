@@ -386,15 +386,17 @@ public struct RomaTranscriptionOutputFilter {
         "in", "is", "left", "needed", "of", "shortcut", "shortcuts", "there", "to"
     ]
     private static let likelyLowercaseFragments: Set<String> = [
-        "a", "about", "after", "again", "all", "also", "an", "and", "any", "are",
-        "as", "at", "back", "be", "because", "but", "by", "can", "case", "code",
+        "a", "about", "after", "again", "all", "also", "an", "and", "any", "app", "are",
+        "as", "at", "back", "be", "because", "but", "by", "can", "case", "client", "code", "config",
         "could", "data", "did", "do", "does", "done", "final", "first", "for", "from",
         "get", "go", "got", "had", "has", "have", "here", "how", "if", "in",
         "is", "it", "just", "last", "like", "make", "maybe", "mean", "model",
         "models", "need", "next", "not", "now", "of", "on", "one", "or", "out",
-        "phrase", "phrases", "put", "really", "right", "second", "see", "should", "single", "so", "some", "that",
-        "the", "then", "there", "third", "this", "to", "use", "was", "we", "what",
-        "when", "where", "which", "will", "with", "word", "words", "work", "would", "yeah", "you"
+        "page", "parser", "phrase", "phrases", "prompt", "put", "really", "request", "response", "right",
+        "router", "screen", "second", "see", "server", "service", "setting", "should", "single", "so", "some",
+        "that", "the", "then", "there", "third", "this", "to", "token", "tool", "use", "view", "was",
+        "we", "what", "when", "where", "which", "will", "window", "with", "word", "words", "work",
+        "would", "yeah", "you"
     ]
     private static let preservedSingleWordQuestionFragments: Set<String> = [
         "how", "what", "when", "where", "which", "who", "why"
