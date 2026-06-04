@@ -155,6 +155,26 @@ function Invoke-ProofAgentDoctorCommand {
     return $output
 }
 
+function Invoke-PackagedListenerSmoke {
+    param(
+        [Parameter(Mandatory = $true)]
+        [string]$ConfigPath
+    )
+
+    $output = & $agentPath listen `
+        --config $ConfigPath `
+        --max-sessions 0 2>&1 | Out-String
+    if ($LASTEXITCODE -ne 0) {
+        Write-Host $output
+        throw "RomaWindowsAgent listen smoke failed"
+    }
+
+    Write-Host $output
+    Assert-OutputContains -Output $output -Expected "mode=listen"
+    Assert-OutputContains -Output $output -Expected "listen_completed_sessions=0"
+    return $output
+}
+
 function Get-FileProof {
     param(
         [Parameter(Mandatory = $true)]
@@ -598,6 +618,19 @@ function Get-NativeDoctorOutputProof {
     }
 }
 
+function Get-ListenerSmokeProof {
+    param(
+        [string]$Output = ""
+    )
+
+    return [ordered]@{
+        output_present = ![string]::IsNullOrWhiteSpace($Output)
+        mode_listen = $Output.Contains("mode=listen")
+        zero_session = $Output.Contains("max_sessions=0")
+        completed_zero_sessions = $Output.Contains("listen_completed_sessions=0")
+    }
+}
+
 function Write-ProofReport {
     param(
         [Parameter(Mandatory = $true)]
@@ -660,6 +693,7 @@ function Write-ProofReport {
             }
             installed_launcher = (Get-DoctorOutputProof -Output $script:installedLauncherDoctorOutput)
         }
+        packaged_listener = (Get-ListenerSmokeProof -Output $script:packagedListenerOutput)
         files = [ordered]@{
             packaged_agent = (Get-FileProof -Path $agentPath)
             packaged_proof_agent = (Get-FileProof -Path $script:proofAgentPath)
@@ -747,6 +781,7 @@ $script:artifactManifest = @{}
 $script:packagedWhisperCLI = ""
 $script:packagedAgentDoctorOutput = ""
 $script:packagedProofAgentDoctorOutput = ""
+$script:packagedListenerOutput = ""
 $script:packagedNativeDoctorOutputs = [ordered]@{
     register_hotkey = ""
     keyboard_hook = ""
@@ -836,6 +871,10 @@ Invoke-Step "packaged proof agent doctor" {
     Write-Host $script:packagedProofAgentDoctorOutput
     Assert-OutputContains -Output $script:packagedProofAgentDoctorOutput -Expected "windows_paste_adapter_source=true"
     Assert-OutputContains -Output $script:packagedProofAgentDoctorOutput -Expected "windows_dictation_proof_source=true"
+}
+
+Invoke-Step "packaged listener smoke" {
+    $script:packagedListenerOutput = Invoke-PackagedListenerSmoke -ConfigPath (Join-Path $PackageDir "sample-windows-agent.json")
 }
 
 Invoke-Step "packaged native proof doctors" {
