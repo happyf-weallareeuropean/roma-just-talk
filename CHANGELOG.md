@@ -2,6 +2,7 @@
 
 ## v1.81 - Unreleased
 
+- Cleaned leading unpunctuated "like" fillers before clear clause starters.
 - Cleaned natural "strike/delete/cross that" correction phrases without punctuation.
 - Cleaned generated list and heading markers from short mid-sentence fragments.
 - Cleaned noisy markdown and bullet wrappers around short mid-sentence fragments.

@@ -2935,6 +2935,31 @@ struct RomaCoreChecks {
                 "copula pause before actually prose guard"
             ),
             (
+                "Like this is really good.",
+                "this is really good.",
+                "leading unpunctuated like filler before this clause"
+            ),
+            (
+                "Like I think this works.",
+                "I think this works.",
+                "leading unpunctuated like filler before i clause"
+            ),
+            (
+                "Like it is ready.",
+                "it is ready.",
+                "leading unpunctuated like filler before it clause"
+            ),
+            (
+                "Like this model, the old one works.",
+                "Like this model, the old one works.",
+                "leading like comparison noun phrase guard"
+            ),
+            (
+                "Like a model, this is compact.",
+                "Like a model, this is compact.",
+                "leading like article comparison guard"
+            ),
+            (
                 "There is no wait time.",
                 "There is no wait time.",
                 "no wait prose guard"

@@ -449,6 +449,14 @@ public struct RomaTranscriptionOutputFilter {
         "good", "just", "maybe", "not", "probably", "ready", "really",
         "thinking", "trying", "waiting", "working"
     ]
+    private static let leadingLikeClauseStarterVerbs: Set<String> = [
+        "am", "are", "can", "could", "did", "do", "does", "had", "has",
+        "have", "is", "might", "must", "need", "needs", "should", "think",
+        "thinks", "was", "were", "will", "would"
+    ]
+    private static let leadingLikeClauseStarterPronouns: Set<String> = [
+        "he", "i", "it", "she", "that", "they", "this", "we", "you"
+    ]
     private static let inlineNumberedListMarkerPattern = #"(?<![\p{L}\p{N}])\d{1,2}\.\s+(?=\S)"#
     private static let spokenSequenceListMarkerPattern = #"(?i)(?<![\p{L}\p{N}])(?:number[ \t]+)?(one|two|three|four|five|six|seven|eight|nine|first|second|third|fourth|fifth|sixth|seventh|eighth|ninth)(?:[.)])?[ \t]+(?=\S)"#
     private static let spokenSequenceListMarkerValues: [String: Int] = [
@@ -1270,6 +1278,7 @@ public struct RomaTranscriptionOutputFilter {
 
         filteredText = removeStandaloneDiscourseFillers(from: filteredText)
         filteredText = removeLeadingDiscourseFillers(from: filteredText)
+        filteredText = removeLeadingUnpunctuatedLikeFiller(from: filteredText)
         filteredText = removePunctuatedDiscourseFillers(from: filteredText)
         filteredText = removeTerminalDiscourseFillers(from: filteredText)
         filteredText = removeUnpunctuatedLikeFillers(from: filteredText)
@@ -1406,6 +1415,42 @@ public struct RomaTranscriptionOutputFilter {
         }
 
         return filteredText
+    }
+
+    private static func removeLeadingUnpunctuatedLikeFiller(from text: String) -> String {
+        let trimmedText = text.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard let regex = try? NSRegularExpression(pattern: #"(?i)^like[ \t]+"#),
+              let match = regex.firstMatch(in: trimmedText, range: NSRange(trimmedText.startIndex..., in: trimmedText)),
+              let matchRange = Range(match.range, in: trimmedText) else {
+            return text
+        }
+
+        let suffix = String(trimmedText[matchRange.upperBound...])
+            .trimmingCharacters(in: .whitespacesAndNewlines)
+        guard isLeadingLikeFollowedByClauseStarter(suffix) else {
+            return text
+        }
+
+        return suffix
+    }
+
+    private static func isLeadingLikeFollowedByClauseStarter(_ text: String) -> Bool {
+        let tokens = wordTokens(in: text)
+        guard tokens.count >= 2 else { return false }
+
+        let firstWord = tokens[0].text
+        let secondWord = tokens[1].text
+        guard leadingLikeClauseStarterPronouns.contains(firstWord) else {
+            return false
+        }
+
+        if leadingLikeClauseStarterVerbs.contains(secondWord) {
+            return true
+        }
+
+        guard tokens.count >= 3 else { return false }
+        let thirdWord = tokens[2].text
+        return secondWord == "really" && leadingLikeClauseStarterVerbs.contains(thirdWord)
     }
 
     private static func removeTerminalDiscourseFillers(from text: String) -> String {
