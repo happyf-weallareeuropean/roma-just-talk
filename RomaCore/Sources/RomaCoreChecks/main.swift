@@ -391,6 +391,18 @@ struct RomaCoreChecks {
             "shared insertion polish should preserve trailing path slash fragments"
         )
         try require(
+            RomaTranscriptionOutputFilter.applyInsertionPolish("... [Model.]", context: midSentenceContext) == "model",
+            "shared insertion polish should unwrap ellipsis-prefixed bracketed fragments"
+        )
+        try require(
+            RomaTranscriptionOutputFilter.applyInsertionPolish("— [Model.]", context: midSentenceContext) == "model",
+            "shared insertion polish should unwrap dash-prefixed bracketed fragments"
+        )
+        try require(
+            RomaTranscriptionOutputFilter.applyInsertionPolish("| [Model.]", context: midSentenceContext) == "model",
+            "shared insertion polish should unwrap pipe-prefixed bracketed fragments"
+        )
+        try require(
             RomaTranscriptionOutputFilter.applyInsertionPolish("\ndetails.", context: midSentenceContext) == "\ndetails",
             "shared insertion polish should preserve leading line breaks"
         )

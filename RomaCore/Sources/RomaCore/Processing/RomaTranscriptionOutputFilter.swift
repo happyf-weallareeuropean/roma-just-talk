@@ -6382,6 +6382,13 @@ public struct RomaTranscriptionOutputFilter {
 
     private static func stripBoundaryNoise(from text: String) -> String {
         var strippedText = unwrapSquareBracketedWholeOutput(text)
+        if strippedText == text {
+            let withoutLeadingNoise = removeLeadingFragmentPunctuation(from: removeLeadingPausePunctuation(from: text))
+            let unwrappedLeadingFragment = unwrapSquareBracketedWholeOutput(withoutLeadingNoise)
+            if unwrappedLeadingFragment != withoutLeadingNoise {
+                strippedText = unwrappedLeadingFragment
+            }
+        }
         guard isShortFragment(strippedText) else { return strippedText }
 
         if hasPreservedBalancedBoundary(strippedText) ||

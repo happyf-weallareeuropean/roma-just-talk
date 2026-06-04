@@ -2,6 +2,7 @@
 
 ## v1.81 - Unreleased
 
+- Cleaned leading-noise plus bracketed final-word artifacts such as "... [Model.]".
 - Cleaned broader bounded clarification self-corrections such as "just to clarify" and "to be clear".
 - Cleaned bounded "to clarify" self-corrections.
 - Cleaned bounded "what I mean is" self-corrections without leaving stray "is".
