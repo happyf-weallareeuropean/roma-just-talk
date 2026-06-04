@@ -262,6 +262,7 @@ $smokeScript = Join-Path $PackageDir "smoke-windows-agent.ps1"
 $installScript = Join-Path $PackageDir "install-windows-agent.ps1"
 $runScript = Join-Path $PackageDir "run-windows-agent.ps1"
 $proofScript = Join-Path $PackageDir "prove-windows-agent-artifact.ps1"
+$checkReportScript = Join-Path $PackageDir "check-windows-proof-report.ps1"
 $manifestPath = Join-Path $PackageDir "manifest.txt"
 $script:artifactManifest = @{}
 $script:packagedWhisperCLI = ""
@@ -272,6 +273,7 @@ Invoke-Step "artifact files" {
     Require-File -Path $installScript
     Require-File -Path $runScript
     Require-File -Path $proofScript
+    Require-File -Path $checkReportScript
     Require-File -Path $manifestPath
 
     if ([System.Environment]::OSVersion.Platform -eq [System.PlatformID]::Win32NT) {
@@ -289,6 +291,7 @@ Invoke-Step "artifact manifest" {
         "run_script",
         "install_script",
         "proof_script",
+        "check_report_script",
         "install_proof_config",
         "install_proof_shortcut",
         "local_whisper_install_config",

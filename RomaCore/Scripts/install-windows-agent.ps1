@@ -135,6 +135,7 @@ Invoke-Step "copy package files" {
         "run-windows-agent.ps1",
         "install-windows-agent.ps1",
         "prove-windows-agent-artifact.ps1",
+        "check-windows-proof-report.ps1",
         "manifest.txt",
         "sample-windows-agent.json",
         "sample-local-whisper-agent.json"
