@@ -2,6 +2,7 @@
 
 ## v1.81 - Unreleased
 
+- Unwrapped short generated parenthesis, brace, and quote artifacts such as "(Model.)" mid-sentence.
 - Normalized spaced product-name fragments such as "OPEN AI MODEL" and "GIT HUB ISSUE" mid-sentence.
 - Replaced whole product phrases in self-corrections such as "GitHub issue wait no Linear ticket" without leaving the old product name.
 - Normalized more all-caps developer product fragments such as "VERCEL PROJECT" and "NEXT JS ROUTE" mid-sentence.

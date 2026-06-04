@@ -1279,11 +1279,14 @@ public struct RomaTranscriptionOutputFilter {
             return restoreLeadingNewlines(leadingNewlineCount, to: polishedText)
         }
 
+        let isContinuingInsertion = activeContext.map { isContinuingSentence(after: $0.precedingText) } ?? false
         let shouldTreatAsFragment = isShortFragment(polishedText) ||
             (wasWholeSquareBracketedOutput &&
-                isShortFragment(removeTrailingNoisyFragmentPunctuation(from: polishedText)))
+                isShortFragment(removeTrailingNoisyFragmentPunctuation(from: polishedText))) ||
+            (isContinuingInsertion &&
+                isNoisyPreservedBoundaryContinuationFragment(polishedText))
         let shouldUseFragmentPolish: Bool
-        if let activeContext, isContinuingSentence(after: activeContext.precedingText) {
+        if isContinuingInsertion {
             shouldUseFragmentPolish = shouldTreatAsFragment
         } else {
             shouldUseFragmentPolish = shouldTreatAsFragment &&
@@ -1301,7 +1304,15 @@ public struct RomaTranscriptionOutputFilter {
             if wasWholeSquareBracketedOutput {
                 polishedText = removeTrailingNoisyFragmentPunctuation(from: polishedText)
             } else {
+                let textBeforeTrailingCleanup = polishedText
                 polishedText = removeTrailingShortFragmentPunctuation(from: polishedText)
+                if let activeContext,
+                   isContinuingSentence(after: activeContext.precedingText) {
+                    polishedText = unwrapNoisyPreservedBoundaryContinuationFragment(
+                        from: polishedText,
+                        originalText: textBeforeTrailingCleanup
+                    )
+                }
             }
         }
 
@@ -8099,6 +8110,80 @@ public struct RomaTranscriptionOutputFilter {
         }
 
         return innerText
+    }
+
+    private static func unwrapNoisyPreservedBoundaryContinuationFragment(
+        from text: String,
+        originalText: String
+    ) -> String {
+        let trimmedText = text.trimmingCharacters(in: .whitespacesAndNewlines)
+        let trimmedOriginalText = originalText.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard shouldUnwrapGeneratedContinuationBoundary(trimmedOriginalText),
+              let innerText = preservedBoundaryInnerText(in: trimmedText),
+              let originalInnerText = preservedBoundaryInnerText(in: trimmedOriginalText),
+              shouldUnwrapNoisyGeneratedBoundaryContinuationInnerText(originalInnerText) else {
+            return text
+        }
+
+        let cleanedInnerText = innerText.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !cleanedInnerText.isEmpty,
+              wordCount(in: cleanedInnerText) <= 5,
+              !hasInternalSentenceBoundary(cleanedInnerText) else {
+            return text
+        }
+
+        return cleanedInnerText
+    }
+
+    private static func shouldUnwrapGeneratedContinuationBoundary(_ text: String) -> Bool {
+        guard let first = text.trimmingCharacters(in: .whitespacesAndNewlines).first else {
+            return false
+        }
+
+        return first == "\"" || first == "(" || first == "{"
+    }
+
+    private static func isNoisyPreservedBoundaryContinuationFragment(_ text: String) -> Bool {
+        guard let innerText = preservedBoundaryInnerText(in: text),
+              isNoisyGeneratedBoundaryContinuationInnerText(innerText) else {
+            return false
+        }
+
+        let cleanedInnerText = removeTrailingNoisyFragmentPunctuation(from: innerText)
+            .trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !cleanedInnerText.isEmpty,
+              wordCount(in: cleanedInnerText) <= 5,
+              !hasInternalSentenceBoundary(cleanedInnerText) else {
+            return false
+        }
+
+        return true
+    }
+
+    private static func shouldUnwrapNoisyGeneratedBoundaryContinuationInnerText(_ text: String) -> Bool {
+        let trimmedText = text.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard trimmedText.last == ".",
+              !trimmedText.hasSuffix("..."),
+              !isTerminalPeriodAbbreviation(trimmedText) else {
+            return false
+        }
+
+        let baseText = String(trimmedText.dropLast()).trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !baseText.isEmpty,
+              !baseText.contains("."),
+              !hasInternalSentenceBoundary(baseText) else {
+            return false
+        }
+
+        return wordCount(in: baseText) <= 5
+    }
+
+    private static func isNoisyGeneratedBoundaryContinuationInnerText(_ text: String) -> Bool {
+        if shouldRemoveNoisySentencePunctuationInsideBoundary(text) {
+            return true
+        }
+
+        return shouldUnwrapNoisyGeneratedBoundaryContinuationInnerText(text)
     }
 
     private static func shouldRemoveNoisySentencePunctuationInsideBoundary(_ text: String) -> Bool {

@@ -399,6 +399,33 @@ struct RomaCoreChecks {
             "shared insertion polish should remove trailing generated quotes after final punctuation"
         )
         try require(
+            RomaTranscriptionOutputFilter.applyInsertionPolish("\"Model.\"", context: midSentenceContext) == "model",
+            "shared insertion polish should unwrap quoted final-word artifacts"
+        )
+        try require(
+            RomaTranscriptionOutputFilter.applyInsertionPolish("(Model.)", context: midSentenceContext) == "model",
+            "shared insertion polish should unwrap parenthesized final-word artifacts"
+        )
+        try require(
+            RomaTranscriptionOutputFilter.applyInsertionPolish("{Model.}", context: midSentenceContext) == "model",
+            "shared insertion polish should unwrap braced final-word artifacts"
+        )
+        try require(
+            RomaTranscriptionOutputFilter.applyInsertionPolish(
+                "(A final word or single.)",
+                context: midSentenceContext
+            ) == "a final word or single",
+            "shared insertion polish should unwrap parenthesized short phrase artifacts"
+        )
+        try require(
+            RomaTranscriptionOutputFilter.applyInsertionPolish("(Model)", context: midSentenceContext) == "(model)",
+            "shared insertion polish should preserve deliberate parenthesized fragments without noisy punctuation"
+        )
+        try require(
+            RomaTranscriptionOutputFilter.applyInsertionPolish("\"What?\"", context: midSentenceContext) == "\"what?\"",
+            "shared insertion polish should preserve quoted question fragments"
+        )
+        try require(
             RomaTranscriptionOutputFilter.applyInsertionPolish("Model!\"", context: midSentenceContext) == "model",
             "shared insertion polish should remove trailing generated quotes after emphatic punctuation"
         )
