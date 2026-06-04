@@ -4936,6 +4936,14 @@ struct RomaCoreChecks {
             packageScript.contains(#""source_dirty=$($gitMetadata.Dirty)""#),
             "Windows package manifest should record whether source was dirty"
         )
+        try require(
+            packageScript.contains("package-windows-agent.ps1 must run on Windows"),
+            "Windows package script should reject non-Windows hosts"
+        )
+        try require(
+            !packageScript.contains("$nonWindowsPreferred"),
+            "Windows package script should not package non-Windows executables as .exe files"
+        )
         guard let gitMetadataRange = packageScript.range(
             of: "$gitMetadata = Get-GitMetadata -RepositoryRoot $packageRoot"
         ),

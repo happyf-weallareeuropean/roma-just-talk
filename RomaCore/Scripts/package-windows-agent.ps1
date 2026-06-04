@@ -65,11 +65,6 @@ function Resolve-ProductExecutable {
         return $anyExecutable
     }
 
-    $nonWindowsPreferred = Join-Path $BuildDirectory "$Configuration\$Name"
-    if (Test-Path -LiteralPath $nonWindowsPreferred) {
-        return Get-Item -LiteralPath $nonWindowsPreferred
-    }
-
     throw "$Name executable was not found under $BuildDirectory"
 }
 
@@ -202,6 +197,10 @@ function Get-GitMetadata {
 }
 
 $packageRoot = Resolve-Path "$PSScriptRoot\.."
+if ([System.Environment]::OSVersion.Platform -ne [System.PlatformID]::Win32NT) {
+    throw "package-windows-agent.ps1 must run on Windows so packaged executables and Swift runtime DLLs are Windows artifacts"
+}
+
 $gitMetadata = Get-GitMetadata -RepositoryRoot $packageRoot
 $OutputDir = $ExecutionContext.SessionState.Path.GetUnresolvedProviderPathFromPSPath($OutputDir)
 New-Item -ItemType Directory -Force -Path $OutputDir | Out-Null
