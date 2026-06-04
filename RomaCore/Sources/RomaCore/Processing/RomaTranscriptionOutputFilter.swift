@@ -6644,8 +6644,14 @@ public struct RomaTranscriptionOutputFilter {
         var result = text.trimmingCharacters(in: .whitespacesAndNewlines)
         while let lastCharacter = result.last,
               removableTrailingSpacedFragmentSymbols.contains(lastCharacter) {
-            let symbolIndex = result.index(before: result.endIndex)
-            let prefix = result[..<symbolIndex]
+            var symbolRunStart = result.index(before: result.endIndex)
+            while symbolRunStart > result.startIndex {
+                let previousIndex = result.index(before: symbolRunStart)
+                guard removableTrailingSpacedFragmentSymbols.contains(result[previousIndex]) else { break }
+                symbolRunStart = previousIndex
+            }
+
+            let prefix = result[..<symbolRunStart]
             guard prefix.last?.isWhitespace == true else {
                 return result
             }

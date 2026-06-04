@@ -342,6 +342,14 @@ struct RomaCoreChecks {
             "shared insertion polish should remove noisy pipe symbols from mid-sentence fragments"
         )
         try require(
+            RomaTranscriptionOutputFilter.applyInsertionPolish("Model //", context: midSentenceContext) == "model",
+            "shared insertion polish should remove repeated noisy slash symbols from mid-sentence fragments"
+        )
+        try require(
+            RomaTranscriptionOutputFilter.applyInsertionPolish("Model ||", context: midSentenceContext) == "model",
+            "shared insertion polish should remove repeated noisy pipe symbols from mid-sentence fragments"
+        )
+        try require(
             RomaTranscriptionOutputFilter.applyInsertionPolish("Model。", context: midSentenceContext) == "model",
             "shared insertion polish should remove noisy full-width periods from mid-sentence fragments"
         )
@@ -401,6 +409,10 @@ struct RomaCoreChecks {
         try require(
             RomaTranscriptionOutputFilter.applyInsertionPolish("docs/", context: midSentenceContext) == "docs/",
             "shared insertion polish should preserve trailing path slash fragments"
+        )
+        try require(
+            RomaTranscriptionOutputFilter.applyInsertionPolish("docs//", context: midSentenceContext) == "docs//",
+            "shared insertion polish should preserve compact double-slash fragments"
         )
         try require(
             RomaTranscriptionOutputFilter.applyInsertionPolish("... [Model.]", context: midSentenceContext) == "model",
