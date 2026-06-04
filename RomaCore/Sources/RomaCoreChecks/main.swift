@@ -3583,6 +3583,18 @@ struct RomaCoreChecks {
             "Windows MVP permission surface should stay minimal"
         )
         try require(
+            surface.osPermissionGrants == ["microphone"],
+            "Windows MVP should only require a microphone OS grant"
+        )
+        try require(
+            surface.nativeCapabilities.contains("RegisterHotKey"),
+            "Windows permission doctor should separate RegisterHotKey from OS grants"
+        )
+        try require(
+            surface.nativeCapabilities.contains("SendInput"),
+            "Windows permission doctor should separate paste injection from OS grants"
+        )
+        try require(
             surface.microphoneSettingsPath.contains("Microphone"),
             "Windows permission surface should point users to microphone settings"
         )
@@ -3593,6 +3605,12 @@ struct RomaCoreChecks {
         try require(!surface.hotKeyPermissionPrompt, "RegisterHotKey should not be documented as a prompt flow")
         try require(!surface.pastePermissionPrompt, "SendInput paste should not be documented as a prompt flow")
         try require(surface.pasteIntegrityLimit == "equal_or_lower", "paste integrity limit should be explicit")
+        try require(!surface.adminRequired, "Windows MVP should not require admin")
+        try require(
+            surface.startupMechanism == "user_startup_folder_shortcut",
+            "Windows startup should stay a no-admin per-user shortcut"
+        )
+        try require(!surface.startupPermissionPrompt, "Startup folder shortcut should not be documented as a prompt flow")
         try require(!surface.screenCaptureRequired, "Windows MVP should not require screen capture")
     }
 

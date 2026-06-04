@@ -138,8 +138,8 @@ Windows is not macOS TCC.
 - Clipboard restore: the Windows MVP restores the previous text clipboard only. It does not yet preserve every non-text clipboard format.
 - Screen/window context: skip for MVP. Screen OCR/context has a separate permission and product-risk surface on both platforms.
 
-Minimum Windows MVP permission surface: microphone + shortcut + clipboard/paste. Do not start with screen capture, browser URL detection, media control, or app-aware modes.
-Run `swift run RomaProofAgent windows-permission-doctor` or `RomaWindowsAgent doctor` to print the shared permission surface before laptop smoke tests.
+Minimum Windows MVP surface: microphone + shortcut + clipboard/paste. The only OS permission grant in that MVP is microphone access; hotkey, paste, DPAPI, and login start are native capabilities with no prompt flow, though paste is limited to equal-or-lower integrity targets. Do not start with screen capture, browser URL detection, media control, or app-aware modes.
+Run `swift run RomaProofAgent windows-permission-doctor` or `RomaWindowsAgent doctor` to print the shared OS-grant/native-capability split before laptop smoke tests.
 
 ## First Implementation Plan
 

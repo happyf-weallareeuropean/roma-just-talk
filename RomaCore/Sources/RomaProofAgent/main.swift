@@ -154,11 +154,16 @@ struct RomaProofAgent {
 
         print("platform=\(platformName)")
         print("minimum_permission_surface=\(surface.minimumPermissions.joined(separator: ","))")
+        print("os_permission_grants=\(surface.osPermissionGrants.joined(separator: ","))")
+        print("native_capabilities=\(surface.nativeCapabilities.joined(separator: ","))")
         print("microphone_settings=\(surface.microphoneSettingsPath)")
         print("desktop_app_microphone_access_required=\(surface.requiresDesktopAppMicrophoneAccess)")
         print("hotkey_permission_prompt=\(surface.hotKeyPermissionPrompt)")
         print("paste_permission_prompt=\(surface.pastePermissionPrompt)")
         print("paste_integrity_limit=\(surface.pasteIntegrityLimit)")
+        print("admin_required=\(surface.adminRequired)")
+        print("startup_mechanism=\(surface.startupMechanism)")
+        print("startup_permission_prompt=\(surface.startupPermissionPrompt)")
         print("screen_capture_required=\(surface.screenCaptureRequired)")
     }
 

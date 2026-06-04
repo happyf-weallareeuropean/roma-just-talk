@@ -46,11 +46,16 @@ struct RomaWindowsAgent {
         print("secret_store=dpapi")
         print("config_default=\(RomaWindowsAgentConfiguration.defaultURL().path)")
         print("minimum_permission_surface=\(permissionSurface.minimumPermissions.joined(separator: ","))")
+        print("os_permission_grants=\(permissionSurface.osPermissionGrants.joined(separator: ","))")
+        print("native_capabilities=\(permissionSurface.nativeCapabilities.joined(separator: ","))")
         print("microphone_settings=\(permissionSurface.microphoneSettingsPath)")
         print("desktop_app_microphone_access_required=\(permissionSurface.requiresDesktopAppMicrophoneAccess)")
         print("hotkey_permission_prompt=\(permissionSurface.hotKeyPermissionPrompt)")
         print("paste_permission_prompt=\(permissionSurface.pastePermissionPrompt)")
         print("paste_integrity_limit=\(permissionSurface.pasteIntegrityLimit)")
+        print("admin_required=\(permissionSurface.adminRequired)")
+        print("startup_mechanism=\(permissionSurface.startupMechanism)")
+        print("startup_permission_prompt=\(permissionSurface.startupPermissionPrompt)")
         print("screen_capture_required=\(permissionSurface.screenCaptureRequired)")
     }
 
