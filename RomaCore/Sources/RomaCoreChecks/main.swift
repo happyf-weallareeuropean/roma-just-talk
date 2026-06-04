@@ -25,6 +25,7 @@ struct RomaCoreChecks {
         try checkTranscriptionRequestMetadata()
         try await checkDictationPipelineTranscribesAndInserts()
         try await checkFakeAdaptersSatisfyCorePorts()
+        try checkWindowsProofScriptContracts()
         try checkSourcesDoNotImportApplePlatformFrameworks()
     }
 
@@ -4771,6 +4772,43 @@ struct RomaCoreChecks {
                 )
             }
         }
+    }
+
+    private static func checkWindowsProofScriptContracts() throws {
+        let packageRoot = URL(fileURLWithPath: #filePath)
+            .deletingLastPathComponent()
+            .deletingLastPathComponent()
+            .deletingLastPathComponent()
+        let scriptsRoot = packageRoot.appendingPathComponent("Scripts")
+        let packageScript = try String(
+            contentsOf: scriptsRoot.appendingPathComponent("package-windows-agent.ps1"),
+            encoding: .utf8
+        )
+        let checkReportScript = try String(
+            contentsOf: scriptsRoot.appendingPathComponent("check-windows-proof-report.ps1"),
+            encoding: .utf8
+        )
+
+        try require(
+            packageScript.contains(#""source_commit=$($gitMetadata.Commit)""#),
+            "Windows package manifest should record the source git commit"
+        )
+        try require(
+            packageScript.contains(#""source_dirty=$($gitMetadata.Dirty)""#),
+            "Windows package manifest should record whether source was dirty"
+        )
+        try require(
+            checkReportScript.contains("function Assert-ManifestSourceProof"),
+            "Windows proof checker should validate manifest source provenance"
+        )
+        try require(
+            checkReportScript.contains("source_repository to identify the packaged source repository"),
+            "Windows proof checker should reject placeholder source repositories"
+        )
+        try require(
+            checkReportScript.contains("source_commit to be a 40-character git SHA"),
+            "Windows proof checker should reject missing or malformed source commits"
+        )
     }
 
     private static func asciiString(_ data: Data, offset: Int, count: Int) throws -> String {

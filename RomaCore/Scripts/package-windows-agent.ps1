@@ -145,6 +145,62 @@ function Assert-SwiftRuntimePackaged {
     Write-Host "asserted_runtime_dll=swiftCore.dll"
 }
 
+function Invoke-GitLines {
+    param(
+        [Parameter(Mandatory = $true)]
+        [string[]]$Arguments
+    )
+
+    try {
+        $output = & git @Arguments 2>$null
+        if ($LASTEXITCODE -ne 0) {
+            return @()
+        }
+
+        return @($output)
+    } catch {
+        return @()
+    }
+}
+
+function Get-GitMetadata {
+    param(
+        [Parameter(Mandatory = $true)]
+        [string]$RepositoryRoot
+    )
+
+    Push-Location $RepositoryRoot
+    try {
+        $commit = (@(Invoke-GitLines -Arguments @("rev-parse", "--verify", "HEAD")) -join "`n").Trim()
+        if ([string]::IsNullOrWhiteSpace($commit)) {
+            throw "Could not resolve source git commit"
+        }
+
+        $branch = (@(Invoke-GitLines -Arguments @("rev-parse", "--abbrev-ref", "HEAD")) -join "`n").Trim()
+        if ([string]::IsNullOrWhiteSpace($branch)) {
+            $branch = "unknown"
+        }
+
+        $repository = (@(Invoke-GitLines -Arguments @("config", "--get", "remote.roma-just-talk.url")) -join "`n").Trim()
+        if ([string]::IsNullOrWhiteSpace($repository)) {
+            $repository = (@(Invoke-GitLines -Arguments @("config", "--get", "remote.origin.url")) -join "`n").Trim()
+        }
+        if ([string]::IsNullOrWhiteSpace($repository)) {
+            $repository = "unknown"
+        }
+
+        $statusLines = @(Invoke-GitLines -Arguments @("status", "--porcelain"))
+        return @{
+            Commit = $commit
+            Branch = $branch
+            Repository = $repository
+            Dirty = ($statusLines.Count -gt 0).ToString().ToLowerInvariant()
+        }
+    } finally {
+        Pop-Location
+    }
+}
+
 $packageRoot = Resolve-Path "$PSScriptRoot\.."
 $OutputDir = $ExecutionContext.SessionState.Path.GetUnresolvedProviderPathFromPSPath($OutputDir)
 New-Item -ItemType Directory -Force -Path $OutputDir | Out-Null
@@ -194,6 +250,7 @@ try {
     $localWhisperInstallConfigPath = Join-Path $localWhisperInstallProofDir "windows-agent.json"
     $localWhisperShortcutDir = Join-Path $OutputDir "shortcuts-local-whisper"
     $localWhisperShortcutPath = Join-Path $localWhisperShortcutDir "Roma Just Talk Agent.lnk"
+    $gitMetadata = Get-GitMetadata -RepositoryRoot $packageRoot
 
     Invoke-Step "copy agent executable" {
         Copy-Item -LiteralPath $agentSource.FullName -Destination $agentOutput -Force
@@ -330,6 +387,10 @@ try {
     @(
         "agent=RomaWindowsAgent",
         "configuration=$Configuration",
+        "source_repository=$($gitMetadata.Repository)",
+        "source_branch=$($gitMetadata.Branch)",
+        "source_commit=$($gitMetadata.Commit)",
+        "source_dirty=$($gitMetadata.Dirty)",
         "source=$($agentSource.FullName)",
         "output=$agentOutput",
         "proof_agent=RomaProofAgent.exe",
@@ -356,6 +417,8 @@ try {
 
     Write-Host ""
     Write-Host "package_artifacts=$OutputDir"
+    Write-Host "source_commit=$($gitMetadata.Commit)"
+    Write-Host "source_dirty=$($gitMetadata.Dirty)"
     Write-Host "manifest=$manifestPath"
 } finally {
     Pop-Location

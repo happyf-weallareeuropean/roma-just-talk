@@ -202,6 +202,32 @@ function Assert-RealCloudBackendProof {
     Write-Host "proof_real_cloud_backend host=$endpointHost model=$model"
 }
 
+function Assert-ManifestSourceProof {
+    param(
+        [Parameter(Mandatory = $true)]
+        [object]$Manifest
+    )
+
+    $repository = [string](Require-Property -Object $Manifest -Name "source_repository")
+    if ([string]::IsNullOrWhiteSpace($repository) -or $repository -eq "unknown") {
+        throw "Expected manifest source_repository to identify the packaged source repository"
+    }
+
+    Assert-NonEmptyString -Object $Manifest -Name "source_branch"
+    $commit = [string](Require-Property -Object $Manifest -Name "source_commit")
+    if ($commit -notmatch "^[0-9a-fA-F]{40}$") {
+        throw "Expected manifest source_commit to be a 40-character git SHA, got $commit"
+    }
+
+    $dirty = [string](Require-Property -Object $Manifest -Name "source_dirty")
+    if ($dirty -ne "true" -and $dirty -ne "false") {
+        throw "Expected manifest source_dirty to be true or false, got $dirty"
+    }
+
+    Write-Host "proof_source_commit=$commit"
+    Write-Host "proof_source_dirty=$dirty"
+}
+
 function Assert-PathNotEqual {
     param(
         [Parameter(Mandatory = $true)]
@@ -632,6 +658,8 @@ Assert-StringEquals `
     -Name "package_identity.algorithm"
 Assert-NonEmptyString -Object $packageIdentity -Name "fingerprint"
 Assert-NumberGreaterThan -Object $packageIdentity -Name "entry_count" -Minimum 0
+$manifest = Require-Property -Object $report -Name "manifest"
+Assert-ManifestSourceProof -Manifest $manifest
 
 if ($RequireWindowsPlatform) {
     $os = Require-Property -Object $report -Name "os"

@@ -39,6 +39,7 @@
 - Required Windows proof reports and full proof sets to include and match the current Windows user identity.
 - Required Windows laptop dictation proof reports to find the prompted pre-roll phrase in the runtime transcript log.
 - Scoped Windows expected transcript phrase checks to the processed transcript field instead of the whole runtime log.
+- Required Windows artifact proof reports to include packaged source repository, branch, commit, and dirty-state provenance.
 - Added a packaged Windows laptop proof runner that executes cloud dictation, local whisper dictation, Notepad paste, and proof-set validation through existing scripts.
 - Added a Windows proof-set checker for full laptop and artifact-smoke report bundles.
 - Strengthened Windows laptop proof profiles to reject loopback/mock cloud endpoints and packaged mock whisper backends.
