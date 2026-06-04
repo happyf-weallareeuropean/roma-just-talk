@@ -1,7 +1,7 @@
 <div align="center">
   <img src="docs/assets/roma-just-talk-logo.png" width="180" height="180" />
   <h1>roma-just-talk</h1>
-  <p>a dictation app: speak before you press the hotkey.</p>
+  <p>speak before press hotkey dictation app.</p>
   <p>rethink UX: pre-roll voice capture, -87% bin size & -83% ram usage (780mb → 132mb), local & cloud stt solution both available.</p>
   <p>speak is 3~4x faster than type btw </p>
 
