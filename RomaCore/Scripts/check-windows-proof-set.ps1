@@ -151,6 +151,133 @@ function Get-ReportSourceProvenance {
     }
 }
 
+function Assert-SameArtifactSmokeProofSet {
+    param(
+        [Parameter(Mandatory = $true)]
+        [string]$DoctorOnlyReportPath,
+        [Parameter(Mandatory = $true)]
+        [string]$PackagedWhisperMockInstallReportPath
+    )
+
+    $reports = @(
+        @{
+            Name = "doctor_only"
+            Report = (Read-ProofReport -Path $DoctorOnlyReportPath)
+        },
+        @{
+            Name = "packaged_whisper_mock_install"
+            Report = (Read-ProofReport -Path $PackagedWhisperMockInstallReportPath)
+        }
+    )
+
+    $first = $reports[0]
+    $firstName = [string]$first["Name"]
+    $firstReport = $first["Report"]
+    $firstOS = Require-ReportProperty -Report $firstReport -Name "os" -ReportName $firstName
+    $expectedPlatform = [string](Require-ReportProperty -Report $firstOS -Name "platform" -ReportName $firstName)
+    $expectedMachine = [string](Require-ReportProperty -Report $firstOS -Name "machine" -ReportName $firstName)
+    $expectedUserName = [string](Require-ReportProperty -Report $firstOS -Name "user_name" -ReportName $firstName)
+    $expectedUserDomain = [string](Require-ReportProperty -Report $firstOS -Name "user_domain" -ReportName $firstName)
+    $expectedUserSid = [string](Require-ReportProperty -Report $firstOS -Name "user_sid" -ReportName $firstName)
+    $expectedPackageDir = [string](Require-ReportProperty -Report $firstReport -Name "package_dir" -ReportName $firstName)
+    $expectedPackageFingerprint = Get-ReportPackageFingerprint -Report $firstReport -ReportName $firstName
+    $expectedSource = Get-ReportSourceProvenance -Report $firstReport -ReportName $firstName
+
+    if ($expectedPlatform -ne "Win32NT") {
+        throw "Artifact smoke proof must run on Windows, got platform $expectedPlatform"
+    }
+    if ([string]::IsNullOrWhiteSpace($expectedMachine)) {
+        throw "Artifact smoke proof report is missing machine name"
+    }
+    if ([string]::IsNullOrWhiteSpace($expectedUserName)) {
+        throw "Artifact smoke proof report is missing Windows user name"
+    }
+    if ([string]::IsNullOrWhiteSpace($expectedUserSid)) {
+        throw "Artifact smoke proof report is missing Windows user SID"
+    }
+    if ([string]::IsNullOrWhiteSpace($expectedPackageDir)) {
+        throw "Artifact smoke proof report is missing package_dir"
+    }
+    if ([string]::IsNullOrWhiteSpace($expectedPackageFingerprint)) {
+        throw "Artifact smoke proof report is missing package identity fingerprint"
+    }
+    if ([string]$expectedSource['Dirty'] -ne "false") {
+        throw "Artifact smoke proof requires a clean packaged source checkout, got source_dirty=$($expectedSource['Dirty'])"
+    }
+
+    foreach ($entry in $reports) {
+        $reportName = $entry["Name"]
+        $report = $entry["Report"]
+        $reportOS = Require-ReportProperty -Report $report -Name "os" -ReportName $reportName
+        Assert-SameReportValue `
+            -Name "os.platform" `
+            -Expected $expectedPlatform `
+            -Actual ([string](Require-ReportProperty -Report $reportOS -Name "platform" -ReportName $reportName)) `
+            -ReportName $reportName
+        Assert-SameReportValue `
+            -Name "os.machine" `
+            -Expected $expectedMachine `
+            -Actual ([string](Require-ReportProperty -Report $reportOS -Name "machine" -ReportName $reportName)) `
+            -ReportName $reportName
+        Assert-SameReportValue `
+            -Name "os.user_name" `
+            -Expected $expectedUserName `
+            -Actual ([string](Require-ReportProperty -Report $reportOS -Name "user_name" -ReportName $reportName)) `
+            -ReportName $reportName
+        Assert-SameReportValue `
+            -Name "os.user_domain" `
+            -Expected $expectedUserDomain `
+            -Actual ([string](Require-ReportProperty -Report $reportOS -Name "user_domain" -ReportName $reportName)) `
+            -ReportName $reportName
+        Assert-SameReportValue `
+            -Name "os.user_sid" `
+            -Expected $expectedUserSid `
+            -Actual ([string](Require-ReportProperty -Report $reportOS -Name "user_sid" -ReportName $reportName)) `
+            -ReportName $reportName
+        Assert-SameReportValue `
+            -Name "package_dir" `
+            -Expected $expectedPackageDir `
+            -Actual ([string](Require-ReportProperty -Report $report -Name "package_dir" -ReportName $reportName)) `
+            -ReportName $reportName
+        Assert-SameReportValue `
+            -Name "package_identity.fingerprint" `
+            -Expected $expectedPackageFingerprint `
+            -Actual (Get-ReportPackageFingerprint -Report $report -ReportName $reportName) `
+            -ReportName $reportName
+        $source = Get-ReportSourceProvenance -Report $report -ReportName $reportName
+        Assert-SameReportValue `
+            -Name "manifest.source_repository" `
+            -Expected ([string]$expectedSource['Repository']) `
+            -Actual ([string]$source['Repository']) `
+            -ReportName $reportName
+        Assert-SameReportValue `
+            -Name "manifest.source_branch" `
+            -Expected ([string]$expectedSource['Branch']) `
+            -Actual ([string]$source['Branch']) `
+            -ReportName $reportName
+        Assert-SameReportValue `
+            -Name "manifest.source_commit" `
+            -Expected ([string]$expectedSource['Commit']) `
+            -Actual ([string]$source['Commit']) `
+            -ReportName $reportName
+        Assert-SameReportValue `
+            -Name "manifest.source_dirty" `
+            -Expected ([string]$expectedSource['Dirty']) `
+            -Actual ([string]$source['Dirty']) `
+            -ReportName $reportName
+    }
+
+    Write-Host "proof_set_artifact_smoke_machine=$expectedMachine"
+    Write-Host "proof_set_artifact_smoke_user=$expectedUserName"
+    Write-Host "proof_set_artifact_smoke_user_sid=$expectedUserSid"
+    Write-Host "proof_set_artifact_smoke_package_dir=$expectedPackageDir"
+    Write-Host "proof_set_artifact_smoke_package_fingerprint=$expectedPackageFingerprint"
+    Write-Host "proof_set_artifact_smoke_source_repository=$($expectedSource['Repository'])"
+    Write-Host "proof_set_artifact_smoke_source_branch=$($expectedSource['Branch'])"
+    Write-Host "proof_set_artifact_smoke_source_commit=$($expectedSource['Commit'])"
+    Write-Host "proof_set_artifact_smoke_source_dirty=$($expectedSource['Dirty'])"
+}
+
 function Assert-SameLaptopProofSet {
     param(
         [Parameter(Mandatory = $true)]
@@ -376,6 +503,9 @@ if ($RequireFullLaptopProof) {
         -NotepadReportPath $LocalWhisperNotepadPasteReportPath
     Write-Host "proof_set_ok=full-laptop"
 } elseif ($RequireArtifactSmokeProof) {
+    Assert-SameArtifactSmokeProofSet `
+        -DoctorOnlyReportPath $DoctorOnlyReportPath `
+        -PackagedWhisperMockInstallReportPath $PackagedWhisperMockInstallReportPath
     Write-Host "proof_set_ok=artifact-smoke"
 } else {
     Write-Host "proof_set_ok=custom"

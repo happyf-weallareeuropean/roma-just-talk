@@ -5394,6 +5394,12 @@ struct RomaCoreChecks {
             "Windows proof-set checker should reject dirty packaged source for final laptop proof"
         )
         try require(
+            checkSetScript.contains("function Assert-SameArtifactSmokeProofSet") &&
+                checkSetScript.contains("Artifact smoke proof requires a clean packaged source checkout") &&
+                checkSetScript.contains("proof_set_artifact_smoke_package_fingerprint="),
+            "Windows artifact smoke proof-set checker should tie doctor and install reports to one package"
+        )
+        try require(
             laptopProofScript.contains("ProofSessionId"),
             "Windows laptop proof runner should stamp every report with one proof session id"
         )
