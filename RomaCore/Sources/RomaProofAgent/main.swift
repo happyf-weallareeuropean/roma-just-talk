@@ -122,7 +122,11 @@ struct RomaProofAgent {
     }
 
     private static func runWindowsKeyboardHookProof(arguments: [String]) throws {
-        let timeoutMilliseconds = UInt32(try doubleValue(after: "--timeout", in: arguments, default: 15) * 1_000)
+        let timeoutMilliseconds = UInt32(try positiveDoubleValue(
+            after: "--timeout",
+            in: arguments,
+            default: 15
+        ) * 1_000)
         let chord = WindowsLowLevelKeyboardHookChord.proofHold
 
         print("waiting_for_hold=\(chord.displayName)")
@@ -258,8 +262,12 @@ struct RomaProofAgent {
 
     private static func runWindowsDictationProof(arguments: [String]) async throws {
         let outputURL = URL(fileURLWithPath: try value(after: "--out", in: arguments))
-        let seconds = try doubleValue(after: "--seconds", in: arguments, default: 2)
-        let timeoutMilliseconds = UInt32(try doubleValue(after: "--timeout", in: arguments, default: 15) * 1_000)
+        let seconds = try positiveDoubleValue(after: "--seconds", in: arguments, default: 2)
+        let timeoutMilliseconds = UInt32(try positiveDoubleValue(
+            after: "--timeout",
+            in: arguments,
+            default: 15
+        ) * 1_000)
         let endpointText = try value(after: "--endpoint", in: arguments)
         let modelName = try value(after: "--model", in: arguments)
         let apiKeySource = try makeAPIKeySource(arguments: arguments)
@@ -474,7 +482,7 @@ struct RomaProofAgent {
 
     private static func runMiniaudioRecordProof(arguments: [String]) async throws {
         let outputURL = URL(fileURLWithPath: try value(after: "--out", in: arguments))
-        let seconds = try doubleValue(after: "--seconds", in: arguments, default: 2)
+        let seconds = try positiveDoubleValue(after: "--seconds", in: arguments, default: 2)
         let recorder = MiniaudioCaptureRecorder()
 
         try await recorder.startPreRollBuffering()
@@ -659,6 +667,19 @@ struct RomaProofAgent {
 
     private static func doubleValue(after option: String, in arguments: [String], default defaultValue: Double) throws -> Double {
         try RomaCommandLineOptions(arguments).doubleValue(after: option, default: defaultValue)
+    }
+
+    private static func positiveDoubleValue(
+        after option: String,
+        in arguments: [String],
+        default defaultValue: Double
+    ) throws -> Double {
+        let value = try doubleValue(after: option, in: arguments, default: defaultValue)
+        guard value > 0 else {
+            throw AgentError.invalidOptionValue(option)
+        }
+
+        return value
     }
 
     private static func optionalUInt32Value(after option: String, in arguments: [String]) throws -> UInt32? {

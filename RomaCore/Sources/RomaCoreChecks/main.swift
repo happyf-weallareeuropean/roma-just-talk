@@ -4476,6 +4476,18 @@ struct RomaCoreChecks {
         }
 
         do {
+            try RomaWindowsAgentConfiguration(recordSeconds: 0).validate()
+            throw CheckFailure("config should reject zero toggle record duration")
+        } catch RomaCommandLineOptionsError.invalidOptionValue {
+        }
+
+        do {
+            try RomaWindowsAgentConfiguration(holdTimeoutSeconds: 0).validate()
+            throw CheckFailure("config should reject zero hold timeout")
+        } catch RomaCommandLineOptionsError.invalidOptionValue {
+        }
+
+        do {
             try RomaWindowsAgentConfiguration(
                 endpoint: "https://api.example.com/v1/audio/transcriptions",
                 model: "cloud-model",

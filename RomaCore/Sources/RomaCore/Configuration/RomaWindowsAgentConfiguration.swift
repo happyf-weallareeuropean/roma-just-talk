@@ -332,10 +332,10 @@ public struct RomaWindowsAgentConfiguration: Codable, Equatable, Sendable {
     }
 
     public func validate() throws {
-        if let recordSeconds, recordSeconds < 0 {
+        if let recordSeconds, recordSeconds <= 0 {
             throw RomaCommandLineOptionsError.invalidOptionValue("--seconds")
         }
-        if let holdTimeoutSeconds, holdTimeoutSeconds < 0 {
+        if let holdTimeoutSeconds, holdTimeoutSeconds <= 0 {
             throw RomaCommandLineOptionsError.invalidOptionValue("--timeout")
         }
         if let clipboardRestoreDelaySeconds, clipboardRestoreDelaySeconds < 0 {
