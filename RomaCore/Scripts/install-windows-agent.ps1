@@ -169,6 +169,13 @@ if ($hasExplicitWhisperCLI -and
     $WhisperCLI = $installedWhisperMock
     Write-Host "installed_whisper_cli_mock=$WhisperCLI"
 }
+$installedAgent = Join-Path $InstallDir "RomaWindowsAgent.exe"
+if ($hasExplicitWhisperModel -and
+    (Resolve-FullPath -Path $WhisperModel) -eq (Resolve-FullPath -Path $agentSource) -and
+    (Test-Path -LiteralPath $installedAgent)) {
+    $WhisperModel = $installedAgent
+    Write-Host "installed_whisper_model_mock=$WhisperModel"
+}
 
 if (!$SkipSmoke) {
     Invoke-Step "installed agent smoke" {
@@ -299,7 +306,6 @@ if ($CreateShortcut) {
 }
 
 Write-Host ""
-$installedAgent = Join-Path $InstallDir "RomaWindowsAgent.exe"
 $installedSmoke = Join-Path $InstallDir "smoke-windows-agent.ps1"
 $installedRun = Join-Path $InstallDir "run-windows-agent.ps1"
 Write-Host "installed_agent=$installedAgent"
