@@ -350,6 +350,8 @@ struct TranscriptionOutputFilterTests {
 
         #expect(TranscriptionOutputFilter.applyInsertionPolish("Model.", context: midSentenceContext) == "model")
         #expect(TranscriptionOutputFilter.applyInsertionPolish("MODEL.", context: midSentenceContext) == "model")
+        #expect(TranscriptionOutputFilter.applyInsertionPolish("MODULE.", context: midSentenceContext) == "module")
+        #expect(TranscriptionOutputFilter.applyInsertionPolish("FUNCTION.", context: midSentenceContext) == "function")
         #expect(TranscriptionOutputFilter.applyInsertionPolish("Model.\"", context: midSentenceContext) == "model")
         #expect(TranscriptionOutputFilter.applyInsertionPolish("Model!\"", context: midSentenceContext) == "model")
         #expect(TranscriptionOutputFilter.applyInsertionPolish("Model!”", context: midSentenceContext) == "model")
@@ -372,6 +374,7 @@ struct TranscriptionOutputFilterTests {
         #expect(TranscriptionOutputFilter.applyInsertionPolish("U.S.\"", context: midSentenceContext) == "U.S.")
         #expect(TranscriptionOutputFilter.applyInsertionPolish("The Model.", context: midSentenceContext) == "the model")
         #expect(TranscriptionOutputFilter.applyInsertionPolish("API.", context: midSentenceContext) == "API")
+        #expect(TranscriptionOutputFilter.applyInsertionPolish("Swift.", context: midSentenceContext) == "Swift")
         #expect(TranscriptionOutputFilter.applyInsertionPolish("A Final Word.", context: midSentenceContext) == "a final word")
         #expect(TranscriptionOutputFilter.applyInsertionPolish("The API.", context: midSentenceContext) == "the API")
         #expect(TranscriptionOutputFilter.applyInsertionPolish("The LLM Router.", context: midSentenceContext) == "the LLM router")

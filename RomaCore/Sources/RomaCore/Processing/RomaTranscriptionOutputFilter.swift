@@ -389,14 +389,15 @@ public struct RomaTranscriptionOutputFilter {
     private static let likelyLowercaseFragments: Set<String> = [
         "a", "about", "after", "again", "all", "also", "an", "and", "any", "app", "are",
         "as", "at", "back", "be", "because", "but", "by", "can", "case", "client", "code", "config",
-        "could", "data", "did", "do", "does", "done", "final", "first", "for", "from",
+        "class", "classes", "constant", "constants", "could", "data", "did", "do", "does", "done",
+        "enum", "enums", "file", "files", "final", "first", "folder", "folders", "for", "from", "function", "functions",
         "get", "go", "got", "had", "has", "have", "here", "how", "if", "in",
         "is", "it", "just", "last", "like", "make", "maybe", "mean", "model",
-        "models", "need", "next", "not", "now", "of", "on", "one", "or", "out",
-        "page", "parser", "phrase", "phrases", "prompt", "put", "really", "request", "response", "right",
+        "models", "module", "modules", "method", "methods", "need", "next", "not", "now", "of", "on", "one", "or", "out",
+        "page", "parser", "phrase", "phrases", "prompt", "property", "properties", "put", "really", "request", "response", "right",
         "router", "screen", "second", "see", "server", "service", "setting", "should", "single", "so", "some",
         "that", "the", "then", "there", "third", "this", "to", "token", "tool", "use", "view", "was",
-        "we", "what", "when", "where", "which", "will", "window", "with", "word", "words", "work",
+        "variable", "variables", "we", "what", "when", "where", "which", "will", "window", "with", "word", "words", "work",
         "would", "yeah", "you"
     ]
     private static let sentenceBoundaryContinuationPreviousWords: Set<String> = [

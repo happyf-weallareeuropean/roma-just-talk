@@ -276,6 +276,14 @@ struct RomaCoreChecks {
             "shared insertion polish should lowercase all-caps ordinary mid-sentence fragments"
         )
         try require(
+            RomaTranscriptionOutputFilter.applyInsertionPolish("MODULE.", context: midSentenceContext) == "module",
+            "shared insertion polish should lowercase all-caps ordinary tech fragments"
+        )
+        try require(
+            RomaTranscriptionOutputFilter.applyInsertionPolish("FUNCTION.", context: midSentenceContext) == "function",
+            "shared insertion polish should lowercase all-caps ordinary code nouns"
+        )
+        try require(
             RomaTranscriptionOutputFilter.applyInsertionPolish("Model.\"", context: midSentenceContext) == "model",
             "shared insertion polish should remove trailing generated quotes after final punctuation"
         )
@@ -299,6 +307,10 @@ struct RomaCoreChecks {
         try require(
             RomaTranscriptionOutputFilter.applyInsertionPolish("API.", context: midSentenceContext) == "API",
             "shared insertion polish should preserve all-caps acronym fragments"
+        )
+        try require(
+            RomaTranscriptionOutputFilter.applyInsertionPolish("Swift.", context: midSentenceContext) == "Swift",
+            "shared insertion polish should preserve product and language names"
         )
         try require(
             RomaTranscriptionOutputFilter.applyInsertionPolish(
