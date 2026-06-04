@@ -429,6 +429,7 @@ public struct RomaTranscriptionOutputFilter {
         "command", "commands", "from", "in", "is", "means", "of", "phrase",
         "phrases", "shortcut", "shortcuts"
     ]
+    private static let markdownTablePattern = #"(?im)(^|\n)[ \t]*(?:markdown[ \t]+)?table[ \t]+([^\n]+)"#
     private static let inlineCodePattern = #"(?i)(?<![\p{L}\p{N}])inline[ \t]+code[ \t]+((?:(?!for\b|from\b|in\b|into\b|on\b|to\b|with\b)[\p{L}\p{N}_./@:+#-]+[ \t]*){1,4})([.!?])?(?=\s+(?:for|from|in|into|on|to|with)\b|\s|$)"#
     private static let markdownLinkPattern = #"(?im)(^|\n)[ \t]*(?:markdown[ \t]+)?link[ \t]+([^\n]{1,80}?)[ \t]+to[ \t]+([^ \t\n]+)([ \t]+(?:for|from|in|into|on|to|with)\b[^\n.!?]*)?[ \t]*([.!?])?(?=\n|$)"#
     private static let openCodeBlockPattern = #"(?im)(^|\n)[ \t]*(?:open|start)[ \t]+code[ \t]+block(?:[ \t]+([A-Za-z0-9_+#.-]+))?[ \t]*(?=\n|$)"#
@@ -2700,6 +2701,7 @@ public struct RomaTranscriptionOutputFilter {
     private static func applySpokenMarkdownCommands(in text: String) -> String {
         var formattedText = applySpokenMarkdownHeadings(in: text)
         formattedText = applySpokenMarkdownTasks(in: formattedText)
+        formattedText = applySpokenMarkdownTables(in: formattedText)
         formattedText = applySpokenMarkdownInlineCode(in: formattedText)
         formattedText = applySpokenMarkdownLinks(in: formattedText)
         formattedText = applySpokenMarkdownCodeBlocks(in: formattedText)
@@ -2898,6 +2900,107 @@ public struct RomaTranscriptionOutputFilter {
         }
 
         return nil
+    }
+
+    private static func applySpokenMarkdownTables(in text: String) -> String {
+        guard let regex = try? NSRegularExpression(pattern: markdownTablePattern) else {
+            return text
+        }
+
+        var formattedText = text
+        let matches = regex.matches(in: formattedText, range: NSRange(formattedText.startIndex..., in: formattedText))
+
+        for match in matches.reversed() {
+            guard match.numberOfRanges >= 3,
+                  let fullRange = Range(match.range(at: 0), in: formattedText),
+                  let prefixRange = Range(match.range(at: 1), in: formattedText),
+                  let bodyRange = Range(match.range(at: 2), in: formattedText),
+                  let table = markdownTable(from: String(formattedText[bodyRange])) else {
+                continue
+            }
+
+            let prefix = String(formattedText[prefixRange])
+            formattedText.replaceSubrange(fullRange, with: "\(prefix)\(table)")
+        }
+
+        return formattedText
+    }
+
+    private static func markdownTable(from spokenBody: String) -> String? {
+        let rows = splitSpokenMarkdownTableRows(spokenBody).map { markdownTableCells(from: $0) }
+        guard rows.count >= 2,
+              let columnCount = rows.first?.count,
+              (2...4).contains(columnCount),
+              rows.allSatisfy({ $0.count == columnCount }),
+              rows.flatMap({ $0 }).allSatisfy({ shouldApplySpokenMarkdownLineCommand(to: $0) }) else {
+            return nil
+        }
+
+        let header = markdownTableRow(rows[0])
+        let separator = markdownTableRow(Array(repeating: "---", count: columnCount))
+        let bodyRows = rows.dropFirst().map(markdownTableRow)
+        return ([header, separator] + bodyRows).joined(separator: "\n")
+    }
+
+    private static func splitSpokenMarkdownTableRows(_ text: String) -> [String] {
+        splitSpokenMarkdownTableComponents(text, separatorPattern: #"(?i)(?<![\p{L}\p{N}])row(?![\p{L}\p{N}])"#)
+    }
+
+    private static func markdownTableCells(from row: String) -> [String] {
+        let normalizedRow = markdownLineContent(row)
+        guard !normalizedRow.isEmpty else { return [] }
+
+        let explicitCells = splitSpokenMarkdownTableComponents(
+            normalizedRow,
+            separatorPattern: #"(?i)(?<![\p{L}\p{N}])(?:column|pipe)(?![\p{L}\p{N}])"#
+        )
+        if explicitCells.count > 1 {
+            return explicitCells.map(markdownTableCell).filter { !$0.isEmpty }
+        }
+
+        return normalizedRow
+            .split(whereSeparator: \.isWhitespace)
+            .map { markdownTableCell(String($0)) }
+            .filter { !$0.isEmpty }
+    }
+
+    private static func splitSpokenMarkdownTableComponents(_ text: String, separatorPattern: String) -> [String] {
+        guard let regex = try? NSRegularExpression(pattern: separatorPattern) else {
+            return [text]
+        }
+
+        var components: [String] = []
+        var currentIndex = text.startIndex
+        let matches = regex.matches(in: text, range: NSRange(text.startIndex..., in: text))
+
+        for match in matches {
+            guard let range = Range(match.range, in: text) else {
+                continue
+            }
+
+            let component = String(text[currentIndex..<range.lowerBound])
+                .trimmingCharacters(in: .whitespacesAndNewlines)
+            if !component.isEmpty {
+                components.append(component)
+            }
+            currentIndex = range.upperBound
+        }
+
+        let finalComponent = String(text[currentIndex...])
+            .trimmingCharacters(in: .whitespacesAndNewlines)
+        if !finalComponent.isEmpty {
+            components.append(finalComponent)
+        }
+
+        return components
+    }
+
+    private static func markdownTableRow(_ cells: [String]) -> String {
+        "| \(cells.joined(separator: " | ")) |"
+    }
+
+    private static func markdownTableCell(_ text: String) -> String {
+        markdownLineContent(text).replacingOccurrences(of: "|", with: "\\|")
     }
 
     private static func applySpokenMarkdownInlineCode(in text: String) -> String {

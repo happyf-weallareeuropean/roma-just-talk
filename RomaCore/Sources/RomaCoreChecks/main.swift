@@ -2044,6 +2044,21 @@ struct RomaCoreChecks {
                 "title case text command"
             ),
             (
+                "Markdown table name age row Felix thirty row Roma one.",
+                "| name | age |\n| --- | --- |\n| Felix | thirty |\n| Roma | one |",
+                "compact spoken markdown table"
+            ),
+            (
+                "Table name column age row Felix column thirty.",
+                "| name | age |\n| --- | --- |\n| Felix | thirty |",
+                "explicit column spoken markdown table"
+            ),
+            (
+                "Table manners matter.",
+                "Table manners matter.",
+                "table prose guard"
+            ),
+            (
                 ".env file.",
                 ".env file.",
                 "dot-prefixed token guard"
