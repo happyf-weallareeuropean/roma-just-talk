@@ -6887,7 +6887,7 @@ public struct RomaTranscriptionOutputFilter {
 
     private static func collapseGeneratedBoundaryBeforePlainShortFragment(in text: String) -> String {
         guard let regex = try? NSRegularExpression(
-            pattern: #"(?<![\p{L}\p{N}'’ʼ-])([\p{L}\p{N}][\p{L}\p{N}'’ʼ-]{0,63})[ \t]*\.[ \t]+((?:[\p{L}\p{N}][\p{L}\p{N}'’ʼ-]{0,63})(?:[ \t]+[\p{L}\p{N}][\p{L}\p{N}'’ʼ-]{0,63}){0,2})([.!?])(?=\s|$)"#
+            pattern: #"(?<![\p{L}\p{N}'’ʼ-])([\p{L}\p{N}][\p{L}\p{N}'’ʼ-]{0,63})[ \t]*\.[ \t]+((?:[\p{L}\p{N}][\p{L}\p{N}'’ʼ-]{0,63})(?:[ \t]+[\p{L}\p{N}][\p{L}\p{N}'’ʼ-]{0,63}){0,2})([.!?])?(?=\s|$)"#
         ) else {
             return text
         }
@@ -6900,7 +6900,6 @@ public struct RomaTranscriptionOutputFilter {
                   let fullRange = Range(match.range, in: collapsedText),
                   let previousWordRange = Range(match.range(at: 1), in: collapsedText),
                   let fragmentRange = Range(match.range(at: 2), in: collapsedText),
-                  let punctuationRange = Range(match.range(at: 3), in: collapsedText),
                   let cleanedFragment = cleanedGeneratedBoundaryContinuationFragment(
                     String(collapsedText[fragmentRange]),
                     requiresGeneratedCasing: true
@@ -6909,7 +6908,12 @@ public struct RomaTranscriptionOutputFilter {
             }
 
             let previousWord = String(collapsedText[previousWordRange])
-            let punctuation = String(collapsedText[punctuationRange])
+            let punctuation: String
+            if let punctuationRange = Range(match.range(at: 3), in: collapsedText) {
+                punctuation = String(collapsedText[punctuationRange])
+            } else {
+                punctuation = ""
+            }
             guard canJoinGeneratedSentenceBoundary(after: previousWord),
                   !isPreservedGeneratedQuestionFragment(String(collapsedText[fragmentRange]) + punctuation) else {
                 continue

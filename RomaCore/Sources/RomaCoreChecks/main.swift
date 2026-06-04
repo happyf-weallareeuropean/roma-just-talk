@@ -701,6 +701,21 @@ struct RomaCoreChecks {
                 "generated sentence boundary before short continuation fragment"
             ),
             (
+                "So this. Model",
+                "So this model",
+                "generated sentence boundary before short continuation fragment without terminal punctuation"
+            ),
+            (
+                "So this. The model",
+                "So this the model",
+                "generated sentence boundary before short article continuation fragment without terminal punctuation"
+            ),
+            (
+                "So this. Model final word",
+                "So this model final word",
+                "generated sentence boundary before multi-word continuation fragment without terminal punctuation"
+            ),
+            (
                 "So this. [Model.]",
                 "So this model.",
                 "generated sentence boundary before bracketed short continuation fragment"
@@ -769,6 +784,11 @@ struct RomaCoreChecks {
                 "It is. [What?]",
                 "It is. [What?]",
                 "bracketed single-word generated question boundary guard"
+            ),
+            (
+                "It works. Model",
+                "It works. Model",
+                "complete sentence before unpunctuated generated fragment guard"
             ),
             (
                 "mm-hmm... uh-huh, I think so.",
