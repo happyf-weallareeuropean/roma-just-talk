@@ -6229,8 +6229,17 @@ struct RomaCoreChecks {
         try require(
             laptopProofScript.contains("PreflightReportPath") &&
                 laptopProofScript.contains("windows_laptop_preflight_report=") &&
-                laptopProofScript.contains(#"proof_mode = "windows-laptop-preflight""#),
+                laptopProofScript.contains(#"proof_mode = "windows-laptop-preflight""#) &&
+                laptopProofScript.contains("-LaptopPreflightReportPath") &&
+                laptopProofScript.contains("-RequireLaptopPreflight"),
             "Windows laptop preflight-only runner should write an archivable JSON proof report"
+        )
+        try require(
+            checkSetScript.contains("RequireLaptopPreflight") &&
+                checkSetScript.contains("Assert-LaptopPreflightReport") &&
+                checkSetScript.contains("proof_set_ok=laptop-preflight") &&
+                checkSetScript.contains("Laptop preflight proof must run on Windows"),
+            "Windows proof-set checker should validate laptop preflight reports"
         )
         try require(
             laptopProofScript.contains("startup-shortcuts"),

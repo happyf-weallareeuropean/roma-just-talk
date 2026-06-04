@@ -497,6 +497,9 @@ if ($PreflightOnly) {
         -MicPreflightPath $micPreflightPath `
         -WhisperCLIPath $WhisperCLI `
         -WhisperModelPath $WhisperModel
+    & $checkSetScript `
+        -LaptopPreflightReportPath $PreflightReportPath `
+        -RequireLaptopPreflight
     Write-Host ""
     Write-Host "windows_laptop_proof_dir=$ProofDir"
     Write-Host "windows_laptop_proof_session_id=$proofSessionId"

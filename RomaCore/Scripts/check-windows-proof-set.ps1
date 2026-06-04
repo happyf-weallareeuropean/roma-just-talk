@@ -3,11 +3,13 @@ param(
     [string]$CloudDictationReportPath = "",
     [string]$LocalWhisperDictationReportPath = "",
     [string]$LocalWhisperNotepadPasteReportPath = "",
+    [string]$LaptopPreflightReportPath = "",
     [string]$PackagedWhisperMockInstallReportPath = "",
     [switch]$RequireDoctorOnly,
     [switch]$RequireCloudDictation,
     [switch]$RequireLocalWhisperDictation,
     [switch]$RequireLocalWhisperNotepadPaste,
+    [switch]$RequireLaptopPreflight,
     [switch]$RequirePackagedWhisperMockInstall,
     [switch]$RequireArtifactSmokeProof,
     [switch]$RequireFullLaptopProof
@@ -97,6 +99,71 @@ function Assert-SameReportValue {
     if ($Expected -ne $Actual) {
         throw ("Proof set mismatch for {0} in {1}: expected '{2}', got '{3}'" -f $Name, $ReportName, $Expected, $Actual)
     }
+}
+
+function Assert-NonEmptyReportString {
+    param(
+        [Parameter(Mandatory = $true)]
+        [object]$Report,
+        [Parameter(Mandatory = $true)]
+        [string]$Name,
+        [Parameter(Mandatory = $true)]
+        [string]$ReportName
+    )
+
+    $value = [string](Require-ReportProperty -Report $Report -Name $Name -ReportName $ReportName)
+    if ([string]::IsNullOrWhiteSpace($value)) {
+        throw "Proof set report $ReportName has empty property: $Name"
+    }
+
+    Write-Host "proof_set_value=$ReportName.$Name value=$value"
+    return $value
+}
+
+function Assert-ReportBoolean {
+    param(
+        [Parameter(Mandatory = $true)]
+        [object]$Report,
+        [Parameter(Mandatory = $true)]
+        [string]$Name,
+        [Parameter(Mandatory = $true)]
+        [bool]$Expected,
+        [Parameter(Mandatory = $true)]
+        [string]$ReportName
+    )
+
+    $actual = [bool](Require-ReportProperty -Report $Report -Name $Name -ReportName $ReportName)
+    if ($actual -ne $Expected) {
+        throw "Proof set report $ReportName expected $Name to be $Expected, got $actual"
+    }
+
+    Write-Host "proof_set_bool=$ReportName.$Name value=$actual"
+}
+
+function Assert-ReportFileProof {
+    param(
+        [Parameter(Mandatory = $true)]
+        [object]$Proof,
+        [Parameter(Mandatory = $true)]
+        [string]$Name,
+        [int64]$MinimumBytes = 1
+    )
+
+    $path = [string](Require-ReportProperty -Report $Proof -Name "path" -ReportName $Name)
+    $exists = [bool](Require-ReportProperty -Report $Proof -Name "exists" -ReportName $Name)
+    $bytes = [int64](Require-ReportProperty -Report $Proof -Name "bytes" -ReportName $Name)
+
+    if ([string]::IsNullOrWhiteSpace($path)) {
+        throw "Proof set file proof $Name has empty path"
+    }
+    if (!$exists) {
+        throw "Proof set file proof $Name does not exist: $path"
+    }
+    if ($bytes -lt $MinimumBytes) {
+        throw "Proof set file proof $Name has too few bytes: $path bytes=$bytes minimum=$MinimumBytes"
+    }
+
+    Write-Host "proof_set_file=$Name path=$path bytes=$bytes"
 }
 
 function Get-ReportPackageFingerprint {
@@ -278,6 +345,53 @@ function Assert-SameArtifactSmokeProofSet {
     Write-Host "proof_set_artifact_smoke_source_dirty=$($expectedSource['Dirty'])"
 }
 
+function Assert-LaptopPreflightReport {
+    param(
+        [Parameter(Mandatory = $true)]
+        [string]$Path
+    )
+
+    $reportName = "laptop_preflight"
+    $report = Read-ProofReport -Path $Path
+
+    Assert-SameReportValue `
+        -Name "proof_mode" `
+        -Expected "windows-laptop-preflight" `
+        -Actual ([string](Require-ReportProperty -Report $report -Name "proof_mode" -ReportName $reportName)) `
+        -ReportName $reportName
+    Assert-ReportBoolean -Report $report -Name "preflight_only" -Expected $true -ReportName $reportName
+    $proofSessionId = Assert-NonEmptyReportString -Report $report -Name "proof_session_id" -ReportName $reportName
+    $packageDir = Assert-NonEmptyReportString -Report $report -Name "package_dir" -ReportName $reportName
+    $proofDir = Assert-NonEmptyReportString -Report $report -Name "proof_dir" -ReportName $reportName
+
+    $os = Require-ReportProperty -Report $report -Name "os" -ReportName $reportName
+    $platform = [string](Require-ReportProperty -Report $os -Name "platform" -ReportName $reportName)
+    if ($platform -ne "Win32NT") {
+        throw "Laptop preflight proof must run on Windows, got platform $platform"
+    }
+    $machine = Assert-NonEmptyReportString -Report $os -Name "machine" -ReportName $reportName
+    $userName = Assert-NonEmptyReportString -Report $os -Name "user_name" -ReportName $reportName
+    $userSid = Assert-NonEmptyReportString -Report $os -Name "user_sid" -ReportName $reportName
+
+    $preflights = Require-ReportProperty -Report $report -Name "preflights" -ReportName $reportName
+    Assert-ReportBoolean -Report $preflights -Name "hotkey_delivery" -Expected $true -ReportName $reportName
+    Assert-ReportBoolean -Report $preflights -Name "microphone" -Expected $true -ReportName $reportName
+    Assert-ReportBoolean -Report $preflights -Name "local_whisper" -Expected $true -ReportName $reportName
+
+    $files = Require-ReportProperty -Report $report -Name "files" -ReportName $reportName
+    Assert-ReportFileProof -Proof (Require-ReportProperty -Report $files -Name "proof_agent" -ReportName $reportName) -Name "laptop_preflight.proof_agent"
+    Assert-ReportFileProof -Proof (Require-ReportProperty -Report $files -Name "mic_preflight_wav" -ReportName $reportName) -Name "laptop_preflight.mic_preflight_wav" -MinimumBytes 45
+    Assert-ReportFileProof -Proof (Require-ReportProperty -Report $files -Name "whisper_cli" -ReportName $reportName) -Name "laptop_preflight.whisper_cli"
+    Assert-ReportFileProof -Proof (Require-ReportProperty -Report $files -Name "whisper_model" -ReportName $reportName) -Name "laptop_preflight.whisper_model"
+
+    Write-Host "proof_set_laptop_preflight_session_id=$proofSessionId"
+    Write-Host "proof_set_laptop_preflight_machine=$machine"
+    Write-Host "proof_set_laptop_preflight_user=$userName"
+    Write-Host "proof_set_laptop_preflight_user_sid=$userSid"
+    Write-Host "proof_set_laptop_preflight_package_dir=$packageDir"
+    Write-Host "proof_set_laptop_preflight_proof_dir=$proofDir"
+}
+
 function Assert-SameLaptopProofSet {
     param(
         [Parameter(Mandatory = $true)]
@@ -441,6 +555,7 @@ $hasExplicitRequirement = $RequireDoctorOnly -or
     $RequireCloudDictation -or
     $RequireLocalWhisperDictation -or
     $RequireLocalWhisperNotepadPaste -or
+    $RequireLaptopPreflight -or
     $RequirePackagedWhisperMockInstall
 
 if (!$hasExplicitRequirement) {
@@ -448,6 +563,7 @@ if (!$hasExplicitRequirement) {
     $RequireCloudDictation = ![string]::IsNullOrWhiteSpace($CloudDictationReportPath)
     $RequireLocalWhisperDictation = ![string]::IsNullOrWhiteSpace($LocalWhisperDictationReportPath)
     $RequireLocalWhisperNotepadPaste = ![string]::IsNullOrWhiteSpace($LocalWhisperNotepadPasteReportPath)
+    $RequireLaptopPreflight = ![string]::IsNullOrWhiteSpace($LaptopPreflightReportPath)
     $RequirePackagedWhisperMockInstall = ![string]::IsNullOrWhiteSpace($PackagedWhisperMockInstallReportPath)
 }
 
@@ -455,6 +571,7 @@ $hasRequirement = $RequireDoctorOnly -or
     $RequireCloudDictation -or
     $RequireLocalWhisperDictation -or
     $RequireLocalWhisperNotepadPaste -or
+    $RequireLaptopPreflight -or
     $RequirePackagedWhisperMockInstall
 
 if (!$hasRequirement) {
@@ -489,6 +606,13 @@ if ($RequireLocalWhisperNotepadPaste) {
         -Path $LocalWhisperNotepadPasteReportPath
 }
 
+if ($RequireLaptopPreflight) {
+    Write-Host ""
+    Write-Host "== proof_set_check=laptop_preflight =="
+    Assert-LaptopPreflightReport -Path $LaptopPreflightReportPath
+    Write-Host "proof_set_requirement=laptop_preflight status=pass report=$LaptopPreflightReportPath"
+}
+
 if ($RequirePackagedWhisperMockInstall) {
     Invoke-ProofReportProfileCheck `
         -Name "packaged_whisper_mock_install" `
@@ -507,6 +631,8 @@ if ($RequireFullLaptopProof) {
         -DoctorOnlyReportPath $DoctorOnlyReportPath `
         -PackagedWhisperMockInstallReportPath $PackagedWhisperMockInstallReportPath
     Write-Host "proof_set_ok=artifact-smoke"
+} elseif ($RequireLaptopPreflight) {
+    Write-Host "proof_set_ok=laptop-preflight"
 } else {
     Write-Host "proof_set_ok=custom"
 }

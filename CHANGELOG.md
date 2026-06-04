@@ -58,6 +58,7 @@
 - Added a packaged `windows-keyboard-hook-proof` preflight to the Windows laptop proof runner so hold-hotkey delivery fails before dictation.
 - Added a Windows laptop `-PreflightOnly` mode that runs hotkey, microphone, and local-whisper checks before cloud/full-proof setup.
 - Added a Windows laptop preflight-only JSON report so native setup proof can be archived before cloud/full-proof runs.
+- Required the Windows proof-set checker to validate laptop preflight-only JSON reports before marking setup proof OK.
 - Exposed shared Windows record, hold, and clipboard defaults in doctor and artifact proof output.
 - Required Windows package smoke to assert shared proof-agent defaults.
 - Required Windows agent smoke to assert shared user-facing agent defaults.
