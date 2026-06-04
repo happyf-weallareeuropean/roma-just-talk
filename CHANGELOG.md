@@ -2,6 +2,7 @@
 
 ## v1.81 - Unreleased
 
+- Cleaned bounded "I meant to say" self-corrections without leaving "to say" behind.
 - Cleaned bounded "I mean to say" self-corrections.
 - Cleaned tight hyphenated repeated-word stutters such as "I-I think".
 - Cleaned bounded "let me rephrase" self-corrections.

@@ -1668,6 +1668,21 @@ struct RomaCoreChecks {
                 "i mean to say correction should preserve suffix"
             ),
             (
+                "Use model, I meant to say module.",
+                "Use module.",
+                "i meant to say correction"
+            ),
+            (
+                "Use model, uh I meant to say module.",
+                "Use module.",
+                "pause filler before i meant to say correction"
+            ),
+            (
+                "Let's meet at two, I meant to say three tomorrow.",
+                "Let's meet at three tomorrow.",
+                "i meant to say correction should preserve suffix"
+            ),
+            (
                 "Use model, wait actually module.",
                 "Use module.",
                 "wait actually correction"
@@ -2741,6 +2756,11 @@ struct RomaCoreChecks {
                 "I mean to say, module loads.",
                 "I mean to say, module loads.",
                 "i mean to say prose guard"
+            ),
+            (
+                "I meant to say, module loads.",
+                "I meant to say, module loads.",
+                "i meant to say prose guard"
             ),
             (
                 "The phrase actually wait no is useful.",
