@@ -47,6 +47,7 @@
 - Strengthened full Windows laptop proof-set validation to require matching source provenance across reports.
 - Required full Windows laptop proof-set validation to reject artifacts built from dirty source checkouts.
 - Prevented generated Windows proof artifacts from making clean package provenance appear dirty.
+- Required Windows CI packaging to reject artifacts whose manifest does not show clean source provenance.
 - Added a packaged Windows laptop proof runner that executes cloud dictation, local whisper dictation, Notepad paste, and proof-set validation through existing scripts.
 - Added a Windows proof-set checker for full laptop and artifact-smoke report bundles.
 - Strengthened Windows laptop proof profiles to reject loopback/mock cloud endpoints and packaged mock whisper backends.

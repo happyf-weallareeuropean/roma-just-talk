@@ -4884,6 +4884,7 @@ struct RomaCoreChecks {
             .deletingLastPathComponent()
             .deletingLastPathComponent()
             .deletingLastPathComponent()
+        let repositoryRoot = packageRoot.deletingLastPathComponent()
         let scriptsRoot = packageRoot.appendingPathComponent("Scripts")
         let packageScript = try String(
             contentsOf: scriptsRoot.appendingPathComponent("package-windows-agent.ps1"),
@@ -4895,6 +4896,10 @@ struct RomaCoreChecks {
         )
         let checkSetScript = try String(
             contentsOf: scriptsRoot.appendingPathComponent("check-windows-proof-set.ps1"),
+            encoding: .utf8
+        )
+        let workflowScript = try String(
+            contentsOf: repositoryRoot.appendingPathComponent(".github/workflows/romacore.yml"),
             encoding: .utf8
         )
 
@@ -4941,6 +4946,14 @@ struct RomaCoreChecks {
         try require(
             checkSetScript.contains("Full laptop proof requires a clean packaged source checkout"),
             "Windows proof-set checker should reject dirty packaged source for final laptop proof"
+        )
+        try require(
+            workflowScript.contains("Verify clean Windows package provenance"),
+            "Windows CI should explicitly verify clean package provenance"
+        )
+        try require(
+            workflowScript.contains(#"source_dirty=false"#),
+            "Windows CI should fail artifacts packaged from dirty source"
         )
     }
 

@@ -222,6 +222,26 @@ jobs:
       - name: Package Windows agent
         run: .\Scripts\package-windows-agent.ps1 -OutputDir "$env:RUNNER_TEMP\roma-windows-agent"
 
+      - name: Verify clean Windows package provenance
+        run: |
+          $manifestPath = "$env:RUNNER_TEMP\roma-windows-agent\manifest.txt"
+          if (!(Test-Path -LiteralPath $manifestPath)) {
+            throw "manifest.txt was not found: $manifestPath"
+          }
+
+          $manifestLines = Get-Content -LiteralPath $manifestPath
+          $sourceCommit = $manifestLines | Where-Object { $_ -like "source_commit=*" } | Select-Object -First 1
+          $sourceDirty = $manifestLines | Where-Object { $_ -like "source_dirty=*" } | Select-Object -First 1
+          if ($sourceCommit -notmatch "^source_commit=[0-9a-fA-F]{40}$") {
+            throw "Windows package manifest has invalid source_commit: $sourceCommit"
+          }
+          if ($sourceDirty -ne "source_dirty=false") {
+            throw "Windows package manifest must come from a clean checkout, got: $sourceDirty"
+          }
+
+          Write-Host "ci_package_source_commit=$($sourceCommit.Substring('source_commit='.Length))"
+          Write-Host "ci_package_source_dirty=false"
+
       - name: Verify Windows agent artifact wrapper
         run: |
           & "$env:RUNNER_TEMP\roma-windows-agent\prove-windows-agent-artifact.ps1" `
