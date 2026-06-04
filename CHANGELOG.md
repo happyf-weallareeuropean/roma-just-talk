@@ -34,6 +34,7 @@
 - Required Windows install proof reports to hash-match the installed agent and launcher script against the packaged artifact.
 - Required installed listener proof reports to use the same agent executable path as the installed Windows agent.
 - Required Windows shortcut proof reports to contain exact quoted launcher and config arguments.
+- Required Windows proof reports and full proof sets to include and match the current Windows user identity.
 - Added a packaged Windows laptop proof runner that executes cloud dictation, local whisper dictation, Notepad paste, and proof-set validation through existing scripts.
 - Added a Windows proof-set checker for full laptop and artifact-smoke report bundles.
 - Strengthened Windows laptop proof profiles to reject loopback/mock cloud endpoints and packaged mock whisper backends.

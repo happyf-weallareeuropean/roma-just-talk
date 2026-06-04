@@ -79,7 +79,7 @@ function Require-ReportProperty {
         throw "Proof set report $ReportName is missing property: $Name"
     }
 
-    return $Report.$Name
+    return $Report.PSObject.Properties[$Name].Value
 }
 
 function Assert-SameReportValue {
@@ -147,6 +147,9 @@ function Assert-SameLaptopProofSet {
     $firstOS = Require-ReportProperty -Report $firstReport -Name "os" -ReportName $firstName
     $expectedPlatform = [string](Require-ReportProperty -Report $firstOS -Name "platform" -ReportName $firstName)
     $expectedMachine = [string](Require-ReportProperty -Report $firstOS -Name "machine" -ReportName $firstName)
+    $expectedUserName = [string](Require-ReportProperty -Report $firstOS -Name "user_name" -ReportName $firstName)
+    $expectedUserDomain = [string](Require-ReportProperty -Report $firstOS -Name "user_domain" -ReportName $firstName)
+    $expectedUserSid = [string](Require-ReportProperty -Report $firstOS -Name "user_sid" -ReportName $firstName)
     $expectedPackageDir = [string](Require-ReportProperty -Report $firstReport -Name "package_dir" -ReportName $firstName)
     $expectedPackageFingerprint = Get-ReportPackageFingerprint -Report $firstReport -ReportName $firstName
 
@@ -155,6 +158,12 @@ function Assert-SameLaptopProofSet {
     }
     if ([string]::IsNullOrWhiteSpace($expectedMachine)) {
         throw "Full laptop proof report is missing machine name"
+    }
+    if ([string]::IsNullOrWhiteSpace($expectedUserName)) {
+        throw "Full laptop proof report is missing Windows user name"
+    }
+    if ([string]::IsNullOrWhiteSpace($expectedUserSid)) {
+        throw "Full laptop proof report is missing Windows user SID"
     }
     if ([string]::IsNullOrWhiteSpace($expectedPackageDir)) {
         throw "Full laptop proof report is missing package_dir"
@@ -178,6 +187,21 @@ function Assert-SameLaptopProofSet {
             -Actual ([string](Require-ReportProperty -Report $reportOS -Name "machine" -ReportName $reportName)) `
             -ReportName $reportName
         Assert-SameReportValue `
+            -Name "os.user_name" `
+            -Expected $expectedUserName `
+            -Actual ([string](Require-ReportProperty -Report $reportOS -Name "user_name" -ReportName $reportName)) `
+            -ReportName $reportName
+        Assert-SameReportValue `
+            -Name "os.user_domain" `
+            -Expected $expectedUserDomain `
+            -Actual ([string](Require-ReportProperty -Report $reportOS -Name "user_domain" -ReportName $reportName)) `
+            -ReportName $reportName
+        Assert-SameReportValue `
+            -Name "os.user_sid" `
+            -Expected $expectedUserSid `
+            -Actual ([string](Require-ReportProperty -Report $reportOS -Name "user_sid" -ReportName $reportName)) `
+            -ReportName $reportName
+        Assert-SameReportValue `
             -Name "package_dir" `
             -Expected $expectedPackageDir `
             -Actual ([string](Require-ReportProperty -Report $report -Name "package_dir" -ReportName $reportName)) `
@@ -190,6 +214,8 @@ function Assert-SameLaptopProofSet {
     }
 
     Write-Host "proof_set_machine=$expectedMachine"
+    Write-Host "proof_set_user=$expectedUserName"
+    Write-Host "proof_set_user_sid=$expectedUserSid"
     Write-Host "proof_set_package_dir=$expectedPackageDir"
     Write-Host "proof_set_package_fingerprint=$expectedPackageFingerprint"
 }

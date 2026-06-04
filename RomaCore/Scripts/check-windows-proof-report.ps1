@@ -427,6 +427,7 @@ function Get-ProofProfileRequirements {
         "doctor-only" {
             return @(
                 "windows_platform",
+                "windows_user",
                 "permission_surface",
                 "proof_agent_source_surface",
                 "native_doctor_surface",
@@ -436,6 +437,7 @@ function Get-ProofProfileRequirements {
         "cloud-dictation" {
             return @(
                 "windows_platform",
+                "windows_user",
                 "install",
                 "installed_hash_match",
                 "shortcut",
@@ -456,6 +458,7 @@ function Get-ProofProfileRequirements {
         "local-whisper-dictation" {
             return @(
                 "windows_platform",
+                "windows_user",
                 "install",
                 "installed_hash_match",
                 "shortcut",
@@ -476,6 +479,7 @@ function Get-ProofProfileRequirements {
         "local-whisper-notepad-paste" {
             return @(
                 "windows_platform",
+                "windows_user",
                 "install",
                 "installed_hash_match",
                 "permission_surface",
@@ -493,6 +497,7 @@ function Get-ProofProfileRequirements {
         "packaged-whisper-mock-install" {
             return @(
                 "windows_platform",
+                "windows_user",
                 "install",
                 "installed_hash_match",
                 "shortcut",
@@ -621,6 +626,10 @@ if ($RequireWindowsPlatform) {
     }
 
     Write-Host "proof_windows_platform=$platform"
+    Assert-NonEmptyString -Object $os -Name "user_name"
+    Assert-NonEmptyString -Object $os -Name "user_sid"
+    $userName = [string](Require-Property -Object $os -Name "user_name")
+    Write-Host "proof_windows_user=$userName"
 }
 
 if (![string]::IsNullOrWhiteSpace($ExpectedMode)) {

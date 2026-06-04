@@ -682,6 +682,23 @@ function Get-ListenerSmokeProof {
     }
 }
 
+function Get-CurrentWindowsUserSid {
+    if ([System.Environment]::OSVersion.Platform -ne [System.PlatformID]::Win32NT) {
+        return ""
+    }
+
+    try {
+        $identity = [System.Security.Principal.WindowsIdentity]::GetCurrent()
+        if ($null -ne $identity -and $null -ne $identity.User) {
+            return [string]$identity.User.Value
+        }
+    } catch {
+        return ""
+    }
+
+    return ""
+}
+
 function Write-ProofReport {
     param(
         [Parameter(Mandatory = $true)]
@@ -728,6 +745,9 @@ function Write-ProofReport {
             platform = [System.Environment]::OSVersion.Platform.ToString()
             version = [System.Environment]::OSVersion.VersionString
             machine = $env:COMPUTERNAME
+            user_name = $env:USERNAME
+            user_domain = $env:USERDOMAIN
+            user_sid = Get-CurrentWindowsUserSid
         }
         package_dir = $PackageDir
         install_dir = $InstallDir
