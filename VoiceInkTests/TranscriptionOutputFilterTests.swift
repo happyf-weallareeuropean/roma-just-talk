@@ -563,6 +563,13 @@ struct TranscriptionOutputFilterTests {
         #expect(TranscriptionOutputFilter.filter("I think this works. I think this works!") == "I think this works.")
         #expect(TranscriptionOutputFilter.filter("Hello world! Hello world.") == "Hello world.")
         #expect(TranscriptionOutputFilter.filter("No? No.") == "No? No.")
+        #expect(TranscriptionOutputFilter.filter("So this. Model.") == "So this model.")
+        #expect(TranscriptionOutputFilter.filter("So this. [Model.]") == "So this model.")
+        #expect(TranscriptionOutputFilter.filter("I think this is. [A final word.]") == "I think this is a final word.")
+        #expect(TranscriptionOutputFilter.filter("I live in. [U.S.]") == "I live in U.S.")
+        #expect(TranscriptionOutputFilter.filter("It is. What?") == "It is. What?")
+        #expect(TranscriptionOutputFilter.filter("It is. [What?]") == "It is. [What?]")
+        #expect(TranscriptionOutputFilter.applyInsertionPolish("It works. [Model.]", context: nil) == "It works. [Model.]")
     }
 
     @Test func transcriptionFilterAppliesBoundedBacktrackingCorrections() async throws {

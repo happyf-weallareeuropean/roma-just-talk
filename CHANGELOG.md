@@ -2,6 +2,7 @@
 
 ## v1.81 - Unreleased
 
+- Joined generated sentence breaks before short continuation fragments such as "so this. [Model.]".
 - Collapsed repeated short sentences that differ only by final punctuation.
 - Dropped trailing pause and acknowledgement filler tails such as "this works, um yeah.".
 - Dropped filler-only pause plus acknowledgement chains such as "uh okay yeah.".
@@ -50,6 +51,7 @@
 - Rejected zero-length, non-finite, and overflowing Windows record and hold proof windows before runtime.
 - Rejected invalid direct Windows dictation runtime trigger windows before capture.
 - Rejected Windows proof windows that collapse below the runtime timer granularity.
+- Stopped Windows laptop proof runs from forwarding a default clipboard restore delay as an explicit option.
 - Hardened the Windows laptop proof runner to fail early outside Windows or with missing local whisper files.
 - Strengthened full Windows laptop proof-set validation to require the reports come from the same machine and packaged artifact.
 - Added a package identity fingerprint to Windows artifact proof reports and full laptop proof-set validation.

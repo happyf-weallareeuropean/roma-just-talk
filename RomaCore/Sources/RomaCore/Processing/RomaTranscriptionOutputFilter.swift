@@ -398,6 +398,12 @@ public struct RomaTranscriptionOutputFilter {
         "we", "what", "when", "where", "which", "will", "window", "with", "word", "words", "work",
         "would", "yeah", "you"
     ]
+    private static let sentenceBoundaryContinuationPreviousWords: Set<String> = [
+        "a", "about", "after", "an", "and", "are", "as", "at", "be", "been", "being",
+        "by", "for", "from", "had", "has", "have", "in", "into", "is", "it", "like",
+        "my", "of", "on", "or", "our", "that", "the", "their", "then", "these", "this",
+        "those", "to", "under", "was", "were", "with", "without", "your"
+    ]
     private static let preservedSingleWordQuestionFragments: Set<String> = [
         "how", "what", "when", "where", "which", "who", "why"
     ]
@@ -1001,6 +1007,7 @@ public struct RomaTranscriptionOutputFilter {
             filteredText = collapseRepeatedShortClauses(in: filteredText)
             filteredText = collapseRepeatedShortSentences(in: filteredText)
             filteredText = collapseMismatchedRepeatedShortSentences(in: filteredText)
+            filteredText = collapseGeneratedSentenceBoundaryBeforeShortFragment(in: filteredText)
         }
 
         // Clean whitespace
@@ -6720,6 +6727,128 @@ public struct RomaTranscriptionOutputFilter {
         return second
     }
 
+    private static func collapseGeneratedSentenceBoundaryBeforeShortFragment(in text: String) -> String {
+        var collapsedText = collapseGeneratedBoundaryBeforeBracketedShortFragment(in: text)
+        collapsedText = collapseGeneratedBoundaryBeforePlainShortFragment(in: collapsedText)
+        return collapsedText
+    }
+
+    private static func collapseGeneratedBoundaryBeforeBracketedShortFragment(in text: String) -> String {
+        guard let regex = try? NSRegularExpression(
+            pattern: #"(?<![\p{L}\p{N}'’ʼ-])([\p{L}\p{N}][\p{L}\p{N}'’ʼ-]{0,63})[ \t]*\.[ \t]+(\[[^\[\]\n]{1,80}\])([.!?])?(?=\s|$)"#
+        ) else {
+            return text
+        }
+
+        var collapsedText = text
+        let matches = regex.matches(in: collapsedText, range: NSRange(collapsedText.startIndex..., in: collapsedText)).reversed()
+
+        for match in matches {
+            guard match.numberOfRanges >= 4,
+                  let fullRange = Range(match.range, in: collapsedText),
+                  let previousWordRange = Range(match.range(at: 1), in: collapsedText),
+                  let fragmentRange = Range(match.range(at: 2), in: collapsedText),
+                  let cleanedFragment = cleanedGeneratedBoundaryContinuationFragment(
+                    String(collapsedText[fragmentRange]),
+                    requiresGeneratedCasing: false
+                  ) else {
+                continue
+            }
+
+            let previousWord = String(collapsedText[previousWordRange])
+            guard canJoinGeneratedSentenceBoundary(after: previousWord),
+                  !isPreservedGeneratedQuestionFragment(String(collapsedText[fragmentRange])) else {
+                continue
+            }
+
+            let punctuation = generatedBoundaryTerminalPunctuation(for: cleanedFragment)
+            collapsedText.replaceSubrange(fullRange, with: "\(previousWord) \(cleanedFragment)\(punctuation)")
+        }
+
+        return collapsedText
+    }
+
+    private static func collapseGeneratedBoundaryBeforePlainShortFragment(in text: String) -> String {
+        guard let regex = try? NSRegularExpression(
+            pattern: #"(?<![\p{L}\p{N}'’ʼ-])([\p{L}\p{N}][\p{L}\p{N}'’ʼ-]{0,63})[ \t]*\.[ \t]+((?:[\p{L}\p{N}][\p{L}\p{N}'’ʼ-]{0,63})(?:[ \t]+[\p{L}\p{N}][\p{L}\p{N}'’ʼ-]{0,63}){0,2})([.!?])(?=\s|$)"#
+        ) else {
+            return text
+        }
+
+        var collapsedText = text
+        let matches = regex.matches(in: collapsedText, range: NSRange(collapsedText.startIndex..., in: collapsedText)).reversed()
+
+        for match in matches {
+            guard match.numberOfRanges >= 4,
+                  let fullRange = Range(match.range, in: collapsedText),
+                  let previousWordRange = Range(match.range(at: 1), in: collapsedText),
+                  let fragmentRange = Range(match.range(at: 2), in: collapsedText),
+                  let punctuationRange = Range(match.range(at: 3), in: collapsedText),
+                  let cleanedFragment = cleanedGeneratedBoundaryContinuationFragment(
+                    String(collapsedText[fragmentRange]),
+                    requiresGeneratedCasing: true
+                  ) else {
+                continue
+            }
+
+            let previousWord = String(collapsedText[previousWordRange])
+            let punctuation = String(collapsedText[punctuationRange])
+            guard canJoinGeneratedSentenceBoundary(after: previousWord),
+                  !isPreservedGeneratedQuestionFragment(String(collapsedText[fragmentRange]) + punctuation) else {
+                continue
+            }
+
+            collapsedText.replaceSubrange(
+                fullRange,
+                with: "\(previousWord) \(cleanedFragment)\(punctuation)"
+            )
+        }
+
+        return collapsedText
+    }
+
+    private static func cleanedGeneratedBoundaryContinuationFragment(
+        _ text: String,
+        requiresGeneratedCasing: Bool
+    ) -> String? {
+        let strippedText = stripBoundaryNoise(from: text)
+        let cleanedText = removeTrailingNoisyFragmentPunctuation(from: strippedText)
+        guard isShortFragment(cleanedText),
+              !cleanedText.isEmpty,
+              !hasInternalSentenceBoundary(cleanedText),
+              !requiresGeneratedCasing || containsGeneratedCasingToken(cleanedText) else {
+            return nil
+        }
+
+        return lowercaseFragmentWordsIfSafe(in: cleanedText)
+    }
+
+    private static func canJoinGeneratedSentenceBoundary(after previousWord: String) -> Bool {
+        sentenceBoundaryContinuationPreviousWords.contains(
+            previousWord.trimmingCharacters(in: apostropheLikeCharacters).lowercased()
+        )
+    }
+
+    private static func containsGeneratedCasingToken(_ text: String) -> Bool {
+        text.contains { character in
+            character.isUppercase
+        }
+    }
+
+    private static func isPreservedGeneratedQuestionFragment(_ text: String) -> Bool {
+        guard text.contains("?") || text.contains("？") else { return false }
+        return preservedSingleWordQuestionFragments.contains(normalizedRepeatedClause(text))
+    }
+
+    private static func generatedBoundaryTerminalPunctuation(for fragment: String) -> String {
+        if isTerminalPeriodAbbreviation(fragment) { return "" }
+        if let lastCharacter = fragment.last,
+           ".!?".contains(lastCharacter) {
+            return ""
+        }
+        return "."
+    }
+
     private static func collapseRepeatedShortPhrases(in text: String) -> String {
         guard let regex = try? NSRegularExpression(
             pattern: #"(?i)(^|(?<=[.!?])\s+|\n|(?<=[ \t]))((?:[^\s,;:.!?\n]+[ \t]+){1,4}[^\s,;:.!?\n]+)[ \t]+\2(?=[ \t]+[^\s,;:.!?\n]+|[.!?]|\s*$)"#
@@ -6845,6 +6974,9 @@ public struct RomaTranscriptionOutputFilter {
         strippedText = unwrapNoisyAngleBracketedBoundaryOutput(strippedText)
         strippedText = unwrapNoisyMarkdownBoundaryOutput(strippedText)
         guard isShortFragment(strippedText) else { return strippedText }
+        if hasInternalSentenceBoundary(removeTrailingFragmentPunctuation(from: strippedText)) {
+            return strippedText
+        }
 
         if hasPreservedBalancedBoundary(strippedText) ||
             hasPreservedBalancedBoundary(removeTrailingFragmentPunctuation(from: strippedText)) {

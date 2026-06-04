@@ -696,6 +696,36 @@ struct RomaCoreChecks {
                 "one-word repeated question guard"
             ),
             (
+                "So this. Model.",
+                "So this model.",
+                "generated sentence boundary before short continuation fragment"
+            ),
+            (
+                "So this. [Model.]",
+                "So this model.",
+                "generated sentence boundary before bracketed short continuation fragment"
+            ),
+            (
+                "I think this is. [A final word.]",
+                "I think this is a final word.",
+                "generated sentence boundary before bracketed short continuation phrase"
+            ),
+            (
+                "I live in. [U.S.]",
+                "I live in U.S.",
+                "generated sentence boundary before bracketed abbreviation fragment"
+            ),
+            (
+                "It is. What?",
+                "It is. What?",
+                "single-word generated question boundary guard"
+            ),
+            (
+                "It is. [What?]",
+                "It is. [What?]",
+                "bracketed single-word generated question boundary guard"
+            ),
+            (
                 "mm-hmm... uh-huh, I think so.",
                 "I think so.",
                 "hyphenated pause sounds"
@@ -4115,6 +4145,11 @@ struct RomaCoreChecks {
             "insertion polish should strip redundant outer punctuation after quoted full sentences"
         )
         try require(
+            RomaTranscriptionOutputFilter.applyInsertionPolish("It works. [Model.]", context: nil) ==
+                "It works. [Model.]",
+            "insertion polish should preserve inline bracketed fragments after complete sentences"
+        )
+        try require(
             RomaTranscriptionOutputFilter.applyInsertionPolish("... Model.", context: midSentenceContext) == "model",
             "insertion polish should strip leading ellipsis from short fragments"
         )
@@ -5484,6 +5519,14 @@ struct RomaCoreChecks {
             laptopProofScript.contains("cloudStartupShortcutDir") &&
                 laptopProofScript.contains("localStartupShortcutDir"),
             "Windows laptop proof runner should keep cloud and local startup shortcut proofs separate"
+        )
+        try require(
+            laptopProofScript.contains(#"$hasExplicitClipboardRestoreDelay = $PSBoundParameters.ContainsKey("ClipboardRestoreDelaySeconds")"#),
+            "Windows laptop proof runner should distinguish explicit clipboard restore delay from the default"
+        )
+        try require(
+            laptopProofScript.contains(#"if ($NoRestoreClipboard -and $hasExplicitClipboardRestoreDelay)"#),
+            "Windows laptop proof runner should reject no-restore plus explicit restore delay before invoking nested scripts"
         )
         try require(
             installScript.contains("Assert-InstalledAgentNotRunning") &&
