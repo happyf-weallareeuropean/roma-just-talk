@@ -207,6 +207,9 @@ function Assert-SameLaptopProofSet {
     if ([string]::IsNullOrWhiteSpace($expectedPackageFingerprint)) {
         throw "Full laptop proof report is missing package identity fingerprint"
     }
+    if ([string]$expectedSource['Dirty'] -ne "false") {
+        throw "Full laptop proof requires a clean packaged source checkout, got source_dirty=$($expectedSource['Dirty'])"
+    }
 
     foreach ($entry in $reports) {
         $reportName = $entry["Name"]

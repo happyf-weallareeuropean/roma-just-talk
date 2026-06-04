@@ -42,6 +42,7 @@
 - Scoped Windows expected transcript phrase checks to the processed transcript field instead of the whole runtime log.
 - Required Windows artifact proof reports to include packaged source repository, branch, commit, and dirty-state provenance.
 - Strengthened full Windows laptop proof-set validation to require matching source provenance across reports.
+- Required full Windows laptop proof-set validation to reject artifacts built from dirty source checkouts.
 - Added a packaged Windows laptop proof runner that executes cloud dictation, local whisper dictation, Notepad paste, and proof-set validation through existing scripts.
 - Added a Windows proof-set checker for full laptop and artifact-smoke report bundles.
 - Strengthened Windows laptop proof profiles to reject loopback/mock cloud endpoints and packaged mock whisper backends.

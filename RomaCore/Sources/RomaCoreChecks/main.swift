@@ -4861,6 +4861,10 @@ struct RomaCoreChecks {
             checkSetScript.contains("proof_set_source_commit="),
             "Windows proof-set checker should print matched source commit evidence"
         )
+        try require(
+            checkSetScript.contains("Full laptop proof requires a clean packaged source checkout"),
+            "Windows proof-set checker should reject dirty packaged source for final laptop proof"
+        )
     }
 
     private static func asciiString(_ data: Data, offset: Int, count: Int) throws -> String {
