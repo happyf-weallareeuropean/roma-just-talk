@@ -5090,6 +5090,10 @@ struct RomaCoreChecks {
             contentsOf: scriptsRoot.appendingPathComponent("package-windows-agent.ps1"),
             encoding: .utf8
         )
+        let foregroundSource = try String(
+            contentsOf: packageRoot.appendingPathComponent("Sources/CWindowsSupport/roma_windows_foreground.c"),
+            encoding: .utf8
+        )
         let proveScript = try String(
             contentsOf: scriptsRoot.appendingPathComponent("prove-windows-agent-artifact.ps1"),
             encoding: .utf8
@@ -5186,6 +5190,14 @@ struct RomaCoreChecks {
         try require(
             checkReportScript.contains(#"Assert-Boolean -Object $Runtime -Name "reported_ordered_hold_sequence" -Expected $true"#),
             "Windows proof checker should require ordered hold-to-talk runtime evidence"
+        )
+        try require(
+            foregroundSource.contains("AttachThreadInput"),
+            "Windows foreground paste adapter should bridge input queues before SetForegroundWindow"
+        )
+        try require(
+            foregroundSource.contains("SetForegroundWindow"),
+            "Windows foreground paste adapter should call SetForegroundWindow"
         )
         try require(
             checkSetScript.contains("manifest.source_commit"),

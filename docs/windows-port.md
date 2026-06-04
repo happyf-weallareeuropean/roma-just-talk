@@ -186,6 +186,8 @@ powershell -ExecutionPolicy Bypass -File .\Scripts\windows-proof.ps1 -RunInterac
 powershell -ExecutionPolicy Bypass -File .\Scripts\windows-proof.ps1 -RunNotepadPasteProof
 ```
 
+Targeted paste activation restores the target window, temporarily bridges the current thread to the foreground and target input queues with `AttachThreadInput`, then calls `SetForegroundWindow` before `SendInput`. This improves normal Notepad/editor proof reliability but does not remove the equal-or-lower integrity limit.
+
 Useful script options:
 
 - `-SkipMic` skips real microphone capture when Windows microphone access is not ready.
