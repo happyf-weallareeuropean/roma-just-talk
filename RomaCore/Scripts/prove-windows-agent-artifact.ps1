@@ -224,10 +224,13 @@ if ($usesWhisper) {
     if (![string]::IsNullOrWhiteSpace($WhisperOutputDir)) {
         $installArgs += @("-WhisperOutputDir", $WhisperOutputDir)
     }
-    foreach ($argument in $WhisperArgument) {
-        if (![string]::IsNullOrWhiteSpace($argument)) {
-            $installArgs += @("-WhisperArgument", $argument)
-        }
+    $whisperArguments = @(
+        $WhisperArgument |
+            Where-Object { ![string]::IsNullOrWhiteSpace($_) }
+    )
+    if ($whisperArguments.Count -gt 0) {
+        $installArgs += "-WhisperArgument"
+        $installArgs += $whisperArguments
     }
 } else {
     $installArgs += @("-Endpoint", $Endpoint, "-Model", $Model)
@@ -247,10 +250,13 @@ if (![string]::IsNullOrWhiteSpace($Language)) {
 if (![string]::IsNullOrWhiteSpace($Prompt)) {
     $installArgs += @("-Prompt", $Prompt)
 }
-foreach ($replacement in $WordReplacement) {
-    if (![string]::IsNullOrWhiteSpace($replacement)) {
-        $installArgs += @("-WordReplacement", $replacement)
-    }
+$replacementValues = @(
+    $WordReplacement |
+        Where-Object { ![string]::IsNullOrWhiteSpace($_) }
+)
+if ($replacementValues.Count -gt 0) {
+    $installArgs += "-WordReplacement"
+    $installArgs += $replacementValues
 }
 if ($UseHoldHook) {
     $installArgs += "-UseHoldHook"
