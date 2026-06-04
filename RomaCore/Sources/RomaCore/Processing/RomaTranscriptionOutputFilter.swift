@@ -376,13 +376,13 @@ public struct RomaTranscriptionOutputFilter {
     private static let likelyLowercaseFragments: Set<String> = [
         "a", "about", "after", "again", "all", "also", "an", "and", "any", "are",
         "as", "at", "back", "be", "because", "but", "by", "can", "case", "code",
-        "could", "data", "did", "do", "does", "done", "first", "for", "from",
+        "could", "data", "did", "do", "does", "done", "final", "first", "for", "from",
         "get", "go", "got", "had", "has", "have", "here", "how", "if", "in",
         "is", "it", "just", "last", "like", "make", "maybe", "mean", "model",
         "models", "need", "next", "not", "now", "of", "on", "one", "or", "out",
-        "put", "really", "right", "second", "see", "should", "so", "some", "that",
+        "phrase", "phrases", "put", "really", "right", "second", "see", "should", "single", "so", "some", "that",
         "the", "then", "there", "third", "this", "to", "use", "was", "we", "what",
-        "when", "where", "which", "will", "with", "work", "would", "yeah", "you"
+        "when", "where", "which", "will", "with", "word", "words", "work", "would", "yeah", "you"
     ]
     private static let preservedSingleWordQuestionFragments: Set<String> = [
         "how", "what", "when", "where", "which", "who", "why"
@@ -1168,13 +1168,17 @@ public struct RomaTranscriptionOutputFilter {
                 return restoreLeadingNewlines(leadingNewlineCount, to: polishedText)
             }
             polishedText = removeTrailingContinuationPeriod(from: polishedText)
-            return restoreLeadingNewlines(leadingNewlineCount, to: lowercaseInitialWordIfSafe(in: polishedText))
+            let lowercasedText = lowercaseInitialWordIfSafe(in: polishedText)
+            let adjustedText = shouldLowercaseLikelyTitleCasedFragmentWords(in: lowercasedText)
+                ? lowercaseLikelyTitleCasedWordsIfSafe(in: lowercasedText)
+                : lowercasedText
+            return restoreLeadingNewlines(leadingNewlineCount, to: adjustedText)
         }
 
         guard shouldUseFragmentPolish else {
             return restoreLeadingNewlines(leadingNewlineCount, to: polishedText)
         }
-        return restoreLeadingNewlines(leadingNewlineCount, to: lowercaseInitialWordIfSafe(in: polishedText))
+        return restoreLeadingNewlines(leadingNewlineCount, to: lowercaseFragmentWordsIfSafe(in: polishedText))
     }
 
     private static func standaloneSpokenPunctuationOutput(in text: String) -> String? {
@@ -6768,6 +6772,39 @@ public struct RomaTranscriptionOutputFilter {
         return lowercaseInitialWordIfSafe(in: text, firstLetterRange: firstLetterRange, firstWordEnd: firstWordEnd)
     }
 
+    private static func lowercaseFragmentWordsIfSafe(in text: String) -> String {
+        lowercaseLikelyTitleCasedWordsIfSafe(in: lowercaseInitialWordIfSafe(in: text))
+    }
+
+    private static func shouldLowercaseLikelyTitleCasedFragmentWords(in text: String) -> Bool {
+        !text.contains { ".!?。！？".contains($0) }
+    }
+
+    private static func lowercaseLikelyTitleCasedWordsIfSafe(in text: String) -> String {
+        guard let regex = try? NSRegularExpression(
+            pattern: #"(?<![\p{L}\p{N}'’ʼ-])[\p{L}][\p{L}\p{N}'’ʼ-]*(?![\p{L}\p{N}'’ʼ-])"#
+        ) else {
+            return text
+        }
+
+        var result = text
+        let matches = regex.matches(in: result, range: NSRange(result.startIndex..., in: result)).reversed()
+        for match in matches {
+            guard let wordRange = Range(match.range, in: result) else {
+                continue
+            }
+
+            let word = String(result[wordRange])
+            guard shouldLowercaseLikelyFragmentWord(word) else {
+                continue
+            }
+
+            result.replaceSubrange(wordRange, with: String(word.prefix(1)).lowercased() + word.dropFirst())
+        }
+
+        return result
+    }
+
     private static func lowercaseInitialWordIfSafe(
         in text: String,
         firstLetterRange: Range<String.Index>,
@@ -6775,7 +6812,7 @@ public struct RomaTranscriptionOutputFilter {
     ) -> String {
         let firstWordRange = firstLetterRange.lowerBound..<firstWordEnd
         let firstWord = String(text[firstWordRange])
-        guard shouldLowercaseInitialWord(firstWord) else {
+        guard shouldLowercaseLikelyFragmentWord(firstWord) else {
             return text
         }
 
@@ -6784,7 +6821,7 @@ public struct RomaTranscriptionOutputFilter {
         return result
     }
 
-    private static func shouldLowercaseInitialWord(_ word: String) -> Bool {
+    private static func shouldLowercaseLikelyFragmentWord(_ word: String) -> Bool {
         let comparisonWord = word.trimmingCharacters(in: apostropheLikeCharacters)
         guard let firstCharacter = comparisonWord.first, firstCharacter.isUppercase else {
             return false

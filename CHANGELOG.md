@@ -2,6 +2,7 @@
 
 ## v1.81 - Unreleased
 
+- Lowercased ordinary title-cased words inside short mid-sentence fragments such as "The Model." while preserving acronyms like "API".
 - Removed unbracketed non-speech ASR descriptors such as "sighs...", "coughs,", and "laughs." when they appear as their own fragment.
 - Handled bare "sorry" self-corrections such as "blue sorry red" while preserving apology prose.
 - Uppercased common standalone technical acronyms such as API, URL, UI, UX, AI, JSON, and SQL in cleaned dictation.

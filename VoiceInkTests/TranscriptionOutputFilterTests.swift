@@ -209,6 +209,9 @@ struct TranscriptionOutputFilterTests {
         let newLineContext = TranscriptionOutputFilter.TextInsertionContext(precedingText: "Done\n")
 
         #expect(TranscriptionOutputFilter.applyInsertionPolish("Model.", context: midSentenceContext) == "model")
+        #expect(TranscriptionOutputFilter.applyInsertionPolish("The Model.", context: midSentenceContext) == "the model")
+        #expect(TranscriptionOutputFilter.applyInsertionPolish("A Final Word.", context: midSentenceContext) == "a final word")
+        #expect(TranscriptionOutputFilter.applyInsertionPolish("The API.", context: midSentenceContext) == "the API")
         #expect(TranscriptionOutputFilter.applyInsertionPolish("Felix.", context: midSentenceContext) == "Felix")
         #expect(TranscriptionOutputFilter.applyInsertionPolish("Felix is ready.", context: midSentenceContext) == "Felix is ready")
         #expect(TranscriptionOutputFilter.applyInsertionPolish("U.S.", context: midSentenceContext) == "U.S.")

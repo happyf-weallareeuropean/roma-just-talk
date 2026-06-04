@@ -270,6 +270,15 @@ struct RomaCoreChecks {
             "shared insertion polish should lowercase mid-sentence fragments"
         )
         try require(
+            RomaTranscriptionOutputFilter.applyInsertionPolish("The Model.", context: midSentenceContext) ==
+                "the model",
+            "shared insertion polish should lowercase title-cased mid-sentence phrases"
+        )
+        try require(
+            RomaTranscriptionOutputFilter.applyInsertionPolish("The API.", context: midSentenceContext) == "the API",
+            "shared insertion polish should preserve acronyms inside mid-sentence phrases"
+        )
+        try require(
             RomaTranscriptionOutputFilter.applyInsertionPolish("Felix.", context: midSentenceContext) == "Felix",
             "shared insertion polish should preserve proper-name mid-sentence fragments"
         )
@@ -2872,6 +2881,13 @@ struct RomaCoreChecks {
                 context: midSentenceContext
             ) == "model is actually ready",
             "insertion polish should strip auto period from longer mid-sentence fragments"
+        )
+        try require(
+            RomaTranscriptionOutputFilter.applyInsertionPolish(
+                "A Final Word.",
+                context: midSentenceContext
+            ) == "a final word",
+            "insertion polish should lowercase title-cased short mid-sentence fragments"
         )
         try require(
             RomaTranscriptionOutputFilter.applyInsertionPolish(
