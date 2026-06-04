@@ -232,6 +232,7 @@ powershell -ExecutionPolicy Bypass -File C:\tmp\roma-windows-agent\install-windo
 
 By default this installs into `%LOCALAPPDATA%\roma-just-talk\agent` and smokes the installed copy with an install-local smoke config. Passing `-WhisperCLI` and `-WhisperModel` proves the same installed config path for local whisper.cpp without API-key storage. When you pass real endpoint/model/key options or `-RunDictation`, the installer stores config at `%APPDATA%\roma-just-talk\windows-agent.json`. Pass `-InstallDir` and `-ConfigPath` to prove a temp install path in CI.
 Before copying package files, the installer checks whether the existing installed `RomaWindowsAgent.exe` is still running and fails with its pid/path when found. Close the listener before reinstalling or upgrading; the installer does not stop it for you.
+The installer copies the packaged proof surface too: `RomaProofAgent.exe`, `prove-windows-agent-artifact.ps1`, `run-windows-laptop-proof.ps1`, and both proof checkers. That keeps an installed proof directory usable as a complete artifact surface instead of only a runtime launcher.
 
 The installer also copies `run-windows-agent.ps1`. Use it to start one installed dictation session from the saved config, pass `-Listen` to keep the agent alive for repeated hotkey sessions, or pass endpoint/model/key options once to write config and immediately run dictation:
 

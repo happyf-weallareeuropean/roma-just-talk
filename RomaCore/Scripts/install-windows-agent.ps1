@@ -206,13 +206,17 @@ Invoke-Step "copy package files" {
 
     $knownFiles = @(
         "RomaWindowsAgent.exe",
+        "RomaProofAgent.exe",
         "RomaWhisperCLIMock.exe",
         "RomaWindowsAgent.pdb",
+        "RomaProofAgent.pdb",
         "smoke-windows-agent.ps1",
         "run-windows-agent.ps1",
         "install-windows-agent.ps1",
         "prove-windows-agent-artifact.ps1",
+        "run-windows-laptop-proof.ps1",
         "check-windows-proof-report.ps1",
+        "check-windows-proof-set.ps1",
         "manifest.txt",
         "sample-windows-agent.json",
         "sample-local-whisper-agent.json"
@@ -233,7 +237,10 @@ Invoke-Step "copy package files" {
     }
 
     Require-File -Path (Join-Path $InstallDir "RomaWindowsAgent.exe")
+    Require-File -Path (Join-Path $InstallDir "RomaProofAgent.exe")
     Require-File -Path (Join-Path $InstallDir "smoke-windows-agent.ps1")
+    Require-File -Path (Join-Path $InstallDir "run-windows-laptop-proof.ps1")
+    Require-File -Path (Join-Path $InstallDir "check-windows-proof-set.ps1")
     Write-Host "install_dir=$InstallDir"
     Write-Host "runtime_dlls=$($runtimeLibraries.Count)"
 }
