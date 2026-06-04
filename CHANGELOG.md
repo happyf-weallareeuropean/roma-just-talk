@@ -2,6 +2,7 @@
 
 ## v1.81 - Unreleased
 
+- Normalized more all-caps developer product fragments such as "VERCEL PROJECT" and "NEXT JS ROUTE" mid-sentence.
 - Normalized all-caps product and platform phrase fragments such as "GITHUB ISSUE" and "IOS APP" mid-sentence.
 - Lowercased more all-caps ordinary code and product fragments such as "ENDPOINT" and "PAYLOAD" mid-sentence.
 - Lowercased additional all-caps ordinary tech fragments such as "MODULE" mid-sentence.

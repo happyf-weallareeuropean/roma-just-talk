@@ -320,6 +320,42 @@ struct RomaCoreChecks {
             "shared insertion polish should normalize all-caps Apple platform fragments"
         )
         try require(
+            RomaTranscriptionOutputFilter.applyInsertionPolish("VERCEL PROJECT.", context: midSentenceContext) == "Vercel project",
+            "shared insertion polish should normalize all-caps deployment product names"
+        )
+        try require(
+            RomaTranscriptionOutputFilter.applyInsertionPolish("SUPABASE CLIENT.", context: midSentenceContext) == "Supabase client",
+            "shared insertion polish should normalize all-caps database product names"
+        )
+        try require(
+            RomaTranscriptionOutputFilter.applyInsertionPolish("CLOUDFLARE WORKER.", context: midSentenceContext) == "Cloudflare worker",
+            "shared insertion polish should normalize all-caps edge product names"
+        )
+        try require(
+            RomaTranscriptionOutputFilter.applyInsertionPolish("LINEAR TICKET.", context: midSentenceContext) == "Linear ticket",
+            "shared insertion polish should normalize all-caps planning product names"
+        )
+        try require(
+            RomaTranscriptionOutputFilter.applyInsertionPolish("NEXT JS ROUTE.", context: midSentenceContext) == "Next.js route",
+            "shared insertion polish should normalize spaced all-caps Next.js fragments"
+        )
+        try require(
+            RomaTranscriptionOutputFilter.applyInsertionPolish("NEXTJS ROUTE.", context: midSentenceContext) == "Next.js route",
+            "shared insertion polish should normalize compact all-caps Next.js fragments"
+        )
+        try require(
+            RomaTranscriptionOutputFilter.applyInsertionPolish("NODE JS SERVER.", context: midSentenceContext) == "Node.js server",
+            "shared insertion polish should normalize spaced all-caps Node.js fragments"
+        )
+        try require(
+            RomaTranscriptionOutputFilter.applyInsertionPolish("TYPESCRIPT TYPE.", context: midSentenceContext) == "TypeScript type",
+            "shared insertion polish should normalize all-caps language product fragments"
+        )
+        try require(
+            RomaTranscriptionOutputFilter.applyInsertionPolish("OPENAI MODEL.", context: midSentenceContext) == "OpenAI model",
+            "shared insertion polish should normalize all-caps AI provider names"
+        )
+        try require(
             RomaTranscriptionOutputFilter.applyInsertionPolish("NEW YORK.", context: midSentenceContext) == "NEW YORK",
             "shared insertion polish should not lowercase unknown all-caps proper-name phrases"
         )
