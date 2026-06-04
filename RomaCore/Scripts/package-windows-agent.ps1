@@ -202,6 +202,7 @@ function Get-GitMetadata {
 }
 
 $packageRoot = Resolve-Path "$PSScriptRoot\.."
+$gitMetadata = Get-GitMetadata -RepositoryRoot $packageRoot
 $OutputDir = $ExecutionContext.SessionState.Path.GetUnresolvedProviderPathFromPSPath($OutputDir)
 New-Item -ItemType Directory -Force -Path $OutputDir | Out-Null
 
@@ -250,7 +251,6 @@ try {
     $localWhisperInstallConfigPath = Join-Path $localWhisperInstallProofDir "windows-agent.json"
     $localWhisperShortcutDir = Join-Path $OutputDir "shortcuts-local-whisper"
     $localWhisperShortcutPath = Join-Path $localWhisperShortcutDir "Roma Just Talk Agent.lnk"
-    $gitMetadata = Get-GitMetadata -RepositoryRoot $packageRoot
 
     Invoke-Step "copy agent executable" {
         Copy-Item -LiteralPath $agentSource.FullName -Destination $agentOutput -Force

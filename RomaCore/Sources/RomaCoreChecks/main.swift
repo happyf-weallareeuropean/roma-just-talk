@@ -4881,6 +4881,18 @@ struct RomaCoreChecks {
             packageScript.contains(#""source_dirty=$($gitMetadata.Dirty)""#),
             "Windows package manifest should record whether source was dirty"
         )
+        guard let gitMetadataRange = packageScript.range(
+            of: "$gitMetadata = Get-GitMetadata -RepositoryRoot $packageRoot"
+        ),
+              let outputDirCreationRange = packageScript.range(
+                of: "New-Item -ItemType Directory -Force -Path $OutputDir"
+              ) else {
+            throw CheckFailure("Windows package script should record source provenance before output setup")
+        }
+        try require(
+            gitMetadataRange.lowerBound < outputDirCreationRange.lowerBound,
+            "Windows package script should record source provenance before creating proof artifacts"
+        )
         try require(
             checkReportScript.contains("function Assert-ManifestSourceProof"),
             "Windows proof checker should validate manifest source provenance"

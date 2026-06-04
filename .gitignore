@@ -32,6 +32,8 @@ playground.xcworkspace
 .build/
 build/
 .local-build/
+.local-xcode-derived/
+RomaCore/proof-artifacts/
 
 # CocoaPods
 #
@@ -99,4 +101,4 @@ Icon
 .AppleDesktop
 Network Trash Folder
 Temporary Items
-.apdisk 
+.apdisk
