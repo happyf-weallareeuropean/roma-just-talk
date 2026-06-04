@@ -29,6 +29,9 @@ param(
     [switch]$CreateStartupShortcut,
     [string]$ShortcutDir = "",
     [string]$StartupShortcutDir = "",
+    [switch]$RunNotepadPasteProof,
+    [string]$NotepadPasteProofPath = "",
+    [string]$PasteProofText = "roma just talk proof",
     [switch]$DoctorOnly
 )
 
@@ -117,6 +120,21 @@ function Require-ManifestKey {
     Write-Host "manifest_$Key=$($Manifest[$Key])"
 }
 
+function Assert-OutputContains {
+    param(
+        [Parameter(Mandatory = $true)]
+        [string]$Output,
+        [Parameter(Mandatory = $true)]
+        [string]$Expected
+    )
+
+    if (!$Output.Contains($Expected)) {
+        throw "Expected command output to contain '$Expected'"
+    }
+
+    Write-Host "asserted_output=$Expected"
+}
+
 function Get-FileProof {
     param(
         [Parameter(Mandatory = $true)]
@@ -133,6 +151,135 @@ function Get-FileProof {
         path = $Path
         exists = $exists
         bytes = $bytes
+    }
+}
+
+function Wait-ProcessMainWindow {
+    param(
+        [Parameter(Mandatory = $true)]
+        [System.Diagnostics.Process]$Process,
+        [int]$TimeoutSeconds = 10
+    )
+
+    $deadline = (Get-Date).AddSeconds($TimeoutSeconds)
+    while ((Get-Date) -lt $deadline) {
+        $Process.Refresh()
+        if ($Process.HasExited) {
+            throw "Process exited before creating a main window: pid=$($Process.Id)"
+        }
+        if ($Process.MainWindowHandle -ne [IntPtr]::Zero) {
+            Write-Host "process_window=ready pid=$($Process.Id) handle=$($Process.MainWindowHandle)"
+            return
+        }
+        Start-Sleep -Milliseconds 200
+    }
+
+    throw "Timed out waiting for process main window: pid=$($Process.Id)"
+}
+
+function Set-ProcessForeground {
+    param(
+        [Parameter(Mandatory = $true)]
+        [System.Diagnostics.Process]$Process,
+        [int]$TimeoutSeconds = 5
+    )
+
+    $shell = New-Object -ComObject WScript.Shell
+    $deadline = (Get-Date).AddSeconds($TimeoutSeconds)
+    while ((Get-Date) -lt $deadline) {
+        $Process.Refresh()
+        if ($Process.HasExited) {
+            throw "Process exited before activation: pid=$($Process.Id)"
+        }
+        if ($shell.AppActivate($Process.Id)) {
+            Write-Host "process_foreground=activated pid=$($Process.Id)"
+            return $shell
+        }
+        Start-Sleep -Milliseconds 200
+    }
+
+    throw "Timed out activating process: pid=$($Process.Id)"
+}
+
+function New-NotepadPasteProof {
+    return [ordered]@{
+        requested = $RunNotepadPasteProof.IsPresent
+        text = $PasteProofText
+        output_present = $false
+        target_process_id = 0
+        paste_sent = $false
+        text_found = $false
+        verified = $false
+        file = Get-FileProof -Path $NotepadPasteProofPath
+    }
+}
+
+function Invoke-NotepadPasteProof {
+    $proof = New-NotepadPasteProof
+    if (!$RunNotepadPasteProof) {
+        return $proof
+    }
+
+    if ([System.Environment]::OSVersion.Platform -ne [System.PlatformID]::Win32NT) {
+        throw "RunNotepadPasteProof requires Windows"
+    }
+    if ([string]::IsNullOrWhiteSpace($PasteProofText)) {
+        throw "PasteProofText must not be empty"
+    }
+
+    $notepadParent = Split-Path -Parent $NotepadPasteProofPath
+    if (![string]::IsNullOrWhiteSpace($notepadParent)) {
+        New-Item -ItemType Directory -Force -Path $notepadParent | Out-Null
+    }
+    Set-Content -LiteralPath $NotepadPasteProofPath -Encoding UTF8 -NoNewline -Value ""
+
+    $notepad = Start-Process `
+        -FilePath "notepad.exe" `
+        -ArgumentList @("`"$NotepadPasteProofPath`"") `
+        -PassThru
+
+    try {
+        Wait-ProcessMainWindow -Process $notepad
+        $proof["target_process_id"] = $notepad.Id
+        $pasteOutput = & $script:proofAgentPath windows-paste-proof `
+            --text $PasteProofText `
+            --target-process-id $notepad.Id 2>&1 | Out-String
+        $proof["output_present"] = ![string]::IsNullOrWhiteSpace($pasteOutput)
+        Write-Host $pasteOutput
+        if ($LASTEXITCODE -ne 0) {
+            throw "RomaProofAgent windows-paste-proof failed for Notepad"
+        }
+        Assert-OutputContains -Output $pasteOutput -Expected "target_process_id=$($notepad.Id)"
+        Assert-OutputContains -Output $pasteOutput -Expected "paste_sent=true"
+        $proof["paste_sent"] = $true
+
+        $shell = Set-ProcessForeground -Process $notepad
+        $shell.SendKeys("^s")
+        Start-Sleep -Milliseconds 750
+
+        $savedText = Get-Content -LiteralPath $NotepadPasteProofPath -Raw
+        $proof["text_found"] = $savedText.Contains($PasteProofText)
+        if (!$proof["text_found"]) {
+            throw "Notepad file did not contain pasted proof text: $NotepadPasteProofPath"
+        }
+
+        $proof["verified"] = $true
+        $proof["file"] = Get-FileProof -Path $NotepadPasteProofPath
+        Write-Host "notepad_paste_file=$NotepadPasteProofPath"
+        Write-Host "notepad_paste_verified=true"
+        return $proof
+    } finally {
+        if ($null -ne $notepad) {
+            $notepad.Refresh()
+            if (!$notepad.HasExited) {
+                $null = $notepad.CloseMainWindow()
+                Start-Sleep -Milliseconds 500
+                $notepad.Refresh()
+            }
+            if (!$notepad.HasExited) {
+                Stop-Process -Id $notepad.Id -Force
+            }
+        }
     }
 }
 
@@ -301,6 +448,7 @@ function Write-ProofReport {
         }
         files = [ordered]@{
             packaged_agent = (Get-FileProof -Path $agentPath)
+            packaged_proof_agent = (Get-FileProof -Path $script:proofAgentPath)
             packaged_whisper_cli_mock = (Get-FileProof -Path $script:packagedWhisperCLI)
             installed_agent = (Get-FileProof -Path (Join-Path $InstallDir "RomaWindowsAgent.exe"))
             installed_run_script = (Get-FileProof -Path (Join-Path $InstallDir "run-windows-agent.ps1"))
@@ -315,6 +463,9 @@ function Write-ProofReport {
     }
     if ($RunDictation) {
         $report["dictation_runtime"] = Get-DictationRuntimeProof
+    }
+    if ($RunNotepadPasteProof) {
+        $report["notepad_paste"] = $script:notepadPasteProof
     }
 
     $report |
@@ -354,8 +505,13 @@ if (![string]::IsNullOrWhiteSpace($ConfigPath)) {
 if (![string]::IsNullOrWhiteSpace($ProofReportPath)) {
     $ProofReportPath = Resolve-FullPath -Path $ProofReportPath
 }
+if ([string]::IsNullOrWhiteSpace($NotepadPasteProofPath)) {
+    $NotepadPasteProofPath = Join-Path $InstallDir "smoke\notepad-paste-proof.txt"
+}
+$NotepadPasteProofPath = Resolve-FullPath -Path $NotepadPasteProofPath
 
 $agentPath = Join-Path $PackageDir "RomaWindowsAgent.exe"
+$script:proofAgentPath = Join-Path $PackageDir "RomaProofAgent.exe"
 $smokeScript = Join-Path $PackageDir "smoke-windows-agent.ps1"
 $installScript = Join-Path $PackageDir "install-windows-agent.ps1"
 $runScript = Join-Path $PackageDir "run-windows-agent.ps1"
@@ -366,9 +522,11 @@ $script:artifactManifest = @{}
 $script:packagedWhisperCLI = ""
 $script:packagedAgentDoctorOutput = ""
 $script:installedLauncherDoctorOutput = ""
+$script:notepadPasteProof = New-NotepadPasteProof
 
 Invoke-Step "artifact files" {
     Require-File -Path $agentPath
+    Require-File -Path $script:proofAgentPath
     Require-File -Path $smokeScript
     Require-File -Path $installScript
     Require-File -Path $runScript
@@ -386,6 +544,7 @@ Invoke-Step "artifact manifest" {
     foreach ($key in @(
         "agent",
         "output",
+        "proof_agent",
         "whisper_cli_mock",
         "smoke_script",
         "run_script",
@@ -403,6 +562,9 @@ Invoke-Step "artifact manifest" {
     $script:packagedWhisperCLI = Resolve-PackagePath -Path $script:artifactManifest["whisper_cli_mock"]
     Require-File -Path $script:packagedWhisperCLI
     Write-Host "manifest_whisper_cli_mock_path=$script:packagedWhisperCLI"
+    $script:proofAgentPath = Resolve-PackagePath -Path $script:artifactManifest["proof_agent"]
+    Require-File -Path $script:proofAgentPath
+    Write-Host "manifest_proof_agent_path=$script:proofAgentPath"
 }
 
 if ($UsePackagedWhisperMock) {
@@ -574,6 +736,12 @@ Invoke-Step "installed launcher doctor" {
         throw "Installed launcher doctor failed"
     }
     Write-Host $script:installedLauncherDoctorOutput
+}
+
+if ($RunNotepadPasteProof) {
+    Invoke-Step "notepad paste proof" {
+        $script:notepadPasteProof = Invoke-NotepadPasteProof
+    }
 }
 
 Write-ProofReport -Mode $proofMode -IsDoctorOnly $false

@@ -140,14 +140,20 @@ try {
         swift build -c $Configuration --product RomaWindowsAgent
     }
 
+    Invoke-Step "build RomaProofAgent" {
+        swift build -c $Configuration --product RomaProofAgent
+    }
+
     Invoke-Step "build RomaWhisperCLIMock" {
         swift build -c $Configuration --product RomaWhisperCLIMock
     }
 
     $buildDirectory = Join-Path $packageRoot ".build"
     $agentSource = Resolve-ProductExecutable -BuildDirectory $buildDirectory -Configuration $Configuration -Name "RomaWindowsAgent"
+    $proofAgentSource = Resolve-ProductExecutable -BuildDirectory $buildDirectory -Configuration $Configuration -Name "RomaProofAgent"
     $mockWhisperSource = Resolve-ProductExecutable -BuildDirectory $buildDirectory -Configuration $Configuration -Name "RomaWhisperCLIMock"
     $agentOutput = Join-Path $OutputDir "RomaWindowsAgent.exe"
+    $proofAgentOutput = Join-Path $OutputDir "RomaProofAgent.exe"
     $mockWhisperOutput = Join-Path $OutputDir "RomaWhisperCLIMock.exe"
     $smokeScriptSource = Join-Path $PSScriptRoot "smoke-windows-agent.ps1"
     $smokeScriptOutput = Join-Path $OutputDir "smoke-windows-agent.ps1"
@@ -184,6 +190,21 @@ try {
             $pdbOutput = Join-Path $OutputDir "RomaWindowsAgent.pdb"
             Copy-Item -LiteralPath $pdbSource -Destination $pdbOutput -Force
             Write-Host "agent_pdb=$pdbOutput"
+        }
+
+        Copy-Item -LiteralPath $proofAgentSource.FullName -Destination $proofAgentOutput -Force
+        $proofAgentItem = Get-Item -LiteralPath $proofAgentOutput
+        if ($proofAgentItem.Length -le 0) {
+            throw "RomaProofAgent.exe is empty: $proofAgentOutput"
+        }
+        Write-Host "proof_agent_exe=$proofAgentOutput"
+        Write-Host "proof_agent_bytes=$($proofAgentItem.Length)"
+
+        $proofAgentPdbSource = [System.IO.Path]::ChangeExtension($proofAgentSource.FullName, ".pdb")
+        if (Test-Path -LiteralPath $proofAgentPdbSource) {
+            $proofAgentPdbOutput = Join-Path $OutputDir "RomaProofAgent.pdb"
+            Copy-Item -LiteralPath $proofAgentPdbSource -Destination $proofAgentPdbOutput -Force
+            Write-Host "proof_agent_pdb=$proofAgentPdbOutput"
         }
 
         Copy-Item -LiteralPath $mockWhisperSource.FullName -Destination $mockWhisperOutput -Force
@@ -264,6 +285,7 @@ try {
         "configuration=$Configuration",
         "source=$($agentSource.FullName)",
         "output=$agentOutput",
+        "proof_agent=RomaProofAgent.exe",
         "sample_config=$configPath",
         "sample_local_whisper_config=$localWhisperConfigPath",
         "whisper_cli_mock=RomaWhisperCLIMock.exe",

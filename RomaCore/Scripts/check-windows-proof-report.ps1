@@ -12,7 +12,8 @@ param(
     [switch]$RequireCloudConfig,
     [switch]$RequireWhisperConfig,
     [switch]$RequireDictation,
-    [switch]$RequirePaste
+    [switch]$RequirePaste,
+    [switch]$RequireNotepadPaste
 )
 
 $ErrorActionPreference = "Stop"
@@ -180,6 +181,7 @@ if (![string]::IsNullOrWhiteSpace($ExpectedMode)) {
 
 $files = Require-Property -Object $report -Name "files"
 Assert-FileProof -Proof (Require-Property -Object $files -Name "packaged_agent") -Name "packaged_agent"
+Assert-FileProof -Proof (Require-Property -Object $files -Name "packaged_proof_agent") -Name "packaged_proof_agent"
 
 if ($RequirePackagedMock) {
     Assert-FileProof -Proof (Require-Property -Object $files -Name "packaged_whisper_cli_mock") -Name "packaged_whisper_cli_mock"
@@ -248,6 +250,16 @@ if ($RequirePaste) {
         $dictationRuntime = Assert-DictationRuntimeProof -Report $report
     }
     Assert-Boolean -Object $dictationRuntime -Name "reported_paste_sent" -Expected $true
+}
+
+if ($RequireNotepadPaste) {
+    $notepadPaste = Require-Property -Object $report -Name "notepad_paste"
+    Assert-Boolean -Object $notepadPaste -Name "requested" -Expected $true
+    Assert-Boolean -Object $notepadPaste -Name "output_present" -Expected $true
+    Assert-Boolean -Object $notepadPaste -Name "paste_sent" -Expected $true
+    Assert-Boolean -Object $notepadPaste -Name "text_found" -Expected $true
+    Assert-Boolean -Object $notepadPaste -Name "verified" -Expected $true
+    Assert-FileProof -Proof (Require-Property -Object $notepadPaste -Name "file") -Name "notepad_paste_file"
 }
 
 Write-Host "proof_report_ok=$ProofReportPath"
