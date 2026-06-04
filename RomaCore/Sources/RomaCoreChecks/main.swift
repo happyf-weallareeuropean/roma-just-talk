@@ -2004,6 +2004,21 @@ struct RomaCoreChecks {
                 "hit tab key command"
             ),
             (
+                "Bullet parent indent bullet child outdent bullet sibling.",
+                "- parent\n  - child\n- sibling",
+                "nested bullet indent outdent command"
+            ),
+            (
+                "Bullet parent sub bullet child bullet sibling.",
+                "- parent\n  - child\n  - sibling",
+                "nested bullet sub command"
+            ),
+            (
+                "Bullet parent indent bullet child dedent bullet sibling.",
+                "- parent\n  - child\n- sibling",
+                "nested bullet dedent command"
+            ),
+            (
                 "Use api slash users.",
                 "Use api/users.",
                 "spoken slash command"

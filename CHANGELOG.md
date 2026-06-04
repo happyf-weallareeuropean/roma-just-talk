@@ -2,6 +2,7 @@
 
 ## v1.81 - Unreleased
 
+- Formatted nested spoken bullet outlines using "indent", "sub", "outdent", and "dedent" commands.
 - Formatted compact spoken markdown tables such as "markdown table name age row Felix thirty".
 - Split repeated spoken task commands such as "todo ... todo ..." and "checked task ... checked task ..." into separate checklist rows.
 - Added local `whisper.cpp` CLI transcription config and proof commands for the Windows agent.

@@ -906,6 +906,7 @@ public struct RomaTranscriptionOutputFilter {
 
         // Clean whitespace
         filteredText = normalizeWhitespace(filteredText)
+        filteredText = applyNestedBulletCommands(in: filteredText)
         filteredText = restoreLeadingNewlines(leadingFormattingNewlineCount, to: filteredText)
 
         return filteredText
@@ -3581,6 +3582,66 @@ public struct RomaTranscriptionOutputFilter {
             with: "$1",
             options: .regularExpression
         )
+    }
+
+    private static func applyNestedBulletCommands(in text: String) -> String {
+        var nestingLevel = 0
+        var didRewrite = false
+        let lines = text.split(separator: "\n", omittingEmptySubsequences: false).map(String.init)
+
+        let rewrittenLines = lines.map { line -> String in
+            guard let content = bulletLineContent(in: line) else {
+                nestingLevel = 0
+                return line
+            }
+
+            var visibleContent = content
+            if let command = trailingNestedBulletCommand(in: visibleContent) {
+                visibleContent = command.content
+                didRewrite = true
+            }
+
+            let indentation = String(repeating: "  ", count: nestingLevel)
+            let rewrittenLine = "\(indentation)- \(visibleContent)"
+
+            if let command = trailingNestedBulletCommand(in: content) {
+                nestingLevel = max(0, nestingLevel + command.levelDelta)
+            }
+
+            return rewrittenLine
+        }
+
+        return didRewrite ? rewrittenLines.joined(separator: "\n") : text
+    }
+
+    private static func bulletLineContent(in line: String) -> String? {
+        let trimmedLeading = line.drop { $0 == " " || $0 == "\t" }
+        guard trimmedLeading.hasPrefix("- ") else {
+            return nil
+        }
+
+        return String(trimmedLeading.dropFirst(2)).trimmingCharacters(in: .whitespaces)
+    }
+
+    private static func trailingNestedBulletCommand(in content: String) -> (content: String, levelDelta: Int)? {
+        let commandPatterns: [(pattern: String, levelDelta: Int)] = [
+            (#"(?i)(?:^|[ \t]+)(?:indent|increase[ \t]+indent|sub)(?:[.!?])?[ \t]*$"#, 1),
+            (#"(?i)(?:^|[ \t]+)(?:outdent|dedent|decrease[ \t]+indent)(?:[.!?])?[ \t]*$"#, -1)
+        ]
+
+        for commandPattern in commandPatterns {
+            guard let regex = try? NSRegularExpression(pattern: commandPattern.pattern),
+                  let match = regex.firstMatch(in: content, range: NSRange(content.startIndex..., in: content)),
+                  let commandRange = Range(match.range, in: content) else {
+                continue
+            }
+
+            let visibleContent = String(content[..<commandRange.lowerBound])
+                .trimmingCharacters(in: .whitespaces)
+            return (visibleContent, commandPattern.levelDelta)
+        }
+
+        return nil
     }
 
     private static func leadingSpokenFormattingNewlineCount(in text: String) -> Int {
@@ -6471,12 +6532,49 @@ public struct RomaTranscriptionOutputFilter {
     }
 
     private static func normalizeWhitespace(_ text: String) -> String {
-        text
-            .replacingOccurrences(of: #"[^\S\r\n]{2,}"#, with: " ", options: .regularExpression)
+        let protectedText = protectMarkdownListIndentation(in: text)
+        let normalizedText = protectedText.text
+            .replacingOccurrences(of: #"[^\S\r\n]{2,}(?![-*][ \t]|\d{1,2}\.[ \t])"#, with: " ", options: .regularExpression)
             .replacingOccurrences(of: #"\n{3,}"#, with: "\n\n", options: .regularExpression)
             .replacingOccurrences(of: #"[ \t]+\n"#, with: "\n", options: .regularExpression)
-            .replacingOccurrences(of: #"\n[ \t]+"#, with: "\n", options: .regularExpression)
+            .replacingOccurrences(of: #"\n[ \t]+(?![-*][ \t]|\d{1,2}\.[ \t])"#, with: "\n", options: .regularExpression)
             .trimmingCharacters(in: .whitespacesAndNewlines)
+
+        return restoreMarkdownListIndentation(in: normalizedText, spans: protectedText.spans)
+    }
+
+    private static func protectMarkdownListIndentation(in text: String) -> (text: String, spans: [String]) {
+        guard let regex = try? NSRegularExpression(pattern: #"(?m)^[ \t]+(?=(?:[-*][ \t]|\d{1,2}\.[ \t]))"#) else {
+            return (text, [])
+        }
+
+        var protectedText = text
+        var spans: [String] = []
+        let matches = regex.matches(in: protectedText, range: NSRange(protectedText.startIndex..., in: protectedText))
+
+        for match in matches.reversed() {
+            guard let range = Range(match.range, in: protectedText) else {
+                continue
+            }
+
+            spans.append(String(protectedText[range]))
+            protectedText.replaceSubrange(range, with: "__VOICEINK_LIST_INDENT_\(spans.count - 1)__")
+        }
+
+        return (protectedText, spans)
+    }
+
+    private static func restoreMarkdownListIndentation(in text: String, spans: [String]) -> String {
+        var restoredText = text
+
+        for index in spans.indices {
+            restoredText = restoredText.replacingOccurrences(
+                of: "__VOICEINK_LIST_INDENT_\(index)__",
+                with: spans[index]
+            )
+        }
+
+        return restoredText
     }
 
     public static func applyUserCleanupPreferences(_ text: String) -> String {
