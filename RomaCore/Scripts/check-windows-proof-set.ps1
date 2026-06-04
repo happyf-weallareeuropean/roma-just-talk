@@ -180,7 +180,15 @@ function Get-ReportPackageFingerprint {
         throw "Proof set report $ReportName has unsupported package identity algorithm: $algorithm"
     }
 
-    return [string](Require-ReportProperty -Report $packageIdentity -Name "fingerprint" -ReportName $ReportName)
+    $fingerprint = [string](Require-ReportProperty -Report $packageIdentity -Name "fingerprint" -ReportName $ReportName)
+    if ($fingerprint -notmatch "^[0-9a-fA-F]{64}$") {
+        throw "Proof set report $ReportName has invalid package identity fingerprint: $fingerprint"
+    }
+    if ($fingerprint -match "^0{64}$") {
+        throw "Proof set report $ReportName has placeholder package identity fingerprint"
+    }
+
+    return $fingerprint.ToLowerInvariant()
 }
 
 function Get-ReportSourceProvenance {

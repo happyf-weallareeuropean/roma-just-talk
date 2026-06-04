@@ -210,6 +210,86 @@ function New-FileProof {
     }
 }
 
+function New-FileHashProof {
+    param(
+        [Parameter(Mandatory = $true)]
+        [string]$Path
+    )
+
+    $proof = New-FileProof -Path $Path
+    $proof["sha256"] = (Get-FileHash -LiteralPath $Path -Algorithm SHA256).Hash.ToLowerInvariant()
+    return $proof
+}
+
+function Get-PackageIdentityHash {
+    param(
+        [Parameter(Mandatory = $true)]
+        [string[]]$Entries
+    )
+
+    $inputText = [string]::Join("`n", $Entries)
+    $inputBytes = [System.Text.Encoding]::UTF8.GetBytes($inputText)
+    $sha256 = [System.Security.Cryptography.SHA256]::Create()
+    try {
+        $hashBytes = $sha256.ComputeHash($inputBytes)
+    } finally {
+        $sha256.Dispose()
+    }
+
+    return [System.BitConverter]::ToString($hashBytes).Replace("-", "").ToLowerInvariant()
+}
+
+function Get-PackageIdentityProof {
+    param(
+        [Parameter(Mandatory = $true)]
+        [string]$PackageDir
+    )
+
+    $relativePaths = @(
+        "RomaWindowsAgent.exe",
+        "RomaProofAgent.exe",
+        "RomaWhisperCLIMock.exe",
+        "smoke-windows-agent.ps1",
+        "run-windows-agent.ps1",
+        "install-windows-agent.ps1",
+        "prove-windows-agent-artifact.ps1",
+        "run-windows-laptop-proof.ps1",
+        "WINDOWS-LAPTOP-PROOF.txt",
+        "check-windows-proof-report.ps1",
+        "check-windows-proof-set.ps1",
+        "manifest.txt"
+    )
+
+    $dlls = @(
+        Get-ChildItem -LiteralPath $PackageDir -Filter "*.dll" |
+            Sort-Object Name
+    )
+    foreach ($dll in $dlls) {
+        $relativePaths += $dll.Name
+    }
+
+    $files = [ordered]@{}
+    $entries = @()
+    foreach ($relativePath in $relativePaths) {
+        $path = Join-Path $PackageDir $relativePath
+        $proof = New-FileHashProof -Path $path
+        $files[$relativePath] = $proof
+        if ([string]::IsNullOrWhiteSpace([string]$proof["sha256"])) {
+            throw "Package identity file was not hashable: $path"
+        }
+
+        $entries += ("{0}|{1}|{2}" -f $relativePath, $proof["bytes"], $proof["sha256"])
+    }
+
+    return [ordered]@{
+        algorithm = "sha256"
+        fingerprint = (Get-PackageIdentityHash -Entries $entries)
+        entry_count = $entries.Count
+        entries = $entries
+        files = $files
+    }
+}
+
 function Get-CurrentWindowsUserSid {
     $identity = [System.Security.Principal.WindowsIdentity]::GetCurrent()
     if ($null -eq $identity -or $null -eq $identity.User) {
@@ -257,11 +337,7 @@ function Write-LaptopPreflightCheckerSmokeReport {
             source_commit = $GitMetadata.Commit
             source_dirty = $GitMetadata.Dirty
         }
-        package_identity = [ordered]@{
-            algorithm = "sha256"
-            fingerprint = "0000000000000000000000000000000000000000000000000000000000000000"
-            entry_count = 0
-        }
+        package_identity = (Get-PackageIdentityProof -PackageDir $PackageDir)
         os = [ordered]@{
             platform = [System.Environment]::OSVersion.Platform.ToString()
             version = [System.Environment]::OSVersion.VersionString
@@ -542,26 +618,6 @@ try {
             -ShortcutDir $localWhisperShortcutDir
     }
 
-    Invoke-Step "laptop preflight report checker smoke" {
-        Write-LaptopPreflightCheckerSmokeReport `
-            -ReportPath $laptopPreflightCheckerSmokeReport `
-            -PackageDir $OutputDir `
-            -ProofDir $laptopPreflightCheckerSmokeDir `
-            -ProofAgentPath $proofAgentOutput `
-            -WhisperCLIPath $mockWhisperOutput `
-            -WhisperModelPath $agentOutput `
-            -GitMetadata $gitMetadata
-        $checkerOutputText = & $checkSetScriptOutput `
-            -LaptopPreflightReportPath $laptopPreflightCheckerSmokeReport `
-            -RequireLaptopPreflight 2>&1 | Out-String
-        if ($LASTEXITCODE -ne 0) {
-            Write-Host $checkerOutputText
-            throw "Laptop preflight report checker smoke failed"
-        }
-        Write-Host $checkerOutputText
-        Assert-OutputContains -Output $checkerOutputText -Expected "proof_set_ok=laptop-preflight"
-    }
-
     $manifestPath = Join-Path $OutputDir "manifest.txt"
     $agentFile = Get-Item -LiteralPath $agentOutput
     @(
@@ -596,6 +652,26 @@ try {
         "swift_runtime_dlls=$($swiftRuntime.DllCount)",
         "bytes=$($agentFile.Length)"
     ) | Set-Content -LiteralPath $manifestPath -Encoding UTF8
+
+    Invoke-Step "laptop preflight report checker smoke" {
+        Write-LaptopPreflightCheckerSmokeReport `
+            -ReportPath $laptopPreflightCheckerSmokeReport `
+            -PackageDir $OutputDir `
+            -ProofDir $laptopPreflightCheckerSmokeDir `
+            -ProofAgentPath $proofAgentOutput `
+            -WhisperCLIPath $mockWhisperOutput `
+            -WhisperModelPath $agentOutput `
+            -GitMetadata $gitMetadata
+        $checkerOutputText = & $checkSetScriptOutput `
+            -LaptopPreflightReportPath $laptopPreflightCheckerSmokeReport `
+            -RequireLaptopPreflight 2>&1 | Out-String
+        if ($LASTEXITCODE -ne 0) {
+            Write-Host $checkerOutputText
+            throw "Laptop preflight report checker smoke failed"
+        }
+        Write-Host $checkerOutputText
+        Assert-OutputContains -Output $checkerOutputText -Expected "proof_set_ok=laptop-preflight"
+    }
 
     Write-Host ""
     Write-Host "package_artifacts=$OutputDir"

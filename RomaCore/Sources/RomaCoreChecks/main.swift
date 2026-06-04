@@ -6523,11 +6523,20 @@ struct RomaCoreChecks {
             "Windows proof-set checker should validate laptop preflight reports, output markers, and artifact identity"
         )
         try require(
+            checkSetScript.contains("^[0-9a-fA-F]{64}$") &&
+                checkSetScript.contains("^0{64}$") &&
+                checkSetScript.contains("placeholder package identity fingerprint"),
+            "Windows proof-set checker should reject malformed and placeholder package identity fingerprints"
+        )
+        try require(
             packageScript.contains("laptop preflight report checker smoke") &&
                 packageScript.contains("Write-LaptopPreflightCheckerSmokeReport") &&
+                packageScript.contains("function Get-PackageIdentityProof") &&
+                packageScript.contains("Get-PackageIdentityProof -PackageDir $PackageDir") &&
                 packageScript.contains("preflight_outputs") &&
                 packageScript.contains("transcription_client_whisper") &&
                 packageScript.contains("package_identity") &&
+                !packageScript.contains(String(repeating: "0", count: 64)) &&
                 packageScript.contains("source_repository = $GitMetadata.Repository") &&
                 packageScript.contains("laptop_preflight_checker_smoke_report") &&
                 packageScript.contains(#"-Expected "proof_set_ok=laptop-preflight""#),
