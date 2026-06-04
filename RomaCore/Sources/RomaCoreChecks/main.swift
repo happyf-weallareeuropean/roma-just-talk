@@ -4561,6 +4561,10 @@ struct RomaCoreChecks {
             "Windows agent default hold timeout should stay shared"
         )
         try require(
+            RomaWindowsAgentConfiguration.defaultHoldTimeoutMilliseconds == 15_000,
+            "Windows agent default hold timeout milliseconds should stay shared"
+        )
+        try require(
             WindowsClipboardRestoreConfiguration.defaultRestoreDelaySeconds == 2,
             "Windows clipboard restore default delay should stay shared"
         )
@@ -4600,6 +4604,11 @@ struct RomaCoreChecks {
         try require(
             try RomaWindowsAgentConfiguration(holdTimeoutSeconds: 0.001).resolvedHoldTimeoutMilliseconds() == 1,
             "Windows hold timeout conversion should preserve the minimum millisecond"
+        )
+        try require(
+            try RomaWindowsAgentConfiguration().resolvedHoldTimeoutMilliseconds() ==
+                RomaWindowsAgentConfiguration.defaultHoldTimeoutMilliseconds,
+            "Windows default hold timeout conversion should use the shared millisecond default"
         )
         try require(
             merged.wordReplacements == [
@@ -5548,6 +5557,12 @@ struct RomaCoreChecks {
             contentsOf: packageRoot.appendingPathComponent("Sources/RomaCore/Windows/WindowsPasteProof.swift"),
             encoding: .utf8
         )
+        let keyboardHookSource = try String(
+            contentsOf: packageRoot.appendingPathComponent(
+                "Sources/RomaCore/Windows/WindowsLowLevelKeyboardHookProof.swift"
+            ),
+            encoding: .utf8
+        )
         let proveScript = try String(
             contentsOf: scriptsRoot.appendingPathComponent("prove-windows-agent-artifact.ps1"),
             encoding: .utf8
@@ -5622,6 +5637,13 @@ struct RomaCoreChecks {
                 "restoreDelaySeconds: TimeInterval = WindowsClipboardRestoreConfiguration.defaultRestoreDelaySeconds"
             ),
             "Windows paste proof options should share the clipboard restore delay default"
+        )
+        try require(
+            keyboardHookSource.contains(
+                "timeoutMilliseconds: UInt32 = RomaWindowsAgentConfiguration.defaultHoldTimeoutMilliseconds"
+            ) &&
+                !keyboardHookSource.contains("timeoutMilliseconds: UInt32 = 15_000"),
+            "Windows keyboard hook proof should share the agent hold timeout default"
         )
         try require(
             checkReportScript.contains(#"Assert-Boolean -Object $Proof -Name "native_windows_adapters" -Expected $true"#),

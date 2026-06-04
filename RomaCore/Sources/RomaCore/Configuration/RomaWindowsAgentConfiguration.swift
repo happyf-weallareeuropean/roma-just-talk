@@ -3,6 +3,9 @@ import Foundation
 public struct RomaWindowsAgentConfiguration: Codable, Equatable, Sendable {
     public static let defaultRecordSeconds = 2.0
     public static let defaultHoldTimeoutSeconds = 15.0
+    public static var defaultHoldTimeoutMilliseconds: UInt32 {
+        UInt32(Self.defaultHoldTimeoutSeconds * 1_000)
+    }
     public static let minimumRecordSeconds = 1.0 / 1_000_000_000
     public static let maximumRecordSeconds = Double(UInt64.max / 1_000_000_000)
     public static let minimumHoldTimeoutSeconds = 1.0 / 1_000
@@ -319,7 +322,10 @@ public struct RomaWindowsAgentConfiguration: Codable, Equatable, Sendable {
     }
 
     public func resolvedHoldTimeoutMilliseconds() throws -> UInt32 {
-        try Self.holdTimeoutMilliseconds(fromSeconds: holdTimeoutSeconds ?? Self.defaultHoldTimeoutSeconds)
+        guard let holdTimeoutSeconds else {
+            return Self.defaultHoldTimeoutMilliseconds
+        }
+        return try Self.holdTimeoutMilliseconds(fromSeconds: holdTimeoutSeconds)
     }
 
     public static func holdTimeoutMilliseconds(fromSeconds seconds: Double) throws -> UInt32 {

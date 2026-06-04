@@ -73,7 +73,7 @@ public enum WindowsLowLevelKeyboardHookProof {
 
     public static func waitForHold(
         chord: WindowsLowLevelKeyboardHookChord = .proofHold,
-        timeoutMilliseconds: UInt32 = 15_000
+        timeoutMilliseconds: UInt32 = RomaWindowsAgentConfiguration.defaultHoldTimeoutMilliseconds
     ) throws -> WindowsLowLevelKeyboardHookResult {
         try waitForEvent(
             chord: chord,
@@ -86,7 +86,7 @@ public enum WindowsLowLevelKeyboardHookProof {
 
     public static func waitForKeyDown(
         chord: WindowsLowLevelKeyboardHookChord = .proofHold,
-        timeoutMilliseconds: UInt32 = 15_000
+        timeoutMilliseconds: UInt32 = RomaWindowsAgentConfiguration.defaultHoldTimeoutMilliseconds
     ) throws -> WindowsLowLevelKeyboardHookResult {
         try waitForEvent(
             chord: chord,
@@ -99,7 +99,7 @@ public enum WindowsLowLevelKeyboardHookProof {
 
     public static func waitForKeyUp(
         chord: WindowsLowLevelKeyboardHookChord = .proofHold,
-        timeoutMilliseconds: UInt32 = 15_000
+        timeoutMilliseconds: UInt32 = RomaWindowsAgentConfiguration.defaultHoldTimeoutMilliseconds
     ) throws -> WindowsLowLevelKeyboardHookResult {
         try waitForEvent(
             chord: chord,
