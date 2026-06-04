@@ -2,7 +2,7 @@
 
 ## v1.81 - Unreleased
 
-- Next patch release notes go here.
+- Replaced the README, source app icon, and menu bar logo with the roma-just-talk split-keyboard mark.
 
 ## v1.80 - 2026-06-01
 
