@@ -118,7 +118,7 @@ jobs:
 
       - name: Parse Windows proof script
         run: |
-          foreach ($script in @(".\Scripts\windows-proof.ps1", ".\Scripts\package-windows-agent.ps1", ".\Scripts\smoke-windows-agent.ps1", ".\Scripts\install-windows-agent.ps1", ".\Scripts\run-windows-agent.ps1", ".\Scripts\prove-windows-agent-artifact.ps1", ".\Scripts\check-windows-proof-report.ps1")) {
+          foreach ($script in @(".\Scripts\windows-proof.ps1", ".\Scripts\package-windows-agent.ps1", ".\Scripts\smoke-windows-agent.ps1", ".\Scripts\install-windows-agent.ps1", ".\Scripts\run-windows-agent.ps1", ".\Scripts\prove-windows-agent-artifact.ps1", ".\Scripts\check-windows-proof-report.ps1", ".\Scripts\check-windows-proof-set.ps1")) {
             $errors = $null
             [System.Management.Automation.PSParser]::Tokenize(
               (Get-Content -Raw $script),
@@ -252,6 +252,11 @@ jobs:
           & "$env:RUNNER_TEMP\roma-windows-agent\check-windows-proof-report.ps1" `
             -ProofReportPath "$env:RUNNER_TEMP\roma-wrapper-install\proof-report.json" `
             -RequireProofProfile packaged-whisper-mock-install
+
+          & "$env:RUNNER_TEMP\roma-windows-agent\check-windows-proof-set.ps1" `
+            -DoctorOnlyReportPath "$env:RUNNER_TEMP\roma-wrapper-doctor\proof-report.json" `
+            -PackagedWhisperMockInstallReportPath "$env:RUNNER_TEMP\roma-wrapper-install\proof-report.json" `
+            -RequireArtifactSmokeProof
 
       - name: Upload proof artifacts
         uses: actions/upload-artifact@v4

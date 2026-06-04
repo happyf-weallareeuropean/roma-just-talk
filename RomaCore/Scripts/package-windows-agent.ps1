@@ -180,6 +180,8 @@ try {
     $proofScriptOutput = Join-Path $OutputDir "prove-windows-agent-artifact.ps1"
     $checkReportScriptSource = Join-Path $PSScriptRoot "check-windows-proof-report.ps1"
     $checkReportScriptOutput = Join-Path $OutputDir "check-windows-proof-report.ps1"
+    $checkSetScriptSource = Join-Path $PSScriptRoot "check-windows-proof-set.ps1"
+    $checkSetScriptOutput = Join-Path $OutputDir "check-windows-proof-set.ps1"
     $configPath = Join-Path $OutputDir "sample-windows-agent.json"
     $localWhisperConfigPath = Join-Path $OutputDir "sample-local-whisper-agent.json"
     $installProofDir = Join-Path $OutputDir "install-proof"
@@ -240,6 +242,8 @@ try {
         Write-Host "proof_script=$proofScriptOutput"
         Copy-Item -LiteralPath $checkReportScriptSource -Destination $checkReportScriptOutput -Force
         Write-Host "check_report_script=$checkReportScriptOutput"
+        Copy-Item -LiteralPath $checkSetScriptSource -Destination $checkSetScriptOutput -Force
+        Write-Host "check_set_script=$checkSetScriptOutput"
     }
 
     $swiftRuntime = @{}
@@ -326,6 +330,7 @@ try {
         "install_script=$installScriptOutput",
         "proof_script=$proofScriptOutput",
         "check_report_script=$checkReportScriptOutput",
+        "check_set_script=$checkSetScriptOutput",
         "swift_runtime_dir=$($swiftRuntime.Directory)",
         "swift_runtime_dlls=$($swiftRuntime.DllCount)",
         "bytes=$($agentFile.Length)"

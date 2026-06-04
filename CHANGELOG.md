@@ -12,6 +12,7 @@
 - Cleaned leading slash, backslash, and pipe separator noise from short mid-sentence fragments.
 - Cleaned bounded "hold on" and "hang on" hesitation self-corrections.
 - Cleaned bounded bare "wait" self-corrections such as "Use model, wait module.".
+- Added a Windows proof-set checker for full laptop and artifact-smoke report bundles.
 - Strengthened Windows laptop proof profiles to reject loopback/mock cloud endpoints and packaged mock whisper backends.
 - Added pass/fail requirement coverage output for named Windows proof-report profiles.
 - Added named Windows proof-report profiles for doctor, cloud dictation, local whisper, and Notepad paste checks.
