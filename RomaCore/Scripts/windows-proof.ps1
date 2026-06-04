@@ -25,6 +25,7 @@ param(
     [switch]$RestoreClipboard,
     [switch]$NoRestoreClipboard,
     [double]$ClipboardRestoreDelaySeconds = 2,
+    [double]$PasteFocusDelaySeconds = 5,
     [switch]$PasteDictation
 )
 
@@ -198,6 +199,10 @@ if ($RestoreClipboard -and $NoRestoreClipboard) {
 
 if ($ClipboardRestoreDelaySeconds -lt 0) {
     throw "ClipboardRestoreDelaySeconds must be non-negative"
+}
+
+if ($PasteFocusDelaySeconds -lt 0) {
+    throw "PasteFocusDelaySeconds must be non-negative"
 }
 
 if ((![string]::IsNullOrWhiteSpace($WhisperCLI) -or
@@ -458,8 +463,8 @@ try {
 
     if ($RunInteractivePaste) {
         Invoke-Step "windows paste proof" {
-            Write-Host "Focus Notepad or another normal-integrity text field before this step."
-            swift run RomaProofAgent windows-paste-proof --text $PasteText
+            Write-Host "Focus Notepad or another normal-integrity text field within $PasteFocusDelaySeconds seconds."
+            swift run RomaProofAgent windows-paste-proof --text $PasteText --focus-delay $PasteFocusDelaySeconds
         }
     } else {
         Write-Host ""

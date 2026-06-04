@@ -200,6 +200,7 @@ Useful script options:
 - `-RunInteractiveWindowsAgent` writes `windows-agent.json`, then runs the user-facing `RomaWindowsAgent dictate --config windows-agent.json` command and writes `windows-agent-dictation.wav`.
 - `-UseHoldHook` makes interactive dictation use `WH_KEYBOARD_LL`: recording starts on `Ctrl+Shift+R` keydown and stops on keyup.
 - `-HoldTimeoutSeconds 15` changes the keydown/keyup wait timeout for hold-hook dictation.
+- `-PasteFocusDelaySeconds 5` gives you time to focus Notepad or another normal-integrity text field before the standalone paste proof sends `Ctrl+V`.
 - `-PasteDictation` adds the final paste step to the interactive dictation proof.
 
 Packaged artifact smoke test:
@@ -290,7 +291,7 @@ swift run RomaProofAgent windows-hotkey-proof
 swift run RomaProofAgent windows-keyboard-hook-doctor
 swift run RomaProofAgent windows-keyboard-hook-proof --timeout 15
 swift run RomaProofAgent windows-paste-doctor
-swift run RomaProofAgent windows-paste-proof --text "roma just talk proof"
+swift run RomaProofAgent windows-paste-proof --text "roma just talk proof" --focus-delay 5
 swift run RomaProofAgent windows-permission-doctor
 swift run RomaProofAgent windows-secret-doctor
 swift run RomaProofAgent windows-secret-proof --dir C:\tmp\roma-secrets

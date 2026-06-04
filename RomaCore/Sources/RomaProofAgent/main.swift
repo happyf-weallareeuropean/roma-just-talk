@@ -226,8 +226,16 @@ struct RomaProofAgent {
 
     private static func runWindowsPasteProof(arguments: [String]) throws {
         let text = try value(after: "--text", in: arguments)
+        let focusDelaySeconds = try doubleValue(after: "--focus-delay", in: arguments, default: 0)
+        guard focusDelaySeconds >= 0 else {
+            throw AgentError.invalidOptionValue("--focus-delay")
+        }
 
         #if os(Windows)
+        if focusDelaySeconds > 0 {
+            print("focus_delay_seconds=\(String(format: "%.3f", focusDelaySeconds))")
+            Thread.sleep(forTimeInterval: focusDelaySeconds)
+        }
         let result = try WindowsPasteProof.pasteText(text)
         print("paste_sent=true")
         print("clipboard_restore=\(result.restoreStatus.rawValue)")
@@ -665,7 +673,7 @@ struct RomaProofAgent {
         print("  RomaProofAgent windows-keyboard-hook-doctor")
         print("  RomaProofAgent windows-keyboard-hook-proof --timeout 15")
         print("  RomaProofAgent windows-paste-doctor")
-        print("  RomaProofAgent windows-paste-proof --text \"roma just talk proof\"")
+        print("  RomaProofAgent windows-paste-proof --text \"roma just talk proof\" [--focus-delay 5]")
         print("  RomaProofAgent windows-permission-doctor")
         print("  RomaProofAgent windows-secret-doctor")
         print("  RomaProofAgent windows-secret-proof --dir C:\\tmp\\roma-secrets")
