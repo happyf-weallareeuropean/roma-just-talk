@@ -220,6 +220,7 @@ Invoke-Step "copy package files" {
         "install-windows-agent.ps1",
         "prove-windows-agent-artifact.ps1",
         "run-windows-laptop-proof.ps1",
+        "WINDOWS-LAPTOP-PROOF.txt",
         "check-windows-proof-report.ps1",
         "check-windows-proof-set.ps1",
         "manifest.txt",

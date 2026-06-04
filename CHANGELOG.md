@@ -62,6 +62,7 @@
 - Added a Windows laptop preflight-only JSON report so native setup proof can be archived before cloud/full-proof runs.
 - Required the Windows proof-set checker to validate laptop preflight-only JSON reports before marking setup proof OK.
 - Added a Windows package smoke for the laptop preflight JSON checker so CI verifies the checker path before laptop handoff.
+- Added an artifact-local Windows laptop proof guide and hash-check it with the packaged proof surface.
 - Exposed shared Windows record, hold, and clipboard defaults in doctor and artifact proof output.
 - Required Windows package smoke to assert shared proof-agent defaults.
 - Required Windows agent smoke to assert shared user-facing agent defaults.

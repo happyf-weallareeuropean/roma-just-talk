@@ -6276,6 +6276,12 @@ struct RomaCoreChecks {
             "Windows package smoke should exercise the laptop preflight report checker on Windows CI"
         )
         try require(
+            packageScript.contains("Write-LaptopProofGuide") &&
+                packageScript.contains("WINDOWS-LAPTOP-PROOF.txt") &&
+                packageScript.contains("laptop_proof_guide="),
+            "Windows package should include an artifact-local laptop proof guide"
+        )
+        try require(
             laptopProofScript.contains("startup-shortcuts"),
             "Windows laptop proof runner should use proof-owned startup shortcut directories"
         )
@@ -6314,18 +6320,21 @@ struct RomaCoreChecks {
         try require(
             installScript.contains(#""RomaProofAgent.exe""#) &&
                 installScript.contains(#""run-windows-laptop-proof.ps1""#) &&
+                installScript.contains(#""WINDOWS-LAPTOP-PROOF.txt""#) &&
                 installScript.contains(#""check-windows-proof-set.ps1""#),
             "Windows installer should preserve the packaged proof surface"
         )
         try require(
             proveScript.contains("installed_proof_agent") &&
                 proveScript.contains("installed_laptop_proof_script") &&
+                proveScript.contains("installed_laptop_proof_guide") &&
                 proveScript.contains("installed_check_set_script"),
             "Windows artifact proof reports should record the installed proof surface"
         )
         try require(
             checkReportScript.contains("installed_proof_agent_matches_package") &&
                 checkReportScript.contains("installed_laptop_proof_script_matches_package") &&
+                checkReportScript.contains("installed_laptop_proof_guide_matches_package") &&
                 checkReportScript.contains("installed_check_set_script_matches_package"),
             "Windows proof checker should verify installed proof surface hashes"
         )

@@ -263,6 +263,7 @@ function Get-PackageIdentityProof {
         "install-windows-agent.ps1",
         "prove-windows-agent-artifact.ps1",
         "run-windows-laptop-proof.ps1",
+        "WINDOWS-LAPTOP-PROOF.txt",
         "check-windows-proof-report.ps1",
         "check-windows-proof-set.ps1",
         "manifest.txt"
@@ -859,6 +860,7 @@ function Write-ProofReport {
             installed_run_script = (Get-FileHashProof -Path (Join-Path $InstallDir "run-windows-agent.ps1"))
             installed_proof_script = (Get-FileHashProof -Path (Join-Path $InstallDir "prove-windows-agent-artifact.ps1"))
             installed_laptop_proof_script = (Get-FileHashProof -Path (Join-Path $InstallDir "run-windows-laptop-proof.ps1"))
+            installed_laptop_proof_guide = (Get-FileHashProof -Path (Join-Path $InstallDir "WINDOWS-LAPTOP-PROOF.txt"))
             installed_check_report_script = (Get-FileHashProof -Path (Join-Path $InstallDir "check-windows-proof-report.ps1"))
             installed_check_set_script = (Get-FileHashProof -Path (Join-Path $InstallDir "check-windows-proof-set.ps1"))
         }

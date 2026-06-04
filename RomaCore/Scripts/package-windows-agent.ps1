@@ -276,6 +276,37 @@ function Write-LaptopPreflightCheckerSmokeReport {
     Write-Host "laptop_preflight_checker_smoke_report=$ReportPath"
 }
 
+function Write-LaptopProofGuide {
+    param(
+        [Parameter(Mandatory = $true)]
+        [string]$OutputPath
+    )
+
+    @'
+Roma Just Talk Windows laptop proof
+
+Run these commands from this artifact directory.
+
+Preflight only, before cloud credentials:
+
+powershell -ExecutionPolicy Bypass -File .\run-windows-laptop-proof.ps1 -PackageDir . -ProofDir C:\tmp\roma-windows-laptop-proof -PreflightOnly -WhisperCLI C:\path\whisper-cli.exe -WhisperModel C:\path\ggml-base.en.bin
+
+Full laptop proof, after cloud credentials and local whisper are ready:
+
+powershell -ExecutionPolicy Bypass -File .\run-windows-laptop-proof.ps1 -PackageDir . -ProofDir C:\tmp\roma-windows-laptop-proof -Endpoint https://api.groq.com/openai/v1/audio/transcriptions -Model whisper-large-v3-turbo -ApiKeyEnv GROQ_API_KEY -ApiKeyName groq -WhisperCLI C:\path\whisper-cli.exe -WhisperModel C:\path\ggml-base.en.bin
+
+Expected proof markers:
+
+proof_set_ok=laptop-preflight
+windows_laptop_preflight_ok=true
+proof_set_ok=full-laptop
+windows_laptop_proof_ok=true
+
+Do not claim Windows support until the full laptop proof passes on the target Windows machine.
+'@ | Set-Content -LiteralPath $OutputPath -Encoding UTF8
+    Write-Host "laptop_proof_guide=$OutputPath"
+}
+
 $packageRoot = Resolve-Path "$PSScriptRoot\.."
 if ([System.Environment]::OSVersion.Platform -ne [System.PlatformID]::Win32NT) {
     throw "package-windows-agent.ps1 must run on Windows so packaged executables and Swift runtime DLLs are Windows artifacts"
@@ -320,6 +351,7 @@ try {
     $checkReportScriptOutput = Join-Path $OutputDir "check-windows-proof-report.ps1"
     $checkSetScriptSource = Join-Path $PSScriptRoot "check-windows-proof-set.ps1"
     $checkSetScriptOutput = Join-Path $OutputDir "check-windows-proof-set.ps1"
+    $laptopProofGuideOutput = Join-Path $OutputDir "WINDOWS-LAPTOP-PROOF.txt"
     $configPath = Join-Path $OutputDir "sample-windows-agent.json"
     $localWhisperConfigPath = Join-Path $OutputDir "sample-local-whisper-agent.json"
     $installProofDir = Join-Path $OutputDir "install-proof"
@@ -386,6 +418,7 @@ try {
         Write-Host "check_report_script=$checkReportScriptOutput"
         Copy-Item -LiteralPath $checkSetScriptSource -Destination $checkSetScriptOutput -Force
         Write-Host "check_set_script=$checkSetScriptOutput"
+        Write-LaptopProofGuide -OutputPath $laptopProofGuideOutput
     }
 
     $swiftRuntime = @{}
@@ -515,6 +548,7 @@ try {
         "install_script=$installScriptOutput",
         "proof_script=$proofScriptOutput",
         "laptop_proof_script=$laptopProofScriptOutput",
+        "laptop_proof_guide=$laptopProofGuideOutput",
         "check_report_script=$checkReportScriptOutput",
         "check_set_script=$checkSetScriptOutput",
         "swift_runtime_dir=$($swiftRuntime.Directory)",

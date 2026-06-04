@@ -758,6 +758,7 @@ if ($RequireInstall) {
     $installedRunScript = Require-Property -Object $files -Name "installed_run_script"
     $installedProofScript = Require-Property -Object $files -Name "installed_proof_script"
     $installedLaptopProofScript = Require-Property -Object $files -Name "installed_laptop_proof_script"
+    $installedLaptopProofGuide = Require-Property -Object $files -Name "installed_laptop_proof_guide"
     $installedCheckReportScript = Require-Property -Object $files -Name "installed_check_report_script"
     $installedCheckSetScript = Require-Property -Object $files -Name "installed_check_set_script"
     Assert-FileProof -Proof $installedAgent -Name "installed_agent"
@@ -765,6 +766,7 @@ if ($RequireInstall) {
     Assert-FileProof -Proof $installedRunScript -Name "installed_run_script"
     Assert-FileProof -Proof $installedProofScript -Name "installed_proof_script"
     Assert-FileProof -Proof $installedLaptopProofScript -Name "installed_laptop_proof_script"
+    Assert-FileProof -Proof $installedLaptopProofGuide -Name "installed_laptop_proof_guide"
     Assert-FileProof -Proof $installedCheckReportScript -Name "installed_check_report_script"
     Assert-FileProof -Proof $installedCheckSetScript -Name "installed_check_set_script"
     Assert-FileHashEquals `
@@ -788,6 +790,10 @@ if ($RequireInstall) {
         -ActualProof $installedLaptopProofScript `
         -ExpectedProof (Require-Property -Object $packageIdentityFiles -Name "run-windows-laptop-proof.ps1") `
         -Name "installed_laptop_proof_script_matches_package"
+    Assert-FileHashEquals `
+        -ActualProof $installedLaptopProofGuide `
+        -ExpectedProof (Require-Property -Object $packageIdentityFiles -Name "WINDOWS-LAPTOP-PROOF.txt") `
+        -Name "installed_laptop_proof_guide_matches_package"
     Assert-FileHashEquals `
         -ActualProof $installedCheckReportScript `
         -ExpectedProof (Require-Property -Object $packageIdentityFiles -Name "check-windows-proof-report.ps1") `
