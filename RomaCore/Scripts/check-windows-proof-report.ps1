@@ -14,7 +14,9 @@ param(
     [switch]$RequirePackagedMock,
     [switch]$RequireHoldHook,
     [switch]$RequireCloudConfig,
+    [switch]$RequireRealCloudBackend,
     [switch]$RequireWhisperConfig,
+    [switch]$RequireRealWhisperBackend,
     [switch]$RequireDictation,
     [switch]$RequirePaste,
     [switch]$RequireNotepadPaste
@@ -132,6 +134,87 @@ function Assert-StringEquals {
     }
 
     Write-Host "proof_value=$Name value=$Actual"
+}
+
+function Assert-RealCloudBackendProof {
+    param(
+        [Parameter(Mandatory = $true)]
+        [object]$Config
+    )
+
+    $endpoint = [string](Require-Property -Object $Config -Name "endpoint")
+    $model = [string](Require-Property -Object $Config -Name "model")
+    try {
+        $uri = [System.Uri]::new($endpoint)
+    } catch {
+        throw "Cloud endpoint is not a valid URI: $endpoint"
+    }
+    if (!$uri.IsAbsoluteUri -or [string]::IsNullOrWhiteSpace($uri.Host)) {
+        throw "Cloud endpoint must be an absolute URI with a host: $endpoint"
+    }
+
+    $endpointHost = $uri.Host.ToLowerInvariant()
+    if ($endpointHost -eq "localhost" -or
+        $endpointHost -eq "::1" -or
+        $endpointHost -eq "0.0.0.0" -or
+        $endpointHost.StartsWith("127.")) {
+        throw "Cloud laptop proof cannot use a loopback/mock endpoint: $endpoint"
+    }
+    if ($model -match "(?i)(^|[-_.])mock($|[-_.])") {
+        throw "Cloud laptop proof cannot use a mock model name: $model"
+    }
+
+    Write-Host "proof_real_cloud_backend host=$endpointHost model=$model"
+}
+
+function Assert-PathNotEqual {
+    param(
+        [Parameter(Mandatory = $true)]
+        [string]$Actual,
+        [Parameter(Mandatory = $true)]
+        [string]$Blocked,
+        [Parameter(Mandatory = $true)]
+        [string]$Name
+    )
+
+    if (![string]::IsNullOrWhiteSpace($Blocked) -and
+        $Actual.Equals($Blocked, [System.StringComparison]::OrdinalIgnoreCase)) {
+        throw "$Name points at packaged mock artifact: $Actual"
+    }
+}
+
+function Assert-RealWhisperBackendProof {
+    param(
+        [Parameter(Mandatory = $true)]
+        [object]$Config,
+        [Parameter(Mandatory = $true)]
+        [object]$Files
+    )
+
+    $whisperCLIPath = [string](Require-Property -Object $Config -Name "whisper_cli_path")
+    $whisperModelPath = [string](Require-Property -Object $Config -Name "whisper_model_path")
+    $whisperCLIName = [System.IO.Path]::GetFileName($whisperCLIPath).ToLowerInvariant()
+    $whisperModelName = [System.IO.Path]::GetFileName($whisperModelPath).ToLowerInvariant()
+
+    if ($whisperCLIName -eq "romawhisperclimock.exe") {
+        throw "Local whisper laptop proof cannot use RomaWhisperCLIMock.exe"
+    }
+    if ($whisperModelName -eq "romawindowsagent.exe" -or
+        $whisperModelName -eq "romaproofagent.exe" -or
+        $whisperModelName -eq "romawhisperclimock.exe" -or
+        $whisperModelName.EndsWith(".exe")) {
+        throw "Local whisper laptop proof must point at a model file, got: $whisperModelPath"
+    }
+
+    $packagedMock = Require-Property -Object $Files -Name "packaged_whisper_cli_mock"
+    $packagedAgent = Require-Property -Object $Files -Name "packaged_agent"
+    $packagedProofAgent = Require-Property -Object $Files -Name "packaged_proof_agent"
+    Assert-PathNotEqual -Actual $whisperCLIPath -Blocked ([string](Require-Property -Object $packagedMock -Name "path")) -Name "whisper_cli_path"
+    Assert-PathNotEqual -Actual $whisperModelPath -Blocked ([string](Require-Property -Object $packagedMock -Name "path")) -Name "whisper_model_path"
+    Assert-PathNotEqual -Actual $whisperModelPath -Blocked ([string](Require-Property -Object $packagedAgent -Name "path")) -Name "whisper_model_path"
+    Assert-PathNotEqual -Actual $whisperModelPath -Blocked ([string](Require-Property -Object $packagedProofAgent -Name "path")) -Name "whisper_model_path"
+
+    Write-Host "proof_real_whisper_backend cli=$whisperCLIPath model=$whisperModelPath"
 }
 
 function Assert-NumberGreaterThan {
@@ -286,6 +369,7 @@ function Get-ProofProfileRequirements {
                 "native_doctor_surface",
                 "hold_hook_config",
                 "cloud_config",
+                "real_cloud_backend",
                 "dictation_runtime",
                 "paste_sent"
             )
@@ -301,6 +385,7 @@ function Get-ProofProfileRequirements {
                 "native_doctor_surface",
                 "hold_hook_config",
                 "local_whisper_config",
+                "real_whisper_backend",
                 "dictation_runtime",
                 "paste_sent"
             )
@@ -314,6 +399,7 @@ function Get-ProofProfileRequirements {
                 "native_doctor_surface",
                 "hold_hook_config",
                 "local_whisper_config",
+                "real_whisper_backend",
                 "notepad_paste"
             )
         }
@@ -364,6 +450,7 @@ switch ($RequireProofProfile) {
         $RequireNativeDoctorSurface = $true
         $RequireHoldHook = $true
         $RequireCloudConfig = $true
+        $RequireRealCloudBackend = $true
         $RequireDictation = $true
         $RequirePaste = $true
     }
@@ -378,6 +465,7 @@ switch ($RequireProofProfile) {
         $RequireNativeDoctorSurface = $true
         $RequireHoldHook = $true
         $RequireWhisperConfig = $true
+        $RequireRealWhisperBackend = $true
         $RequireDictation = $true
         $RequirePaste = $true
     }
@@ -390,6 +478,7 @@ switch ($RequireProofProfile) {
         $RequireNativeDoctorSurface = $true
         $RequireHoldHook = $true
         $RequireWhisperConfig = $true
+        $RequireRealWhisperBackend = $true
         $RequireNotepadPaste = $true
     }
     "packaged-whisper-mock-install" {
@@ -504,6 +593,11 @@ if ($RequireCloudConfig) {
     Assert-NonEmptyString -Object $config -Name "model"
 }
 
+if ($RequireRealCloudBackend) {
+    $config = Require-Property -Object $report -Name "config"
+    Assert-RealCloudBackendProof -Config $config
+}
+
 if ($RequireWhisperConfig) {
     $config = Require-Property -Object $report -Name "config"
     Assert-Boolean -Object $config -Name "uses_whisper_cli" -Expected $true
@@ -511,6 +605,11 @@ if ($RequireWhisperConfig) {
     Assert-NonEmptyString -Object $config -Name "whisper_model_path"
     Assert-FileProof -Proof (Require-Property -Object $config -Name "whisper_cli_file") -Name "whisper_cli"
     Assert-FileProof -Proof (Require-Property -Object $config -Name "whisper_model_file") -Name "whisper_model"
+}
+
+if ($RequireRealWhisperBackend) {
+    $config = Require-Property -Object $report -Name "config"
+    Assert-RealWhisperBackendProof -Config $config -Files $files
 }
 
 if ($RequireDictation) {
