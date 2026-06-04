@@ -400,14 +400,20 @@ function Get-DictationRuntimeProof {
     }
 
     $content = Get-Content -LiteralPath $logPath -Raw
+    $wrotePath = Get-OutputValue -Content $content -Name "wrote"
     $durationSeconds = Get-OutputNumber -Content $content -Name "duration_seconds"
     $includedPreRollSeconds = Get-OutputNumber -Content $content -Name "included_pre_roll_seconds"
     $rawTranscriptLength = Get-OutputNumber -Content $content -Name "raw_transcript_length"
     $processedTranscriptLength = Get-OutputNumber -Content $content -Name "processed_transcript_length"
     $proof["reported_wrote"] = $content.Contains("wrote=")
+    $proof["wrote_path"] = $wrotePath
+    if (![string]::IsNullOrWhiteSpace($wrotePath)) {
+        $proof["wrote_file"] = Get-FileProof -Path $wrotePath
+    }
     $proof["reported_pre_roll"] = $content.Contains("included_pre_roll_seconds=")
     $proof["duration_seconds"] = $durationSeconds
     $proof["included_pre_roll_seconds"] = $includedPreRollSeconds
+    $proof["reported_positive_duration"] = ($null -ne $durationSeconds) -and ($durationSeconds -gt 0)
     $proof["reported_positive_pre_roll"] = ($null -ne $includedPreRollSeconds) -and ($includedPreRollSeconds -gt 0)
     $proof["raw_transcript_length"] = $rawTranscriptLength
     $proof["processed_transcript_length"] = $processedTranscriptLength
@@ -422,6 +428,23 @@ function Get-DictationRuntimeProof {
     $proof["reported_hold_key_up"] = $content.Contains("hold_key_up=true")
 
     return $proof
+}
+
+function Get-OutputValue {
+    param(
+        [Parameter(Mandatory = $true)]
+        [string]$Content,
+        [Parameter(Mandatory = $true)]
+        [string]$Name
+    )
+
+    $escapedName = [regex]::Escape($Name)
+    $match = [regex]::Match($Content, "(?m)^$escapedName=(.+?)\s*$")
+    if (!$match.Success) {
+        return ""
+    }
+
+    return $match.Groups[1].Value
 }
 
 function Get-OutputNumber {

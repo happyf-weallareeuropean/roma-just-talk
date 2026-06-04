@@ -115,6 +115,23 @@ function Assert-NonEmptyString {
     Write-Host "proof_value=$Name value=$value"
 }
 
+function Assert-StringEquals {
+    param(
+        [Parameter(Mandatory = $true)]
+        [string]$Actual,
+        [Parameter(Mandatory = $true)]
+        [string]$Expected,
+        [Parameter(Mandatory = $true)]
+        [string]$Name
+    )
+
+    if ($Actual -ne $Expected) {
+        throw "Expected $Name to be '$Expected', got '$Actual'"
+    }
+
+    Write-Host "proof_value=$Name value=$Actual"
+}
+
 function Assert-NumberGreaterThan {
     param(
         [Parameter(Mandatory = $true)]
@@ -142,6 +159,10 @@ function Assert-DictationRuntimeProof {
     $runtime = Require-Property -Object $Report -Name "dictation_runtime"
     Assert-FileProof -Proof $runtime -Name "dictation_runtime_log"
     Assert-Boolean -Object $runtime -Name "reported_wrote" -Expected $true
+    Assert-NonEmptyString -Object $runtime -Name "wrote_path"
+    Assert-FileProof -Proof (Require-Property -Object $runtime -Name "wrote_file") -Name "dictation_runtime_wav"
+    Assert-Boolean -Object $runtime -Name "reported_positive_duration" -Expected $true
+    Assert-NumberGreaterThan -Object $runtime -Name "duration_seconds" -Minimum 0
     Assert-Boolean -Object $runtime -Name "reported_pre_roll" -Expected $true
     Assert-Boolean -Object $runtime -Name "reported_positive_pre_roll" -Expected $true
     Assert-NumberGreaterThan -Object $runtime -Name "included_pre_roll_seconds" -Minimum 0
@@ -337,6 +358,10 @@ if ($RequireDictation) {
     $outputFile = Require-Property -Object $config -Name "output_file"
     Assert-FileProof -Proof $outputFile -Name "dictation_output" -MinimumBytes 45
     $dictationRuntime = Assert-DictationRuntimeProof -Report $report
+    Assert-StringEquals `
+        -Actual ([string](Require-Property -Object $dictationRuntime -Name "wrote_path")) `
+        -Expected ([string](Require-Property -Object $outputFile -Name "path")) `
+        -Name "dictation_runtime_wrote_path"
     if ($RequireHoldHook) {
         Assert-HoldHookRuntimeProof -Runtime $dictationRuntime
     }
