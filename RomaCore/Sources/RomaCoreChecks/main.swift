@@ -721,6 +721,36 @@ struct RomaCoreChecks {
                 "generated colon before bracketed short continuation fragment"
             ),
             (
+                "So this. \"[Model.]\"",
+                "So this model.",
+                "generated sentence boundary before quoted bracketed short continuation fragment"
+            ),
+            (
+                "So this. ([Model.])",
+                "So this model.",
+                "generated sentence boundary before parenthesized bracketed short continuation fragment"
+            ),
+            (
+                "So this. <[Model.]>",
+                "So this model.",
+                "generated sentence boundary before angle-wrapped bracketed short continuation fragment"
+            ),
+            (
+                "So this. 【Model.】",
+                "So this model.",
+                "generated sentence boundary before full-width bracketed short continuation fragment"
+            ),
+            (
+                "So this. *Model.*",
+                "So this model.",
+                "generated sentence boundary before markdown-wrapped short continuation fragment"
+            ),
+            (
+                "So this, \"[Model.]\"",
+                "So this model.",
+                "generated comma before quoted bracketed short continuation fragment"
+            ),
+            (
                 "I think this is. [A final word.]",
                 "I think this is a final word.",
                 "generated sentence boundary before bracketed short continuation phrase"
@@ -4168,6 +4198,11 @@ struct RomaCoreChecks {
             RomaTranscriptionOutputFilter.applyInsertionPolish("It works, [Model.]", context: nil) ==
                 "It works, [Model.]",
             "insertion polish should preserve inline bracketed fragments after complete clauses"
+        )
+        try require(
+            RomaTranscriptionOutputFilter.applyInsertionPolish("It works. \"[Model.]\"", context: nil) ==
+                "It works. \"[Model.]\"",
+            "insertion polish should preserve inline quoted bracket fragments after complete sentences"
         )
         try require(
             RomaTranscriptionOutputFilter.applyInsertionPolish("... Model.", context: midSentenceContext) == "model",

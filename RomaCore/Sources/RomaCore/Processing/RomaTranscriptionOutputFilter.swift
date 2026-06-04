@@ -6727,51 +6727,132 @@ public struct RomaTranscriptionOutputFilter {
         return second
     }
 
+    private static let generatedWrappedBoundaryFragmentPattern = #"(?:\[[^\[\]\n]{1,80}\]|"[^"\n]{1,80}"|'[^'\n]{1,80}'|“[^”\n]{1,80}”|‘[^’\n]{1,80}’|\([^\(\)\n]{1,80}\)|\{[^\{\}\n]{1,80}\}|<[^<>\n]{1,80}>|【[^】\n]{1,80}】|《[^》\n]{1,80}》|〈[^〉\n]{1,80}〉|（[^）\n]{1,80}）|｛[^｝\n]{1,80}｝|［[^］\n]{1,80}］|「[^」\n]{1,80}」|『[^』\n]{1,80}』|〔[^〕\n]{1,80}〕|\*{1,2}[^*\n]{1,80}\*{1,2}|_{1,2}[^_\n]{1,80}_{1,2})"#
+
     private static func collapseGeneratedSeparatorBeforeShortFragment(in text: String) -> String {
-        var collapsedText = collapseGeneratedSoftSeparatorBeforeBracketedShortFragment(in: text)
-        collapsedText = collapseGeneratedBoundaryBeforeBracketedShortFragment(in: collapsedText)
+        var collapsedText = collapseGeneratedNonASCIISeparatorBeforeWrappedShortFragment(in: text)
+        collapsedText = collapseGeneratedSoftSeparatorBeforeWrappedShortFragment(in: collapsedText)
+        collapsedText = collapseGeneratedBoundaryBeforeWrappedShortFragment(in: collapsedText)
         collapsedText = collapseGeneratedBoundaryBeforePlainShortFragment(in: collapsedText)
         return collapsedText
     }
 
-    private static func collapseGeneratedSoftSeparatorBeforeBracketedShortFragment(in text: String) -> String {
-        guard let regex = try? NSRegularExpression(
-            pattern: #"(?<![\p{L}\p{N}'’ʼ-])([\p{L}\p{N}][\p{L}\p{N}'’ʼ-]{0,63})[ \t]*(?:[,;:…]|[–—-])[ \t]+(\[[^\[\]\n]{1,80}\])([.!?])?(?=\s|$)"#
-        ) else {
-            return text
-        }
-
+    private static func collapseGeneratedNonASCIISeparatorBeforeWrappedShortFragment(in text: String) -> String {
         var collapsedText = text
-        let matches = regex.matches(in: collapsedText, range: NSRange(collapsedText.startIndex..., in: collapsedText)).reversed()
+        var rewriteCount = 0
 
-        for match in matches {
-            guard match.numberOfRanges >= 4,
-                  let fullRange = Range(match.range, in: collapsedText),
-                  let previousWordRange = Range(match.range(at: 1), in: collapsedText),
-                  let fragmentRange = Range(match.range(at: 2), in: collapsedText),
-                  let cleanedFragment = cleanedGeneratedBoundaryContinuationFragment(
-                    String(collapsedText[fragmentRange]),
-                    requiresGeneratedCasing: false
-                  ) else {
-                continue
+        while rewriteCount < 8 {
+            var index = collapsedText.startIndex
+            var didRewrite = false
+
+            while index < collapsedText.endIndex {
+                guard let closing = nonASCIIClosingBoundary(for: collapsedText[index]) else {
+                    index = collapsedText.index(after: index)
+                    continue
+                }
+
+                var closingIndex = index
+                var foundClosingIndex: String.Index?
+                while closingIndex < collapsedText.endIndex {
+                    if collapsedText[closingIndex] == closing {
+                        foundClosingIndex = closingIndex
+                        break
+                    }
+                    closingIndex = collapsedText.index(after: closingIndex)
+                }
+
+                guard let foundClosingIndex,
+                      let rewrite = generatedNonASCIISeparatorRewrite(
+                        in: collapsedText,
+                        wrapperStart: index,
+                        wrapperEnd: collapsedText.index(after: foundClosingIndex)
+                      ) else {
+                    index = collapsedText.index(after: index)
+                    continue
+                }
+
+                collapsedText.replaceSubrange(rewrite.range, with: rewrite.replacement)
+                didRewrite = true
+                break
             }
 
-            let previousWord = String(collapsedText[previousWordRange])
-            guard canJoinGeneratedSentenceBoundary(after: previousWord),
-                  !isPreservedGeneratedQuestionFragment(String(collapsedText[fragmentRange])) else {
-                continue
-            }
-
-            let punctuation = generatedBoundaryTerminalPunctuation(for: cleanedFragment)
-            collapsedText.replaceSubrange(fullRange, with: "\(previousWord) \(cleanedFragment)\(punctuation)")
+            guard didRewrite else { break }
+            rewriteCount += 1
         }
 
         return collapsedText
     }
 
-    private static func collapseGeneratedBoundaryBeforeBracketedShortFragment(in text: String) -> String {
+    private static func generatedNonASCIISeparatorRewrite(
+        in text: String,
+        wrapperStart: String.Index,
+        wrapperEnd: String.Index
+    ) -> (range: Range<String.Index>, replacement: String)? {
+        var fullEnd = wrapperEnd
+        if fullEnd < text.endIndex,
+           ".!?".contains(text[fullEnd]) {
+            fullEnd = text.index(after: fullEnd)
+        }
+
+        var beforeWrapper = wrapperStart
+        while beforeWrapper > text.startIndex {
+            let previousIndex = text.index(before: beforeWrapper)
+            guard text[previousIndex].isWhitespace else { break }
+            beforeWrapper = previousIndex
+        }
+        guard beforeWrapper > text.startIndex else { return nil }
+
+        let separatorIndex = text.index(before: beforeWrapper)
+        guard ".,;:…–—-".contains(text[separatorIndex]) else { return nil }
+
+        var wordEnd = separatorIndex
+        while wordEnd > text.startIndex {
+            let previousIndex = text.index(before: wordEnd)
+            guard text[previousIndex].isWhitespace else { break }
+            wordEnd = previousIndex
+        }
+        guard wordEnd > text.startIndex else { return nil }
+
+        var wordStart = wordEnd
+        while wordStart > text.startIndex {
+            let previousIndex = text.index(before: wordStart)
+            guard isWordCharacter(text[previousIndex]) else { break }
+            wordStart = previousIndex
+        }
+        guard wordStart < wordEnd else { return nil }
+        if wordStart > text.startIndex {
+            let previousIndex = text.index(before: wordStart)
+            guard !isWordCharacter(text[previousIndex]) else { return nil }
+        }
+
+        let previousWord = String(text[wordStart..<wordEnd])
+        let wrapperText = String(text[wrapperStart..<wrapperEnd])
+        guard canJoinGeneratedSentenceBoundary(after: previousWord),
+              !isPreservedGeneratedQuestionFragment(wrapperText),
+              let cleanedFragment = cleanedGeneratedNonASCIIBoundaryContinuationFragment(wrapperText) else {
+            return nil
+        }
+
+        let punctuation = generatedBoundaryTerminalPunctuation(for: cleanedFragment)
+        return (wordStart..<fullEnd, "\(previousWord) \(cleanedFragment)\(punctuation)")
+    }
+
+    private static func collapseGeneratedSoftSeparatorBeforeWrappedShortFragment(in text: String) -> String {
+        collapseGeneratedSeparatorBeforeWrappedShortFragment(in: text, separatorPattern: #"[,;:…]|[–—-]"#)
+    }
+
+    private static func collapseGeneratedBoundaryBeforeWrappedShortFragment(in text: String) -> String {
+        collapseGeneratedSeparatorBeforeWrappedShortFragment(in: text, separatorPattern: #"\."#)
+    }
+
+    private static func collapseGeneratedSeparatorBeforeWrappedShortFragment(
+        in text: String,
+        separatorPattern: String
+    ) -> String {
         guard let regex = try? NSRegularExpression(
-            pattern: #"(?<![\p{L}\p{N}'’ʼ-])([\p{L}\p{N}][\p{L}\p{N}'’ʼ-]{0,63})[ \t]*\.[ \t]+(\[[^\[\]\n]{1,80}\])([.!?])?(?=\s|$)"#
+            pattern: #"(?<![\p{L}\p{N}'’ʼ-])([\p{L}\p{N}][\p{L}\p{N}'’ʼ-]{0,63})[ \t]*(?:"# +
+                separatorPattern +
+                #")[ \t]+("# + generatedWrappedBoundaryFragmentPattern + #")([.!?])?(?=\s|$)"#
         ) else {
             return text
         }
@@ -6853,6 +6934,21 @@ public struct RomaTranscriptionOutputFilter {
               !cleanedText.isEmpty,
               !hasInternalSentenceBoundary(cleanedText),
               !requiresGeneratedCasing || containsGeneratedCasingToken(cleanedText) else {
+            return nil
+        }
+
+        return lowercaseFragmentWordsIfSafe(in: cleanedText)
+    }
+
+    private static func cleanedGeneratedNonASCIIBoundaryContinuationFragment(_ text: String) -> String? {
+        guard let innerText = nonASCIIBoundaryInnerText(in: text) else {
+            return nil
+        }
+
+        let cleanedText = removeTrailingNoisyFragmentPunctuation(from: innerText)
+        guard isShortFragment(cleanedText),
+              !cleanedText.isEmpty,
+              !hasInternalSentenceBoundary(cleanedText) else {
             return nil
         }
 
