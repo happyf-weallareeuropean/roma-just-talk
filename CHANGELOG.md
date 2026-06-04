@@ -2,6 +2,7 @@
 
 ## v1.81 - Unreleased
 
+- Lowercased all-caps ordinary short fragments mid-sentence while preserving acronyms.
 - Dropped unpunctuated terminal clarification filler tails such as "This works if that makes sense".
 - Dropped unpunctuated terminal hedge filler tails such as "This works like".
 - Dropped unpunctuated terminal discourse filler tails such as "This works I mean".
@@ -59,6 +60,7 @@
 - Added a Windows laptop `-PreflightOnly` mode that runs hotkey, microphone, and local-whisper checks before cloud/full-proof setup.
 - Added a Windows laptop preflight-only JSON report so native setup proof can be archived before cloud/full-proof runs.
 - Required the Windows proof-set checker to validate laptop preflight-only JSON reports before marking setup proof OK.
+- Added a Windows package smoke for the laptop preflight JSON checker so CI verifies the checker path before laptop handoff.
 - Exposed shared Windows record, hold, and clipboard defaults in doctor and artifact proof output.
 - Required Windows package smoke to assert shared proof-agent defaults.
 - Required Windows agent smoke to assert shared user-facing agent defaults.

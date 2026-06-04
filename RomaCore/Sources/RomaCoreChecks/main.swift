@@ -272,6 +272,10 @@ struct RomaCoreChecks {
             "shared insertion polish should lowercase mid-sentence fragments"
         )
         try require(
+            RomaTranscriptionOutputFilter.applyInsertionPolish("MODEL.", context: midSentenceContext) == "model",
+            "shared insertion polish should lowercase all-caps ordinary mid-sentence fragments"
+        )
+        try require(
             RomaTranscriptionOutputFilter.applyInsertionPolish("Model.\"", context: midSentenceContext) == "model",
             "shared insertion polish should remove trailing generated quotes after final punctuation"
         )
@@ -293,11 +297,22 @@ struct RomaCoreChecks {
             "shared insertion polish should preserve acronyms inside mid-sentence phrases"
         )
         try require(
+            RomaTranscriptionOutputFilter.applyInsertionPolish("API.", context: midSentenceContext) == "API",
+            "shared insertion polish should preserve all-caps acronym fragments"
+        )
+        try require(
             RomaTranscriptionOutputFilter.applyInsertionPolish(
                 "The LLM Router.",
                 context: midSentenceContext
             ) == "the LLM router",
             "shared insertion polish should lowercase generated tech nouns after acronyms"
+        )
+        try require(
+            RomaTranscriptionOutputFilter.applyInsertionPolish(
+                "URL PARSER.",
+                context: midSentenceContext
+            ) == "URL parser",
+            "shared insertion polish should preserve all-caps acronyms while lowercasing generated nouns"
         )
         try require(
             RomaTranscriptionOutputFilter.applyInsertionPolish(
@@ -6240,6 +6255,13 @@ struct RomaCoreChecks {
                 checkSetScript.contains("proof_set_ok=laptop-preflight") &&
                 checkSetScript.contains("Laptop preflight proof must run on Windows"),
             "Windows proof-set checker should validate laptop preflight reports"
+        )
+        try require(
+            packageScript.contains("laptop preflight report checker smoke") &&
+                packageScript.contains("Write-LaptopPreflightCheckerSmokeReport") &&
+                packageScript.contains("laptop_preflight_checker_smoke_report") &&
+                packageScript.contains(#"-Expected "proof_set_ok=laptop-preflight""#),
+            "Windows package smoke should exercise the laptop preflight report checker on Windows CI"
         )
         try require(
             laptopProofScript.contains("startup-shortcuts"),

@@ -8120,7 +8120,7 @@ public struct RomaTranscriptionOutputFilter {
                 continue
             }
 
-            result.replaceSubrange(wordRange, with: String(word.prefix(1)).lowercased() + word.dropFirst())
+            result.replaceSubrange(wordRange, with: lowercaseLikelyFragmentWord(word))
         }
 
         return result
@@ -8138,7 +8138,7 @@ public struct RomaTranscriptionOutputFilter {
         }
 
         var result = text
-        result.replaceSubrange(firstLetterRange, with: String(text[firstLetterRange]).lowercased())
+        result.replaceSubrange(firstWordRange, with: lowercaseLikelyFragmentWord(firstWord))
         return result
     }
 
@@ -8149,10 +8149,22 @@ public struct RomaTranscriptionOutputFilter {
         }
 
         if comparisonWord == "I" { return false }
-        if comparisonWord.count > 1 && comparisonWord.allSatisfy({ !$0.isLetter || $0.isUppercase }) { return false }
+        let normalizedWord = comparisonWord.lowercased()
+        guard likelyLowercaseFragments.contains(normalizedWord) else { return false }
+
+        if comparisonWord.count > 1 && comparisonWord.allSatisfy({ !$0.isLetter || $0.isUppercase }) {
+            return commonTechnicalAcronyms[normalizedWord] == nil
+        }
         if comparisonWord.dropFirst().contains(where: { $0.isUppercase }) { return false }
 
-        return likelyLowercaseFragments.contains(comparisonWord.lowercased())
+        return true
+    }
+
+    private static func lowercaseLikelyFragmentWord(_ word: String) -> String {
+        if word.count > 1 && word.allSatisfy({ !$0.isLetter || $0.isUppercase }) {
+            return word.lowercased()
+        }
+        return String(word.prefix(1)).lowercased() + word.dropFirst()
     }
 
     private static func needsLeadingSpace(before text: String, context: TextInsertionContext) -> Bool {
