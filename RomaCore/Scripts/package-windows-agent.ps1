@@ -227,7 +227,9 @@ try {
             -WhisperCLI $mockWhisperSource.FullName `
             -WhisperModel $agentOutput `
             -RestoreClipboard `
-            -ClipboardRestoreDelaySeconds 0
+            -ClipboardRestoreDelaySeconds 0 `
+            -CreateShortcut `
+            -ShortcutDir (Join-Path $OutputDir "shortcuts-local-whisper")
     }
 
     $manifestPath = Join-Path $OutputDir "manifest.txt"
