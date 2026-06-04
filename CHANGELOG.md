@@ -28,6 +28,7 @@
 - Smoked packaged Windows listener mode with a zero-session run during artifact packaging.
 - Added packaged listener smoke evidence to Windows artifact proof reports and profile checks.
 - Added installed launcher listener smoke evidence to Windows artifact proof reports and install profiles.
+- Required installed listener proof reports to use the same config path as the validated Windows artifact config.
 - Added a packaged Windows laptop proof runner that executes cloud dictation, local whisper dictation, Notepad paste, and proof-set validation through existing scripts.
 - Added a Windows proof-set checker for full laptop and artifact-smoke report bundles.
 - Strengthened Windows laptop proof profiles to reject loopback/mock cloud endpoints and packaged mock whisper backends.

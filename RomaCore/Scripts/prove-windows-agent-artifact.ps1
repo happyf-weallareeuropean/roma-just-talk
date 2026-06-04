@@ -647,11 +647,14 @@ function Get-ListenerSmokeProof {
         [string]$Output = ""
     )
 
+    $configPath = Get-OutputValue -Content $Output -Name "config"
     return [ordered]@{
         output_present = ![string]::IsNullOrWhiteSpace($Output)
         mode_listen = $Output.Contains("mode=listen")
         zero_session = $Output.Contains("max_sessions=0")
         completed_zero_sessions = $Output.Contains("listen_completed_sessions=0")
+        config_path = $configPath
+        config_path_present = ![string]::IsNullOrWhiteSpace($configPath)
     }
 }
 

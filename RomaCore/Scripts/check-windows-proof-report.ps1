@@ -347,13 +347,20 @@ function Assert-PackagedListenerProof {
 function Assert-InstalledListenerProof {
     param(
         [Parameter(Mandatory = $true)]
-        [object]$Proof
+        [object]$Proof,
+        [Parameter(Mandatory = $true)]
+        [string]$ExpectedConfigPath
     )
 
     Assert-Boolean -Object $Proof -Name "output_present" -Expected $true
     Assert-Boolean -Object $Proof -Name "mode_listen" -Expected $true
     Assert-Boolean -Object $Proof -Name "zero_session" -Expected $true
     Assert-Boolean -Object $Proof -Name "completed_zero_sessions" -Expected $true
+    Assert-Boolean -Object $Proof -Name "config_path_present" -Expected $true
+    Assert-StringEquals `
+        -Actual ([string](Require-Property -Object $Proof -Name "config_path")) `
+        -Expected $ExpectedConfigPath `
+        -Name "installed_listener.config_path"
     Write-Host "proof_installed_listener=listen_zero_session"
 }
 
@@ -640,7 +647,10 @@ if ($RequirePackagedListener) {
 }
 
 if ($RequireInstalledListener) {
-    Assert-InstalledListenerProof -Proof (Require-Property -Object $report -Name "installed_listener")
+    $config = Require-Property -Object $report -Name "config"
+    Assert-InstalledListenerProof `
+        -Proof (Require-Property -Object $report -Name "installed_listener") `
+        -ExpectedConfigPath ([string](Require-Property -Object $config -Name "path"))
 }
 
 if ($RequireHoldHook) {
