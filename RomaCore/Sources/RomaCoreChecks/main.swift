@@ -1653,6 +1653,21 @@ struct RomaCoreChecks {
                 "let me rephrase correction should preserve suffix"
             ),
             (
+                "Use model, to clarify module.",
+                "Use module.",
+                "to clarify correction"
+            ),
+            (
+                "Use model, um to clarify module.",
+                "Use module.",
+                "pause filler before to clarify correction"
+            ),
+            (
+                "Let's meet at two, to clarify three tomorrow.",
+                "Let's meet at three tomorrow.",
+                "to clarify correction should preserve suffix"
+            ),
+            (
                 "Use model, I mean to say module.",
                 "Use module.",
                 "i mean to say correction"
@@ -2766,6 +2781,11 @@ struct RomaCoreChecks {
                 "Let me rephrase, module loads.",
                 "Let me rephrase, module loads.",
                 "let me rephrase prose guard"
+            ),
+            (
+                "To clarify, module loads.",
+                "To clarify, module loads.",
+                "to clarify prose guard"
             ),
             (
                 "I mean to say, module loads.",
