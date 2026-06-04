@@ -259,7 +259,7 @@ public struct RomaTranscriptionOutputFilter {
         "typing", "unclear", "unintelligible"
     ]
     private static let preservedRepeatedWords: Set<String> = [
-        "ha", "haha", "no", "ok", "okay", "really", "so", "very", "yes"
+        "dash", "ha", "haha", "hyphen", "no", "ok", "okay", "really", "so", "very", "yes"
     ]
     private static let preservedRepeatedClauses: Set<String> = [
         "i know", "new york", "you know"
@@ -588,6 +588,7 @@ public struct RomaTranscriptionOutputFilter {
     private static let spokenDoubleQuotePairPattern = #"(?i)(?<![\p{L}\p{N}])quote[ \t]+([^.!?\n]{1,160}?)[ \t]+unquote([.!?])?(?![\p{L}\p{N}])"#
     private static let spokenSingleQuotePairPattern = #"(?i)(?<![\p{L}\p{N}])single[ \t]+quote[ \t]+([^.!?\n]{1,160}?)[ \t]+single[ \t]+quote([.!?])?(?![\p{L}\p{N}])"#
     private static let spokenPutEnclosurePattern = #"(?i)(?<![\p{L}\p{N}])(?:put|wrap|enclose)[ \t]+([^.!?\n]{1,120}?)[ \t]+(?:in|inside)[ \t]+(single[ \t]+quotes?|quotes?|quotation[ \t]+marks?|parentheses|parenthesis|parens?|brackets?|square[ \t]+brackets?|braces?|curly[ \t]+braces?)([.!?])?(?![\p{L}\p{N}])"#
+    private static let spokenLongCLIFlagPattern = #"(?i)(?<![\p{L}\p{N}])(?:dash|hyphen)[ \t]+(?:dash|hyphen)[ \t]+([A-Za-z][A-Za-z0-9]*(?:[ \t]+(?:dash|hyphen)[ \t]+[A-Za-z0-9]+){0,4})(?=[.!?,;:]|\s+(?:and|or|then|with|without)\b|$)"#
     private static let spokenSymbolCommands = [
         SpokenSymbolCommand(
             pattern: #"(?i)(?<![\p{L}\p{N}])(?:forward\s+slash|slash)(?![\p{L}\p{N}])"#,
@@ -897,6 +898,7 @@ public struct RomaTranscriptionOutputFilter {
         filteredText = applySpokenNumberedOutlineCommands(in: filteredText)
         filteredText = replaceSpokenSequenceListMarkers(in: filteredText)
         filteredText = formatInlineNumberedLists(in: filteredText)
+        filteredText = applySpokenCLIFlagCommands(in: filteredText)
         filteredText = applySpokenSymbolCommands(in: filteredText)
         filteredText = applySpokenContractionCommands(in: filteredText)
         filteredText = applySpokenPossessiveCommands(in: filteredText)
@@ -1680,6 +1682,74 @@ public struct RomaTranscriptionOutputFilter {
         return symbolizedText
     }
 
+    private static func applySpokenCLIFlagCommands(in text: String) -> String {
+        guard let regex = try? NSRegularExpression(pattern: spokenLongCLIFlagPattern) else {
+            return text
+        }
+
+        var flagText = text
+        let matches = regex.matches(in: flagText, range: NSRange(flagText.startIndex..., in: flagText))
+
+        for match in matches.reversed() {
+            guard match.numberOfRanges >= 2,
+                  let fullRange = Range(match.range(at: 0), in: flagText),
+                  let flagRange = Range(match.range(at: 1), in: flagText),
+                  shouldApplySpokenCLIFlag(in: flagText, commandRange: fullRange) else {
+                continue
+            }
+
+            let flagName = spokenCLIFlagName(from: String(flagText[flagRange]))
+            guard !flagName.isEmpty else { continue }
+
+            let prefix = String(flagText[..<fullRange.lowerBound])
+            let separator = prefix.last.map { $0.isWhitespace || $0.isNewline ? "" : " " } ?? ""
+            flagText.replaceSubrange(fullRange, with: "\(separator)--\(flagName)")
+        }
+
+        return flagText
+    }
+
+    private static func shouldApplySpokenCLIFlag(
+        in text: String,
+        commandRange: Range<String.Index>
+    ) -> Bool {
+        let beforeCommand = String(text[..<commandRange.lowerBound])
+        let trimmedBefore = beforeCommand.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !trimmedBefore.isEmpty else { return true }
+
+        guard let previousWord = previousWord(in: beforeCommand),
+              !["a", "an", "the"].contains(previousWord) else {
+            return false
+        }
+
+        let allowedPreviousWords = [
+            "add", "and", "argument", "arguments", "args", "command", "enter", "flag", "option",
+            "or", "pass", "run", "then", "type", "use", "using", "with", "without"
+        ]
+        if allowedPreviousWords.contains(previousWord) {
+            return true
+        }
+
+        let lowercasedLine = currentLinePrefix(in: beforeCommand).lowercased()
+        let cliContextPattern = #"(?i)(?:^|\s)(?:run|execute|terminal|shell|command|git|gh|npm|pnpm|yarn|node|python|swift|cargo|docker|brew|curl)\b"#
+        guard let regex = try? NSRegularExpression(pattern: cliContextPattern) else {
+            return false
+        }
+
+        return regex.firstMatch(in: lowercasedLine, range: NSRange(lowercasedLine.startIndex..., in: lowercasedLine)) != nil
+    }
+
+    private static func spokenCLIFlagName(from text: String) -> String {
+        text
+            .trimmingCharacters(in: .whitespacesAndNewlines)
+            .replacingOccurrences(
+                of: #"(?i)[ \t]+(?:dash|hyphen)[ \t]+"#,
+                with: "-",
+                options: .regularExpression
+            )
+            .lowercased()
+    }
+
     private static func applySpokenContractionCommands(in text: String) -> String {
         var contractedText = text
 
@@ -1770,12 +1840,23 @@ public struct RomaTranscriptionOutputFilter {
             return false
         }
 
+        if command.output == "-",
+           hasAdjacentSpokenDashWord(before: beforeCommand, after: afterCommand) {
+            return false
+        }
+
         if command.requiresCompactContext,
            !hasCompactSymbolContext(command: command, before: beforeCommand, after: afterCommand) {
             return false
         }
 
         return true
+    }
+
+    private static func hasAdjacentSpokenDashWord(before: String, after: String) -> Bool {
+        let dashWords = Set(["dash", "hyphen"])
+        return previousWord(in: before).map { dashWords.contains($0) } == true ||
+            nextWord(in: after).map { dashWords.contains($0) } == true
     }
 
     private static func hasCompactSymbolContext(

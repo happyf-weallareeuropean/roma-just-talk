@@ -2,6 +2,7 @@
 
 ## v1.81 - Unreleased
 
+- Formatted spoken long CLI flags such as "dash dash amend" as `--amend` without compacting them into the previous word.
 - Treated "end parenthesis", "end bracket", and "end brace" as spoken closing-enclosure commands.
 - Formatted nested spoken numbered outlines using "indent", "sub", "outdent", and "dedent" commands.
 - Formatted nested spoken bullet outlines using "indent", "sub", "outdent", and "dedent" commands.

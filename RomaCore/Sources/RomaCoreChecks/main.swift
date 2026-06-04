@@ -1934,6 +1934,21 @@ struct RomaCoreChecks {
                 "compact dash command guard"
             ),
             (
+                "Run git commit dash dash amend.",
+                "Run git commit --amend.",
+                "spoken long CLI flag command"
+            ),
+            (
+                "Run npm install dash dash save dash dev.",
+                "Run npm install --save-dev.",
+                "spoken hyphenated long CLI flag command"
+            ),
+            (
+                "Use dash dash help and dash dash version.",
+                "Use --help and --version.",
+                "repeated spoken long CLI flag commands"
+            ),
+            (
                 "My top goals are one finish the report two send the slides.",
                 "My top goals are\n1. finish the report\n2. send the slides.",
                 "cardinal spoken sequence list"
@@ -2492,6 +2507,11 @@ struct RomaCoreChecks {
                 "The ellipsis symbol is useful.",
                 "The ellipsis symbol is useful.",
                 "ellipsis symbol prose guard"
+            ),
+            (
+                "The dash dash pattern is useful.",
+                "The dash dash pattern is useful.",
+                "dash dash prose guard"
             ),
             (
                 "Quote from the docs.",
