@@ -351,6 +351,7 @@ public struct RomaTranscriptionOutputFilter {
         "http": "HTTP",
         "https": "HTTPS",
         "json": "JSON",
+        "js": "JS",
         "llm": "LLM",
         "ml": "ML",
         "nlp": "NLP",
@@ -366,12 +367,29 @@ public struct RomaTranscriptionOutputFilter {
     ]
     private static let properNameFragmentCasing = [
         "apple": "Apple",
+        "anthropic": "Anthropic",
+        "cloudflare": "Cloudflare",
+        "docker": "Docker",
+        "elevenlabs": "ElevenLabs",
         "github": "GitHub",
         "ios": "iOS",
         "ipados": "iPadOS",
+        "javascript": "JavaScript",
+        "kubernetes": "Kubernetes",
+        "linear": "Linear",
         "macos": "macOS",
+        "netlify": "Netlify",
+        "nextjs": "Next.js",
+        "node": "Node",
+        "openai": "OpenAI",
+        "postgres": "Postgres",
+        "raycast": "Raycast",
+        "react": "React",
         "roma": "Roma",
         "swift": "Swift",
+        "supabase": "Supabase",
+        "typescript": "TypeScript",
+        "vercel": "Vercel",
         "voiceink": "VoiceInk",
         "xcode": "Xcode"
     ]
@@ -411,13 +429,13 @@ public struct RomaTranscriptionOutputFilter {
         "model", "models", "module", "modules", "name", "names", "need", "next", "not", "now", "of", "on", "one",
         "option", "options", "or", "out", "output", "outputs", "package", "packages", "page", "parameter",
         "parameters", "parser", "path", "paths", "payload", "payloads", "phrase", "phrases", "project", "projects",
-        "prompt", "property", "properties", "protocol", "protocols", "put", "really", "repo", "repos", "repository",
+        "pod", "pods", "prompt", "property", "properties", "protocol", "protocols", "put", "really", "repo", "repos", "repository",
         "repositories", "request", "response", "result", "results", "right", "route", "routes", "router", "screen",
-        "script", "scripts", "second", "see", "server", "service", "setting", "settings", "should", "single", "so",
+        "script", "scripts", "second", "see", "server", "service", "setting", "settings", "should", "single", "site", "sites", "so",
         "some", "state", "states", "struct", "structs", "that", "the", "then", "there", "third", "this", "ticket",
         "tickets", "to", "token", "tool", "type", "types", "use", "user", "users", "value", "values", "variable",
-        "variables", "view", "was", "we", "what", "when", "where", "which", "will", "window", "with", "word", "words",
-        "work", "workspace", "workspaces", "would", "yeah", "you"
+        "variables", "view", "voice", "voices", "was", "we", "what", "when", "where", "which", "will", "window", "with",
+        "word", "words", "work", "worker", "workers", "workspace", "workspaces", "would", "yeah", "you"
     ]
     private static let leadingModifierLowercaseFragments: Set<String> = [
         "cloud", "current", "default", "direct", "full", "local", "main", "native", "new", "old",
@@ -1260,11 +1278,7 @@ public struct RomaTranscriptionOutputFilter {
                 return restoreLeadingNewlines(leadingNewlineCount, to: polishedText)
             }
             polishedText = removeTrailingContinuationPeriod(from: polishedText)
-            let lowercasedText = lowercaseInitialWordIfSafe(in: polishedText)
-            let adjustedText = shouldLowercaseLikelyTitleCasedFragmentWords(in: lowercasedText)
-                ? lowercaseLikelyTitleCasedWordsIfSafe(in: lowercasedText)
-                : lowercasedText
-            return restoreLeadingNewlines(leadingNewlineCount, to: adjustedText)
+            return restoreLeadingNewlines(leadingNewlineCount, to: lowercaseFragmentWordsIfSafe(in: polishedText))
         }
 
         guard shouldUseFragmentPolish else {
@@ -8118,7 +8132,14 @@ public struct RomaTranscriptionOutputFilter {
     }
 
     private static func lowercaseFragmentWordsIfSafe(in text: String) -> String {
-        lowercaseLikelyTitleCasedWordsIfSafe(in: lowercaseInitialWordIfSafe(in: text))
+        if shouldLowercaseLikelyTitleCasedFragmentWords(in: text) {
+            let lowercasedText = lowercaseLikelyTitleCasedWordsIfSafe(in: text)
+            if lowercasedText != text {
+                return lowercasedText
+            }
+        }
+
+        return lowercaseInitialWordIfSafe(in: text)
     }
 
     private static func shouldLowercaseLikelyTitleCasedFragmentWords(in text: String) -> Bool {
@@ -8152,7 +8173,7 @@ public struct RomaTranscriptionOutputFilter {
             result.replaceSubrange(wordRange, with: normalizeLikelyFragmentWord(word))
         }
 
-        return result
+        return normalizeKnownProductPhraseFragments(in: result)
     }
 
     private static func lowercaseInitialWordIfSafe(
@@ -8206,6 +8227,19 @@ public struct RomaTranscriptionOutputFilter {
         return likelyLowercaseFragments.contains(normalizedWord) ||
             commonTechnicalAcronyms[normalizedWord] != nil ||
             properNameFragmentCasing[normalizedWord] != nil
+    }
+
+    private static func normalizeKnownProductPhraseFragments(in text: String) -> String {
+        text.replacingOccurrences(
+            of: #"(?i)(?<![\p{L}\p{N}])next\s+js(?![\p{L}\p{N}])"#,
+            with: "Next.js",
+            options: .regularExpression
+        )
+        .replacingOccurrences(
+            of: #"(?i)(?<![\p{L}\p{N}])node\s+js(?![\p{L}\p{N}])"#,
+            with: "Node.js",
+            options: .regularExpression
+        )
     }
 
     private static func normalizeLikelyFragmentWord(_ word: String) -> String {
