@@ -1116,6 +1116,9 @@ public struct RomaTranscriptionOutputFilter {
 
     public static func applyInsertionSpacing(_ text: String, context: TextInsertionContext?) -> String {
         guard let context else { return text }
+        if needsLeadingListBoundary(before: text, context: context) {
+            return "\n\(text)"
+        }
         guard needsLeadingSpace(before: text, context: context) else { return text }
         return " \(text)"
     }
@@ -6128,6 +6131,34 @@ public struct RomaTranscriptionOutputFilter {
         return previousCharacter.isLetter ||
             previousCharacter.isNumber ||
             previousCharacter.unicodeScalars.allSatisfy { leadingSpaceAfter.contains($0) }
+    }
+
+    private static func needsLeadingListBoundary(before text: String, context: TextInsertionContext) -> Bool {
+        guard context.selectedText?.isEmpty != false,
+              let previousCharacter = context.precedingText.last,
+              let firstCharacter = text.first,
+              !previousCharacter.isWhitespace,
+              !firstCharacter.isWhitespace,
+              startsWithListMarker(text) else {
+            return false
+        }
+
+        let linePrefix = currentLinePrefix(in: context.precedingText)
+            .trimmingCharacters(in: .whitespaces)
+        guard !linePrefix.isEmpty else { return false }
+
+        let allowedListBoundaryBefore = CharacterSet(charactersIn: ".,;:!?)]}”’")
+        return previousCharacter.isLetter ||
+            previousCharacter.isNumber ||
+            previousCharacter.unicodeScalars.allSatisfy { allowedListBoundaryBefore.contains($0) }
+    }
+
+    private static func startsWithListMarker(_ text: String) -> Bool {
+        guard let regex = try? NSRegularExpression(pattern: #"^\s*(?:-\s+\S|\d{1,2}\.\s+\S)"#) else {
+            return false
+        }
+
+        return regex.firstMatch(in: text, range: NSRange(text.startIndex..., in: text)) != nil
     }
 
     private static func hasUnclosedStraightDoubleQuote(in precedingText: String) -> Bool {

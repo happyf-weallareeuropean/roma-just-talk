@@ -318,6 +318,27 @@ struct RomaCoreChecks {
             "shared insertion spacing should add a leading space after words"
         )
         try require(
+            RomaTranscriptionOutputFilter.applyInsertionSpacing(
+                "1. finish the report\n2. send the slides",
+                context: RomaTranscriptionOutputFilter.TextInsertionContext(precedingText: "Tasks:")
+            ) == "\n1. finish the report\n2. send the slides",
+            "shared insertion spacing should start numbered lists on a new line"
+        )
+        try require(
+            RomaTranscriptionOutputFilter.applyInsertionSpacing(
+                "- first item\n- second item",
+                context: RomaTranscriptionOutputFilter.TextInsertionContext(precedingText: "Tasks:")
+            ) == "\n- first item\n- second item",
+            "shared insertion spacing should start bullet lists on a new line"
+        )
+        try require(
+            RomaTranscriptionOutputFilter.applyInsertionSpacing(
+                "\n1. finish the report",
+                context: RomaTranscriptionOutputFilter.TextInsertionContext(precedingText: "Tasks:")
+            ) == "\n1. finish the report",
+            "shared insertion spacing should not double-prefix existing list newlines"
+        )
+        try require(
             RomaTranscriptionOutputFilter.applyInsertionPolish("Model.", context: selectedMidSentenceContext) == "model",
             "shared insertion polish should lowercase selected mid-sentence replacements"
         )
@@ -2565,6 +2586,13 @@ struct RomaCoreChecks {
         try require(
             RomaTranscriptionOutputFilter.applyInsertionSpacing("again", context: closingSmartSingleQuoteContext) == " again",
             "insertion spacing should add space after closing smart single quotes"
+        )
+        try require(
+            RomaTranscriptionOutputFilter.applyInsertionSpacing(
+                "1. finish the report",
+                context: RomaTranscriptionOutputFilter.TextInsertionContext(precedingText: "Done\n")
+            ) == "1. finish the report",
+            "insertion spacing should not add a list boundary after an existing newline"
         )
         try require(
             RomaTranscriptionOutputFilter.applyInsertionSpacing("”", context: wordContext) == "”",
