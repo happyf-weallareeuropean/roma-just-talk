@@ -135,6 +135,26 @@ function Assert-OutputContains {
     Write-Host "asserted_output=$Expected"
 }
 
+function Invoke-ProofAgentDoctorCommand {
+    param(
+        [Parameter(Mandatory = $true)]
+        [string]$Name,
+        [Parameter(Mandatory = $true)]
+        [string]$Command
+    )
+
+    Write-Host ""
+    Write-Host "-- $Name --"
+    $output = & $script:proofAgentPath $Command 2>&1 | Out-String
+    if ($LASTEXITCODE -ne 0) {
+        Write-Host $output
+        throw "RomaProofAgent $Command failed"
+    }
+
+    Write-Host $output
+    return $output
+}
+
 function Get-FileProof {
     param(
         [Parameter(Mandatory = $true)]
@@ -414,6 +434,21 @@ function Get-ProofAgentDoctorOutputProof {
     }
 }
 
+function Get-NativeDoctorOutputProof {
+    param(
+        [string]$Output = "",
+        [Parameter(Mandatory = $true)]
+        [string]$ExpectedMarker
+    )
+
+    return [ordered]@{
+        output_present = ![string]::IsNullOrWhiteSpace($Output)
+        platform_windows = $Output.Contains("platform=windows")
+        expected_marker = $ExpectedMarker
+        expected_marker_present = $Output.Contains($ExpectedMarker)
+    }
+}
+
 function Write-ProofReport {
     param(
         [Parameter(Mandatory = $true)]
@@ -466,6 +501,13 @@ function Write-ProofReport {
         doctor = [ordered]@{
             packaged_agent = (Get-DoctorOutputProof -Output $script:packagedAgentDoctorOutput)
             packaged_proof_agent = (Get-ProofAgentDoctorOutputProof -Output $script:packagedProofAgentDoctorOutput)
+            packaged_native_doctors = [ordered]@{
+                register_hotkey = (Get-NativeDoctorOutputProof -Output ($script:packagedNativeDoctorOutputs["register_hotkey"]) -ExpectedMarker "windows_hotkey_runtime=true")
+                keyboard_hook = (Get-NativeDoctorOutputProof -Output ($script:packagedNativeDoctorOutputs["keyboard_hook"]) -ExpectedMarker "runtime=true")
+                paste = (Get-NativeDoctorOutputProof -Output ($script:packagedNativeDoctorOutputs["paste"]) -ExpectedMarker "windows_paste_runtime=true")
+                dpapi_secret = (Get-NativeDoctorOutputProof -Output ($script:packagedNativeDoctorOutputs["dpapi_secret"]) -ExpectedMarker "dpapi_runtime=true")
+                miniaudio_capture = (Get-NativeDoctorOutputProof -Output ($script:packagedNativeDoctorOutputs["miniaudio_capture"]) -ExpectedMarker "native_capture_adapter=true")
+            }
             installed_launcher = (Get-DoctorOutputProof -Output $script:installedLauncherDoctorOutput)
         }
         files = [ordered]@{
@@ -544,6 +586,13 @@ $script:artifactManifest = @{}
 $script:packagedWhisperCLI = ""
 $script:packagedAgentDoctorOutput = ""
 $script:packagedProofAgentDoctorOutput = ""
+$script:packagedNativeDoctorOutputs = [ordered]@{
+    register_hotkey = ""
+    keyboard_hook = ""
+    paste = ""
+    dpapi_secret = ""
+    miniaudio_capture = ""
+}
 $script:installedLauncherDoctorOutput = ""
 $script:notepadPasteProof = New-NotepadPasteProof
 
@@ -622,6 +671,23 @@ Invoke-Step "packaged proof agent doctor" {
     Write-Host $script:packagedProofAgentDoctorOutput
     Assert-OutputContains -Output $script:packagedProofAgentDoctorOutput -Expected "windows_paste_adapter_source=true"
     Assert-OutputContains -Output $script:packagedProofAgentDoctorOutput -Expected "windows_dictation_proof_source=true"
+}
+
+Invoke-Step "packaged native proof doctors" {
+    $script:packagedNativeDoctorOutputs["register_hotkey"] = Invoke-ProofAgentDoctorCommand -Name "register hotkey" -Command "windows-hotkey-doctor"
+    Assert-OutputContains -Output ($script:packagedNativeDoctorOutputs["register_hotkey"]) -Expected "windows_hotkey_runtime=true"
+
+    $script:packagedNativeDoctorOutputs["keyboard_hook"] = Invoke-ProofAgentDoctorCommand -Name "keyboard hook" -Command "windows-keyboard-hook-doctor"
+    Assert-OutputContains -Output ($script:packagedNativeDoctorOutputs["keyboard_hook"]) -Expected "runtime=true"
+
+    $script:packagedNativeDoctorOutputs["paste"] = Invoke-ProofAgentDoctorCommand -Name "paste" -Command "windows-paste-doctor"
+    Assert-OutputContains -Output ($script:packagedNativeDoctorOutputs["paste"]) -Expected "windows_paste_runtime=true"
+
+    $script:packagedNativeDoctorOutputs["dpapi_secret"] = Invoke-ProofAgentDoctorCommand -Name "dpapi secret" -Command "windows-secret-doctor"
+    Assert-OutputContains -Output ($script:packagedNativeDoctorOutputs["dpapi_secret"]) -Expected "dpapi_runtime=true"
+
+    $script:packagedNativeDoctorOutputs["miniaudio_capture"] = Invoke-ProofAgentDoctorCommand -Name "miniaudio capture" -Command "miniaudio-capture-doctor"
+    Assert-OutputContains -Output ($script:packagedNativeDoctorOutputs["miniaudio_capture"]) -Expected "native_capture_adapter=true"
 }
 
 if ($DoctorOnly) {

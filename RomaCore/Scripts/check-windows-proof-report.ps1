@@ -8,6 +8,7 @@ param(
     [switch]$RequireStartupShortcut,
     [switch]$RequirePermissionSurface,
     [switch]$RequireProofAgentSurface,
+    [switch]$RequireNativeDoctorSurface,
     [switch]$RequirePackagedMock,
     [switch]$RequireHoldHook,
     [switch]$RequireCloudConfig,
@@ -171,6 +172,21 @@ function Assert-ProofAgentDoctorOutputProof {
     Write-Host "proof_agent_doctor=$Name"
 }
 
+function Assert-NativeDoctorOutputProof {
+    param(
+        [Parameter(Mandatory = $true)]
+        [object]$Proof,
+        [Parameter(Mandatory = $true)]
+        [string]$Name
+    )
+
+    Assert-Boolean -Object $Proof -Name "output_present" -Expected $true
+    Assert-Boolean -Object $Proof -Name "platform_windows" -Expected $true
+    Assert-NonEmptyString -Object $Proof -Name "expected_marker"
+    Assert-Boolean -Object $Proof -Name "expected_marker_present" -Expected $true
+    Write-Host "proof_native_doctor=$Name"
+}
+
 $ProofReportPath = $ExecutionContext.SessionState.Path.GetUnresolvedProviderPathFromPSPath($ProofReportPath)
 if (!(Test-Path -LiteralPath $ProofReportPath)) {
     throw "Proof report was not found: $ProofReportPath"
@@ -241,6 +257,22 @@ if ($RequireProofAgentSurface) {
     $doctor = Require-Property -Object $report -Name "doctor"
     $packagedProofAgent = Require-Property -Object $doctor -Name "packaged_proof_agent"
     Assert-ProofAgentDoctorOutputProof -Proof $packagedProofAgent -Name "packaged_proof_agent"
+}
+
+if ($RequireNativeDoctorSurface) {
+    $doctor = Require-Property -Object $report -Name "doctor"
+    $nativeDoctors = Require-Property -Object $doctor -Name "packaged_native_doctors"
+    foreach ($name in @(
+        "register_hotkey",
+        "keyboard_hook",
+        "paste",
+        "dpapi_secret",
+        "miniaudio_capture"
+    )) {
+        Assert-NativeDoctorOutputProof `
+            -Proof (Require-Property -Object $nativeDoctors -Name $name) `
+            -Name $name
+    }
 }
 
 if ($RequireHoldHook) {

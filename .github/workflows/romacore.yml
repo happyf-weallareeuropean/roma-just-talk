@@ -235,7 +235,8 @@ jobs:
             -ExpectedMode doctor-only `
             -RequireWindowsPlatform `
             -RequirePermissionSurface `
-            -RequireProofAgentSurface
+            -RequireProofAgentSurface `
+            -RequireNativeDoctorSurface
 
       - name: Verify Windows agent artifact local whisper install
         run: |
@@ -261,6 +262,7 @@ jobs:
             -RequireStartupShortcut `
             -RequirePermissionSurface `
             -RequireProofAgentSurface `
+            -RequireNativeDoctorSurface `
             -RequirePackagedMock `
             -RequireHoldHook `
             -RequireWhisperConfig
