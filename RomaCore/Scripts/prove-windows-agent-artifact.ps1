@@ -188,6 +188,23 @@ function Get-ConfigProof {
     return $proof
 }
 
+function Get-DictationRuntimeProof {
+    $logPath = Join-Path (Join-Path $InstallDir "smoke") "windows-agent-dictate.log"
+    $proof = Get-FileProof -Path $logPath
+    if (!$proof["exists"]) {
+        return $proof
+    }
+
+    $content = Get-Content -LiteralPath $logPath -Raw
+    $proof["reported_wrote"] = $content.Contains("wrote=")
+    $proof["reported_pre_roll"] = $content.Contains("included_pre_roll_seconds=")
+    $proof["reported_processed_text"] = $content.Contains("processed_transcript_text=")
+    $proof["reported_paste_sent"] = $content.Contains("paste_sent=true")
+    $proof["reported_paste_not_sent"] = $content.Contains("paste_sent=false")
+
+    return $proof
+}
+
 function Write-ProofReport {
     param(
         [Parameter(Mandatory = $true)]
@@ -250,6 +267,9 @@ function Write-ProofReport {
     }
     if (![string]::IsNullOrWhiteSpace($startupShortcutPath)) {
         $report["startup_shortcut"] = Get-FileProof -Path $startupShortcutPath
+    }
+    if ($RunDictation) {
+        $report["dictation_runtime"] = Get-DictationRuntimeProof
     }
 
     $report |

@@ -91,12 +91,28 @@ function Assert-NonEmptyString {
     Write-Host "proof_value=$Name value=$value"
 }
 
+function Assert-DictationRuntimeProof {
+    param(
+        [Parameter(Mandatory = $true)]
+        [object]$Report
+    )
+
+    $runtime = Require-Property -Object $Report -Name "dictation_runtime"
+    Assert-FileProof -Proof $runtime -Name "dictation_runtime_log"
+    Assert-Boolean -Object $runtime -Name "reported_wrote" -Expected $true
+    Assert-Boolean -Object $runtime -Name "reported_pre_roll" -Expected $true
+    Assert-Boolean -Object $runtime -Name "reported_processed_text" -Expected $true
+
+    return $runtime
+}
+
 $ProofReportPath = $ExecutionContext.SessionState.Path.GetUnresolvedProviderPathFromPSPath($ProofReportPath)
 if (!(Test-Path -LiteralPath $ProofReportPath)) {
     throw "Proof report was not found: $ProofReportPath"
 }
 
 $report = Get-Content -LiteralPath $ProofReportPath -Raw | ConvertFrom-Json
+$dictationRuntime = $null
 
 Assert-NonEmptyString -Object $report -Name "generated_at"
 Assert-NonEmptyString -Object $report -Name "proof_mode"
@@ -161,12 +177,17 @@ if ($RequireDictation) {
     $config = Require-Property -Object $report -Name "config"
     $outputFile = Require-Property -Object $config -Name "output_file"
     Assert-FileProof -Proof $outputFile -Name "dictation_output" -MinimumBytes 45
+    $dictationRuntime = Assert-DictationRuntimeProof -Report $report
 }
 
 if ($RequirePaste) {
     Assert-Boolean -Object $report -Name "paste_dictation" -Expected $true
     $config = Require-Property -Object $report -Name "config"
     Assert-Boolean -Object $config -Name "should_paste" -Expected $true
+    if ($null -eq $dictationRuntime) {
+        $dictationRuntime = Assert-DictationRuntimeProof -Report $report
+    }
+    Assert-Boolean -Object $dictationRuntime -Name "reported_paste_sent" -Expected $true
 }
 
 Write-Host "proof_report_ok=$ProofReportPath"

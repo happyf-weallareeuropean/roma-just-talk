@@ -188,6 +188,7 @@ if ($RunDictation -and !$usesWhisperCLI -and
 $isWindowsHost = [System.Environment]::OSVersion.Platform -eq [System.PlatformID]::Win32NT
 $shouldUseHoldHook = $UseHoldHook -or !$UseToggle
 $dictationOutput = Join-Path $OutputDir "windows-agent-smoke.wav"
+$dictationLog = Join-Path $OutputDir "windows-agent-dictate.log"
 
 Invoke-Step "agent doctor" {
     $doctorOutput = & $AgentPath doctor 2>&1 | Out-String
@@ -332,11 +333,22 @@ if ($RunDictation) {
             Write-Host "Focus Notepad or another normal-integrity text field before transcription completes."
         }
 
-        & $AgentPath dictate --config $ConfigPath
+        $dictateOutput = & $AgentPath dictate --config $ConfigPath 2>&1 | Out-String
+        Write-Host $dictateOutput
+        Set-Content -LiteralPath $dictationLog -Value $dictateOutput -Encoding UTF8
         if ($LASTEXITCODE -ne 0) {
             throw "RomaWindowsAgent dictate failed"
         }
         Assert-WavFileWithBytes -Path $dictationOutput
+        Assert-NonEmptyFile -Path $dictationLog
+        Assert-OutputContains -Output $dictateOutput -Expected "wrote="
+        Assert-OutputContains -Output $dictateOutput -Expected "included_pre_roll_seconds="
+        Assert-OutputContains -Output $dictateOutput -Expected "processed_transcript_text="
+        if ($PasteDictation) {
+            Assert-OutputContains -Output $dictateOutput -Expected "paste_sent=true"
+        } else {
+            Assert-OutputContains -Output $dictateOutput -Expected "paste_sent=false"
+        }
     }
 } else {
     Write-Host ""
@@ -353,3 +365,6 @@ if (![string]::IsNullOrWhiteSpace($ApiKeyName)) {
 }
 Write-Host "smoke_artifacts=$OutputDir"
 Write-Host "run_dictation=$($RunDictation.IsPresent)"
+if ($RunDictation) {
+    Write-Host "dictation_log=$dictationLog"
+}
