@@ -723,11 +723,11 @@ function Write-ProofReport {
         packaged_listener = (Get-ListenerSmokeProof -Output $script:packagedListenerOutput)
         installed_listener = (Get-ListenerSmokeProof -Output $script:installedListenerOutput)
         files = [ordered]@{
-            packaged_agent = (Get-FileProof -Path $agentPath)
-            packaged_proof_agent = (Get-FileProof -Path $script:proofAgentPath)
-            packaged_whisper_cli_mock = (Get-FileProof -Path $script:packagedWhisperCLI)
-            installed_agent = (Get-FileProof -Path (Join-Path $InstallDir "RomaWindowsAgent.exe"))
-            installed_run_script = (Get-FileProof -Path (Join-Path $InstallDir "run-windows-agent.ps1"))
+            packaged_agent = (Get-FileHashProof -Path $agentPath)
+            packaged_proof_agent = (Get-FileHashProof -Path $script:proofAgentPath)
+            packaged_whisper_cli_mock = (Get-FileHashProof -Path $script:packagedWhisperCLI)
+            installed_agent = (Get-FileHashProof -Path (Join-Path $InstallDir "RomaWindowsAgent.exe"))
+            installed_run_script = (Get-FileHashProof -Path (Join-Path $InstallDir "run-windows-agent.ps1"))
         }
         manifest = $script:artifactManifest
         package_identity = (Get-PackageIdentityProof)

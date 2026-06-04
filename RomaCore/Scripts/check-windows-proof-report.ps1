@@ -39,7 +39,7 @@ function Require-Property {
         throw "Proof report property was not found: $Name"
     }
 
-    return $Object.$Name
+    return $Object.PSObject.Properties[$Name].Value
 }
 
 function Assert-FileProof {
@@ -66,6 +66,31 @@ function Assert-FileProof {
     }
 
     Write-Host "proof_file=$Name path=$path bytes=$bytes"
+}
+
+function Assert-FileHashEquals {
+    param(
+        [Parameter(Mandatory = $true)]
+        [object]$ActualProof,
+        [Parameter(Mandatory = $true)]
+        [object]$ExpectedProof,
+        [Parameter(Mandatory = $true)]
+        [string]$Name
+    )
+
+    $actualHash = [string](Require-Property -Object $ActualProof -Name "sha256")
+    $expectedHash = [string](Require-Property -Object $ExpectedProof -Name "sha256")
+    if ([string]::IsNullOrWhiteSpace($actualHash)) {
+        throw "$Name actual sha256 is empty"
+    }
+    if ([string]::IsNullOrWhiteSpace($expectedHash)) {
+        throw "$Name expected sha256 is empty"
+    }
+    if ($actualHash -ne $expectedHash) {
+        throw "Expected $Name sha256 to be $expectedHash, got $actualHash"
+    }
+
+    Write-Host "proof_hash=$Name sha256=$actualHash"
 }
 
 function Assert-ShortcutProof {
@@ -399,6 +424,7 @@ function Get-ProofProfileRequirements {
             return @(
                 "windows_platform",
                 "install",
+                "installed_hash_match",
                 "shortcut",
                 "startup_shortcut",
                 "permission_surface",
@@ -417,6 +443,7 @@ function Get-ProofProfileRequirements {
             return @(
                 "windows_platform",
                 "install",
+                "installed_hash_match",
                 "shortcut",
                 "startup_shortcut",
                 "permission_surface",
@@ -435,6 +462,7 @@ function Get-ProofProfileRequirements {
             return @(
                 "windows_platform",
                 "install",
+                "installed_hash_match",
                 "permission_surface",
                 "proof_agent_source_surface",
                 "native_doctor_surface",
@@ -450,6 +478,7 @@ function Get-ProofProfileRequirements {
             return @(
                 "windows_platform",
                 "install",
+                "installed_hash_match",
                 "shortcut",
                 "startup_shortcut",
                 "permission_surface",
@@ -595,8 +624,19 @@ if ($RequirePackagedMock) {
 }
 
 if ($RequireInstall) {
-    Assert-FileProof -Proof (Require-Property -Object $files -Name "installed_agent") -Name "installed_agent"
-    Assert-FileProof -Proof (Require-Property -Object $files -Name "installed_run_script") -Name "installed_run_script"
+    $installedAgent = Require-Property -Object $files -Name "installed_agent"
+    $installedRunScript = Require-Property -Object $files -Name "installed_run_script"
+    Assert-FileProof -Proof $installedAgent -Name "installed_agent"
+    Assert-FileProof -Proof $installedRunScript -Name "installed_run_script"
+    Assert-FileHashEquals `
+        -ActualProof $installedAgent `
+        -ExpectedProof (Require-Property -Object $files -Name "packaged_agent") `
+        -Name "installed_agent_matches_package"
+    $packageIdentityFiles = Require-Property -Object $packageIdentity -Name "files"
+    Assert-FileHashEquals `
+        -ActualProof $installedRunScript `
+        -ExpectedProof (Require-Property -Object $packageIdentityFiles -Name "run-windows-agent.ps1") `
+        -Name "installed_run_script_matches_package"
 
     $config = Require-Property -Object $report -Name "config"
     Assert-FileProof -Proof $config -Name "config"
