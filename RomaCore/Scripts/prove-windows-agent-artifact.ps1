@@ -22,6 +22,7 @@ param(
     [switch]$RestoreClipboard,
     [switch]$NoRestoreClipboard,
     [double]$ClipboardRestoreDelaySeconds = 2,
+    [switch]$UsePackagedWhisperMock,
     [switch]$RunDictation,
     [switch]$CreateShortcut,
     [string]$ShortcutDir = "",
@@ -129,6 +130,76 @@ if (![string]::IsNullOrWhiteSpace($ConfigPath)) {
     $ConfigPath = Resolve-FullPath -Path $ConfigPath
 }
 
+$agentPath = Join-Path $PackageDir "RomaWindowsAgent.exe"
+$smokeScript = Join-Path $PackageDir "smoke-windows-agent.ps1"
+$installScript = Join-Path $PackageDir "install-windows-agent.ps1"
+$runScript = Join-Path $PackageDir "run-windows-agent.ps1"
+$proofScript = Join-Path $PackageDir "prove-windows-agent-artifact.ps1"
+$manifestPath = Join-Path $PackageDir "manifest.txt"
+$script:artifactManifest = @{}
+
+Invoke-Step "artifact files" {
+    Require-File -Path $agentPath
+    Require-File -Path $smokeScript
+    Require-File -Path $installScript
+    Require-File -Path $runScript
+    Require-File -Path $proofScript
+    Require-File -Path $manifestPath
+
+    if ([System.Environment]::OSVersion.Platform -eq [System.PlatformID]::Win32NT) {
+        Require-File -Path (Join-Path $PackageDir "swiftCore.dll")
+    }
+}
+
+Invoke-Step "artifact manifest" {
+    $script:artifactManifest = Read-Manifest -Path $manifestPath
+    foreach ($key in @(
+        "agent",
+        "output",
+        "whisper_cli_mock",
+        "smoke_script",
+        "run_script",
+        "install_script",
+        "proof_script",
+        "install_proof_config",
+        "install_proof_shortcut",
+        "local_whisper_install_config",
+        "local_whisper_shortcut",
+        "swift_runtime_dlls"
+    )) {
+        Require-ManifestKey -Manifest $script:artifactManifest -Key $key
+    }
+}
+
+if ($UsePackagedWhisperMock) {
+    if (![string]::IsNullOrWhiteSpace($WhisperCLI) -or
+        ![string]::IsNullOrWhiteSpace($WhisperModel) -or
+        ![string]::IsNullOrWhiteSpace($Endpoint) -or
+        ![string]::IsNullOrWhiteSpace($Model)) {
+        throw "UsePackagedWhisperMock cannot be combined with explicit WhisperCLI/WhisperModel or Endpoint/Model"
+    }
+
+    $WhisperCLI = $script:artifactManifest["whisper_cli_mock"]
+    $WhisperModel = $script:artifactManifest["output"]
+    Write-Host "packaged_whisper_cli=$WhisperCLI"
+    Write-Host "packaged_whisper_model=$WhisperModel"
+}
+
+Invoke-Step "packaged agent doctor" {
+    $doctorOutput = & $agentPath doctor 2>&1 | Out-String
+    if ($LASTEXITCODE -ne 0) {
+        Write-Host $doctorOutput
+        throw "RomaWindowsAgent doctor failed"
+    }
+    Write-Host $doctorOutput
+}
+
+if ($DoctorOnly) {
+    Write-Host ""
+    Write-Host "artifact_doctor_only=true"
+    exit 0
+}
+
 $hasEndpoint = ![string]::IsNullOrWhiteSpace($Endpoint)
 $hasModel = ![string]::IsNullOrWhiteSpace($Model)
 $hasWhisperCLI = ![string]::IsNullOrWhiteSpace($WhisperCLI)
@@ -148,68 +219,14 @@ if ($usesWhisper -and (!$hasWhisperCLI -or !$hasWhisperModel)) {
     throw "WhisperCLI and WhisperModel must be provided together"
 }
 
-if (!$DoctorOnly -and !$usesCloud -and !$usesWhisper) {
-    throw "Pass cloud Endpoint/Model/API key or local WhisperCLI/WhisperModel, or use -DoctorOnly"
+if (!$usesCloud -and !$usesWhisper) {
+    throw "Pass cloud Endpoint/Model/API key, local WhisperCLI/WhisperModel, or -UsePackagedWhisperMock"
 }
 
 if ($usesCloud -and
     [string]::IsNullOrWhiteSpace($ApiKeyEnv) -and
     [string]::IsNullOrWhiteSpace($ApiKeyName)) {
     throw "Cloud proof requires ApiKeyEnv or ApiKeyName"
-}
-
-$agentPath = Join-Path $PackageDir "RomaWindowsAgent.exe"
-$smokeScript = Join-Path $PackageDir "smoke-windows-agent.ps1"
-$installScript = Join-Path $PackageDir "install-windows-agent.ps1"
-$runScript = Join-Path $PackageDir "run-windows-agent.ps1"
-$proofScript = Join-Path $PackageDir "prove-windows-agent-artifact.ps1"
-$manifestPath = Join-Path $PackageDir "manifest.txt"
-
-Invoke-Step "artifact files" {
-    Require-File -Path $agentPath
-    Require-File -Path $smokeScript
-    Require-File -Path $installScript
-    Require-File -Path $runScript
-    Require-File -Path $proofScript
-    Require-File -Path $manifestPath
-
-    if ([System.Environment]::OSVersion.Platform -eq [System.PlatformID]::Win32NT) {
-        Require-File -Path (Join-Path $PackageDir "swiftCore.dll")
-    }
-}
-
-Invoke-Step "artifact manifest" {
-    $manifest = Read-Manifest -Path $manifestPath
-    foreach ($key in @(
-        "agent",
-        "output",
-        "smoke_script",
-        "run_script",
-        "install_script",
-        "proof_script",
-        "install_proof_config",
-        "install_proof_shortcut",
-        "local_whisper_install_config",
-        "local_whisper_shortcut",
-        "swift_runtime_dlls"
-    )) {
-        Require-ManifestKey -Manifest $manifest -Key $key
-    }
-}
-
-Invoke-Step "packaged agent doctor" {
-    $doctorOutput = & $agentPath doctor 2>&1 | Out-String
-    if ($LASTEXITCODE -ne 0) {
-        Write-Host $doctorOutput
-        throw "RomaWindowsAgent doctor failed"
-    }
-    Write-Host $doctorOutput
-}
-
-if ($DoctorOnly) {
-    Write-Host ""
-    Write-Host "artifact_doctor_only=true"
-    exit 0
 }
 
 $installArgs = @(

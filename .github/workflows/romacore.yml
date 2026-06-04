@@ -230,22 +230,11 @@ jobs:
 
       - name: Verify Windows agent artifact local whisper install
         run: |
-          $manifestPath = "$env:RUNNER_TEMP\roma-windows-agent\manifest.txt"
-          $manifest = @{}
-          foreach ($line in Get-Content -LiteralPath $manifestPath) {
-            if ([string]::IsNullOrWhiteSpace($line) -or !$line.Contains("=")) {
-              continue
-            }
-            $separator = $line.IndexOf("=")
-            $manifest[$line.Substring(0, $separator)] = $line.Substring($separator + 1)
-          }
-
           & "$env:RUNNER_TEMP\roma-windows-agent\prove-windows-agent-artifact.ps1" `
             -PackageDir "$env:RUNNER_TEMP\roma-windows-agent" `
             -InstallDir "$env:RUNNER_TEMP\roma-wrapper-install" `
             -ConfigPath "$env:RUNNER_TEMP\roma-wrapper-install\windows-agent.json" `
-            -WhisperCLI $manifest["whisper_cli_mock"] `
-            -WhisperModel $manifest["output"] `
+            -UsePackagedWhisperMock `
             -CreateShortcut `
             -ShortcutDir "$env:RUNNER_TEMP\roma-wrapper-shortcuts" `
             -RestoreClipboard `
