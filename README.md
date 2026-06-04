@@ -1,9 +1,9 @@
 <div align="center">
   <img src="docs/assets/roma-just-talk-logo.png" alt="roma-just-talk split keyboard logo" width="180" height="180" />
   <h1>roma-just-talk</h1>
-  <p>speak before you press the hotkey.</p>
+  <p>speak before press hotkey dictation app.</p>
   <p>rethink UX: pre-roll voice capture, -87% bin size & -83% ram usage (780mb → 132mb), local & cloud stt solution both available.</p>
-  <p>did u know speak is 3~4x faster than type? now u know</p>
+  <p>speak is 3~4x faster than type btw </p>
 
   [![License](https://img.shields.io/badge/License-GPL%20v3-blue.svg)](https://www.gnu.org/licenses/gpl-3.0)
   ![Platform](https://img.shields.io/badge/platform-macOS%2014.0%2B-brightgreen)
@@ -22,13 +22,11 @@
 
 ---
 
-roma-just-talk is a native macOS voice-to-text app forked from [VoiceInk](https://github.com/Beingpax/VoiceInk).
-
-Most dictation apps wait for the hotkey, then open the mic. That means you pause, prepare, press, then speak. This fork explores the other direction: keep a short rolling voice buffer, so the app can catch what you already started saying.
+Most dictation apps wait for the hotkey, then open the mic. That means you pause, prepare, press, then speak. This [fork](https://github.com/Beingpax/VoiceInk) explores the other direction: keep a short rolling voice buffer, so the app can catch what you already started saying.
 
 VoiceInk made dictation feel instant after recording starts. roma-just-talk is interested in the moment before that: speech that begins naturally, then gets committed when you press the shortcut.
 
-![VoiceInk Mac App](https://github.com/user-attachments/assets/12367379-83e7-48a6-b52c-4488a6a04bba)
+![roma just talk Mac App](https://github.com/user-attachments/assets/a6631a6d-1f56-43e1-be6c-88b21750c82f)
 
 ## What Makes This Different
 
@@ -104,7 +102,8 @@ If you encounter any issues or have questions, please:
 
 ## Acknowledgments
 
-roma-just-talk is built on top of [VoiceInk](https://github.com/Beingpax/VoiceInk). The core app, original product direction, and much of the current implementation come from Pax and the VoiceInk project.
+roma-just-talk is built top on: [VoiceInk](https://github.com/Beingpax/VoiceInk).
+
 
 ### Core Technology
 - [whisper.cpp](https://github.com/ggerganov/whisper.cpp) - High-performance inference of OpenAI's Whisper model
@@ -118,6 +117,7 @@ roma-just-talk is built on top of [VoiceInk](https://github.com/Beingpax/VoiceIn
 - [Zip](https://github.com/marmelroy/Zip) - File compression and decompression utilities
 - [SelectedTextKit](https://github.com/tisfeng/SelectedTextKit) - A modern macOS library for getting selected text
 - [Swift Atomics](https://github.com/apple/swift-atomics) - Low-level atomic operations for thread-safe concurrent programming
+- [PermissionFlow](https://github.com/jaywcjlove/PermissionFlow) - make granting permissions intuitive. they were inspired by when codex app shiped legendary `computer-use` tool alongside a never seen before way of permission granting flow.   
 
 
 ---
