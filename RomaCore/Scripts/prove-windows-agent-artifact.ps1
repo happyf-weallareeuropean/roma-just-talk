@@ -205,6 +205,22 @@ function Get-DictationRuntimeProof {
     return $proof
 }
 
+function Get-DoctorOutputProof {
+    param(
+        [string]$Output = ""
+    )
+
+    return [ordered]@{
+        output_present = ![string]::IsNullOrWhiteSpace($Output)
+        runtime_available = $Output.Contains("runtime_available=true")
+        os_permission_grants_microphone = $Output.Contains("os_permission_grants=microphone")
+        native_capabilities_register_hotkey = $Output.Contains("native_capabilities=RegisterHotKey")
+        no_admin_required = $Output.Contains("admin_required=false")
+        no_startup_permission_prompt = $Output.Contains("startup_permission_prompt=false")
+        no_screen_capture_required = $Output.Contains("screen_capture_required=false")
+    }
+}
+
 function Write-ProofReport {
     param(
         [Parameter(Mandatory = $true)]
@@ -254,6 +270,10 @@ function Write-ProofReport {
         package_dir = $PackageDir
         install_dir = $InstallDir
         config = (Get-ConfigProof)
+        doctor = [ordered]@{
+            packaged_agent = (Get-DoctorOutputProof -Output $script:packagedAgentDoctorOutput)
+            installed_launcher = (Get-DoctorOutputProof -Output $script:installedLauncherDoctorOutput)
+        }
         files = [ordered]@{
             packaged_agent = (Get-FileProof -Path $agentPath)
             packaged_whisper_cli_mock = (Get-FileProof -Path $script:packagedWhisperCLI)
@@ -319,6 +339,8 @@ $checkReportScript = Join-Path $PackageDir "check-windows-proof-report.ps1"
 $manifestPath = Join-Path $PackageDir "manifest.txt"
 $script:artifactManifest = @{}
 $script:packagedWhisperCLI = ""
+$script:packagedAgentDoctorOutput = ""
+$script:installedLauncherDoctorOutput = ""
 
 Invoke-Step "artifact files" {
     Require-File -Path $agentPath
@@ -373,12 +395,12 @@ if ($UsePackagedWhisperMock) {
 }
 
 Invoke-Step "packaged agent doctor" {
-    $doctorOutput = & $agentPath doctor 2>&1 | Out-String
+    $script:packagedAgentDoctorOutput = & $agentPath doctor 2>&1 | Out-String
     if ($LASTEXITCODE -ne 0) {
-        Write-Host $doctorOutput
+        Write-Host $script:packagedAgentDoctorOutput
         throw "RomaWindowsAgent doctor failed"
     }
-    Write-Host $doctorOutput
+    Write-Host $script:packagedAgentDoctorOutput
 }
 
 if ($DoctorOnly) {
@@ -521,7 +543,12 @@ Invoke-Step "installed launcher doctor" {
     if (![string]::IsNullOrWhiteSpace($ConfigPath)) {
         $runArgs += @("-ConfigPath", $ConfigPath)
     }
-    & $installedRun @runArgs
+    $script:installedLauncherDoctorOutput = & $installedRun @runArgs 2>&1 | Out-String
+    if ($LASTEXITCODE -ne 0) {
+        Write-Host $script:installedLauncherDoctorOutput
+        throw "Installed launcher doctor failed"
+    }
+    Write-Host $script:installedLauncherDoctorOutput
 }
 
 Write-ProofReport -Mode $proofMode -IsDoctorOnly $false

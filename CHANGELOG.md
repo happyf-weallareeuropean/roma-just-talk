@@ -2,6 +2,7 @@
 
 ## v1.81 - Unreleased
 
+- Removed ambient/background sound ASR artifacts such as "ambient noise." and "background sounds.".
 - Removed unbracketed foreign-language ASR artifacts such as "foreign language." and "speaking foreign language.".
 - Removed unbracketed environmental ASR artifacts such as "music playing.", "keyboard typing.", "phone ringing.", and "static noise.".
 - Removed more unbracketed non-speech ASR phrase artifacts such as "clears throat.", "background noise.", and "inaudible.".
@@ -15,6 +16,7 @@
 - Formatted nested spoken bullet outlines using "indent", "sub", "outdent", and "dedent" commands.
 - Formatted compact spoken markdown tables such as "markdown table name age row Felix thirty".
 - Split repeated spoken task commands such as "todo ... todo ..." and "checked task ... checked task ..." into separate checklist rows.
+- Added Windows artifact proof-report fields for packaged and installed doctor permission-surface output.
 - Asserted the Windows doctor permission split in CI and packaged smoke proofs.
 - Split Windows doctor output into OS permission grants and no-prompt native capabilities.
 - Strengthened Windows laptop proof reports to include `RomaWindowsAgent dictate` runtime logs for pre-roll, processed text, and paste evidence.

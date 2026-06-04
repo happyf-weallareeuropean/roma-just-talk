@@ -5,6 +5,7 @@ param(
     [switch]$RequireInstall,
     [switch]$RequireShortcut,
     [switch]$RequireStartupShortcut,
+    [switch]$RequirePermissionSurface,
     [switch]$RequirePackagedMock,
     [switch]$RequireHoldHook,
     [switch]$RequireCloudConfig,
@@ -106,6 +107,24 @@ function Assert-DictationRuntimeProof {
     return $runtime
 }
 
+function Assert-DoctorOutputProof {
+    param(
+        [Parameter(Mandatory = $true)]
+        [object]$Proof,
+        [Parameter(Mandatory = $true)]
+        [string]$Name
+    )
+
+    Assert-Boolean -Object $Proof -Name "output_present" -Expected $true
+    Assert-Boolean -Object $Proof -Name "runtime_available" -Expected $true
+    Assert-Boolean -Object $Proof -Name "os_permission_grants_microphone" -Expected $true
+    Assert-Boolean -Object $Proof -Name "native_capabilities_register_hotkey" -Expected $true
+    Assert-Boolean -Object $Proof -Name "no_admin_required" -Expected $true
+    Assert-Boolean -Object $Proof -Name "no_startup_permission_prompt" -Expected $true
+    Assert-Boolean -Object $Proof -Name "no_screen_capture_required" -Expected $true
+    Write-Host "proof_doctor=$Name"
+}
+
 $ProofReportPath = $ExecutionContext.SessionState.Path.GetUnresolvedProviderPathFromPSPath($ProofReportPath)
 if (!(Test-Path -LiteralPath $ProofReportPath)) {
     throw "Proof report was not found: $ProofReportPath"
@@ -149,6 +168,16 @@ if ($RequireShortcut) {
 
 if ($RequireStartupShortcut) {
     Assert-FileProof -Proof (Require-Property -Object $report -Name "startup_shortcut") -Name "startup_shortcut"
+}
+
+if ($RequirePermissionSurface) {
+    $doctor = Require-Property -Object $report -Name "doctor"
+    $packagedDoctor = Require-Property -Object $doctor -Name "packaged_agent"
+    Assert-DoctorOutputProof -Proof $packagedDoctor -Name "packaged_agent"
+    if ($RequireInstall) {
+        $installedDoctor = Require-Property -Object $doctor -Name "installed_launcher"
+        Assert-DoctorOutputProof -Proof $installedDoctor -Name "installed_launcher"
+    }
 }
 
 if ($RequireHoldHook) {

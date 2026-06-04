@@ -249,6 +249,7 @@ jobs:
             -RequireInstall `
             -RequireShortcut `
             -RequireStartupShortcut `
+            -RequirePermissionSurface `
             -RequirePackagedMock `
             -RequireHoldHook `
             -RequireWhisperConfig
