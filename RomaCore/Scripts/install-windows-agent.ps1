@@ -80,8 +80,17 @@ $InstallDir = Resolve-FullPath -Path $InstallDir
 
 $hasExplicitEndpoint = $PSBoundParameters.ContainsKey("Endpoint")
 $hasExplicitModel = $PSBoundParameters.ContainsKey("Model")
+$hasExplicitConfigPath = $PSBoundParameters.ContainsKey("ConfigPath")
 $hasExplicitWhisperCLI = $PSBoundParameters.ContainsKey("WhisperCLI")
 $hasExplicitWhisperModel = $PSBoundParameters.ContainsKey("WhisperModel")
+$usesInstallSmokeConfig = (
+    !$hasExplicitConfigPath -and
+    !$hasExplicitEndpoint -and
+    !$hasExplicitModel -and
+    !$hasExplicitWhisperCLI -and
+    !$hasExplicitWhisperModel -and
+    !$RunDictation
+)
 
 if ([string]::IsNullOrWhiteSpace($ConfigPath)) {
     if (($hasExplicitEndpoint -or $hasExplicitModel -or $hasExplicitWhisperCLI -or $hasExplicitWhisperModel -or $RunDictation) -and
@@ -238,6 +247,9 @@ if (!$SkipSmoke) {
 
 if ($CreateShortcut) {
     Invoke-Step "create user shortcut" {
+        if ($usesInstallSmokeConfig) {
+            throw "CreateShortcut requires -ConfigPath, -RunDictation, or real Endpoint/Model or WhisperCLI/WhisperModel args"
+        }
         if ([System.Environment]::OSVersion.Platform -ne [System.PlatformID]::Win32NT) {
             throw "CreateShortcut is only available on Windows"
         }

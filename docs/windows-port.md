@@ -232,7 +232,7 @@ powershell -ExecutionPolicy Bypass -File "$env:LOCALAPPDATA\roma-just-talk\agent
 powershell -ExecutionPolicy Bypass -File "$env:LOCALAPPDATA\roma-just-talk\agent\run-windows-agent.ps1" -WhisperCLI C:\path\whisper-cli.exe -WhisperModel C:\path\ggml-base.en.bin -PasteDictation
 ```
 
-Add `-CreateShortcut` to `install-windows-agent.ps1` to create a user Start Menu shortcut that runs `run-windows-agent.ps1` without administrator rights. The shortcut points at the same config path the installer just smoked. CI package smoke creates the shortcut in a temporary folder, verifies its arguments include that config, and verifies the launcher with `-DoctorOnly`.
+Add `-CreateShortcut` to `install-windows-agent.ps1` after passing `-ConfigPath`, `-RunDictation`, or real endpoint/model/API-key or whisper-cli/model args. The installer refuses to create a user shortcut for the default mock smoke config. The shortcut points at the same config path the installer just smoked. CI package smoke creates the shortcut in a temporary folder, verifies its arguments include that config, and verifies the launcher with `-DoctorOnly`.
 
 Windows agent config:
 
