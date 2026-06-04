@@ -246,7 +246,7 @@ public struct RomaTranscriptionOutputFilter {
     private static let removableLeadingFragmentPunctuation = CharacterSet(charactersIn: ".,;:…-–—。．，、；：")
     private static let removableTrailingFragmentPunctuation = CharacterSet(charactersIn: ".,;:…-–—。．，、；：")
     private static let removableTrailingSentenceFragmentPunctuation = CharacterSet(charactersIn: "!?！？")
-    private static let removableTrailingQuoteBoundaryPunctuation = CharacterSet(charactersIn: "\"'”’")
+    private static let removableTrailingGeneratedBoundaryPunctuation = CharacterSet(charactersIn: "\"'”’)]}>】》〉）｝］」』〕")
     private static let removableLeadingSpacedFragmentSymbols = "/\\|•‣◦"
     private static let removableTrailingSpacedFragmentSymbols = "/\\|"
     private static let removableOpeningNonASCIIBoundaryWrappers = CharacterSet(charactersIn: "【《〈（｛［「『〔")
@@ -7523,7 +7523,7 @@ public struct RomaTranscriptionOutputFilter {
     }
 
     private static func removeTrailingShortFragmentPunctuation(from text: String) -> String {
-        var result = removeTrailingQuoteAfterFragmentPunctuation(from: text)
+        var result = removeTrailingBoundaryAfterFragmentPunctuation(from: text)
         result = removeTrailingPunctuationAfterPreservedBoundary(from: result)
         result = removeTrailingFragmentPunctuationPreservingAbbreviation(from: result)
         result = removeTrailingSpacedFragmentSymbols(from: result)
@@ -7538,7 +7538,7 @@ public struct RomaTranscriptionOutputFilter {
     }
 
     private static func removeTrailingNoisyFragmentPunctuation(from text: String) -> String {
-        var result = removeTrailingQuoteAfterFragmentPunctuation(from: text)
+        var result = removeTrailingBoundaryAfterFragmentPunctuation(from: text)
         result = removeTrailingFragmentPunctuationPreservingAbbreviation(from: result)
         result = removeTrailingSpacedFragmentSymbols(from: result)
         while let lastScalar = result.unicodeScalars.last,
@@ -7548,30 +7548,31 @@ public struct RomaTranscriptionOutputFilter {
         return result.trimmingCharacters(in: .whitespacesAndNewlines)
     }
 
-    private static func removeTrailingQuoteAfterFragmentPunctuation(from text: String) -> String {
+    private static func removeTrailingBoundaryAfterFragmentPunctuation(from text: String) -> String {
         var result = text.trimmingCharacters(in: .whitespacesAndNewlines)
-        var didRemoveQuote = false
+        var didRemoveBoundary = false
 
         while let lastScalar = result.unicodeScalars.last,
-              removableTrailingQuoteBoundaryPunctuation.contains(lastScalar) {
-            guard !hasBalancedQuoteBoundary(result) else {
+              removableTrailingGeneratedBoundaryPunctuation.contains(lastScalar) {
+            guard !hasBalancedQuoteBoundary(result),
+                  !hasPreservedBalancedBoundary(result) else {
                 break
             }
 
-            let quoteIndex = result.index(before: result.endIndex)
-            let beforeQuote = String(result[..<quoteIndex]).trimmingCharacters(in: .whitespacesAndNewlines)
-            guard let punctuation = beforeQuote.unicodeScalars.last,
+            let boundaryIndex = result.index(before: result.endIndex)
+            let beforeBoundary = String(result[..<boundaryIndex]).trimmingCharacters(in: .whitespacesAndNewlines)
+            guard let punctuation = beforeBoundary.unicodeScalars.last,
                   removableTrailingFragmentPunctuation.contains(punctuation) ||
                     (removableTrailingSentenceFragmentPunctuation.contains(punctuation) &&
-                        isLikelyPunctuatedShortFragment(beforeQuote)) else {
+                        isLikelyPunctuatedShortFragment(beforeBoundary)) else {
                 break
             }
 
-            result = beforeQuote
-            didRemoveQuote = true
+            result = beforeBoundary
+            didRemoveBoundary = true
         }
 
-        return didRemoveQuote ? result : text
+        return didRemoveBoundary ? result : text
     }
 
     private static func hasBalancedQuoteBoundary(_ text: String) -> Bool {
@@ -7816,10 +7817,10 @@ public struct RomaTranscriptionOutputFilter {
 
     private static func isShortFragment(_ text: String) -> Bool {
         let withoutTrailingFragmentPunctuation = removeTrailingFragmentPunctuation(from: text)
-        let withoutTrailingQuote = removeTrailingQuoteAfterFragmentPunctuation(from: withoutTrailingFragmentPunctuation)
-        let textWithoutTrailingFragmentPunctuation = withoutTrailingQuote == withoutTrailingFragmentPunctuation
+        let withoutTrailingBoundary = removeTrailingBoundaryAfterFragmentPunctuation(from: withoutTrailingFragmentPunctuation)
+        let textWithoutTrailingFragmentPunctuation = withoutTrailingBoundary == withoutTrailingFragmentPunctuation
             ? withoutTrailingFragmentPunctuation
-            : removeTrailingFragmentPunctuation(from: withoutTrailingQuote)
+            : removeTrailingFragmentPunctuation(from: withoutTrailingBoundary)
         if isShortPreservedBoundaryFragment(textWithoutTrailingFragmentPunctuation) {
             return true
         }

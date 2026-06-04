@@ -2,6 +2,7 @@
 
 ## v1.81 - Unreleased
 
+- Removed unmatched trailing generated brackets and parens after noisy short mid-sentence fragment marks.
 - Removed trailing generated quotes after noisy emphatic or question marks on short mid-sentence fragments.
 - Removed trailing generated quotes after short mid-sentence fragment punctuation.
 - Collapsed repeated short sentences when the duplicate copy drops its final punctuation.

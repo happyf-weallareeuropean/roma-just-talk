@@ -4073,8 +4073,20 @@ struct RomaCoreChecks {
             "insertion polish should remove trailing generated quotes after noisy question punctuation"
         )
         try require(
+            RomaTranscriptionOutputFilter.applyInsertionPolish("Model!]", context: midSentenceContext) == "model",
+            "insertion polish should remove trailing generated brackets after emphatic punctuation"
+        )
+        try require(
+            RomaTranscriptionOutputFilter.applyInsertionPolish("Model?)", context: midSentenceContext) == "model",
+            "insertion polish should remove trailing generated parens after noisy question punctuation"
+        )
+        try require(
             RomaTranscriptionOutputFilter.applyInsertionPolish("What?\"", context: midSentenceContext) == "what?\"",
             "insertion polish should preserve trailing quotes after question words"
+        )
+        try require(
+            RomaTranscriptionOutputFilter.applyInsertionPolish("What?]", context: midSentenceContext) == "what?]",
+            "insertion polish should preserve trailing brackets after question words"
         )
         try require(
             RomaTranscriptionOutputFilter.applyInsertionPolish("U.S.\"", context: midSentenceContext) == "U.S.",
