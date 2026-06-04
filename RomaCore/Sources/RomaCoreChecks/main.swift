@@ -4506,6 +4506,16 @@ struct RomaCoreChecks {
             "Windows agent default hold timeout should stay shared"
         )
         try require(
+            try RomaWindowsAgentConfiguration().resolvedRecordDurationNanoseconds() == 2_000_000_000,
+            "Windows default record duration conversion should stay shared"
+        )
+        try require(
+            try RomaWindowsAgentConfiguration(
+                recordSeconds: RomaWindowsAgentConfiguration.minimumRecordSeconds
+            ).resolvedRecordDurationNanoseconds() == 1,
+            "Windows record duration conversion should preserve the minimum nanosecond"
+        )
+        try require(
             merged.clipboardRestoreConfiguration() == WindowsClipboardRestoreConfiguration(
                 restoreClipboard: true,
                 restoreDelaySeconds: 0.75

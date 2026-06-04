@@ -717,7 +717,9 @@ struct RomaProofAgent {
     }
 
     private static func sleep(seconds: Double) async throws {
-        let nanoseconds = UInt64(max(seconds, 0) * 1_000_000_000)
+        let nanoseconds = try RomaWindowsAgentConfiguration.recordDurationNanoseconds(
+            fromSeconds: seconds
+        )
         try await Task.sleep(nanoseconds: nanoseconds)
     }
 

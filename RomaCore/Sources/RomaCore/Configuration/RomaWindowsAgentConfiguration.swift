@@ -303,6 +303,20 @@ public struct RomaWindowsAgentConfiguration: Codable, Equatable, Sendable {
         recordSeconds ?? Self.defaultRecordSeconds
     }
 
+    public func resolvedRecordDurationNanoseconds() throws -> UInt64 {
+        try Self.recordDurationNanoseconds(fromSeconds: resolvedRecordSeconds)
+    }
+
+    public static func recordDurationNanoseconds(fromSeconds seconds: Double) throws -> UInt64 {
+        try validatePositiveFiniteDuration(
+            seconds,
+            option: "--seconds",
+            minimum: minimumRecordSeconds,
+            maximum: maximumRecordSeconds
+        )
+        return UInt64(seconds * 1_000_000_000)
+    }
+
     public func resolvedHoldTimeoutMilliseconds() throws -> UInt32 {
         try Self.holdTimeoutMilliseconds(fromSeconds: holdTimeoutSeconds ?? Self.defaultHoldTimeoutSeconds)
     }

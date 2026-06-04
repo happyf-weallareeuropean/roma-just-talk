@@ -113,7 +113,7 @@ public enum WindowsDictationRuntime {
                 onEvent(.toggleReceived)
 
                 return try await pipeline.runRecordingWindow(pipelineRequest) {
-                    try await sleep(seconds: recordSeconds)
+                    try await sleep(recordSeconds: recordSeconds)
                 }
             case .hold(let timeoutMilliseconds):
                 let chord = WindowsLowLevelKeyboardHookChord.proofHold
@@ -177,8 +177,10 @@ public enum WindowsDictationRuntime {
         }
     }
 
-    private static func sleep(seconds: TimeInterval) async throws {
-        let nanoseconds = UInt64(max(seconds, 0) * 1_000_000_000)
+    private static func sleep(recordSeconds: TimeInterval) async throws {
+        let nanoseconds = try RomaWindowsAgentConfiguration.recordDurationNanoseconds(
+            fromSeconds: recordSeconds
+        )
         try await Task.sleep(nanoseconds: nanoseconds)
     }
 }
