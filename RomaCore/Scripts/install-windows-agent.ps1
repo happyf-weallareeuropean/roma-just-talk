@@ -129,13 +129,15 @@ Invoke-Step "copy package files" {
 
     $knownFiles = @(
         "RomaWindowsAgent.exe",
+        "RomaWhisperCLIMock.exe",
         "RomaWindowsAgent.pdb",
         "smoke-windows-agent.ps1",
         "run-windows-agent.ps1",
         "install-windows-agent.ps1",
         "prove-windows-agent-artifact.ps1",
         "manifest.txt",
-        "sample-windows-agent.json"
+        "sample-windows-agent.json",
+        "sample-local-whisper-agent.json"
     )
     foreach ($file in $knownFiles) {
         $source = Join-Path $PackageDir $file
@@ -156,6 +158,15 @@ Invoke-Step "copy package files" {
     Require-File -Path (Join-Path $InstallDir "smoke-windows-agent.ps1")
     Write-Host "install_dir=$InstallDir"
     Write-Host "runtime_dlls=$($runtimeLibraries.Count)"
+}
+
+$packageWhisperMock = Join-Path $PackageDir "RomaWhisperCLIMock.exe"
+$installedWhisperMock = Join-Path $InstallDir "RomaWhisperCLIMock.exe"
+if ($hasExplicitWhisperCLI -and
+    (Resolve-FullPath -Path $WhisperCLI) -eq (Resolve-FullPath -Path $packageWhisperMock) -and
+    (Test-Path -LiteralPath $installedWhisperMock)) {
+    $WhisperCLI = $installedWhisperMock
+    Write-Host "installed_whisper_cli_mock=$WhisperCLI"
 }
 
 if (!$SkipSmoke) {

@@ -54,6 +54,19 @@ function Resolve-FullPath {
     return $ExecutionContext.SessionState.Path.GetUnresolvedProviderPathFromPSPath($Path)
 }
 
+function Resolve-PackagePath {
+    param(
+        [Parameter(Mandatory = $true)]
+        [string]$Path
+    )
+
+    if ([System.IO.Path]::IsPathRooted($Path)) {
+        return Resolve-FullPath -Path $Path
+    }
+
+    return Resolve-FullPath -Path (Join-Path $PackageDir $Path)
+}
+
 function Require-File {
     param(
         [Parameter(Mandatory = $true)]
@@ -137,6 +150,7 @@ $runScript = Join-Path $PackageDir "run-windows-agent.ps1"
 $proofScript = Join-Path $PackageDir "prove-windows-agent-artifact.ps1"
 $manifestPath = Join-Path $PackageDir "manifest.txt"
 $script:artifactManifest = @{}
+$script:packagedWhisperCLI = ""
 
 Invoke-Step "artifact files" {
     Require-File -Path $agentPath
@@ -169,6 +183,9 @@ Invoke-Step "artifact manifest" {
     )) {
         Require-ManifestKey -Manifest $script:artifactManifest -Key $key
     }
+    $script:packagedWhisperCLI = Resolve-PackagePath -Path $script:artifactManifest["whisper_cli_mock"]
+    Require-File -Path $script:packagedWhisperCLI
+    Write-Host "manifest_whisper_cli_mock_path=$script:packagedWhisperCLI"
 }
 
 if ($UsePackagedWhisperMock) {
@@ -179,8 +196,8 @@ if ($UsePackagedWhisperMock) {
         throw "UsePackagedWhisperMock cannot be combined with explicit WhisperCLI/WhisperModel or Endpoint/Model"
     }
 
-    $WhisperCLI = $script:artifactManifest["whisper_cli_mock"]
-    $WhisperModel = $script:artifactManifest["output"]
+    $WhisperCLI = $script:packagedWhisperCLI
+    $WhisperModel = $agentPath
     Write-Host "packaged_whisper_cli=$WhisperCLI"
     Write-Host "packaged_whisper_model=$WhisperModel"
 }

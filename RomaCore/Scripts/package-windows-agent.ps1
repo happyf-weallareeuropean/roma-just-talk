@@ -148,6 +148,7 @@ try {
     $agentSource = Resolve-ProductExecutable -BuildDirectory $buildDirectory -Configuration $Configuration -Name "RomaWindowsAgent"
     $mockWhisperSource = Resolve-ProductExecutable -BuildDirectory $buildDirectory -Configuration $Configuration -Name "RomaWhisperCLIMock"
     $agentOutput = Join-Path $OutputDir "RomaWindowsAgent.exe"
+    $mockWhisperOutput = Join-Path $OutputDir "RomaWhisperCLIMock.exe"
     $smokeScriptSource = Join-Path $PSScriptRoot "smoke-windows-agent.ps1"
     $smokeScriptOutput = Join-Path $OutputDir "smoke-windows-agent.ps1"
     $runScriptSource = Join-Path $PSScriptRoot "run-windows-agent.ps1"
@@ -183,6 +184,14 @@ try {
             Write-Host "agent_pdb=$pdbOutput"
         }
 
+        Copy-Item -LiteralPath $mockWhisperSource.FullName -Destination $mockWhisperOutput -Force
+        $mockWhisperItem = Get-Item -LiteralPath $mockWhisperOutput
+        if ($mockWhisperItem.Length -le 0) {
+            throw "RomaWhisperCLIMock.exe is empty: $mockWhisperOutput"
+        }
+        Write-Host "whisper_cli_mock=$mockWhisperOutput"
+        Write-Host "whisper_cli_mock_bytes=$($mockWhisperItem.Length)"
+
         Copy-Item -LiteralPath $smokeScriptSource -Destination $smokeScriptOutput -Force
         Write-Host "smoke_script=$smokeScriptOutput"
         Copy-Item -LiteralPath $runScriptSource -Destination $runScriptOutput -Force
@@ -213,7 +222,7 @@ try {
             -AgentPath $agentOutput `
             -OutputDir (Join-Path $OutputDir "local-whisper-smoke") `
             -ConfigPath $localWhisperConfigPath `
-            -WhisperCLI $mockWhisperSource.FullName `
+            -WhisperCLI $mockWhisperOutput `
             -WhisperModel $agentOutput `
             -RestoreClipboard `
             -ClipboardRestoreDelaySeconds 0
@@ -236,7 +245,7 @@ try {
             -PackageDir $OutputDir `
             -InstallDir $localWhisperInstallProofDir `
             -ConfigPath $localWhisperInstallConfigPath `
-            -WhisperCLI $mockWhisperSource.FullName `
+            -WhisperCLI $mockWhisperOutput `
             -WhisperModel $agentOutput `
             -RestoreClipboard `
             -ClipboardRestoreDelaySeconds 0 `
@@ -253,7 +262,7 @@ try {
         "output=$agentOutput",
         "sample_config=$configPath",
         "sample_local_whisper_config=$localWhisperConfigPath",
-        "whisper_cli_mock=$($mockWhisperSource.FullName)",
+        "whisper_cli_mock=RomaWhisperCLIMock.exe",
         "install_proof_dir=$installProofDir",
         "install_proof_config=$installProofConfigPath",
         "install_proof_shortcut=$shortcutPath",
