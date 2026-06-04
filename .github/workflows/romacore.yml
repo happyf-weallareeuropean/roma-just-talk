@@ -243,9 +243,11 @@ jobs:
 
           & "$env:RUNNER_TEMP\roma-windows-agent\check-windows-proof-report.ps1" `
             -ProofReportPath "$env:RUNNER_TEMP\roma-wrapper-install\proof-report.json" `
+            -ExpectedMode packaged-whisper-mock `
             -RequireInstall `
             -RequireShortcut `
-            -RequirePackagedMock
+            -RequirePackagedMock `
+            -RequireHoldHook
 
       - name: Upload proof artifacts
         uses: actions/upload-artifact@v4

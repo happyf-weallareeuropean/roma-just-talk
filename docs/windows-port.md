@@ -238,11 +238,11 @@ Artifact-to-laptop proof wrapper:
 ```powershell
 powershell -ExecutionPolicy Bypass -File C:\tmp\roma-windows-agent\prove-windows-agent-artifact.ps1 -PackageDir C:\tmp\roma-windows-agent -WhisperCLI C:\path\whisper-cli.exe -WhisperModel C:\path\ggml-base.en.bin -CreateShortcut
 powershell -ExecutionPolicy Bypass -File C:\tmp\roma-windows-agent\prove-windows-agent-artifact.ps1 -PackageDir C:\tmp\roma-windows-agent -Endpoint https://api.groq.com/openai/v1/audio/transcriptions -Model whisper-large-v3-turbo -ApiKeyEnv GROQ_API_KEY -ApiKeyName groq -UseHoldHook -RunDictation -PasteDictation -CreateShortcut -ProofReportPath C:\tmp\roma-windows-agent-proof.json
-powershell -ExecutionPolicy Bypass -File C:\tmp\roma-windows-agent\check-windows-proof-report.ps1 -ProofReportPath C:\tmp\roma-windows-agent-proof.json -RequireInstall -RequireShortcut -RequireDictation -RequirePaste
+powershell -ExecutionPolicy Bypass -File C:\tmp\roma-windows-agent\check-windows-proof-report.ps1 -ProofReportPath C:\tmp\roma-windows-agent-proof.json -ExpectedMode cloud -RequireInstall -RequireShortcut -RequireHoldHook -RequireDictation -RequirePaste
 ```
 
 The wrapper validates the packaged artifact and manifest, runs the packaged agent doctor, delegates install/config/shortcut work to `install-windows-agent.ps1`, then verifies the installed launcher with `-DoctorOnly`. It is the preferred laptop handoff command because it reuses the proven scripts instead of adding a second install path.
-Pass `-ProofReportPath` to leave a JSON proof record with package/install paths, Windows version, config output path, dictation/paste flags, and file existence/byte counts for the agent, installed launcher, optional shortcut, and dictation WAV when `-RunDictation` creates one. Run `check-windows-proof-report.ps1` afterward to fail fast if the expected install, shortcut, dictation WAV, or paste proof fields are missing.
+Pass `-ProofReportPath` to leave a JSON proof record with package/install paths, Windows version, config output path, dictation/paste flags, and file existence/byte counts for the agent, installed launcher, optional shortcut, and dictation WAV when `-RunDictation` creates one. Run `check-windows-proof-report.ps1` afterward to fail fast if the expected mode, hold-hook config, install, shortcut, dictation WAV, or paste proof fields are missing.
 
 For CI or artifact smoke only, pass `-UsePackagedWhisperMock` instead of explicit `-WhisperCLI` and `-WhisperModel`. The wrapper reads the artifact-local `whisper_cli_mock` entry from `manifest.txt` and uses the packaged agent executable as the mock model file; laptop proof should still pass real whisper.cpp paths or a real cloud endpoint/model.
 

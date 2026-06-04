@@ -1,9 +1,11 @@
 param(
     [Parameter(Mandatory = $true)]
     [string]$ProofReportPath,
+    [string]$ExpectedMode = "",
     [switch]$RequireInstall,
     [switch]$RequireShortcut,
     [switch]$RequirePackagedMock,
+    [switch]$RequireHoldHook,
     [switch]$RequireDictation,
     [switch]$RequirePaste
 )
@@ -98,6 +100,15 @@ Assert-NonEmptyString -Object $report -Name "proof_mode"
 Assert-NonEmptyString -Object $report -Name "package_dir"
 Assert-NonEmptyString -Object $report -Name "install_dir"
 
+if (![string]::IsNullOrWhiteSpace($ExpectedMode)) {
+    $actualMode = [string](Require-Property -Object $report -Name "proof_mode")
+    if ($actualMode -ne $ExpectedMode) {
+        throw "Expected proof_mode to be $ExpectedMode, got $actualMode"
+    }
+
+    Write-Host "proof_mode=$actualMode"
+}
+
 $files = Require-Property -Object $report -Name "files"
 Assert-FileProof -Proof (Require-Property -Object $files -Name "packaged_agent") -Name "packaged_agent"
 
@@ -115,6 +126,11 @@ if ($RequireInstall) {
 
 if ($RequireShortcut) {
     Assert-FileProof -Proof (Require-Property -Object $report -Name "shortcut") -Name "shortcut"
+}
+
+if ($RequireHoldHook) {
+    $config = Require-Property -Object $report -Name "config"
+    Assert-Boolean -Object $config -Name "uses_hold_hook" -Expected $true
 }
 
 if ($RequireDictation) {
