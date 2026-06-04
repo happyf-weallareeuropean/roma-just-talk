@@ -648,6 +648,7 @@ function Get-ListenerSmokeProof {
     )
 
     $configPath = Get-OutputValue -Content $Output -Name "config"
+    $agentPath = Get-OutputValue -Content $Output -Name "agent_exe"
     return [ordered]@{
         output_present = ![string]::IsNullOrWhiteSpace($Output)
         mode_listen = $Output.Contains("mode=listen")
@@ -655,6 +656,8 @@ function Get-ListenerSmokeProof {
         completed_zero_sessions = $Output.Contains("listen_completed_sessions=0")
         config_path = $configPath
         config_path_present = ![string]::IsNullOrWhiteSpace($configPath)
+        agent_path = $agentPath
+        agent_path_present = ![string]::IsNullOrWhiteSpace($agentPath)
     }
 }
 

@@ -2155,6 +2155,26 @@ struct RomaCoreChecks {
                 "scratch that out correction"
             ),
             (
+                "Wrong phrase strike that right phrase.",
+                "right phrase.",
+                "natural strike that correction"
+            ),
+            (
+                "Wrong phrase strike that out right phrase.",
+                "right phrase.",
+                "natural strike that out correction"
+            ),
+            (
+                "Wrong phrase cross that out right phrase.",
+                "right phrase.",
+                "natural cross that out correction"
+            ),
+            (
+                "Wrong phrase delete that right phrase.",
+                "right phrase.",
+                "natural delete that correction"
+            ),
+            (
                 "Wrong phrase cancel that. Right phrase.",
                 "Right phrase.",
                 "cancel that correction"
@@ -2988,6 +3008,16 @@ struct RomaCoreChecks {
                 "The phrase actually wait no is useful.",
                 "The phrase actually wait no is useful.",
                 "actually wait no phrase guard"
+            ),
+            (
+                "Please delete that file.",
+                "Please delete that file.",
+                "delete that prose guard"
+            ),
+            (
+                "Please cross that bridge.",
+                "Please cross that bridge.",
+                "cross that prose guard"
             ),
             (
                 "The phrase actually wait nevermind is useful.",

@@ -374,7 +374,9 @@ function Assert-InstalledListenerProof {
         [Parameter(Mandatory = $true)]
         [object]$Proof,
         [Parameter(Mandatory = $true)]
-        [string]$ExpectedConfigPath
+        [string]$ExpectedConfigPath,
+        [Parameter(Mandatory = $true)]
+        [string]$ExpectedAgentPath
     )
 
     Assert-Boolean -Object $Proof -Name "output_present" -Expected $true
@@ -386,6 +388,11 @@ function Assert-InstalledListenerProof {
         -Actual ([string](Require-Property -Object $Proof -Name "config_path")) `
         -Expected $ExpectedConfigPath `
         -Name "installed_listener.config_path"
+    Assert-Boolean -Object $Proof -Name "agent_path_present" -Expected $true
+    Assert-StringEquals `
+        -Actual ([string](Require-Property -Object $Proof -Name "agent_path")) `
+        -Expected $ExpectedAgentPath `
+        -Name "installed_listener.agent_path"
     Write-Host "proof_installed_listener=listen_zero_session"
 }
 
@@ -432,6 +439,7 @@ function Get-ProofProfileRequirements {
                 "native_doctor_surface",
                 "packaged_listener",
                 "installed_listener",
+                "installed_listener_agent_path",
                 "hold_hook_config",
                 "cloud_config",
                 "real_cloud_backend",
@@ -451,6 +459,7 @@ function Get-ProofProfileRequirements {
                 "native_doctor_surface",
                 "packaged_listener",
                 "installed_listener",
+                "installed_listener_agent_path",
                 "hold_hook_config",
                 "local_whisper_config",
                 "real_whisper_backend",
@@ -468,6 +477,7 @@ function Get-ProofProfileRequirements {
                 "native_doctor_surface",
                 "packaged_listener",
                 "installed_listener",
+                "installed_listener_agent_path",
                 "hold_hook_config",
                 "local_whisper_config",
                 "real_whisper_backend",
@@ -486,6 +496,7 @@ function Get-ProofProfileRequirements {
                 "native_doctor_surface",
                 "packaged_listener",
                 "installed_listener",
+                "installed_listener_agent_path",
                 "packaged_whisper_mock",
                 "hold_hook_config",
                 "local_whisper_config"
@@ -688,9 +699,11 @@ if ($RequirePackagedListener) {
 
 if ($RequireInstalledListener) {
     $config = Require-Property -Object $report -Name "config"
+    $installedAgent = Require-Property -Object $files -Name "installed_agent"
     Assert-InstalledListenerProof `
         -Proof (Require-Property -Object $report -Name "installed_listener") `
-        -ExpectedConfigPath ([string](Require-Property -Object $config -Name "path"))
+        -ExpectedConfigPath ([string](Require-Property -Object $config -Name "path")) `
+        -ExpectedAgentPath ([string](Require-Property -Object $installedAgent -Name "path"))
 }
 
 if ($RequireHoldHook) {

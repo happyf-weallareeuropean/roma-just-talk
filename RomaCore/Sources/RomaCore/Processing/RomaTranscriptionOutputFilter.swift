@@ -535,7 +535,7 @@ public struct RomaTranscriptionOutputFilter {
             (?:[,;:…]|\.\.\.)\s*call\s+it\s*[,;:]? |
             replace\s+(?:that|it)\s+with |
             change\s+(?:that|it)\s+to |
-            scratch\s+that(?!\s+out\b) |
+            (?:(?:scratch|strike|delete|remove|erase|undo|cancel|disregard|ignore|forget|cut|drop)\s+that\s+out|cross\s+that\s+out|(?:scratch|strike|delete|remove|erase|undo|cancel|disregard|ignore|forget|cut|drop)\s+that(?!\s+(?:out|words?|lines?|sentences?|paragraphs?)\b)) |
             (?:[,;:…]|\.\.\.)\s*hold\s+on\s*[,;:]? |
             (?:[,;:…]|\.\.\.)\s*hang\s+on\s*[,;:]? |
             (?:[,;:…]|\.\.\.)?\s*wait\s*[,;:]?\s+never\s*mind\s*[,;:]? |
@@ -565,7 +565,7 @@ public struct RomaTranscriptionOutputFilter {
         )
         \s*[,;:]?\s+
         """#
-    private static let scratchThatCommandPattern = #"(?i)(?<![\p{L}\p{N}])(?:scratch|strike|delete|remove|erase|undo|cancel|disregard|ignore|forget|cut|drop)\s+that(?:\s+out)?(?:\s*[.!?,;:…]+|(?=\s*$|\s*\n))"#
+    private static let scratchThatCommandPattern = #"(?i)(?<![\p{L}\p{N}])(?:(?:scratch|strike|delete|remove|erase|undo|cancel|disregard|ignore|forget|cut|drop)\s+that(?:\s+out)?|cross\s+that\s+out)(?:\s*[.!?,;:…]+|(?=\s*$|\s*\n))"#
     private static let deletePreviousWordCommandPattern = #"(?i)(?<![\p{L}\p{N}])(?:delete|remove|erase|undo|scratch|strike|cancel|drop)\s+(?:(?:the\s+)?(?:last|previous)(?:\s+(\d|one|two|three|four|five))?|that|this)\s+words?(?:\s*[.!?,;:…]+|(?=\s*$|\s*\n)|\s+)"#
     private static let deletePreviousLineCommandPattern = #"(?i)(?<![\p{L}\p{N}])(?:delete|remove|erase|undo|scratch|strike|cancel|drop)\s+(?:(?:the\s+)?(?:last|previous)|that|this)\s+line(?:\s*[.!?,;:…]+|(?=\s*$|\s*\n)|\s+)"#
     private static let deletePreviousParagraphCommandPattern = #"(?i)(?<![\p{L}\p{N}])(?:delete|remove|erase|undo|scratch|strike|cancel|drop)\s+(?:(?:the\s+)?(?:last|previous)|that|this)\s+paragraph(?:\s*[.!?,;:…]+|(?=\s*$|\s*\n)|\s+)"#
@@ -578,6 +578,9 @@ public struct RomaTranscriptionOutputFilter {
     private static let maxScratchThatWords = 12
     private static let blockedPreviousWordsForReplaceThat: Set<String> = [
         "command", "commands", "phrase", "phrases", "say", "saying", "word", "words"
+    ]
+    private static let blockedPreviousWordsForEraseThat: Set<String> = [
+        "command", "commands", "say", "saying", "word", "words"
     ]
     private static let blockedFirstCorrectionWordsForReplaceThat: Set<String> = [
         "is", "means"
@@ -5472,6 +5475,24 @@ public struct RomaTranscriptionOutputFilter {
             return false
         }
 
+        if isEraseBacktrackingMarker(markerText) {
+            guard wordCount(in: beforeMarker) >= 2 else {
+                return false
+            }
+
+            if let previousWord = previousWord(in: beforeMarker),
+               blockedPreviousWordsForEraseThat.contains(previousWord) {
+                return false
+            }
+
+            if let firstCorrectionWord = firstWord(in: correctionText),
+               blockedFirstCorrectionWordsForReplaceThat.contains(firstCorrectionWord) {
+                return false
+            }
+
+            return true
+        }
+
         guard isReplaceOrChangeBacktrackingMarker(markerText) ||
                 isGuardedNaturalBacktrackingMarker(markerText) ||
                 isBareSorryBacktrackingMarker(markerText) ||
@@ -5538,6 +5559,31 @@ public struct RomaTranscriptionOutputFilter {
             "for clarity",
             "hold on",
             "hang on",
+            "scratch that",
+            "scratch that out",
+            "cross that out",
+            "strike that",
+            "strike that out",
+            "delete that",
+            "delete that out",
+            "remove that",
+            "remove that out",
+            "erase that",
+            "erase that out",
+            "undo that",
+            "undo that out",
+            "cancel that",
+            "cancel that out",
+            "disregard that",
+            "disregard that out",
+            "ignore that",
+            "ignore that out",
+            "forget that",
+            "forget that out",
+            "cut that",
+            "cut that out",
+            "drop that",
+            "drop that out",
             "wait actually",
             "wait i mean",
             "wait i meant",
@@ -5546,6 +5592,37 @@ public struct RomaTranscriptionOutputFilter {
             "wait nevermind",
             "never mind",
             "nevermind"
+        ].contains(normalizedMarker)
+    }
+
+    private static func isEraseBacktrackingMarker(_ markerText: String) -> Bool {
+        let normalizedMarker = normalizedBacktrackingMarker(markerText)
+        return [
+            "scratch that",
+            "scratch that out",
+            "cross that out",
+            "strike that",
+            "strike that out",
+            "delete that",
+            "delete that out",
+            "remove that",
+            "remove that out",
+            "erase that",
+            "erase that out",
+            "undo that",
+            "undo that out",
+            "cancel that",
+            "cancel that out",
+            "disregard that",
+            "disregard that out",
+            "ignore that",
+            "ignore that out",
+            "forget that",
+            "forget that out",
+            "cut that",
+            "cut that out",
+            "drop that",
+            "drop that out"
         ].contains(normalizedMarker)
     }
 
