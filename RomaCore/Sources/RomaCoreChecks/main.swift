@@ -5231,6 +5231,15 @@ struct RomaCoreChecks {
             "Windows laptop proof runner should stamp every report with one proof session id"
         )
         try require(
+            laptopProofScript.contains("startup-shortcuts"),
+            "Windows laptop proof runner should use proof-owned startup shortcut directories"
+        )
+        try require(
+            laptopProofScript.contains("cloudStartupShortcutDir") &&
+                laptopProofScript.contains("localStartupShortcutDir"),
+            "Windows laptop proof runner should keep cloud and local startup shortcut proofs separate"
+        )
+        try require(
             checkSetScript.contains("proof_session_id"),
             "Windows proof-set checker should compare proof session ids across laptop reports"
         )

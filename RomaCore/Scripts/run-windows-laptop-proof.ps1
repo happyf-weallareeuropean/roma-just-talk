@@ -200,6 +200,12 @@ $localInstallDir = Join-Path $ProofDir "local-whisper-install"
 $localConfigPath = Join-Path $localInstallDir "windows-agent.json"
 $notepadInstallDir = Join-Path $ProofDir "local-whisper-notepad-install"
 $notepadConfigPath = Join-Path $notepadInstallDir "windows-agent.json"
+$startupShortcutBaseDir = $StartupShortcutDir
+if ([string]::IsNullOrWhiteSpace($startupShortcutBaseDir)) {
+    $startupShortcutBaseDir = Join-Path $ProofDir "startup-shortcuts"
+}
+$cloudStartupShortcutDir = Join-Path $startupShortcutBaseDir "cloud"
+$localStartupShortcutDir = Join-Path $startupShortcutBaseDir "local-whisper"
 
 $cloudArgs = @(
     "-PackageDir", $PackageDir,
@@ -227,7 +233,7 @@ $cloudArgs += @("-RunDictation", "-PasteDictation")
 $cloudArgs = Add-ShortcutProofArgs `
     -ArgumentList $cloudArgs `
     -ShortcutDir (Join-Path $ProofDir "cloud-shortcuts") `
-    -StartupDir $StartupShortcutDir
+    -StartupDir $cloudStartupShortcutDir
 
 $localArgs = @(
     "-PackageDir", $PackageDir,
@@ -257,7 +263,7 @@ $localArgs += @("-RunDictation", "-PasteDictation")
 $localArgs = Add-ShortcutProofArgs `
     -ArgumentList $localArgs `
     -ShortcutDir (Join-Path $ProofDir "local-whisper-shortcuts") `
-    -StartupDir $StartupShortcutDir
+    -StartupDir $localStartupShortcutDir
 
 $notepadArgs = @(
     "-PackageDir", $PackageDir,
@@ -304,6 +310,7 @@ Invoke-Step "full laptop proof set check" {
 Write-Host ""
 Write-Host "windows_laptop_proof_dir=$ProofDir"
 Write-Host "windows_laptop_proof_session_id=$proofSessionId"
+Write-Host "windows_laptop_startup_shortcut_base_dir=$startupShortcutBaseDir"
 Write-Host "windows_laptop_cloud_report=$cloudReport"
 Write-Host "windows_laptop_local_whisper_report=$localWhisperDictationReport"
 Write-Host "windows_laptop_notepad_report=$localWhisperNotepadReport"
