@@ -6,6 +6,7 @@ param(
     [string]$ApiKeyEnv = "",
     [string]$ApiKeyName = "",
     [string]$SecretDir = "",
+    [string]$PreflightReportPath = "",
     [string]$WhisperCLI = "",
     [string]$WhisperModel = "",
     [string]$WhisperOutputDir = "",
@@ -65,6 +66,42 @@ function Require-FileWithMinimumBytes {
 
     Write-Host "proof_file=$Path"
     Write-Host "proof_file_bytes=$($item.Length)"
+}
+
+function Get-FileProof {
+    param(
+        [Parameter(Mandatory = $true)]
+        [string]$Path
+    )
+
+    $exists = Test-Path -LiteralPath $Path
+    $bytes = 0
+    if ($exists) {
+        $bytes = (Get-Item -LiteralPath $Path).Length
+    }
+
+    return [ordered]@{
+        path = $Path
+        exists = $exists
+        bytes = $bytes
+    }
+}
+
+function Get-CurrentWindowsUserSid {
+    if ([System.Environment]::OSVersion.Platform -ne [System.PlatformID]::Win32NT) {
+        return ""
+    }
+
+    try {
+        $identity = [System.Security.Principal.WindowsIdentity]::GetCurrent()
+        if ($null -ne $identity -and $null -ne $identity.User) {
+            return [string]$identity.User.Value
+        }
+    } catch {
+        return ""
+    }
+
+    return ""
 }
 
 function Assert-OutputContains {
@@ -219,6 +256,61 @@ function Invoke-LocalWhisperPreflight {
     Write-Host "local_whisper_preflight_ok=true"
 }
 
+function Write-PreflightReport {
+    param(
+        [Parameter(Mandatory = $true)]
+        [string]$Path,
+        [Parameter(Mandatory = $true)]
+        [string]$ProofSessionId,
+        [Parameter(Mandatory = $true)]
+        [string]$ProofAgentPath,
+        [Parameter(Mandatory = $true)]
+        [string]$MicPreflightPath,
+        [Parameter(Mandatory = $true)]
+        [string]$WhisperCLIPath,
+        [Parameter(Mandatory = $true)]
+        [string]$WhisperModelPath
+    )
+
+    $reportParent = Split-Path -Parent $Path
+    if (![string]::IsNullOrWhiteSpace($reportParent)) {
+        New-Item -ItemType Directory -Force -Path $reportParent | Out-Null
+    }
+
+    $report = [ordered]@{
+        generated_at = (Get-Date).ToUniversalTime().ToString("o")
+        proof_session_id = $ProofSessionId
+        proof_mode = "windows-laptop-preflight"
+        preflight_only = $true
+        package_dir = $PackageDir
+        proof_dir = $ProofDir
+        os = [ordered]@{
+            platform = [System.Environment]::OSVersion.Platform.ToString()
+            version = [System.Environment]::OSVersion.VersionString
+            machine = $env:COMPUTERNAME
+            user_name = $env:USERNAME
+            user_domain = $env:USERDOMAIN
+            user_sid = Get-CurrentWindowsUserSid
+        }
+        preflights = [ordered]@{
+            hotkey_delivery = $true
+            microphone = $true
+            local_whisper = $true
+        }
+        files = [ordered]@{
+            proof_agent = Get-FileProof -Path $ProofAgentPath
+            mic_preflight_wav = Get-FileProof -Path $MicPreflightPath
+            whisper_cli = Get-FileProof -Path $WhisperCLIPath
+            whisper_model = Get-FileProof -Path $WhisperModelPath
+        }
+    }
+
+    $report |
+        ConvertTo-Json -Depth 6 |
+        Set-Content -LiteralPath $Path -Encoding UTF8
+    Write-Host "windows_laptop_preflight_report=$Path"
+}
+
 function Add-CommonProofArgs {
     param(
         [Parameter(Mandatory = $true)]
@@ -311,6 +403,12 @@ New-Item -ItemType Directory -Force -Path $ProofDir | Out-Null
 if (![string]::IsNullOrWhiteSpace($StartupShortcutDir)) {
     $StartupShortcutDir = Resolve-FullPath -Path $StartupShortcutDir
 }
+if ($PreflightOnly) {
+    if ([string]::IsNullOrWhiteSpace($PreflightReportPath)) {
+        $PreflightReportPath = Join-Path $ProofDir "preflight-proof.json"
+    }
+    $PreflightReportPath = Resolve-FullPath -Path $PreflightReportPath
+}
 
 if (!$PreflightOnly) {
     if ([string]::IsNullOrWhiteSpace($Endpoint) -or
@@ -392,6 +490,13 @@ Invoke-Step "local whisper CLI preflight" {
 }
 
 if ($PreflightOnly) {
+    Write-PreflightReport `
+        -Path $PreflightReportPath `
+        -ProofSessionId $proofSessionId `
+        -ProofAgentPath $proofAgent `
+        -MicPreflightPath $micPreflightPath `
+        -WhisperCLIPath $WhisperCLI `
+        -WhisperModelPath $WhisperModel
     Write-Host ""
     Write-Host "windows_laptop_proof_dir=$ProofDir"
     Write-Host "windows_laptop_proof_session_id=$proofSessionId"

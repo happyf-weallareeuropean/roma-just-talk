@@ -6197,6 +6197,12 @@ struct RomaCoreChecks {
             "Windows laptop proof runner should let native preflights run before cloud/full-proof setup"
         )
         try require(
+            laptopProofScript.contains("PreflightReportPath") &&
+                laptopProofScript.contains("windows_laptop_preflight_report=") &&
+                laptopProofScript.contains(#"proof_mode = "windows-laptop-preflight""#),
+            "Windows laptop preflight-only runner should write an archivable JSON proof report"
+        )
+        try require(
             laptopProofScript.contains("startup-shortcuts"),
             "Windows laptop proof runner should use proof-owned startup shortcut directories"
         )
