@@ -7,6 +7,7 @@
 - Cleaned leading slash, backslash, and pipe separator noise from short mid-sentence fragments.
 - Cleaned bounded "hold on" and "hang on" hesitation self-corrections.
 - Cleaned bounded bare "wait" self-corrections such as "Use model, wait module.".
+- Strengthened Windows proof reports to require hold-hook keydown/key-up evidence during dictation.
 - Added artifact-wrapper proof-report checks for packaged Windows native doctors.
 - Added artifact-wrapper proof-report checks for packaged `RomaProofAgent.exe` source coverage.
 - Smoked packaged `RomaProofAgent.exe` before uploading the Windows agent artifact.
