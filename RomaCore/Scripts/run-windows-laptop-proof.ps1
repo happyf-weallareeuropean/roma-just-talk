@@ -57,6 +57,28 @@ function Invoke-Step {
     & $Command
 }
 
+function Write-HoldDictationPrompt {
+    param(
+        [Parameter(Mandatory = $true)]
+        [string]$Name
+    )
+
+    Write-Host ""
+    Write-Host "ACTION_REQUIRED=$Name"
+    Write-Host "focus_target=normal_text_field_or_notepad"
+    Write-Host "hold_hotkey=Ctrl+Shift+R"
+    Write-Host "speak_before_pressing_hotkey=true"
+    Write-Host "release_hotkey_to_finish=true"
+    Write-Host "hold_timeout_seconds=$HoldTimeoutSeconds"
+}
+
+function Write-NotepadPastePrompt {
+    Write-Host ""
+    Write-Host "ACTION_REQUIRED=local_whisper_notepad_paste"
+    Write-Host "notepad=will_open_and_verify_file"
+    Write-Host "manual_focus_required=false"
+}
+
 function Add-CommonProofArgs {
     param(
         [Parameter(Mandatory = $true)]
@@ -240,14 +262,17 @@ if ($whisperArguments.Count -gt 0) {
 $notepadArgs = Add-CommonProofArgs -ArgumentList $notepadArgs
 
 Invoke-Step "cloud dictation laptop proof" {
+    Write-HoldDictationPrompt -Name "cloud_dictation"
     & $proofScript @cloudArgs
 }
 
 Invoke-Step "local whisper dictation laptop proof" {
+    Write-HoldDictationPrompt -Name "local_whisper_dictation"
     & $proofScript @localArgs
 }
 
 Invoke-Step "local whisper Notepad paste proof" {
+    Write-NotepadPastePrompt
     & $proofScript @notepadArgs
 }
 

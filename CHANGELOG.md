@@ -15,6 +15,7 @@
 - Cleaned leading slash, backslash, and pipe separator noise from short mid-sentence fragments.
 - Cleaned bounded "hold on" and "hang on" hesitation self-corrections.
 - Cleaned bounded bare "wait" self-corrections such as "Use model, wait module.".
+- Added explicit action prompts for the Windows laptop proof runner's hold-to-talk and Notepad paste steps.
 - Hardened the Windows laptop proof runner to fail early outside Windows or with missing local whisper files.
 - Added a packaged Windows laptop proof runner that executes cloud dictation, local whisper dictation, Notepad paste, and proof-set validation through existing scripts.
 - Added a Windows proof-set checker for full laptop and artifact-smoke report bundles.
