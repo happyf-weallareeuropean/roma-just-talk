@@ -393,12 +393,33 @@ public struct RomaTranscriptionOutputFilter {
         "voiceink": "VoiceInk",
         "xcode": "Xcode"
     ]
+    private static let knownProductPhraseFragmentCasing = [
+        "cloud flare": "Cloudflare",
+        "eleven labs": "ElevenLabs",
+        "git hub": "GitHub",
+        "java script": "JavaScript",
+        "next js": "Next.js",
+        "node js": "Node.js",
+        "open ai": "OpenAI",
+        "ray cast": "Raycast",
+        "supa base": "Supabase",
+        "type script": "TypeScript",
+        "voice ink": "VoiceInk",
+        "x code": "Xcode"
+    ]
     private static let multiWordProductPhraseHeads: [[String]] = [
+        ["cloud", "flare"],
         ["eleven", "labs"],
+        ["git", "hub"],
+        ["java", "script"],
         ["next", "js"],
         ["node", "js"],
         ["open", "ai"],
-        ["voice", "ink"]
+        ["ray", "cast"],
+        ["supa", "base"],
+        ["type", "script"],
+        ["voice", "ink"],
+        ["x", "code"]
     ]
     private static let productCorrectionTailWords: Set<String> = [
         "agent", "agents", "api", "apis", "app", "apps", "branch", "branches",
@@ -8331,16 +8352,19 @@ public struct RomaTranscriptionOutputFilter {
     }
 
     private static func normalizeKnownProductPhraseFragments(in text: String) -> String {
-        text.replacingOccurrences(
-            of: #"(?i)(?<![\p{L}\p{N}])next\s+js(?![\p{L}\p{N}])"#,
-            with: "Next.js",
-            options: .regularExpression
-        )
-        .replacingOccurrences(
-            of: #"(?i)(?<![\p{L}\p{N}])node\s+js(?![\p{L}\p{N}])"#,
-            with: "Node.js",
-            options: .regularExpression
-        )
+        var normalizedText = text
+        for (phrase, replacement) in knownProductPhraseFragmentCasing.sorted(by: { $0.key.count > $1.key.count }) {
+            let phrasePattern = phrase
+                .split(separator: " ")
+                .map { NSRegularExpression.escapedPattern(for: String($0)) }
+                .joined(separator: #"\s+"#)
+            normalizedText = normalizedText.replacingOccurrences(
+                of: #"(?i)(?<![\p{L}\p{N}])"# + phrasePattern + #"(?![\p{L}\p{N}])"#,
+                with: replacement,
+                options: .regularExpression
+            )
+        }
+        return normalizedText
     }
 
     private static func normalizeLikelyFragmentWord(_ word: String) -> String {

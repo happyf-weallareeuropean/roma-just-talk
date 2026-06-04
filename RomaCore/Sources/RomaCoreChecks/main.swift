@@ -332,8 +332,16 @@ struct RomaCoreChecks {
             "shared insertion polish should normalize all-caps edge product names"
         )
         try require(
+            RomaTranscriptionOutputFilter.applyInsertionPolish("CLOUD FLARE WORKER.", context: midSentenceContext) == "Cloudflare worker",
+            "shared insertion polish should normalize spaced all-caps edge product names"
+        )
+        try require(
             RomaTranscriptionOutputFilter.applyInsertionPolish("LINEAR TICKET.", context: midSentenceContext) == "Linear ticket",
             "shared insertion polish should normalize all-caps planning product names"
+        )
+        try require(
+            RomaTranscriptionOutputFilter.applyInsertionPolish("GIT HUB ISSUE.", context: midSentenceContext) == "GitHub issue",
+            "shared insertion polish should normalize spaced all-caps GitHub fragments"
         )
         try require(
             RomaTranscriptionOutputFilter.applyInsertionPolish("NEXT JS ROUTE.", context: midSentenceContext) == "Next.js route",
@@ -352,8 +360,28 @@ struct RomaCoreChecks {
             "shared insertion polish should normalize all-caps language product fragments"
         )
         try require(
+            RomaTranscriptionOutputFilter.applyInsertionPolish("TYPE SCRIPT TYPE.", context: midSentenceContext) == "TypeScript type",
+            "shared insertion polish should normalize spaced all-caps TypeScript fragments"
+        )
+        try require(
+            RomaTranscriptionOutputFilter.applyInsertionPolish("JAVA SCRIPT FILE.", context: midSentenceContext) == "JavaScript file",
+            "shared insertion polish should normalize spaced all-caps JavaScript fragments"
+        )
+        try require(
             RomaTranscriptionOutputFilter.applyInsertionPolish("OPENAI MODEL.", context: midSentenceContext) == "OpenAI model",
             "shared insertion polish should normalize all-caps AI provider names"
+        )
+        try require(
+            RomaTranscriptionOutputFilter.applyInsertionPolish("OPEN AI MODEL.", context: midSentenceContext) == "OpenAI model",
+            "shared insertion polish should normalize spaced all-caps OpenAI fragments"
+        )
+        try require(
+            RomaTranscriptionOutputFilter.applyInsertionPolish("ELEVEN LABS VOICE.", context: midSentenceContext) == "ElevenLabs voice",
+            "shared insertion polish should normalize spaced all-caps ElevenLabs fragments"
+        )
+        try require(
+            RomaTranscriptionOutputFilter.applyInsertionPolish("VOICE INK SETTING.", context: midSentenceContext) == "VoiceInk setting",
+            "shared insertion polish should normalize spaced all-caps VoiceInk fragments"
         )
         try require(
             RomaTranscriptionOutputFilter.applyInsertionPolish(
@@ -2191,6 +2219,11 @@ struct RomaCoreChecks {
                 "wait no correction should replace product issue phrase"
             ),
             (
+                "Git Hub issue wait no Linear ticket.",
+                "Linear ticket.",
+                "wait no correction should replace spaced product issue phrase"
+            ),
+            (
                 "Use Vercel project wait no Supabase client.",
                 "Use Supabase client.",
                 "wait no correction should replace product client phrase"
@@ -2204,6 +2237,11 @@ struct RomaCoreChecks {
                 "OpenAI model wait no Anthropic API.",
                 "Anthropic API.",
                 "wait no correction should replace provider API phrase"
+            ),
+            (
+                "Open AI model wait no Anthropic API.",
+                "Anthropic API.",
+                "wait no correction should replace spaced provider API phrase"
             ),
             (
                 "Next JS route wait no Cloudflare worker.",
@@ -6471,8 +6509,12 @@ struct RomaCoreChecks {
         try require(
             packageScript.contains("Write-LaptopProofGuide") &&
                 packageScript.contains("WINDOWS-LAPTOP-PROOF.txt") &&
+                packageScript.contains("windows_laptop_preflight_report=") &&
+                packageScript.contains("proof_set_laptop_preflight_matches_full=true") &&
+                packageScript.contains("proof_set_source_dirty=false") &&
+                packageScript.contains("Full proof validates four JSON reports") &&
                 packageScript.contains("laptop_proof_guide="),
-            "Windows package should include an artifact-local laptop proof guide"
+            "Windows package should include an artifact-local laptop proof guide with full proof markers"
         )
         try require(
             laptopProofScript.contains("startup-shortcuts"),

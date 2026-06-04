@@ -2,6 +2,7 @@
 
 ## v1.81 - Unreleased
 
+- Normalized spaced product-name fragments such as "OPEN AI MODEL" and "GIT HUB ISSUE" mid-sentence.
 - Replaced whole product phrases in self-corrections such as "GitHub issue wait no Linear ticket" without leaving the old product name.
 - Normalized more all-caps developer product fragments such as "VERCEL PROJECT" and "NEXT JS ROUTE" mid-sentence.
 - Normalized all-caps product and platform phrase fragments such as "GITHUB ISSUE" and "IOS APP" mid-sentence.
@@ -68,6 +69,7 @@
 - Added a Windows package smoke for the laptop preflight JSON checker so CI verifies the checker path before laptop handoff.
 - Added hotkey, microphone, and local-whisper output marker evidence to Windows laptop preflight proof reports, including full-proof runs.
 - Required full Windows laptop proof to tie the preflight report to the same package identity and source provenance as the interactive reports.
+- Added the full four-report Windows laptop proof markers to the artifact-local laptop guide.
 - Added an artifact-local Windows laptop proof guide and hash-check it with the packaged proof surface.
 - Locked the Windows no-admin startup contract to the installed run script in listener mode.
 - Required the installed Windows launcher doctor to assert the permission/startup contract before running sessions.
