@@ -1433,6 +1433,11 @@ public struct RomaTranscriptionOutputFilter {
             return text
         }
 
+        let chain = String(trimmedText[..<matchRange.upperBound])
+        guard !isLiteralYeahRightAcknowledgementChain(chain) else {
+            return text
+        }
+
         let suffix = String(trimmedText[matchRange.upperBound...])
             .trimmingCharacters(in: .whitespacesAndNewlines)
         guard isLeadingFillerFollowedByClauseStarter(suffix) else {
@@ -1440,6 +1445,12 @@ public struct RomaTranscriptionOutputFilter {
         }
 
         return suffix
+    }
+
+    private static func isLiteralYeahRightAcknowledgementChain(_ text: String) -> Bool {
+        let tokens = wordTokens(in: text)
+        guard tokens.count >= 2 else { return false }
+        return tokens[0].text == "yeah" && tokens[1].text == "right"
     }
 
     private static func removeLeadingWellFiller(from text: String) -> String {

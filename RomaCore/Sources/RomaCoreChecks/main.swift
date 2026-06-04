@@ -1341,6 +1341,16 @@ struct RomaCoreChecks {
                 "leading all right yeah filler chain"
             ),
             (
+                "Right yeah this works.",
+                "this works.",
+                "leading right yeah filler chain"
+            ),
+            (
+                "Okay right this works.",
+                "this works.",
+                "leading okay right filler chain"
+            ),
+            (
                 "Like, this works.",
                 "this works.",
                 "leading like filler"
@@ -3479,6 +3489,26 @@ struct RomaCoreChecks {
                 "Okay yeah the model is ready.",
                 "Okay yeah the model is ready.",
                 "leading okay yeah determiner noun phrase guard"
+            ),
+            (
+                "Yeah right this works.",
+                "Yeah right this works.",
+                "literal yeah right prose guard"
+            ),
+            (
+                "Yeah right, this works.",
+                "Yeah right, this works.",
+                "comma literal yeah right prose guard"
+            ),
+            (
+                "Yeah, right, this works.",
+                "Yeah, right, this works.",
+                "punctuated literal yeah right prose guard"
+            ),
+            (
+                "Okay right the model is ready.",
+                "Okay right the model is ready.",
+                "leading okay right determiner noun phrase guard"
             ),
             (
                 "Wellness works.",

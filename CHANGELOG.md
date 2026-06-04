@@ -2,6 +2,7 @@
 
 ## v1.81 - Unreleased
 
+- Preserved literal "yeah right" starts while cleaning stacked acknowledgement fillers.
 - Cleaned stacked leading "okay/yeah/right" filler chains before clear clause starters.
 - Cleaned leading "okay/yeah/right, well" filler chains before clear clause starters.
 - Cleaned leading "well" fillers before clear clause starters.
