@@ -2,6 +2,7 @@
 
 ## v1.81 - Unreleased
 
+- Dropped unpunctuated terminal clarification filler tails such as "This works if that makes sense".
 - Dropped unpunctuated terminal hedge filler tails such as "This works like".
 - Dropped unpunctuated terminal discourse filler tails such as "This works I mean".
 - Collapsed trailing partial repeats of the preceding short sentence start.

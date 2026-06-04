@@ -1747,6 +1747,21 @@ struct RomaCoreChecks {
                 "unpunctuated terminal or whatever filler"
             ),
             (
+                "This works if that makes sense",
+                "This works",
+                "unpunctuated terminal if that makes sense filler"
+            ),
+            (
+                "This works if you know what I mean",
+                "This works",
+                "unpunctuated terminal if you know what i mean filler"
+            ),
+            (
+                "This works you see",
+                "This works",
+                "unpunctuated terminal you see filler"
+            ),
+            (
                 "This works, um yeah.",
                 "This works.",
                 "terminal pause plus acknowledgement filler"
@@ -3935,6 +3950,21 @@ struct RomaCoreChecks {
                 "This is basically",
                 "This is basically",
                 "terminal basically copula guard"
+            ),
+            (
+                "Tell me if that makes sense",
+                "Tell me if that makes sense",
+                "terminal if that makes sense command guard"
+            ),
+            (
+                "Let's see if that makes sense",
+                "Let's see if that makes sense",
+                "terminal if that makes sense action guard"
+            ),
+            (
+                "Tell me what you see",
+                "Tell me what you see",
+                "terminal you see command guard"
             ),
             (
                 "This, however, works.",
