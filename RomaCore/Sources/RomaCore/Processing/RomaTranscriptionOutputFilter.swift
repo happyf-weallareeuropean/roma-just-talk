@@ -526,6 +526,8 @@ public struct RomaTranscriptionOutputFilter {
             replace\s+(?:that|it)\s+with |
             change\s+(?:that|it)\s+to |
             scratch\s+that(?!\s+out\b) |
+            (?:[,;:…]|\.\.\.)\s*hold\s+on\s*[,;:]? |
+            (?:[,;:…]|\.\.\.)\s*hang\s+on\s*[,;:]? |
             (?:[,;:…]|\.\.\.)?\s*wait\s*[,;:]?\s+never\s*mind\s*[,;:]? |
             (?:[,;:…]|\.\.\.)?\s*wait\s*[,;:]?\s+nevermind\s*[,;:]? |
             (?:[,;:…]|\.\.\.)?\s*wait\s*[,;:]?\s+no\s*[,;:]? |
@@ -5505,6 +5507,8 @@ public struct RomaTranscriptionOutputFilter {
             "no i mean",
             "no i meant",
             "no actually",
+            "hold on",
+            "hang on",
             "wait actually",
             "wait i mean",
             "wait i meant",
@@ -5555,6 +5559,8 @@ public struct RomaTranscriptionOutputFilter {
             "nevermind",
             "no actually",
             "no wait",
+            "hold on",
+            "hang on",
             "wait",
             "wait never mind",
             "wait nevermind",

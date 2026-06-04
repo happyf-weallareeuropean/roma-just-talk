@@ -1593,6 +1593,16 @@ struct RomaCoreChecks {
                 "bare wait short phrase correction"
             ),
             (
+                "Use model, hold on module.",
+                "Use module.",
+                "hold on hesitation correction"
+            ),
+            (
+                "Use model, hang on new module.",
+                "Use new module.",
+                "hang on hesitation correction"
+            ),
+            (
                 "Use model, wait actually module.",
                 "Use module.",
                 "wait actually correction"
@@ -2641,6 +2651,16 @@ struct RomaCoreChecks {
                 "Please wait, module loads.",
                 "Please wait, module loads.",
                 "bare wait prose guard"
+            ),
+            (
+                "Please hold on, module loads.",
+                "Please hold on, module loads.",
+                "hold on prose guard"
+            ),
+            (
+                "Please hang on, module loads.",
+                "Please hang on, module loads.",
+                "hang on prose guard"
             ),
             (
                 "The phrase actually wait no is useful.",

@@ -2,6 +2,7 @@
 
 ## v1.81 - Unreleased
 
+- Cleaned bounded "hold on" and "hang on" hesitation self-corrections.
 - Cleaned bounded bare "wait" self-corrections such as "Use model, wait module.".
 - Packaged `RomaProofAgent.exe` and added artifact-wrapper JSON proof for Notepad paste verification.
 - Removed "ahem..." throat-clear filler artifacts while preserving all-caps marker prose.
