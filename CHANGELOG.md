@@ -9,6 +9,7 @@
 - Cleaned leading slash, backslash, and pipe separator noise from short mid-sentence fragments.
 - Cleaned bounded "hold on" and "hang on" hesitation self-corrections.
 - Cleaned bounded bare "wait" self-corrections such as "Use model, wait module.".
+- Added named Windows proof-report profiles for doctor, cloud dictation, local whisper, and Notepad paste checks.
 - Strengthened Windows dictation proof reports to verify runtime-written WAV path and duration.
 - Strengthened Windows dictation proof reports to require non-empty transcript output.
 - Strengthened Windows proof reports to verify shortcut and startup-shortcut launch arguments.

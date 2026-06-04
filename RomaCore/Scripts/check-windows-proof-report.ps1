@@ -2,6 +2,8 @@ param(
     [Parameter(Mandatory = $true)]
     [string]$ProofReportPath,
     [string]$ExpectedMode = "",
+    [ValidateSet("", "doctor-only", "cloud-dictation", "local-whisper-dictation", "local-whisper-notepad-paste", "packaged-whisper-mock-install")]
+    [string]$RequireProofProfile = "",
     [switch]$RequireWindowsPlatform,
     [switch]$RequireInstall,
     [switch]$RequireShortcut,
@@ -243,6 +245,21 @@ function Assert-NativeDoctorOutputProof {
     Write-Host "proof_native_doctor=$Name"
 }
 
+function Set-ExpectedModeFromProfile {
+    param(
+        [Parameter(Mandatory = $true)]
+        [string]$Mode,
+        [Parameter(Mandatory = $true)]
+        [string]$Profile
+    )
+
+    if (![string]::IsNullOrWhiteSpace($script:ExpectedMode) -and $script:ExpectedMode -ne $Mode) {
+        throw "Proof profile $Profile expects mode $Mode, got ExpectedMode $script:ExpectedMode"
+    }
+
+    $script:ExpectedMode = $Mode
+}
+
 $ProofReportPath = $ExecutionContext.SessionState.Path.GetUnresolvedProviderPathFromPSPath($ProofReportPath)
 if (!(Test-Path -LiteralPath $ProofReportPath)) {
     throw "Proof report was not found: $ProofReportPath"
@@ -250,6 +267,73 @@ if (!(Test-Path -LiteralPath $ProofReportPath)) {
 
 $report = Get-Content -LiteralPath $ProofReportPath -Raw | ConvertFrom-Json
 $dictationRuntime = $null
+
+switch ($RequireProofProfile) {
+    "doctor-only" {
+        Set-ExpectedModeFromProfile -Mode "doctor-only" -Profile $RequireProofProfile
+        $RequireWindowsPlatform = $true
+        $RequirePermissionSurface = $true
+        $RequireProofAgentSurface = $true
+        $RequireNativeDoctorSurface = $true
+    }
+    "cloud-dictation" {
+        Set-ExpectedModeFromProfile -Mode "cloud" -Profile $RequireProofProfile
+        $RequireWindowsPlatform = $true
+        $RequireInstall = $true
+        $RequireShortcut = $true
+        $RequireStartupShortcut = $true
+        $RequirePermissionSurface = $true
+        $RequireProofAgentSurface = $true
+        $RequireNativeDoctorSurface = $true
+        $RequireHoldHook = $true
+        $RequireCloudConfig = $true
+        $RequireDictation = $true
+        $RequirePaste = $true
+    }
+    "local-whisper-dictation" {
+        Set-ExpectedModeFromProfile -Mode "local-whisper" -Profile $RequireProofProfile
+        $RequireWindowsPlatform = $true
+        $RequireInstall = $true
+        $RequireShortcut = $true
+        $RequireStartupShortcut = $true
+        $RequirePermissionSurface = $true
+        $RequireProofAgentSurface = $true
+        $RequireNativeDoctorSurface = $true
+        $RequireHoldHook = $true
+        $RequireWhisperConfig = $true
+        $RequireDictation = $true
+        $RequirePaste = $true
+    }
+    "local-whisper-notepad-paste" {
+        Set-ExpectedModeFromProfile -Mode "local-whisper" -Profile $RequireProofProfile
+        $RequireWindowsPlatform = $true
+        $RequireInstall = $true
+        $RequirePermissionSurface = $true
+        $RequireProofAgentSurface = $true
+        $RequireNativeDoctorSurface = $true
+        $RequireHoldHook = $true
+        $RequireWhisperConfig = $true
+        $RequireNotepadPaste = $true
+    }
+    "packaged-whisper-mock-install" {
+        Set-ExpectedModeFromProfile -Mode "packaged-whisper-mock" -Profile $RequireProofProfile
+        $RequireWindowsPlatform = $true
+        $RequireInstall = $true
+        $RequireShortcut = $true
+        $RequireStartupShortcut = $true
+        $RequirePermissionSurface = $true
+        $RequireProofAgentSurface = $true
+        $RequireNativeDoctorSurface = $true
+        $RequirePackagedMock = $true
+        $RequireHoldHook = $true
+        $RequireWhisperConfig = $true
+    }
+    default {}
+}
+
+if (![string]::IsNullOrWhiteSpace($RequireProofProfile)) {
+    Write-Host "proof_profile=$RequireProofProfile"
+}
 
 Assert-NonEmptyString -Object $report -Name "generated_at"
 Assert-NonEmptyString -Object $report -Name "proof_mode"

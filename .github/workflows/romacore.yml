@@ -232,11 +232,7 @@ jobs:
 
           & "$env:RUNNER_TEMP\roma-windows-agent\check-windows-proof-report.ps1" `
             -ProofReportPath "$env:RUNNER_TEMP\roma-wrapper-doctor\proof-report.json" `
-            -ExpectedMode doctor-only `
-            -RequireWindowsPlatform `
-            -RequirePermissionSurface `
-            -RequireProofAgentSurface `
-            -RequireNativeDoctorSurface
+            -RequireProofProfile doctor-only
 
       - name: Verify Windows agent artifact local whisper install
         run: |
@@ -255,17 +251,7 @@ jobs:
 
           & "$env:RUNNER_TEMP\roma-windows-agent\check-windows-proof-report.ps1" `
             -ProofReportPath "$env:RUNNER_TEMP\roma-wrapper-install\proof-report.json" `
-            -ExpectedMode packaged-whisper-mock `
-            -RequireWindowsPlatform `
-            -RequireInstall `
-            -RequireShortcut `
-            -RequireStartupShortcut `
-            -RequirePermissionSurface `
-            -RequireProofAgentSurface `
-            -RequireNativeDoctorSurface `
-            -RequirePackagedMock `
-            -RequireHoldHook `
-            -RequireWhisperConfig
+            -RequireProofProfile packaged-whisper-mock-install
 
       - name: Upload proof artifacts
         uses: actions/upload-artifact@v4
