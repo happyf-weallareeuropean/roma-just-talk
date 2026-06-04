@@ -5106,6 +5106,10 @@ struct RomaCoreChecks {
             contentsOf: scriptsRoot.appendingPathComponent("check-windows-proof-set.ps1"),
             encoding: .utf8
         )
+        let laptopProofScript = try String(
+            contentsOf: scriptsRoot.appendingPathComponent("run-windows-laptop-proof.ps1"),
+            encoding: .utf8
+        )
         let proofAgentSource = try String(
             contentsOf: packageRoot.appendingPathComponent("Sources/RomaProofAgent/main.swift"),
             encoding: .utf8
@@ -5210,6 +5214,18 @@ struct RomaCoreChecks {
         try require(
             checkSetScript.contains("Full laptop proof requires a clean packaged source checkout"),
             "Windows proof-set checker should reject dirty packaged source for final laptop proof"
+        )
+        try require(
+            laptopProofScript.contains("ProofSessionId"),
+            "Windows laptop proof runner should stamp every report with one proof session id"
+        )
+        try require(
+            checkSetScript.contains("proof_session_id"),
+            "Windows proof-set checker should compare proof session ids across laptop reports"
+        )
+        try require(
+            checkSetScript.contains("proof_set_session_id="),
+            "Windows proof-set checker should print matched proof session evidence"
         )
         try require(
             workflowScript.contains("Verify clean Windows package provenance"),

@@ -188,6 +188,8 @@ $checkSetScript = Join-Path $PackageDir "check-windows-proof-set.ps1"
 Require-File -Path $proofScript
 Require-File -Path $checkSetScript
 
+$proofSessionId = [guid]::NewGuid().ToString("D")
+
 $cloudReport = Join-Path $ProofDir "cloud-dictation-proof.json"
 $localWhisperDictationReport = Join-Path $ProofDir "local-whisper-dictation-proof.json"
 $localWhisperNotepadReport = Join-Path $ProofDir "local-whisper-notepad-paste-proof.json"
@@ -204,6 +206,7 @@ $cloudArgs = @(
     "-InstallDir", $cloudInstallDir,
     "-ConfigPath", $cloudConfigPath,
     "-ProofReportPath", $cloudReport,
+    "-ProofSessionId", $proofSessionId,
     "-Endpoint", $Endpoint,
     "-Model", $Model
 )
@@ -231,6 +234,7 @@ $localArgs = @(
     "-InstallDir", $localInstallDir,
     "-ConfigPath", $localConfigPath,
     "-ProofReportPath", $localWhisperDictationReport,
+    "-ProofSessionId", $proofSessionId,
     "-WhisperCLI", $WhisperCLI,
     "-WhisperModel", $WhisperModel
 )
@@ -260,6 +264,7 @@ $notepadArgs = @(
     "-InstallDir", $notepadInstallDir,
     "-ConfigPath", $notepadConfigPath,
     "-ProofReportPath", $localWhisperNotepadReport,
+    "-ProofSessionId", $proofSessionId,
     "-WhisperCLI", $WhisperCLI,
     "-WhisperModel", $WhisperModel,
     "-RunNotepadPasteProof"
@@ -298,6 +303,7 @@ Invoke-Step "full laptop proof set check" {
 
 Write-Host ""
 Write-Host "windows_laptop_proof_dir=$ProofDir"
+Write-Host "windows_laptop_proof_session_id=$proofSessionId"
 Write-Host "windows_laptop_cloud_report=$cloudReport"
 Write-Host "windows_laptop_local_whisper_report=$localWhisperDictationReport"
 Write-Host "windows_laptop_notepad_report=$localWhisperNotepadReport"

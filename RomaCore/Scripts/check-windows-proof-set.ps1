@@ -179,6 +179,7 @@ function Assert-SameLaptopProofSet {
     $first = $reports[0]
     $firstName = [string]$first["Name"]
     $firstReport = $first["Report"]
+    $expectedProofSessionId = [string](Require-ReportProperty -Report $firstReport -Name "proof_session_id" -ReportName $firstName)
     $firstOS = Require-ReportProperty -Report $firstReport -Name "os" -ReportName $firstName
     $expectedPlatform = [string](Require-ReportProperty -Report $firstOS -Name "platform" -ReportName $firstName)
     $expectedMachine = [string](Require-ReportProperty -Report $firstOS -Name "machine" -ReportName $firstName)
@@ -191,6 +192,9 @@ function Assert-SameLaptopProofSet {
 
     if ($expectedPlatform -ne "Win32NT") {
         throw "Full laptop proof must run on Windows, got platform $expectedPlatform"
+    }
+    if ([string]::IsNullOrWhiteSpace($expectedProofSessionId)) {
+        throw "Full laptop proof report is missing proof_session_id; use run-windows-laptop-proof.ps1 or pass one shared ProofSessionId"
     }
     if ([string]::IsNullOrWhiteSpace($expectedMachine)) {
         throw "Full laptop proof report is missing machine name"
@@ -214,6 +218,11 @@ function Assert-SameLaptopProofSet {
     foreach ($entry in $reports) {
         $reportName = $entry["Name"]
         $report = $entry["Report"]
+        Assert-SameReportValue `
+            -Name "proof_session_id" `
+            -Expected $expectedProofSessionId `
+            -Actual ([string](Require-ReportProperty -Report $report -Name "proof_session_id" -ReportName $reportName)) `
+            -ReportName $reportName
         $reportOS = Require-ReportProperty -Report $report -Name "os" -ReportName $reportName
         Assert-SameReportValue `
             -Name "os.platform" `
@@ -273,6 +282,7 @@ function Assert-SameLaptopProofSet {
             -ReportName $reportName
     }
 
+    Write-Host "proof_set_session_id=$expectedProofSessionId"
     Write-Host "proof_set_machine=$expectedMachine"
     Write-Host "proof_set_user=$expectedUserName"
     Write-Host "proof_set_user_sid=$expectedUserSid"

@@ -35,6 +35,7 @@
 - Added explicit action prompts for the Windows laptop proof runner's hold-to-talk and Notepad paste steps.
 - Required Windows hold-to-talk proof reports to preserve the runtime event order from pre-roll through transcript output.
 - Hardened Windows targeted paste foreground activation with `AttachThreadInput` before `SetForegroundWindow`.
+- Required full Windows laptop proof reports to share one proof session id.
 - Hardened the Windows laptop proof runner to fail early outside Windows or with missing local whisper files.
 - Strengthened full Windows laptop proof-set validation to require the reports come from the same machine and packaged artifact.
 - Added a package identity fingerprint to Windows artifact proof reports and full laptop proof-set validation.

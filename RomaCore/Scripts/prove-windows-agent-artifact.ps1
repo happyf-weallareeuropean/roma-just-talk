@@ -3,6 +3,7 @@ param(
     [string]$InstallDir = "",
     [string]$ConfigPath = "",
     [string]$ProofReportPath = "",
+    [string]$ProofSessionId = "",
     [string]$Endpoint = "",
     [string]$Model = "",
     [string]$ApiKeyEnv = "",
@@ -787,6 +788,7 @@ function Write-ProofReport {
 
     $report = [ordered]@{
         generated_at = (Get-Date).ToUniversalTime().ToString("o")
+        proof_session_id = $ProofSessionId
         proof_mode = $Mode
         doctor_only = $IsDoctorOnly
         run_dictation = $RunDictation.IsPresent
