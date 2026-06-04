@@ -82,6 +82,7 @@ function Assert-ShortcutProof {
     Assert-Boolean -Object $Proof -Name "references_run_script" -Expected $true
     Assert-Boolean -Object $Proof -Name "has_config_path_argument" -Expected $true
     Assert-Boolean -Object $Proof -Name "references_config_path" -Expected $true
+    Assert-Boolean -Object $Proof -Name "runs_listener" -Expected $true
     Assert-Boolean -Object $Proof -Name "working_directory_is_install_dir" -Expected $true
 }
 

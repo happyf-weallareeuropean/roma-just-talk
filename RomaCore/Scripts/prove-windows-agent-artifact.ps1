@@ -284,6 +284,7 @@ function Get-ShortcutProof {
     $proof["references_run_script"] = ![string]::IsNullOrWhiteSpace($RunScriptPath) -and $arguments.Contains($RunScriptPath)
     $proof["references_config_path"] = ![string]::IsNullOrWhiteSpace($ConfigPath) -and $arguments.Contains($ConfigPath)
     $proof["has_config_path_argument"] = $arguments.Contains("-ConfigPath")
+    $proof["runs_listener"] = $arguments.Contains("-Listen")
     $proof["working_directory_is_install_dir"] = $savedWorkingDirectory.Equals($WorkingDirectory, [System.StringComparison]::OrdinalIgnoreCase)
 
     return $proof

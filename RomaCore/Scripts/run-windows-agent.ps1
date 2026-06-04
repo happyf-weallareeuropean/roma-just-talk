@@ -23,6 +23,8 @@ param(
     [switch]$RestoreClipboard,
     [switch]$NoRestoreClipboard,
     [double]$ClipboardRestoreDelaySeconds = 2,
+    [switch]$Listen,
+    [int]$MaxSessions = -1,
     [switch]$DoctorOnly
 )
 
@@ -63,6 +65,10 @@ if ($RestoreClipboard -and $NoRestoreClipboard) {
 
 if ($ClipboardRestoreDelaySeconds -lt 0) {
     throw "ClipboardRestoreDelaySeconds must be non-negative"
+}
+
+if ($PSBoundParameters.ContainsKey("MaxSessions") -and $MaxSessions -lt 0) {
+    throw "MaxSessions must be non-negative"
 }
 
 if ([string]::IsNullOrWhiteSpace($InstallDir)) {
@@ -216,9 +222,18 @@ if (!$hasConfig) {
     throw "Config was not found at $ConfigPath; rerun with cloud Endpoint/Model/API key or local WhisperCLI/WhisperModel"
 }
 
+$agentMode = if ($Listen) { "listen" } else { "dictate" }
+$agentArgs = @(
+    $agentMode,
+    "--config", $ConfigPath
+)
+if ($Listen -and $PSBoundParameters.ContainsKey("MaxSessions")) {
+    $agentArgs += @("--max-sessions", "$MaxSessions")
+}
+
 Write-Host "waiting_for_hotkey=Ctrl+Shift+R"
-Write-Host "mode=RomaWindowsAgent dictate"
-& $AgentPath dictate --config $ConfigPath
+Write-Host "mode=RomaWindowsAgent $agentMode"
+& $AgentPath @agentArgs
 if ($LASTEXITCODE -ne 0) {
-    throw "RomaWindowsAgent dictate failed"
+    throw "RomaWindowsAgent $agentMode failed"
 }

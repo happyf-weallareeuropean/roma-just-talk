@@ -86,7 +86,7 @@ function New-AgentShortcut {
     $shell = New-Object -ComObject WScript.Shell
     $shortcut = $shell.CreateShortcut($ShortcutPath)
     $shortcut.TargetPath = "powershell.exe"
-    $shortcut.Arguments = "-NoProfile -ExecutionPolicy Bypass -File `"$RunScript`" -ConfigPath `"$ConfigPath`""
+    $shortcut.Arguments = "-NoProfile -ExecutionPolicy Bypass -File `"$RunScript`" -ConfigPath `"$ConfigPath`" -Listen"
     $shortcut.WorkingDirectory = $WorkingDirectory
     $shortcut.Description = $Description
     $shortcut.WindowStyle = 7
@@ -95,7 +95,8 @@ function New-AgentShortcut {
     Require-File -Path $ShortcutPath
     $savedShortcut = $shell.CreateShortcut($ShortcutPath)
     if (!$savedShortcut.Arguments.Contains("-ConfigPath") -or
-        !$savedShortcut.Arguments.Contains($ConfigPath)) {
+        !$savedShortcut.Arguments.Contains($ConfigPath) -or
+        !$savedShortcut.Arguments.Contains("-Listen")) {
         throw "Shortcut does not reference config path: $ConfigPath"
     }
 

@@ -21,6 +21,7 @@
 - Hardened the Windows laptop proof runner to fail early outside Windows or with missing local whisper files.
 - Strengthened full Windows laptop proof-set validation to require the reports come from the same machine and packaged artifact.
 - Added a package identity fingerprint to Windows artifact proof reports and full laptop proof-set validation.
+- Added a persistent Windows agent listener mode and made installed shortcuts/startup shortcuts launch it.
 - Added a packaged Windows laptop proof runner that executes cloud dictation, local whisper dictation, Notepad paste, and proof-set validation through existing scripts.
 - Added a Windows proof-set checker for full laptop and artifact-smoke report bundles.
 - Strengthened Windows laptop proof profiles to reject loopback/mock cloud endpoints and packaged mock whisper backends.

@@ -57,7 +57,7 @@ Reusable now:
 - `RomaTranscriptionOutputFilter` now lives in `RomaCore` as the shared Foundation-only post-STT cleanup and insertion-polish path.
 - `RomaWordReplacementProcessor` now lives in `RomaCore` as the shared dictionary replacement matching path.
 - `WindowsDictationRuntime` now lives in `RomaCore` as the reusable Windows hotkey/hook -> miniaudio -> STT -> cleanup/replacement -> optional paste composition.
-- `RomaWindowsAgent` is the first user-facing Windows executable. It stays thin and calls `WindowsDictationRuntime` instead of duplicating recorder/STT/paste orchestration.
+- `RomaWindowsAgent` is the first user-facing Windows executable. It stays thin and calls `WindowsDictationRuntime` instead of duplicating recorder/STT/paste orchestration. Its `dictate` mode runs one proofable session; its `listen` mode stays alive for repeated hotkey sessions.
 - `RomaWindowsAgentConfiguration` now lives in `RomaCore` as the reusable JSON settings shape for endpoint, model, key source, trigger mode, paste, clipboard restore, language/prompt, and replacement defaults.
 - `WindowsHotKey.proofToggle` and the Windows-only `WindowsRegisterHotKeyProof` source define the first `RegisterHotKey` toggle proof path.
 - `WindowsLowLevelKeyboardHookProof` now defines the first `WH_KEYBOARD_LL` hold-to-talk keydown/keyup proof path.
@@ -229,10 +229,11 @@ powershell -ExecutionPolicy Bypass -File C:\tmp\roma-windows-agent\install-windo
 
 By default this installs into `%LOCALAPPDATA%\roma-just-talk\agent` and smokes the installed copy with an install-local smoke config. Passing `-WhisperCLI` and `-WhisperModel` proves the same installed config path for local whisper.cpp without API-key storage. When you pass real endpoint/model/key options or `-RunDictation`, the installer stores config at `%APPDATA%\roma-just-talk\windows-agent.json`. Pass `-InstallDir` and `-ConfigPath` to prove a temp install path in CI.
 
-The installer also copies `run-windows-agent.ps1`. Use it to start the installed agent from the saved config, or pass endpoint/model/key options once to write config and immediately run dictation:
+The installer also copies `run-windows-agent.ps1`. Use it to start one installed dictation session from the saved config, pass `-Listen` to keep the agent alive for repeated hotkey sessions, or pass endpoint/model/key options once to write config and immediately run dictation:
 
 ```powershell
 powershell -ExecutionPolicy Bypass -File "$env:LOCALAPPDATA\roma-just-talk\agent\run-windows-agent.ps1"
+powershell -ExecutionPolicy Bypass -File "$env:LOCALAPPDATA\roma-just-talk\agent\run-windows-agent.ps1" -Listen
 powershell -ExecutionPolicy Bypass -File "$env:LOCALAPPDATA\roma-just-talk\agent\run-windows-agent.ps1" -Endpoint https://api.groq.com/openai/v1/audio/transcriptions -Model whisper-large-v3-turbo -ApiKeyEnv GROQ_API_KEY -ApiKeyName groq -PasteDictation
 powershell -ExecutionPolicy Bypass -File "$env:LOCALAPPDATA\roma-just-talk\agent\run-windows-agent.ps1" -WhisperCLI C:\path\whisper-cli.exe -WhisperModel C:\path\ggml-base.en.bin -PasteDictation
 ```
@@ -253,7 +254,7 @@ Use `check-windows-proof-set.ps1 -RequireFullLaptopProof` after the three laptop
 
 For CI or artifact smoke only, pass `-UsePackagedWhisperMock` instead of explicit `-WhisperCLI` and `-WhisperModel`. The wrapper reads the artifact-local `whisper_cli_mock` entry from `manifest.txt` and uses the packaged agent executable as the mock model file; laptop proof should still pass real whisper.cpp paths or a real cloud endpoint/model.
 
-Add `-CreateShortcut` to `install-windows-agent.ps1` after passing real endpoint/model/API-key args, whisper-cli/model args, or `-SkipSmoke` with an existing `-ConfigPath`. Add `-CreateStartupShortcut` for exact no-admin login start; it writes the same launcher/config shortcut into the current user's Startup folder unless `-StartupShortcutDir` is passed. The installer refuses to create a user shortcut for the default mock smoke config. The shortcuts point at the same config path the installer just smoked. CI package smoke uses the proof-only `-AllowSmokeShortcut` path, creates shortcuts in temporary folders, verifies their target arguments include the installed `run-windows-agent.ps1` and config, and verifies the launcher with `-DoctorOnly`.
+Add `-CreateShortcut` to `install-windows-agent.ps1` after passing real endpoint/model/API-key args, whisper-cli/model args, or `-SkipSmoke` with an existing `-ConfigPath`. Add `-CreateStartupShortcut` for exact no-admin login start; it writes the same launcher/config shortcut into the current user's Startup folder unless `-StartupShortcutDir` is passed. The installer refuses to create a user shortcut for the default mock smoke config. The shortcuts point at the same config path the installer just smoked and pass `-Listen` so they launch the persistent listener instead of a single dictation session. CI package smoke uses the proof-only `-AllowSmokeShortcut` path, creates shortcuts in temporary folders, verifies their target arguments include the installed `run-windows-agent.ps1`, config, and listener mode, and verifies the launcher with `-DoctorOnly`.
 
 Windows agent config:
 

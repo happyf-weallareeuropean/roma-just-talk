@@ -20,6 +20,8 @@ struct RomaWindowsAgent {
             printDoctor()
         case "dictate":
             try await runDictation(arguments: Array(arguments.dropFirst()))
+        case "listen":
+            try await runListener(arguments: Array(arguments.dropFirst()))
         case "save-key-from-env":
             try saveKeyFromEnvironment(arguments: Array(arguments.dropFirst()))
         case "write-config":
@@ -120,6 +122,38 @@ struct RomaWindowsAgent {
         print("processed_transcript_text=\(RomaCommandLineText.oneLine(result.processedText))")
         print("word_replacements=\(wordReplacements.count)")
         print("paste_sent=\(result.session.insertedText != nil)")
+    }
+
+    private static func runListener(arguments: [String]) async throws {
+        let options = RomaCommandLineOptions(arguments)
+        let maxSessions = try maxListenSessions(from: options)
+        let previewConfiguration = try loadConfiguration(from: options)
+            .applyingOverrides(from: options)
+        try previewConfiguration.validateTranscriptionSettings()
+
+        print("agent=roma-windows-agent")
+        print("mode=listen")
+        print("max_sessions=\(maxSessions.map(String.init) ?? "unbounded")")
+
+        var completedSessions = 0
+        while maxSessions.map({ completedSessions < $0 }) ?? true {
+            print("listen_session_start=\(completedSessions + 1)")
+            try await runDictation(arguments: arguments)
+            completedSessions += 1
+            print("listen_session_completed=\(completedSessions)")
+        }
+
+        print("listen_completed_sessions=\(completedSessions)")
+    }
+
+    private static func maxListenSessions(from options: RomaCommandLineOptions) throws -> Int? {
+        guard let value = options.optionalValue(after: "--max-sessions") else {
+            return nil
+        }
+        guard let sessions = Int(value), sessions >= 0 else {
+            throw RomaCommandLineOptionsError.invalidOptionValue("--max-sessions")
+        }
+        return sessions
     }
 
     private static func saveKeyFromEnvironment(arguments: [String]) throws {
@@ -286,6 +320,7 @@ struct RomaWindowsAgent {
         print("  RomaWindowsAgent dictate [--config C:\\tmp\\roma-agent.json] [--endpoint https://api.example.com/v1/audio/transcriptions --model whisper-large-v3-turbo --api-key-env OPENAI_API_KEY] [--out proof.wav] [--seconds 2] [--replace \"just talk=roma-just-talk\"] [--paste] [--clipboard-restore-delay 2]")
         print("  RomaWindowsAgent dictate --whisper-cli C:\\path\\whisper-cli.exe --whisper-model C:\\path\\ggml-base.en.bin [--hold-hook] [--paste]")
         print("  RomaWindowsAgent dictate --hold-hook --timeout 15 --endpoint https://api.example.com/v1/audio/transcriptions --model whisper-large-v3-turbo --api-key-name groq [--paste] [--no-restore-clipboard]")
+        print("  RomaWindowsAgent listen --config C:\\tmp\\roma-agent.json [--max-sessions 3]")
     }
 
     private static func printError(_ error: Error) {
