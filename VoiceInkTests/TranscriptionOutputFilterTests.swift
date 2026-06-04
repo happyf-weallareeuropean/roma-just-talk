@@ -559,6 +559,10 @@ struct TranscriptionOutputFilterTests {
         #expect(TranscriptionOutputFilter.filter("x - x is zero.") == "x - x is zero.")
         #expect(TranscriptionOutputFilter.filter("No - no, this is wrong.") == "No - no, this is wrong.")
         #expect(TranscriptionOutputFilter.filter("I think this works, I think this works.") == "I think this works.")
+        #expect(TranscriptionOutputFilter.filter("I think this works! I think this works.") == "I think this works.")
+        #expect(TranscriptionOutputFilter.filter("I think this works. I think this works!") == "I think this works.")
+        #expect(TranscriptionOutputFilter.filter("Hello world! Hello world.") == "Hello world.")
+        #expect(TranscriptionOutputFilter.filter("No? No.") == "No? No.")
     }
 
     @Test func transcriptionFilterAppliesBoundedBacktrackingCorrections() async throws {

@@ -676,6 +676,26 @@ struct RomaCoreChecks {
                 "tight preserved separator repeated word"
             ),
             (
+                "I think this works! I think this works.",
+                "I think this works.",
+                "duplicate short sentence with mismatched punctuation"
+            ),
+            (
+                "I think this works. I think this works!",
+                "I think this works.",
+                "duplicate short sentence with trailing emphatic punctuation"
+            ),
+            (
+                "Hello world! Hello world.",
+                "Hello world.",
+                "duplicate short sentence with leading emphatic punctuation"
+            ),
+            (
+                "No? No.",
+                "No? No.",
+                "one-word repeated question guard"
+            ),
+            (
                 "mm-hmm... uh-huh, I think so.",
                 "I think so.",
                 "hyphenated pause sounds"

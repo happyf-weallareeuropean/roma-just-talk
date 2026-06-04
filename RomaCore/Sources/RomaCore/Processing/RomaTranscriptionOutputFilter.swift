@@ -1000,6 +1000,7 @@ public struct RomaTranscriptionOutputFilter {
             filteredText = collapseRepeatedShortPhrases(in: filteredText)
             filteredText = collapseRepeatedShortClauses(in: filteredText)
             filteredText = collapseRepeatedShortSentences(in: filteredText)
+            filteredText = collapseMismatchedRepeatedShortSentences(in: filteredText)
         }
 
         // Clean whitespace
@@ -6663,6 +6664,60 @@ public struct RomaTranscriptionOutputFilter {
         }
 
         return collapsedText
+    }
+
+    private static func collapseMismatchedRepeatedShortSentences(in text: String) -> String {
+        guard let regex = try? NSRegularExpression(
+            pattern: #"(?i)(^|(?<=[.!?])\s+)([^.!?\n]{3,120})([.!?])\s+\2([.!?])(?=\s|$)"#
+        ) else {
+            return text
+        }
+
+        var collapsedText = text
+        var rewriteCount = 0
+
+        while rewriteCount < 4 {
+            let range = NSRange(collapsedText.startIndex..., in: collapsedText)
+            let matches = regex.matches(in: collapsedText, range: range).reversed()
+            var didRewrite = false
+
+            for match in matches {
+                guard match.numberOfRanges >= 5,
+                      let fullRange = Range(match.range, in: collapsedText),
+                      let prefixRange = Range(match.range(at: 1), in: collapsedText),
+                      let sentenceBodyRange = Range(match.range(at: 2), in: collapsedText),
+                      let firstPunctuationRange = Range(match.range(at: 3), in: collapsedText),
+                      let secondPunctuationRange = Range(match.range(at: 4), in: collapsedText) else {
+                    continue
+                }
+
+                let sentenceBody = String(collapsedText[sentenceBodyRange])
+                let sentenceWordCount = wordCount(in: sentenceBody)
+                guard sentenceWordCount >= 2 && sentenceWordCount <= 12,
+                      !preservedRepeatedClauses.contains(normalizedRepeatedClause(sentenceBody)) else {
+                    continue
+                }
+
+                let firstPunctuation = String(collapsedText[firstPunctuationRange])
+                let secondPunctuation = String(collapsedText[secondPunctuationRange])
+                let punctuation = repeatedSentencePunctuation(firstPunctuation, secondPunctuation)
+                collapsedText.replaceSubrange(
+                    fullRange,
+                    with: String(collapsedText[prefixRange]) + sentenceBody + punctuation
+                )
+                didRewrite = true
+            }
+
+            guard didRewrite else { break }
+            rewriteCount += 1
+        }
+
+        return collapsedText
+    }
+
+    private static func repeatedSentencePunctuation(_ first: String, _ second: String) -> String {
+        if first == "." || second == "." { return "." }
+        return second
     }
 
     private static func collapseRepeatedShortPhrases(in text: String) -> String {
