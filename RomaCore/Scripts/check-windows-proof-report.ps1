@@ -353,6 +353,10 @@ function Assert-DoctorOutputProof {
 
     Assert-Boolean -Object $Proof -Name "output_present" -Expected $true
     Assert-Boolean -Object $Proof -Name "runtime_available" -Expected $true
+    Assert-Boolean -Object $Proof -Name "dictation_runtime" -Expected $true
+    Assert-Boolean -Object $Proof -Name "recorder_miniaudio" -Expected $true
+    Assert-Boolean -Object $Proof -Name "paste_win32_clipboard_sendinput" -Expected $true
+    Assert-Boolean -Object $Proof -Name "secret_store_dpapi" -Expected $true
     Assert-Boolean -Object $Proof -Name "os_permission_grants_microphone" -Expected $true
     Assert-Boolean -Object $Proof -Name "native_capabilities_register_hotkey" -Expected $true
     Assert-Boolean -Object $Proof -Name "no_admin_required" -Expected $true

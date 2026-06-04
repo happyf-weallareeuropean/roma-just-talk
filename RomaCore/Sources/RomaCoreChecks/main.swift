@@ -5011,6 +5011,22 @@ struct RomaCoreChecks {
             "Windows proof checker should require native adapter runtime evidence from the proof agent"
         )
         try require(
+            checkReportScript.contains(#"Assert-Boolean -Object $Proof -Name "dictation_runtime" -Expected $true"#),
+            "Windows proof checker should require the user-facing agent to report WindowsDictationRuntime"
+        )
+        try require(
+            checkReportScript.contains(#"Assert-Boolean -Object $Proof -Name "recorder_miniaudio" -Expected $true"#),
+            "Windows proof checker should require the user-facing agent to report miniaudio recording"
+        )
+        try require(
+            checkReportScript.contains(#"Assert-Boolean -Object $Proof -Name "paste_win32_clipboard_sendinput" -Expected $true"#),
+            "Windows proof checker should require the user-facing agent to report Win32 paste"
+        )
+        try require(
+            checkReportScript.contains(#"Assert-Boolean -Object $Proof -Name "secret_store_dpapi" -Expected $true"#),
+            "Windows proof checker should require the user-facing agent to report DPAPI secrets"
+        )
+        try require(
             checkSetScript.contains("manifest.source_commit"),
             "Windows proof-set checker should compare source commits across laptop reports"
         )

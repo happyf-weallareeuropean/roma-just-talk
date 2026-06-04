@@ -630,6 +630,10 @@ function Get-DoctorOutputProof {
     return [ordered]@{
         output_present = ![string]::IsNullOrWhiteSpace($Output)
         runtime_available = $Output.Contains("runtime_available=true")
+        dictation_runtime = $Output.Contains("dictation_runtime=WindowsDictationRuntime")
+        recorder_miniaudio = $Output.Contains("recorder=miniaudio")
+        paste_win32_clipboard_sendinput = $Output.Contains("paste=win32_clipboard_sendinput")
+        secret_store_dpapi = $Output.Contains("secret_store=dpapi")
         os_permission_grants_microphone = $Output.Contains("os_permission_grants=microphone")
         native_capabilities_register_hotkey = $Output.Contains("native_capabilities=RegisterHotKey")
         no_admin_required = $Output.Contains("admin_required=false")
