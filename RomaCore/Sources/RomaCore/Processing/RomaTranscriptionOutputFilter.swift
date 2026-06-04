@@ -246,6 +246,7 @@ public struct RomaTranscriptionOutputFilter {
     private static let removableLeadingFragmentPunctuation = CharacterSet(charactersIn: ".,;:…-–—")
     private static let removableTrailingFragmentPunctuation = CharacterSet(charactersIn: ".,;:…-–—")
     private static let removableTrailingSentenceFragmentPunctuation = CharacterSet(charactersIn: "!?")
+    private static let removableLeadingSpacedFragmentSymbols = "/\\|"
     private static let removableTrailingSpacedFragmentSymbols = "/\\|"
     private static let nonSpeechBracketContents: Set<String> = [
         "ambient noise", "applause", "background music", "background noise",
@@ -6436,11 +6437,25 @@ public struct RomaTranscriptionOutputFilter {
     }
 
     private static func removeLeadingFragmentPunctuation(from text: String) -> String {
-        var result = text.trimmingCharacters(in: .whitespacesAndNewlines)
+        var result = removeLeadingSpacedFragmentSymbols(from: text)
         while let firstScalar = result.unicodeScalars.first,
               removableLeadingFragmentPunctuation.contains(firstScalar) {
             result.removeFirst()
             result = result.trimmingCharacters(in: .whitespacesAndNewlines)
+        }
+        return result
+    }
+
+    private static func removeLeadingSpacedFragmentSymbols(from text: String) -> String {
+        var result = text.trimmingCharacters(in: .whitespacesAndNewlines)
+        while let firstCharacter = result.first,
+              removableLeadingSpacedFragmentSymbols.contains(firstCharacter) {
+            let symbolEndIndex = result.index(after: result.startIndex)
+            guard symbolEndIndex < result.endIndex,
+                  result[symbolEndIndex].isWhitespace else {
+                return result
+            }
+            result = String(result[symbolEndIndex...]).trimmingCharacters(in: .whitespacesAndNewlines)
         }
         return result
     }

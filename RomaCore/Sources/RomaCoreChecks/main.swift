@@ -3163,6 +3163,26 @@ struct RomaCoreChecks {
             "insertion polish should strip leading separators from short fragments"
         )
         try require(
+            RomaTranscriptionOutputFilter.applyInsertionPolish("/ Model.", context: midSentenceContext) == "model",
+            "insertion polish should strip leading slash separators from short fragments"
+        )
+        try require(
+            RomaTranscriptionOutputFilter.applyInsertionPolish("\\ Model.", context: midSentenceContext) == "model",
+            "insertion polish should strip leading backslash separators from short fragments"
+        )
+        try require(
+            RomaTranscriptionOutputFilter.applyInsertionPolish("| Model.", context: midSentenceContext) == "model",
+            "insertion polish should strip leading pipe separators from short fragments"
+        )
+        try require(
+            RomaTranscriptionOutputFilter.applyInsertionPolish("/users", context: wordContext) == "/users",
+            "insertion polish should preserve compact leading slash fragments"
+        )
+        try require(
+            RomaTranscriptionOutputFilter.applyInsertionPolish("|model", context: wordContext) == "|model",
+            "insertion polish should preserve compact leading pipe fragments"
+        )
+        try require(
             RomaTranscriptionOutputFilter.applyInsertionPolish("This is good.", context: nil) == "This is good.",
             "insertion polish should preserve no-context full sentence capitalization"
         )
