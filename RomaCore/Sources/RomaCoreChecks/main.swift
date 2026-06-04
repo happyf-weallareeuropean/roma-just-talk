@@ -2985,6 +2985,36 @@ struct RomaCoreChecks {
                 "leading basically determiner noun phrase guard"
             ),
             (
+                "So this is ready.",
+                "this is ready.",
+                "leading so filler before this clause"
+            ),
+            (
+                "So, I think this works.",
+                "I think this works.",
+                "punctuated leading so filler before i clause"
+            ),
+            (
+                "So... it is ready.",
+                "it is ready.",
+                "ellipsis leading so filler before it clause"
+            ),
+            (
+                "So that we can ship, keep it stable.",
+                "So that we can ship, keep it stable.",
+                "leading so purpose clause guard"
+            ),
+            (
+                "So long as this works, we can ship.",
+                "So long as this works, we can ship.",
+                "leading so long as guard"
+            ),
+            (
+                "So the model is ready.",
+                "So the model is ready.",
+                "leading so determiner noun phrase guard"
+            ),
+            (
                 "There is no wait time.",
                 "There is no wait time.",
                 "no wait prose guard"
