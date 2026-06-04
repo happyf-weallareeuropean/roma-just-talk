@@ -223,6 +223,20 @@ struct RomaCoreChecks {
             "shared insertion polish should preserve mixed abbreviation periods in bracketed fragments"
         )
         try require(
+            RomaTranscriptionOutputFilter.applyInsertionPolish(
+                "J.R.R. Tolkien.",
+                context: midSentenceContext
+            ) == "J.R.R. Tolkien",
+            "shared insertion polish should strip trailing periods after internal initial abbreviations"
+        )
+        try require(
+            RomaTranscriptionOutputFilter.applyInsertionPolish(
+                "The appointment with Dr. Smith.",
+                context: midSentenceContext
+            ) == "the appointment with Dr. Smith",
+            "shared insertion polish should strip trailing periods after embedded honorific abbreviations"
+        )
+        try require(
             RomaTranscriptionOutputFilter.applyInsertionPolish("Model!", context: midSentenceContext) == "model",
             "shared insertion polish should remove noisy exclamation marks from mid-sentence fragments"
         )
@@ -3357,6 +3371,37 @@ struct RomaCoreChecks {
         try require(
             await bracketedMixedAbbreviationInserter.pastedText == " Ph.D.",
             "pipeline should paste mixed abbreviation periods in bracketed mid-sentence fragments"
+        )
+
+        let initialNameRecorder = FakeRecorder()
+        let initialNameInserter = FakeTextInsertion()
+        let initialNamePipeline = DictationPipeline(
+            recorder: initialNameRecorder,
+            transcriptionService: FakeTranscriptionService(
+                expectedFileName: "initial-name-proof.wav",
+                text: "J.R.R. Tolkien."
+            ),
+            textInsertion: initialNameInserter
+        )
+        let initialNameRequest = DictationPipelineRequest(
+            outputURL: URL(fileURLWithPath: "/tmp/initial-name-proof.wav"),
+            model: model,
+            shouldInsertTranscription: true,
+            textProcessing: DictationTextProcessingConfiguration(
+                insertionContext: TextInsertionContext(precedingText: "I met")
+            )
+        )
+
+        try await initialNameRecorder.startPreRollBuffering()
+        let initialNameResult = try await initialNamePipeline.runRecordingWindow(initialNameRequest) {}
+
+        try require(
+            initialNameResult.processedText == " J.R.R. Tolkien",
+            "pipeline should strip noisy trailing periods after internal initial abbreviations"
+        )
+        try require(
+            await initialNameInserter.pastedText == " J.R.R. Tolkien",
+            "pipeline should paste internal initial abbreviations without noisy trailing periods"
         )
 
         let quotedFragmentRecorder = FakeRecorder()

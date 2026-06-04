@@ -2,6 +2,7 @@
 
 ## v1.81 - Unreleased
 
+- Stripped noisy trailing periods from mid-sentence fragments with internal initials such as "J.R.R. Tolkien.".
 - Preserved mixed abbreviation periods in short and bracketed final fragments such as "Ph.D." and "[Ph.D.]".
 - Preserved abbreviation periods in short mid-sentence and bracketed final fragments such as "U.S." and "[U.S.]".
 - Covered bracketed STT final-fragment cleanup through the dictation pipeline for mid-sentence insertion.

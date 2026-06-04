@@ -208,6 +208,8 @@ struct TranscriptionOutputFilterTests {
         #expect(TranscriptionOutputFilter.applyInsertionPolish("U.S.", context: midSentenceContext) == "U.S.")
         #expect(TranscriptionOutputFilter.applyInsertionPolish("Ph.D.", context: midSentenceContext) == "Ph.D.")
         #expect(TranscriptionOutputFilter.applyInsertionPolish("Dr.", context: midSentenceContext) == "Dr.")
+        #expect(TranscriptionOutputFilter.applyInsertionPolish("J.R.R. Tolkien.", context: midSentenceContext) == "J.R.R. Tolkien")
+        #expect(TranscriptionOutputFilter.applyInsertionPolish("The appointment with Dr. Smith.", context: midSentenceContext) == "the appointment with Dr. Smith")
         #expect(TranscriptionOutputFilter.applyInsertionSpacing("model", context: midSentenceContext) == " model")
         #expect(TranscriptionOutputFilter.applyInsertionSpacing("Model", context: questionContext) == " Model")
         #expect(TranscriptionOutputFilter.applyInsertionSpacing("Model", context: exclamationContext) == " Model")

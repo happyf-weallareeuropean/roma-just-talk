@@ -5812,12 +5812,42 @@ public struct RomaTranscriptionOutputFilter {
     }
 
     private static func hasInternalSentenceBoundary(_ text: String) -> Bool {
-        guard let regex = try? NSRegularExpression(pattern: #"[.!?]\s+"#) else {
-            return false
+        var index = text.startIndex
+        while index < text.endIndex {
+            let character = text[index]
+            let nextIndex = text.index(after: index)
+            guard nextIndex < text.endIndex,
+                  text[nextIndex].isWhitespace,
+                  ".!?".contains(character) else {
+                index = nextIndex
+                continue
+            }
+
+            if character == "." {
+                let tokenThroughPeriod = terminalToken(endingAt: index, in: text)
+                if isTerminalPeriodAbbreviation(tokenThroughPeriod) {
+                    index = nextIndex
+                    continue
+                }
+            }
+
+            return true
         }
 
-        let range = NSRange(text.startIndex..., in: text)
-        return regex.firstMatch(in: text, range: range) != nil
+        return false
+    }
+
+    private static func terminalToken(endingAt endIndex: String.Index, in text: String) -> String {
+        var startIndex = endIndex
+        while startIndex > text.startIndex {
+            let previousIndex = text.index(before: startIndex)
+            guard !text[previousIndex].isWhitespace else {
+                break
+            }
+            startIndex = previousIndex
+        }
+
+        return String(text[startIndex...endIndex])
     }
 
     private static func removeTrailingSpacedFragmentSymbols(from text: String) -> String {
