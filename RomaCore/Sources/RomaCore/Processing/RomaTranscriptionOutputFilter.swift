@@ -1424,7 +1424,9 @@ public struct RomaTranscriptionOutputFilter {
 
     private static func removeLeadingWellFiller(from text: String) -> String {
         let trimmedText = text.trimmingCharacters(in: .whitespacesAndNewlines)
-        guard let regex = try? NSRegularExpression(pattern: #"(?i)^well(?:[ \t]*(?:[,;:…]+|\.\.\.))?[ \t]+"#),
+        guard let regex = try? NSRegularExpression(
+            pattern: #"(?i)^(?:(?:ok(?:ay)?|all[ \t]+right|alright|right|yeah)(?:[ \t]*(?:[,;:…]+|\.\.\.))?[ \t]+)?well(?:[ \t]*(?:[,;:…]+|\.\.\.))?[ \t]+"#
+        ),
               let match = regex.firstMatch(in: trimmedText, range: NSRange(trimmedText.startIndex..., in: trimmedText)),
               let matchRange = Range(match.range, in: trimmedText) else {
             return text

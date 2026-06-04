@@ -1301,6 +1301,26 @@ struct RomaCoreChecks {
                 "leading well you know filler chain"
             ),
             (
+                "Okay well this works.",
+                "this works.",
+                "leading okay well filler chain"
+            ),
+            (
+                "Okay, well, this works.",
+                "this works.",
+                "punctuated leading okay well filler chain"
+            ),
+            (
+                "Yeah well this works.",
+                "this works.",
+                "leading yeah well filler chain"
+            ),
+            (
+                "Right, well, I think this works.",
+                "I think this works.",
+                "leading right well filler chain"
+            ),
+            (
                 "Like, this works.",
                 "this works.",
                 "leading like filler"
@@ -3429,6 +3449,11 @@ struct RomaCoreChecks {
                 "Well water is clean.",
                 "Well water is clean.",
                 "leading well noun phrase guard"
+            ),
+            (
+                "Okay well water is clean.",
+                "Okay well water is clean.",
+                "leading okay well noun phrase guard"
             ),
             (
                 "Wellness works.",
