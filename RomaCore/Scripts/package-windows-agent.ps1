@@ -20,20 +20,22 @@ function Invoke-Step {
     & $Command
 }
 
-function Resolve-AgentExecutable {
+function Resolve-ProductExecutable {
     param(
         [Parameter(Mandatory = $true)]
         [string]$BuildDirectory,
         [Parameter(Mandatory = $true)]
-        [string]$Configuration
+        [string]$Configuration,
+        [Parameter(Mandatory = $true)]
+        [string]$Name
     )
 
-    $preferred = Join-Path $BuildDirectory "$Configuration\RomaWindowsAgent.exe"
+    $preferred = Join-Path $BuildDirectory "$Configuration\$Name.exe"
     if (Test-Path -LiteralPath $preferred) {
         return Get-Item -LiteralPath $preferred
     }
 
-    $matchingConfiguration = Get-ChildItem -Path $BuildDirectory -Filter "RomaWindowsAgent.exe" -Recurse |
+    $matchingConfiguration = Get-ChildItem -Path $BuildDirectory -Filter "$Name.exe" -Recurse |
         Where-Object { $_.FullName -like "*\$Configuration\*" } |
         Sort-Object LastWriteTime -Descending |
         Select-Object -First 1
@@ -41,14 +43,19 @@ function Resolve-AgentExecutable {
         return $matchingConfiguration
     }
 
-    $anyExecutable = Get-ChildItem -Path $BuildDirectory -Filter "RomaWindowsAgent.exe" -Recurse |
+    $anyExecutable = Get-ChildItem -Path $BuildDirectory -Filter "$Name.exe" -Recurse |
         Sort-Object LastWriteTime -Descending |
         Select-Object -First 1
     if ($anyExecutable) {
         return $anyExecutable
     }
 
-    throw "RomaWindowsAgent.exe was not found under $BuildDirectory"
+    $nonWindowsPreferred = Join-Path $BuildDirectory "$Configuration\$Name"
+    if (Test-Path -LiteralPath $nonWindowsPreferred) {
+        return Get-Item -LiteralPath $nonWindowsPreferred
+    }
+
+    throw "$Name executable was not found under $BuildDirectory"
 }
 
 function Resolve-SwiftRuntimeDirectory {
@@ -133,8 +140,13 @@ try {
         swift build -c $Configuration --product RomaWindowsAgent
     }
 
+    Invoke-Step "build RomaWhisperCLIMock" {
+        swift build -c $Configuration --product RomaWhisperCLIMock
+    }
+
     $buildDirectory = Join-Path $packageRoot ".build"
-    $agentSource = Resolve-AgentExecutable -BuildDirectory $buildDirectory -Configuration $Configuration
+    $agentSource = Resolve-ProductExecutable -BuildDirectory $buildDirectory -Configuration $Configuration -Name "RomaWindowsAgent"
+    $mockWhisperSource = Resolve-ProductExecutable -BuildDirectory $buildDirectory -Configuration $Configuration -Name "RomaWhisperCLIMock"
     $agentOutput = Join-Path $OutputDir "RomaWindowsAgent.exe"
     $smokeScriptSource = Join-Path $PSScriptRoot "smoke-windows-agent.ps1"
     $smokeScriptOutput = Join-Path $OutputDir "smoke-windows-agent.ps1"
@@ -143,6 +155,7 @@ try {
     $installScriptSource = Join-Path $PSScriptRoot "install-windows-agent.ps1"
     $installScriptOutput = Join-Path $OutputDir "install-windows-agent.ps1"
     $configPath = Join-Path $OutputDir "sample-windows-agent.json"
+    $localWhisperConfigPath = Join-Path $OutputDir "sample-local-whisper-agent.json"
 
     Invoke-Step "copy agent executable" {
         Copy-Item -LiteralPath $agentSource.FullName -Destination $agentOutput -Force
@@ -183,6 +196,17 @@ try {
             -ClipboardRestoreDelaySeconds 0
     }
 
+    Invoke-Step "packaged local whisper config smoke" {
+        & $smokeScriptOutput `
+            -AgentPath $agentOutput `
+            -OutputDir (Join-Path $OutputDir "local-whisper-smoke") `
+            -ConfigPath $localWhisperConfigPath `
+            -WhisperCLI $mockWhisperSource.FullName `
+            -WhisperModel $agentOutput `
+            -RestoreClipboard `
+            -ClipboardRestoreDelaySeconds 0
+    }
+
     Invoke-Step "packaged agent install smoke" {
         & $installScriptOutput `
             -PackageDir $OutputDir `
@@ -202,6 +226,8 @@ try {
         "source=$($agentSource.FullName)",
         "output=$agentOutput",
         "sample_config=$configPath",
+        "sample_local_whisper_config=$localWhisperConfigPath",
+        "whisper_cli_mock=$($mockWhisperSource.FullName)",
         "smoke_script=$smokeScriptOutput",
         "run_script=$runScriptOutput",
         "install_script=$installScriptOutput",
