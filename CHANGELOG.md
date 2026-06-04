@@ -65,6 +65,7 @@
 - Added a Windows package smoke for the laptop preflight JSON checker so CI verifies the checker path before laptop handoff.
 - Added an artifact-local Windows laptop proof guide and hash-check it with the packaged proof surface.
 - Locked the Windows no-admin startup contract to the installed run script in listener mode.
+- Required the installed Windows launcher doctor to assert the permission/startup contract before running sessions.
 - Exposed shared Windows record, hold, and clipboard defaults in doctor and artifact proof output.
 - Required Windows package smoke to assert shared proof-agent defaults.
 - Required Windows agent smoke to assert shared user-facing agent defaults.

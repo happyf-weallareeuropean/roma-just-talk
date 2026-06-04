@@ -6163,6 +6163,25 @@ struct RomaCoreChecks {
                 "Windows run script should assert installed launcher default output \(expectedLine)"
             )
         }
+        let installedLauncherContractAssertions = [
+            "os_permission_grants=microphone",
+            "native_capabilities=RegisterHotKey",
+            "paste=win32_clipboard_sendinput",
+            "secret_store=dpapi",
+            "admin_required=false",
+            "startup_launcher=run-windows-agent.ps1",
+            "startup_launch_mode=listen",
+            "startup_permission_prompt=false",
+            "screen_capture_required=false"
+        ]
+        for expectedLine in installedLauncherContractAssertions {
+            try require(
+                runScript.contains("function Assert-OutputContains") &&
+                    runScript.contains(#"Assert-OutputContains -Output $doctorOutput"#) &&
+                    runScript.contains(#"-Expected "\#(expectedLine)""#),
+                "Windows run script should assert installed launcher contract output \(expectedLine)"
+            )
+        }
         try require(
             pasteProofSource.contains(
                 "restoreDelaySeconds: TimeInterval = WindowsClipboardRestoreConfiguration.defaultRestoreDelaySeconds"
