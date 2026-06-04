@@ -518,7 +518,9 @@ public struct RomaTranscriptionOutputFilter {
             (?:[,;:…]|\.\.\.)\s*correction\s*[,;:]? |
             (?:[,;:…]|\.\.\.)\s*on\s+second\s+thought\s*[,;:]? |
             (?:[,;:…]|\.\.\.)\s*let\s+me\s+rephrase\s*[,;:]? |
-            (?:[,;:…]|\.\.\.)\s*to\s+clarify\s*[,;:]? |
+            (?:[,;:…]|\.\.\.)\s*(?:just\s+)?to\s+clarify\s*[,;:]? |
+            (?:[,;:…]|\.\.\.)\s*(?:just\s+)?to\s+be\s+clear\s*[,;:]? |
+            (?:[,;:…]|\.\.\.)\s*for\s+clarity\s*[,;:]? |
             (?:[,;:…]|\.\.\.)\s*sorry\s*[,;:]?\s+i\s+mean\s*[,;:]? |
             (?:[,;:…]|\.\.\.)\s*sorry\s*[,;:]?\s+i\s+meant\s*[,;:]? |
             (?:[,;:…]|\.\.\.)\s*what\s+i\s+mean\s+is\s*[,;:]? |
@@ -1308,7 +1310,7 @@ public struct RomaTranscriptionOutputFilter {
 
     private static func preserveBacktrackingMarkersAfterPauseFillers(in text: String) -> String {
         guard let regex = try? NSRegularExpression(
-            pattern: #"(?i)([,;:…]|\.\.\.)[ \t]+(?:u+h+|u+m+|h+m+|m+h+|m{2,}|(?-i:[aA]h+[eE][mM]+|[eE]h+[mM]+|[eE][hH]+m+)|e+h+|e+r+|a+h+|h+uh+)(?:[.,;:!?…]+)?[ \t]+(actually(?:[ \t]+no|[ \t]+make[ \t]+it)?|better[ \t]+make[ \t]+it|sorry[ \t]+i[ \t]+mean|sorry[ \t]+i[ \t]+meant|what[ \t]+i[ \t]+mean[ \t]+is|i[ \t]+mean[ \t]+to[ \t]+say|i[ \t]+meant[ \t]+to[ \t]+say|i[ \t]+mean|i[ \t]+meant|i[ \t]+should[ \t]+say|make[ \t]+that|make[ \t]+it|call[ \t]+it|wait[ \t]+no|no[ \t]+wait|no[ \t]+actually|on[ \t]+second[ \t]+thought|let[ \t]+me[ \t]+rephrase|to[ \t]+clarify|rather|instead|oops|whoops|woops|my[ \t]+bad|correction)(?=\s)"#
+            pattern: #"(?i)([,;:…]|\.\.\.)[ \t]+(?:u+h+|u+m+|h+m+|m+h+|m{2,}|(?-i:[aA]h+[eE][mM]+|[eE]h+[mM]+|[eE][hH]+m+)|e+h+|e+r+|a+h+|h+uh+)(?:[.,;:!?…]+)?[ \t]+(actually(?:[ \t]+no|[ \t]+make[ \t]+it)?|better[ \t]+make[ \t]+it|sorry[ \t]+i[ \t]+mean|sorry[ \t]+i[ \t]+meant|what[ \t]+i[ \t]+mean[ \t]+is|i[ \t]+mean[ \t]+to[ \t]+say|i[ \t]+meant[ \t]+to[ \t]+say|i[ \t]+mean|i[ \t]+meant|i[ \t]+should[ \t]+say|make[ \t]+that|make[ \t]+it|call[ \t]+it|wait[ \t]+no|no[ \t]+wait|no[ \t]+actually|on[ \t]+second[ \t]+thought|let[ \t]+me[ \t]+rephrase|(?:just[ \t]+)?to[ \t]+clarify|(?:just[ \t]+)?to[ \t]+be[ \t]+clear|for[ \t]+clarity|rather|instead|oops|whoops|woops|my[ \t]+bad|correction)(?=\s)"#
         ) else {
             return text
         }
@@ -5524,7 +5526,11 @@ public struct RomaTranscriptionOutputFilter {
             "i meant to say",
             "on second thought",
             "let me rephrase",
+            "just to clarify",
             "to clarify",
+            "just to be clear",
+            "to be clear",
+            "for clarity",
             "hold on",
             "hang on",
             "wait actually",
@@ -5582,7 +5588,11 @@ public struct RomaTranscriptionOutputFilter {
             "i meant to say",
             "on second thought",
             "let me rephrase",
+            "just to clarify",
             "to clarify",
+            "just to be clear",
+            "to be clear",
+            "for clarity",
             "hold on",
             "hang on",
             "wait",

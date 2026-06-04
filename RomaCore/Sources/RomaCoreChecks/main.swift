@@ -1668,6 +1668,36 @@ struct RomaCoreChecks {
                 "to clarify correction should preserve suffix"
             ),
             (
+                "Use model, just to clarify module.",
+                "Use module.",
+                "just to clarify correction"
+            ),
+            (
+                "Use model, um just to clarify module.",
+                "Use module.",
+                "pause filler before just to clarify correction"
+            ),
+            (
+                "Use model, to be clear module.",
+                "Use module.",
+                "to be clear correction"
+            ),
+            (
+                "Use model, just to be clear module.",
+                "Use module.",
+                "just to be clear correction"
+            ),
+            (
+                "Use model, for clarity module.",
+                "Use module.",
+                "for clarity correction"
+            ),
+            (
+                "Let's meet at two, just to be clear three tomorrow.",
+                "Let's meet at three tomorrow.",
+                "just to be clear correction should preserve suffix"
+            ),
+            (
                 "Use model, I mean to say module.",
                 "Use module.",
                 "i mean to say correction"
@@ -2786,6 +2816,26 @@ struct RomaCoreChecks {
                 "To clarify, module loads.",
                 "To clarify, module loads.",
                 "to clarify prose guard"
+            ),
+            (
+                "Just to clarify, module loads.",
+                "Just to clarify, module loads.",
+                "just to clarify prose guard"
+            ),
+            (
+                "To be clear, module loads.",
+                "To be clear, module loads.",
+                "to be clear prose guard"
+            ),
+            (
+                "Just to be clear, module loads.",
+                "Just to be clear, module loads.",
+                "just to be clear prose guard"
+            ),
+            (
+                "For clarity, module loads.",
+                "For clarity, module loads.",
+                "for clarity prose guard"
             ),
             (
                 "I mean to say, module loads.",
