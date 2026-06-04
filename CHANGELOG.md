@@ -18,6 +18,7 @@
 - Formatted nested spoken bullet outlines using "indent", "sub", "outdent", and "dedent" commands.
 - Formatted compact spoken markdown tables such as "markdown table name age row Felix thirty".
 - Split repeated spoken task commands such as "todo ... todo ..." and "checked task ... checked task ..." into separate checklist rows.
+- Added a Notepad-backed Windows paste proof that targets the editor process and verifies pasted text on disk.
 - Added a Windows paste-proof focus delay so Notepad can be foreground before `SendInput` sends `Ctrl+V`.
 - Strengthened Windows laptop proof reports to assert Win32NT platform and positive pre-roll seconds.
 - Added Windows artifact proof-report fields for packaged and installed doctor permission-surface output.

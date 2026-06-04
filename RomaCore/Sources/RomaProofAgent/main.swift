@@ -227,6 +227,7 @@ struct RomaProofAgent {
     private static func runWindowsPasteProof(arguments: [String]) throws {
         let text = try value(after: "--text", in: arguments)
         let focusDelaySeconds = try doubleValue(after: "--focus-delay", in: arguments, default: 0)
+        let targetProcessID = try optionalUInt32Value(after: "--target-process-id", in: arguments)
         guard focusDelaySeconds >= 0 else {
             throw AgentError.invalidOptionValue("--focus-delay")
         }
@@ -236,7 +237,13 @@ struct RomaProofAgent {
             print("focus_delay_seconds=\(String(format: "%.3f", focusDelaySeconds))")
             Thread.sleep(forTimeInterval: focusDelaySeconds)
         }
-        let result = try WindowsPasteProof.pasteText(text)
+        let result = try WindowsPasteProof.pasteText(
+            text,
+            options: WindowsPasteOptions(targetProcessID: targetProcessID)
+        )
+        if let targetProcessID {
+            print("target_process_id=\(targetProcessID)")
+        }
         print("paste_sent=true")
         print("clipboard_restore=\(result.restoreStatus.rawValue)")
         print("text_utf16_bytes=\(WindowsClipboardPayload.cfUnicodeTextData(for: text).count)")
@@ -650,6 +657,16 @@ struct RomaProofAgent {
         try RomaCommandLineOptions(arguments).doubleValue(after: option, default: defaultValue)
     }
 
+    private static func optionalUInt32Value(after option: String, in arguments: [String]) throws -> UInt32? {
+        guard let value = optionalValue(after: option, in: arguments) else {
+            return nil
+        }
+        guard let parsed = UInt32(value) else {
+            throw AgentError.invalidOptionValue(option)
+        }
+        return parsed
+    }
+
     private static func sleep(seconds: Double) async throws {
         let nanoseconds = UInt64(max(seconds, 0) * 1_000_000_000)
         try await Task.sleep(nanoseconds: nanoseconds)
@@ -673,7 +690,7 @@ struct RomaProofAgent {
         print("  RomaProofAgent windows-keyboard-hook-doctor")
         print("  RomaProofAgent windows-keyboard-hook-proof --timeout 15")
         print("  RomaProofAgent windows-paste-doctor")
-        print("  RomaProofAgent windows-paste-proof --text \"roma just talk proof\" [--focus-delay 5]")
+        print("  RomaProofAgent windows-paste-proof --text \"roma just talk proof\" [--focus-delay 5] [--target-process-id 1234]")
         print("  RomaProofAgent windows-permission-doctor")
         print("  RomaProofAgent windows-secret-doctor")
         print("  RomaProofAgent windows-secret-proof --dir C:\\tmp\\roma-secrets")

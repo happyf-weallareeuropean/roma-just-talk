@@ -5,6 +5,7 @@
 #include <stdint.h>
 
 #include "roma_windows_keyboard_hook.h"
+#include "roma_windows_foreground.h"
 
 #ifdef __cplusplus
 extern "C" {

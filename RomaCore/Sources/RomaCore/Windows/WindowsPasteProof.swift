@@ -1,4 +1,5 @@
 #if os(Windows)
+import CWindowsSupport
 import Foundation
 import WinSDK
 
@@ -11,6 +12,10 @@ public enum WindowsPasteProofError: Error, Equatable, CustomStringConvertible {
     case emptyClipboardFailed(errorCode: UInt32)
     case setClipboardDataFailed(errorCode: UInt32)
     case sendInputFailed(sent: UInt32, expected: UInt32, errorCode: UInt32)
+    case foregroundUnsupported
+    case foregroundInvalidArgument(processID: UInt32)
+    case foregroundWindowNotFound(processID: UInt32)
+    case foregroundActivationFailed(processID: UInt32, errorCode: UInt32)
 
     public var description: String {
         switch self {
@@ -30,6 +35,14 @@ public enum WindowsPasteProofError: Error, Equatable, CustomStringConvertible {
             return "SetClipboardData failed with GetLastError=\(errorCode)"
         case .sendInputFailed(let sent, let expected, let errorCode):
             return "SendInput sent \(sent)/\(expected) events with GetLastError=\(errorCode)"
+        case .foregroundUnsupported:
+            return "Foreground window activation is not available on this platform"
+        case .foregroundInvalidArgument(let processID):
+            return "Invalid foreground target process id: \(processID)"
+        case .foregroundWindowNotFound(let processID):
+            return "No visible foreground target window was found for process id \(processID)"
+        case .foregroundActivationFailed(let processID, let errorCode):
+            return "SetForegroundWindow failed for process id \(processID) with GetLastError=\(errorCode)"
         }
     }
 }
@@ -37,13 +50,16 @@ public enum WindowsPasteProofError: Error, Equatable, CustomStringConvertible {
 public struct WindowsPasteOptions: Equatable, Hashable, Sendable {
     public var restoreClipboard: Bool
     public var restoreDelaySeconds: TimeInterval
+    public var targetProcessID: UInt32?
 
     public init(
         restoreClipboard: Bool = true,
-        restoreDelaySeconds: TimeInterval = 2
+        restoreDelaySeconds: TimeInterval = 2,
+        targetProcessID: UInt32? = nil
     ) {
         self.restoreClipboard = restoreClipboard
         self.restoreDelaySeconds = restoreDelaySeconds
+        self.targetProcessID = targetProcessID
     }
 }
 
@@ -70,6 +86,9 @@ public enum WindowsPasteProof {
     ) throws -> WindowsPasteResult {
         let previousText = options.restoreClipboard ? try currentClipboardText() : nil
         try setClipboardText(text)
+        if let targetProcessID = options.targetProcessID {
+            try activateForegroundWindow(processID: targetProcessID)
+        }
         try sendControlV()
         let restoreStatus = options.restoreClipboard
             ? try restoreClipboardText(previousText, insertedText: text, delaySeconds: options.restoreDelaySeconds)
@@ -118,6 +137,31 @@ public enum WindowsPasteProof {
             throw WindowsPasteProofError.setClipboardDataFailed(errorCode: GetLastError())
         }
         memoryTransferredToClipboard = true
+    }
+
+    public static func activateForegroundWindow(processID: UInt32) throws {
+        var lastError: UInt32 = 0
+        let status = roma_windows_foreground_activate_process(processID, &lastError)
+        switch status {
+        case ROMA_WINDOWS_FOREGROUND_OK:
+            return
+        case ROMA_WINDOWS_FOREGROUND_UNSUPPORTED:
+            throw WindowsPasteProofError.foregroundUnsupported
+        case ROMA_WINDOWS_FOREGROUND_INVALID_ARGUMENT:
+            throw WindowsPasteProofError.foregroundInvalidArgument(processID: processID)
+        case ROMA_WINDOWS_FOREGROUND_WINDOW_NOT_FOUND:
+            throw WindowsPasteProofError.foregroundWindowNotFound(processID: processID)
+        case ROMA_WINDOWS_FOREGROUND_ACTIVATION_FAILED:
+            throw WindowsPasteProofError.foregroundActivationFailed(
+                processID: processID,
+                errorCode: lastError
+            )
+        default:
+            throw WindowsPasteProofError.foregroundActivationFailed(
+                processID: processID,
+                errorCode: lastError
+            )
+        }
     }
 
     private static func currentClipboardText() throws -> String? {

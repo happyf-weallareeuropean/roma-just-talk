@@ -18,6 +18,7 @@ param(
     [switch]$RunInteractiveHotkey,
     [switch]$RunInteractiveKeyboardHook,
     [switch]$RunInteractivePaste,
+    [switch]$RunNotepadPasteProof,
     [switch]$RunInteractiveDictation,
     [switch]$RunInteractiveWindowsAgent,
     [switch]$UseHoldHook,
@@ -26,6 +27,7 @@ param(
     [switch]$NoRestoreClipboard,
     [double]$ClipboardRestoreDelaySeconds = 2,
     [double]$PasteFocusDelaySeconds = 5,
+    [string]$NotepadPasteProofPath = "",
     [switch]$PasteDictation
 )
 
@@ -97,6 +99,53 @@ function Assert-NonEmptyFile {
 
     Write-Host "file=$Path"
     Write-Host "bytes=$($item.Length)"
+}
+
+function Wait-ProcessMainWindow {
+    param(
+        [Parameter(Mandatory = $true)]
+        [System.Diagnostics.Process]$Process,
+        [int]$TimeoutSeconds = 10
+    )
+
+    $deadline = (Get-Date).AddSeconds($TimeoutSeconds)
+    while ((Get-Date) -lt $deadline) {
+        $Process.Refresh()
+        if ($Process.HasExited) {
+            throw "Process exited before creating a main window: pid=$($Process.Id)"
+        }
+        if ($Process.MainWindowHandle -ne [IntPtr]::Zero) {
+            Write-Host "process_window=ready pid=$($Process.Id) handle=$($Process.MainWindowHandle)"
+            return
+        }
+        Start-Sleep -Milliseconds 200
+    }
+
+    throw "Timed out waiting for process main window: pid=$($Process.Id)"
+}
+
+function Set-ProcessForeground {
+    param(
+        [Parameter(Mandatory = $true)]
+        [System.Diagnostics.Process]$Process,
+        [int]$TimeoutSeconds = 5
+    )
+
+    $shell = New-Object -ComObject WScript.Shell
+    $deadline = (Get-Date).AddSeconds($TimeoutSeconds)
+    while ((Get-Date) -lt $deadline) {
+        $Process.Refresh()
+        if ($Process.HasExited) {
+            throw "Process exited before activation: pid=$($Process.Id)"
+        }
+        if ($shell.AppActivate($Process.Id)) {
+            Write-Host "process_foreground=activated pid=$($Process.Id)"
+            return $shell
+        }
+        Start-Sleep -Milliseconds 200
+    }
+
+    throw "Timed out activating process: pid=$($Process.Id)"
 }
 
 function Resolve-SwiftProductExecutable {
@@ -203,6 +252,10 @@ if ($ClipboardRestoreDelaySeconds -lt 0) {
 
 if ($PasteFocusDelaySeconds -lt 0) {
     throw "PasteFocusDelaySeconds must be non-negative"
+}
+
+if (![string]::IsNullOrWhiteSpace($NotepadPasteProofPath)) {
+    $NotepadPasteProofPath = $ExecutionContext.SessionState.Path.GetUnresolvedProviderPathFromPSPath($NotepadPasteProofPath)
 }
 
 if ((![string]::IsNullOrWhiteSpace($WhisperCLI) -or
@@ -470,6 +523,67 @@ try {
         Write-Host ""
         Write-Host "== windows paste proof skipped =="
         Write-Host "rerun with -RunInteractivePaste after focusing Notepad"
+    }
+
+    if ($RunNotepadPasteProof) {
+        Invoke-Step "notepad paste proof" {
+            $notepadProofPath = $NotepadPasteProofPath
+            if ([string]::IsNullOrWhiteSpace($notepadProofPath)) {
+                $notepadProofPath = Join-Path $OutputDir "notepad-paste-proof.txt"
+            }
+            $notepadParent = Split-Path -Parent $notepadProofPath
+            if (![string]::IsNullOrWhiteSpace($notepadParent)) {
+                New-Item -ItemType Directory -Force -Path $notepadParent | Out-Null
+            }
+            Set-Content -LiteralPath $notepadProofPath -Encoding UTF8 -NoNewline -Value ""
+
+            $notepad = Start-Process `
+                -FilePath "notepad.exe" `
+                -ArgumentList @("`"$notepadProofPath`"") `
+                -PassThru
+
+            try {
+                Wait-ProcessMainWindow -Process $notepad
+                $pasteOutput = swift run RomaProofAgent windows-paste-proof `
+                    --text $PasteText `
+                    --target-process-id $notepad.Id 2>&1 | Out-String
+                if ($LASTEXITCODE -ne 0) {
+                    Write-Host $pasteOutput
+                    throw "windows-paste-proof failed for Notepad"
+                }
+                Write-Host $pasteOutput
+                Assert-OutputContains -Output $pasteOutput -Expected "target_process_id=$($notepad.Id)"
+                Assert-OutputContains -Output $pasteOutput -Expected "paste_sent=true"
+
+                $shell = Set-ProcessForeground -Process $notepad
+                $shell.SendKeys("^s")
+                Start-Sleep -Milliseconds 750
+
+                $savedText = Get-Content -LiteralPath $notepadProofPath -Raw
+                if (!$savedText.Contains($PasteText)) {
+                    throw "Notepad file did not contain pasted proof text: $notepadProofPath"
+                }
+
+                Write-Host "notepad_paste_file=$notepadProofPath"
+                Write-Host "notepad_paste_verified=true"
+            } finally {
+                if ($null -ne $notepad) {
+                    $notepad.Refresh()
+                    if (!$notepad.HasExited) {
+                        $null = $notepad.CloseMainWindow()
+                        Start-Sleep -Milliseconds 500
+                        $notepad.Refresh()
+                    }
+                    if (!$notepad.HasExited) {
+                        Stop-Process -Id $notepad.Id -Force
+                    }
+                }
+            }
+        }
+    } else {
+        Write-Host ""
+        Write-Host "== notepad paste proof skipped =="
+        Write-Host "rerun with -RunNotepadPasteProof to verify text lands in a saved Notepad file"
     }
 
     if ($RunInteractiveDictation) {
