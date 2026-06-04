@@ -2,6 +2,7 @@ param(
     [string]$PackageDir = "",
     [string]$InstallDir = "",
     [string]$ConfigPath = "",
+    [string]$ProofReportPath = "",
     [string]$Endpoint = "",
     [string]$Model = "",
     [string]$ApiKeyEnv = "",
@@ -114,6 +115,116 @@ function Require-ManifestKey {
     Write-Host "manifest_$Key=$($Manifest[$Key])"
 }
 
+function Get-FileProof {
+    param(
+        [Parameter(Mandatory = $true)]
+        [string]$Path
+    )
+
+    $exists = Test-Path -LiteralPath $Path
+    $bytes = 0
+    if ($exists) {
+        $bytes = (Get-Item -LiteralPath $Path).Length
+    }
+
+    return [ordered]@{
+        path = $Path
+        exists = $exists
+        bytes = $bytes
+    }
+}
+
+function Get-ConfigProof {
+    if ([string]::IsNullOrWhiteSpace($ConfigPath)) {
+        return [ordered]@{
+            path = ""
+            exists = $false
+        }
+    }
+
+    $proof = Get-FileProof -Path $ConfigPath
+    if (!$proof["exists"]) {
+        return $proof
+    }
+
+    $config = Get-Content -LiteralPath $ConfigPath -Raw | ConvertFrom-Json
+    if ($config.PSObject.Properties.Name -contains "outputPath") {
+        $outputPath = [string]$config.outputPath
+        $proof["output_path"] = $outputPath
+        if (![string]::IsNullOrWhiteSpace($outputPath)) {
+            $proof["output_file"] = Get-FileProof -Path $outputPath
+        }
+    }
+    if ($config.PSObject.Properties.Name -contains "usesHoldHook") {
+        $proof["uses_hold_hook"] = [bool]$config.usesHoldHook
+    }
+    if ($config.PSObject.Properties.Name -contains "shouldPaste") {
+        $proof["should_paste"] = [bool]$config.shouldPaste
+    }
+    if ($config.PSObject.Properties.Name -contains "restoreClipboardAfterPaste") {
+        $proof["restore_clipboard_after_paste"] = [bool]$config.restoreClipboardAfterPaste
+    }
+
+    return $proof
+}
+
+function Write-ProofReport {
+    param(
+        [Parameter(Mandatory = $true)]
+        [string]$Mode,
+        [Parameter(Mandatory = $true)]
+        [bool]$IsDoctorOnly
+    )
+
+    if ([string]::IsNullOrWhiteSpace($ProofReportPath)) {
+        return
+    }
+
+    $reportParent = Split-Path -Parent $ProofReportPath
+    if (![string]::IsNullOrWhiteSpace($reportParent)) {
+        New-Item -ItemType Directory -Force -Path $reportParent | Out-Null
+    }
+
+    $shortcutPath = ""
+    if (![string]::IsNullOrWhiteSpace($ShortcutDir)) {
+        $shortcutPath = Join-Path $ShortcutDir "Roma Just Talk Agent.lnk"
+    }
+
+    $report = [ordered]@{
+        generated_at = (Get-Date).ToUniversalTime().ToString("o")
+        proof_mode = $Mode
+        doctor_only = $IsDoctorOnly
+        run_dictation = $RunDictation.IsPresent
+        paste_dictation = $PasteDictation.IsPresent
+        create_shortcut = $CreateShortcut.IsPresent
+        restore_clipboard = $RestoreClipboard.IsPresent
+        no_restore_clipboard = $NoRestoreClipboard.IsPresent
+        os = [ordered]@{
+            platform = [System.Environment]::OSVersion.Platform.ToString()
+            version = [System.Environment]::OSVersion.VersionString
+            machine = $env:COMPUTERNAME
+        }
+        package_dir = $PackageDir
+        install_dir = $InstallDir
+        config = (Get-ConfigProof)
+        files = [ordered]@{
+            packaged_agent = (Get-FileProof -Path $agentPath)
+            packaged_whisper_cli_mock = (Get-FileProof -Path $script:packagedWhisperCLI)
+            installed_agent = (Get-FileProof -Path (Join-Path $InstallDir "RomaWindowsAgent.exe"))
+            installed_run_script = (Get-FileProof -Path (Join-Path $InstallDir "run-windows-agent.ps1"))
+        }
+        manifest = $script:artifactManifest
+    }
+    if (![string]::IsNullOrWhiteSpace($shortcutPath)) {
+        $report["shortcut"] = Get-FileProof -Path $shortcutPath
+    }
+
+    $report |
+        ConvertTo-Json -Depth 8 |
+        Set-Content -LiteralPath $ProofReportPath -Encoding UTF8
+    Write-Host "proof_report=$ProofReportPath"
+}
+
 if ($UseHoldHook -and $UseToggle) {
     throw "UseHoldHook and UseToggle are mutually exclusive"
 }
@@ -141,6 +252,9 @@ $InstallDir = Resolve-FullPath -Path $InstallDir
 
 if (![string]::IsNullOrWhiteSpace($ConfigPath)) {
     $ConfigPath = Resolve-FullPath -Path $ConfigPath
+}
+if (![string]::IsNullOrWhiteSpace($ProofReportPath)) {
+    $ProofReportPath = Resolve-FullPath -Path $ProofReportPath
 }
 
 $agentPath = Join-Path $PackageDir "RomaWindowsAgent.exe"
@@ -212,6 +326,7 @@ Invoke-Step "packaged agent doctor" {
 }
 
 if ($DoctorOnly) {
+    Write-ProofReport -Mode "doctor-only" -IsDoctorOnly $true
     Write-Host ""
     Write-Host "artifact_doctor_only=true"
     exit 0
@@ -244,6 +359,14 @@ if ($usesCloud -and
     [string]::IsNullOrWhiteSpace($ApiKeyEnv) -and
     [string]::IsNullOrWhiteSpace($ApiKeyName)) {
     throw "Cloud proof requires ApiKeyEnv or ApiKeyName"
+}
+
+$proofMode = if ($UsePackagedWhisperMock) {
+    "packaged-whisper-mock"
+} elseif ($usesWhisper) {
+    "local-whisper"
+} else {
+    "cloud"
 }
 
 $installArgs = @(
@@ -338,6 +461,8 @@ Invoke-Step "installed launcher doctor" {
     }
     & $installedRun @runArgs
 }
+
+Write-ProofReport -Mode $proofMode -IsDoctorOnly $false
 
 Write-Host ""
 Write-Host "artifact_proof=ok"

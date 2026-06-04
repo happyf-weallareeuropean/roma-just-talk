@@ -234,6 +234,7 @@ jobs:
             -PackageDir "$env:RUNNER_TEMP\roma-windows-agent" `
             -InstallDir "$env:RUNNER_TEMP\roma-wrapper-install" `
             -ConfigPath "$env:RUNNER_TEMP\roma-wrapper-install\windows-agent.json" `
+            -ProofReportPath "$env:RUNNER_TEMP\roma-wrapper-install\proof-report.json" `
             -UsePackagedWhisperMock `
             -CreateShortcut `
             -ShortcutDir "$env:RUNNER_TEMP\roma-wrapper-shortcuts" `
@@ -244,7 +245,9 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: romacore-windows-proof
-          path: ${{ runner.temp }}\roma-proof
+          path: |
+            ${{ runner.temp }}\roma-proof
+            ${{ runner.temp }}\roma-wrapper-install\proof-report.json
           if-no-files-found: error
 
       - name: Upload Windows agent artifact
