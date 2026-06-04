@@ -1,5 +1,5 @@
 <div align="center">
-  <img src="docs/assets/roma-just-talk-logo.png" width="180" height="180" />
+  <img src="docs/assets/roma-just-talk-logo.png" alt="roma-just-talk split keyboard logo" width="180" height="180" />
   <h1>roma-just-talk</h1>
   <p>speak before you press the hotkey.</p>
   <p>rethink UX: pre-roll voice capture, -87% bin size & -83% ram usage (780mb → 132mb), local & cloud stt solution both available.</p>
@@ -38,7 +38,7 @@ VoiceInk made dictation feel instant after recording starts. roma-just-talk is i
 - **Less ceremony**: talk first, decide what to do with it second
 - **Built on VoiceInk**: keeps the strong macOS base, shortcuts, dictionary, app-aware modes, and transcription pipeline
 
-Current status: app bundle name, icon, and many internal labels still come from VoiceInk. The fork direction is changing first; full rebrand comes after the UX proves itself.
+Current status: app bundle name and many internal labels still come from VoiceInk. The logo and source app icon now use the roma-just-talk mark while the fork direction keeps moving first.
 
 ## Features
 
@@ -56,7 +56,7 @@ Current status: app bundle name, icon, and many internal labels still come from 
 ### Download
 Download the latest fork release from [GitHub Releases](https://github.com/happyf-weallareeuropean/roma-just-talk/releases).
 
-The current published app asset is still based on the upstream VoiceInk release while this fork gets its own build and release flow.
+The source app icon now uses the roma-just-talk split-keyboard mark. Published downloads may still show older assets until the next release.
 
 #### Homebrew
 Upstream VoiceInk can also be installed via `brew`:

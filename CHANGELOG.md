@@ -2,6 +2,7 @@
 
 ## v1.81 - Unreleased
 
+- Replaced the README, source app icon, and menu bar logo with the roma-just-talk split-keyboard mark.
 - Unwrapped short generated parenthesis, brace, and quote artifacts such as "(Model.)" mid-sentence.
 - Normalized spaced product-name fragments such as "OPEN AI MODEL" and "GIT HUB ISSUE" mid-sentence.
 - Replaced whole product phrases in self-corrections such as "GitHub issue wait no Linear ticket" without leaving the old product name.
@@ -99,6 +100,7 @@
 - Hardened the Windows laptop proof runner to fail early outside Windows or with missing local whisper files.
 - Strengthened full Windows laptop proof-set validation to require the reports come from the same machine and packaged artifact.
 - Added a package identity fingerprint to Windows artifact proof reports and full laptop proof-set validation.
+- Replaced the Windows laptop preflight checker smoke's placeholder package fingerprint with the real artifact identity.
 - Added a persistent Windows agent listener mode and made installed shortcuts/startup shortcuts launch it.
 - Smoked packaged Windows listener mode with a zero-session run during artifact packaging.
 - Added packaged listener smoke evidence to Windows artifact proof reports and profile checks.
