@@ -2,6 +2,7 @@
 
 ## v1.81 - Unreleased
 
+- Removed trailing generated quotes after short mid-sentence fragment punctuation.
 - Collapsed repeated short sentences when the duplicate copy drops its final punctuation.
 - Dropped pause-led yes, yep, and sure acknowledgement fillers such as "hmm yes this works.".
 - Joined generated sentence breaks and soft separators before short continuation fragments such as "so this. Model".

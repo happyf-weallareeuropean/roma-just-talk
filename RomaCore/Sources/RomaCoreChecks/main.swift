@@ -272,6 +272,10 @@ struct RomaCoreChecks {
             "shared insertion polish should lowercase mid-sentence fragments"
         )
         try require(
+            RomaTranscriptionOutputFilter.applyInsertionPolish("Model.\"", context: midSentenceContext) == "model",
+            "shared insertion polish should remove trailing generated quotes after final punctuation"
+        )
+        try require(
             RomaTranscriptionOutputFilter.applyInsertionPolish("The Model.", context: midSentenceContext) ==
                 "the model",
             "shared insertion polish should lowercase title-cased mid-sentence phrases"
@@ -4043,6 +4047,14 @@ struct RomaCoreChecks {
         try require(
             RomaTranscriptionOutputFilter.applyInsertionPolish("Model.", context: midSentenceContext) == "model",
             "insertion polish should lowercase final mid-sentence word"
+        )
+        try require(
+            RomaTranscriptionOutputFilter.applyInsertionPolish("Model.\"", context: midSentenceContext) == "model",
+            "insertion polish should remove trailing generated quotes after final punctuation"
+        )
+        try require(
+            RomaTranscriptionOutputFilter.applyInsertionPolish("U.S.\"", context: midSentenceContext) == "U.S.",
+            "insertion polish should preserve abbreviation periods when removing trailing generated quotes"
         )
         try require(
             RomaTranscriptionOutputFilter.applyInsertionSpacing("hello", context: openSmartQuoteContext) == "hello",
