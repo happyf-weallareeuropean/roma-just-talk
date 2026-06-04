@@ -26,6 +26,8 @@ param(
 $ErrorActionPreference = "Stop"
 Set-StrictMode -Version Latest
 
+$hasExplicitClipboardRestoreDelay = $PSBoundParameters.ContainsKey("ClipboardRestoreDelaySeconds")
+
 function Resolve-FullPath {
     param(
         [Parameter(Mandatory = $true)]
@@ -116,7 +118,9 @@ function Add-CommonProofArgs {
     if ($NoRestoreClipboard) {
         $ArgumentList += "-NoRestoreClipboard"
     }
-    $ArgumentList += @("-ClipboardRestoreDelaySeconds", "$ClipboardRestoreDelaySeconds")
+    if ($hasExplicitClipboardRestoreDelay) {
+        $ArgumentList += @("-ClipboardRestoreDelaySeconds", "$ClipboardRestoreDelaySeconds")
+    }
 
     return $ArgumentList
 }
@@ -144,6 +148,14 @@ function Add-ShortcutProofArgs {
 
 if ($RestoreClipboard -and $NoRestoreClipboard) {
     throw "RestoreClipboard and NoRestoreClipboard are mutually exclusive"
+}
+
+if ($NoRestoreClipboard -and $hasExplicitClipboardRestoreDelay) {
+    throw "NoRestoreClipboard and ClipboardRestoreDelaySeconds are mutually exclusive"
+}
+
+if ($ClipboardRestoreDelaySeconds -lt 0) {
+    throw "ClipboardRestoreDelaySeconds must be non-negative"
 }
 
 if ([System.Environment]::OSVersion.Platform -ne [System.PlatformID]::Win32NT) {
