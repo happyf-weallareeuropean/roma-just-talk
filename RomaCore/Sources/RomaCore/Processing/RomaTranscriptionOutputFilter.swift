@@ -433,10 +433,11 @@ public struct RomaTranscriptionOutputFilter {
         (#"(?i)[,;:…]\s+(?:you\s+know|like)[,;:…]*([.!?])\s*$"#, "$1"),
         (#"(?i)[,;:…]\s+(?:you\s+know|like)[,;:…]+(?=\s)"#, " ")
     ]
+    private static let acknowledgementFillerWordPattern = #"ok(?:ay)?|all[ \t]+right|alright|right|yeah|yes|yep|yup|sure"#
     private static let leadingDiscourseFillerPatterns: [(pattern: String, replacement: String)] = [
-        (#"(?i)^\s*(?:ok(?:ay)?|all\s+right|alright|right|yeah)(?:[ \t]*[,;:…]+[ \t]*(?:you\s+know(?:[ \t]+what[ \t]+i[ \t]+mean)?|i\s+mean|like)[ \t]*[,;:…]+)+[ \t]+"#, ""),
-        (#"(?i)^\s*(?:ok(?:ay)?|all\s+right|alright|right|yeah)[,;:…]*[ \t]+so[,;:…]*[ \t]+"#, ""),
-        (#"(?i)^\s*(?:ok(?:ay)?|all\s+right|alright|right|yeah)(?:[ \t]*[,;:…]+[ \t]*)+so[,;:…]*[ \t]+"#, ""),
+        (#"(?i)^\s*(?:ok(?:ay)?|all\s+right|alright|right|yeah|yes|yep|yup|sure)(?:[ \t]*[,;:…]+[ \t]*(?:you\s+know(?:[ \t]+what[ \t]+i[ \t]+mean)?|i\s+mean|like)[ \t]*[,;:…]+)+[ \t]+"#, ""),
+        (#"(?i)^\s*(?:ok(?:ay)?|all\s+right|alright|right|yeah|yes|yep|yup|sure)[,;:…]*[ \t]+so[,;:…]*[ \t]+"#, ""),
+        (#"(?i)^\s*(?:ok(?:ay)?|all\s+right|alright|right|yeah|yes|yep|yup|sure)(?:[ \t]*[,;:…]+[ \t]*)+so[,;:…]*[ \t]+"#, ""),
         (#"(?i)^\s*(?:you\s+know|i\s+mean|like)[,;:…]+[ \t]*"#, "")
     ]
     private static let standaloneDiscourseFillerPattern = #"(?i)^\s*you[ \t]+know(?:[ \t]+what[ \t]+i[ \t]+mean)?[ \t]*[.,;:…]*\s*$"#
@@ -1446,7 +1447,7 @@ public struct RomaTranscriptionOutputFilter {
     private static func removeStandaloneAcknowledgementAfterPauseFiller(from text: String) -> String {
         let trimmedText = text.trimmingCharacters(in: .whitespacesAndNewlines)
         guard let regex = try? NSRegularExpression(
-            pattern: #"(?i)^(?:(?:ok(?:ay)?|all[ \t]+right|alright|right|yeah)(?:[ \t]*(?:[,;:…]+|\.\.\.))?[ \t]*)+(?:[.!?]+)?$"#
+            pattern: #"(?i)^(?:(?:"# + acknowledgementFillerWordPattern + #")(?:[ \t]*(?:[,;:…]+|\.\.\.))?[ \t]*)+(?:[.!?]+)?$"#
         ) else {
             return text
         }
@@ -1483,7 +1484,7 @@ public struct RomaTranscriptionOutputFilter {
     private static func removeLeadingSingleAcknowledgementFiller(from text: String) -> String {
         let trimmedText = text.trimmingCharacters(in: .whitespacesAndNewlines)
         guard let regex = try? NSRegularExpression(
-            pattern: #"(?i)^(?:ok(?:ay)?|all[ \t]+right|alright|right|yeah)(?:[ \t]*(?:[,;:…]+|\.\.\.))?[ \t]+"#
+            pattern: #"(?i)^(?:"# + acknowledgementFillerWordPattern + #")(?:[ \t]*(?:[,;:…]+|\.\.\.))?[ \t]+"#
         ),
               let match = regex.firstMatch(in: trimmedText, range: NSRange(trimmedText.startIndex..., in: trimmedText)),
               let matchRange = Range(match.range, in: trimmedText) else {
@@ -1502,7 +1503,7 @@ public struct RomaTranscriptionOutputFilter {
     private static func removeLeadingAcknowledgementFillerChain(from text: String) -> String {
         let trimmedText = text.trimmingCharacters(in: .whitespacesAndNewlines)
         guard let regex = try? NSRegularExpression(
-            pattern: #"(?i)^(?:(?:ok(?:ay)?|all[ \t]+right|alright|right|yeah)(?:[ \t]*(?:[,;:…]+|\.\.\.))?[ \t]+){2,}"#
+            pattern: #"(?i)^(?:(?:"# + acknowledgementFillerWordPattern + #")(?:[ \t]*(?:[,;:…]+|\.\.\.))?[ \t]+){2,}"#
         ),
               let match = regex.firstMatch(in: trimmedText, range: NSRange(trimmedText.startIndex..., in: trimmedText)),
               let matchRange = Range(match.range, in: trimmedText) else {
@@ -1532,7 +1533,7 @@ public struct RomaTranscriptionOutputFilter {
     private static func removeLeadingWellFiller(from text: String) -> String {
         let trimmedText = text.trimmingCharacters(in: .whitespacesAndNewlines)
         guard let regex = try? NSRegularExpression(
-            pattern: #"(?i)^(?:(?:ok(?:ay)?|all[ \t]+right|alright|right|yeah)(?:[ \t]*(?:[,;:…]+|\.\.\.))?[ \t]+)?well(?:[ \t]*(?:[,;:…]+|\.\.\.))?[ \t]+"#
+            pattern: #"(?i)^(?:(?:"# + acknowledgementFillerWordPattern + #")(?:[ \t]*(?:[,;:…]+|\.\.\.))?[ \t]+)?well(?:[ \t]*(?:[,;:…]+|\.\.\.))?[ \t]+"#
         ),
               let match = regex.firstMatch(in: trimmedText, range: NSRange(trimmedText.startIndex..., in: trimmedText)),
               let matchRange = Range(match.range, in: trimmedText) else {
@@ -1677,7 +1678,7 @@ public struct RomaTranscriptionOutputFilter {
 
     private static func removeTerminalAcknowledgementFillers(from text: String) -> String {
         guard let regex = try? NSRegularExpression(
-            pattern: #"(?i)^([\s\S]*?)(?:[,;:…]|\.\.\.)[ \t]+(?:m+h+m+|m+[\s-]+h+m+|u+h+[\s-]+h*u+h+|u+h+[\s-]+u+h+|u+m+[\s-]+h+m+|u+h+|u+m+|h+m+|m+h+|m{2,}|(?-i:[aA]h+[eE][mM]+|[eE]h+[mM]+|[eE][hH]+m+)|e+h+|e+r+|a+h+|h+uh+)?(?:[.,;:!?…]+)?[ \t]*((?:(?:ok(?:ay)?|all[ \t]+right|alright|right|yeah)(?:[ \t]*(?:[,;:…]+|\.\.\.))?[ \t]*)+)([.!])\s*$"#
+            pattern: #"(?i)^([\s\S]*?)(?:[,;:…]|\.\.\.)[ \t]+(?:m+h+m+|m+[\s-]+h+m+|u+h+[\s-]+h*u+h+|u+h+[\s-]+u+h+|u+m+[\s-]+h+m+|u+h+|u+m+|h+m+|m+h+|m{2,}|(?-i:[aA]h+[eE][mM]+|[eE]h+[mM]+|[eE][hH]+m+)|e+h+|e+r+|a+h+|h+uh+)?(?:[.,;:!?…]+)?[ \t]*((?:(?:"# + acknowledgementFillerWordPattern + #")(?:[ \t]*(?:[,;:…]+|\.\.\.))?[ \t]*)+)([.!])\s*$"#
         ) else {
             return text
         }

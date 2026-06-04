@@ -801,6 +801,26 @@ struct RomaCoreChecks {
                 "leading pause plus yeah acknowledgement filler"
             ),
             (
+                "hmm yes this works.",
+                "this works.",
+                "leading pause plus yes acknowledgement filler"
+            ),
+            (
+                "uh sure this works.",
+                "this works.",
+                "leading pause plus sure acknowledgement filler"
+            ),
+            (
+                "eh yep okay this works.",
+                "this works.",
+                "leading pause plus yep acknowledgement chain before content"
+            ),
+            (
+                "hmm yes so this works.",
+                "this works.",
+                "leading pause plus yes-so filler chain before content"
+            ),
+            (
                 "um yeah.",
                 "",
                 "standalone pause plus yeah acknowledgement filler"
@@ -811,6 +831,16 @@ struct RomaCoreChecks {
                 "standalone pause plus okay acknowledgement filler"
             ),
             (
+                "hmm yes.",
+                "",
+                "standalone pause plus yes acknowledgement filler"
+            ),
+            (
+                "uh sure.",
+                "",
+                "standalone pause plus sure acknowledgement filler"
+            ),
+            (
                 "uh all right.",
                 "",
                 "standalone pause plus all right acknowledgement filler"
@@ -819,6 +849,11 @@ struct RomaCoreChecks {
                 "uh okay yeah.",
                 "",
                 "standalone pause plus acknowledgement chain filler"
+            ),
+            (
+                "eh yep okay.",
+                "",
+                "standalone pause plus yep acknowledgement chain filler"
             ),
             (
                 "hmm all right yeah.",
@@ -849,6 +884,26 @@ struct RomaCoreChecks {
                 "hmm all right this works.",
                 "this works.",
                 "leading pause plus all right acknowledgement filler"
+            ),
+            (
+                "This works, um yes.",
+                "This works.",
+                "terminal pause plus yes acknowledgement filler"
+            ),
+            (
+                "This works, uh sure.",
+                "This works.",
+                "terminal pause plus sure acknowledgement filler"
+            ),
+            (
+                "Yes, this works.",
+                "Yes, this works.",
+                "no-pause yes acknowledgement prose guard"
+            ),
+            (
+                "Sure this works.",
+                "Sure this works.",
+                "no-pause sure acknowledgement prose guard"
             ),
             (
                 "hmm — I think this works.",
