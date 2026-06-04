@@ -131,6 +131,18 @@ function Assert-DictationRuntimeProof {
     return $runtime
 }
 
+function Assert-HoldHookRuntimeProof {
+    param(
+        [Parameter(Mandatory = $true)]
+        [object]$Runtime
+    )
+
+    Assert-Boolean -Object $Runtime -Name "reported_hold_mode" -Expected $true
+    Assert-Boolean -Object $Runtime -Name "reported_waiting_for_hold_key_down" -Expected $true
+    Assert-Boolean -Object $Runtime -Name "reported_hold_key_down" -Expected $true
+    Assert-Boolean -Object $Runtime -Name "reported_hold_key_up" -Expected $true
+}
+
 function Assert-DoctorOutputProof {
     param(
         [Parameter(Mandatory = $true)]
@@ -302,6 +314,9 @@ if ($RequireDictation) {
     $outputFile = Require-Property -Object $config -Name "output_file"
     Assert-FileProof -Proof $outputFile -Name "dictation_output" -MinimumBytes 45
     $dictationRuntime = Assert-DictationRuntimeProof -Report $report
+    if ($RequireHoldHook) {
+        Assert-HoldHookRuntimeProof -Runtime $dictationRuntime
+    }
 }
 
 if ($RequirePaste) {
@@ -310,6 +325,9 @@ if ($RequirePaste) {
     Assert-Boolean -Object $config -Name "should_paste" -Expected $true
     if ($null -eq $dictationRuntime) {
         $dictationRuntime = Assert-DictationRuntimeProof -Report $report
+    }
+    if ($RequireHoldHook) {
+        Assert-HoldHookRuntimeProof -Runtime $dictationRuntime
     }
     Assert-Boolean -Object $dictationRuntime -Name "reported_paste_sent" -Expected $true
 }

@@ -373,6 +373,10 @@ function Get-DictationRuntimeProof {
     $proof["reported_processed_text"] = $content.Contains("processed_transcript_text=")
     $proof["reported_paste_sent"] = $content.Contains("paste_sent=true")
     $proof["reported_paste_not_sent"] = $content.Contains("paste_sent=false")
+    $proof["reported_hold_mode"] = $content.Contains("recording_mode=hold")
+    $proof["reported_waiting_for_hold_key_down"] = $content.Contains("waiting_for_key_down=")
+    $proof["reported_hold_key_down"] = $content.Contains("hold_key_down=true")
+    $proof["reported_hold_key_up"] = $content.Contains("hold_key_up=true")
 
     return $proof
 }
