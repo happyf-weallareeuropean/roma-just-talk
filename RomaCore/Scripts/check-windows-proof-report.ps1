@@ -6,6 +6,8 @@ param(
     [switch]$RequireShortcut,
     [switch]$RequirePackagedMock,
     [switch]$RequireHoldHook,
+    [switch]$RequireCloudConfig,
+    [switch]$RequireWhisperConfig,
     [switch]$RequireDictation,
     [switch]$RequirePaste
 )
@@ -131,6 +133,22 @@ if ($RequireShortcut) {
 if ($RequireHoldHook) {
     $config = Require-Property -Object $report -Name "config"
     Assert-Boolean -Object $config -Name "uses_hold_hook" -Expected $true
+}
+
+if ($RequireCloudConfig) {
+    $config = Require-Property -Object $report -Name "config"
+    Assert-Boolean -Object $config -Name "uses_whisper_cli" -Expected $false
+    Assert-NonEmptyString -Object $config -Name "endpoint"
+    Assert-NonEmptyString -Object $config -Name "model"
+}
+
+if ($RequireWhisperConfig) {
+    $config = Require-Property -Object $report -Name "config"
+    Assert-Boolean -Object $config -Name "uses_whisper_cli" -Expected $true
+    Assert-NonEmptyString -Object $config -Name "whisper_cli_path"
+    Assert-NonEmptyString -Object $config -Name "whisper_model_path"
+    Assert-FileProof -Proof (Require-Property -Object $config -Name "whisper_cli_file") -Name "whisper_cli"
+    Assert-FileProof -Proof (Require-Property -Object $config -Name "whisper_model_file") -Name "whisper_model"
 }
 
 if ($RequireDictation) {

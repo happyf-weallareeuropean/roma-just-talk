@@ -247,7 +247,8 @@ jobs:
             -RequireInstall `
             -RequireShortcut `
             -RequirePackagedMock `
-            -RequireHoldHook
+            -RequireHoldHook `
+            -RequireWhisperConfig
 
       - name: Upload proof artifacts
         uses: actions/upload-artifact@v4

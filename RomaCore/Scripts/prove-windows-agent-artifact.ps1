@@ -164,6 +164,24 @@ function Get-ConfigProof {
     if ($config.PSObject.Properties.Name -contains "restoreClipboardAfterPaste") {
         $proof["restore_clipboard_after_paste"] = [bool]$config.restoreClipboardAfterPaste
     }
+    if ($config.PSObject.Properties.Name -contains "whisperCLIPath" -and
+        ![string]::IsNullOrWhiteSpace([string]$config.whisperCLIPath)) {
+        $proof["uses_whisper_cli"] = $true
+        $proof["whisper_cli_path"] = [string]$config.whisperCLIPath
+        $proof["whisper_cli_file"] = Get-FileProof -Path ([string]$config.whisperCLIPath)
+        if ($config.PSObject.Properties.Name -contains "whisperModelPath") {
+            $proof["whisper_model_path"] = [string]$config.whisperModelPath
+            $proof["whisper_model_file"] = Get-FileProof -Path ([string]$config.whisperModelPath)
+        }
+    } else {
+        $proof["uses_whisper_cli"] = $false
+    }
+    if ($config.PSObject.Properties.Name -contains "endpoint") {
+        $proof["endpoint"] = [string]$config.endpoint
+    }
+    if ($config.PSObject.Properties.Name -contains "model") {
+        $proof["model"] = [string]$config.model
+    }
 
     return $proof
 }
