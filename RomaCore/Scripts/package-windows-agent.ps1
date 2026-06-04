@@ -215,6 +215,7 @@ try {
             -RestoreClipboard `
             -ClipboardRestoreDelaySeconds 0 `
             -CreateShortcut `
+            -AllowSmokeShortcut `
             -ShortcutDir (Join-Path $OutputDir "shortcuts")
     }
 

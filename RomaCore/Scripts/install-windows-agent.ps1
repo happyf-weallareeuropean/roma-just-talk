@@ -25,6 +25,7 @@ param(
     [switch]$RunDictation,
     [switch]$SkipSmoke,
     [switch]$CreateShortcut,
+    [switch]$AllowSmokeShortcut,
     [string]$ShortcutDir = "",
     [string]$ShortcutName = "Roma Just Talk Agent.lnk"
 )
@@ -80,17 +81,15 @@ $InstallDir = Resolve-FullPath -Path $InstallDir
 
 $hasExplicitEndpoint = $PSBoundParameters.ContainsKey("Endpoint")
 $hasExplicitModel = $PSBoundParameters.ContainsKey("Model")
-$hasExplicitConfigPath = $PSBoundParameters.ContainsKey("ConfigPath")
+$hasExplicitConfigPath = $PSBoundParameters.ContainsKey("ConfigPath") -and ![string]::IsNullOrWhiteSpace($ConfigPath)
 $hasExplicitWhisperCLI = $PSBoundParameters.ContainsKey("WhisperCLI")
 $hasExplicitWhisperModel = $PSBoundParameters.ContainsKey("WhisperModel")
-$usesInstallSmokeConfig = (
-    !$hasExplicitConfigPath -and
-    !$hasExplicitEndpoint -and
-    !$hasExplicitModel -and
-    !$hasExplicitWhisperCLI -and
-    !$hasExplicitWhisperModel -and
-    !$RunDictation
-)
+$hasExplicitApiKeyEnv = $PSBoundParameters.ContainsKey("ApiKeyEnv") -and ![string]::IsNullOrWhiteSpace($ApiKeyEnv)
+$hasExplicitApiKeyName = ![string]::IsNullOrWhiteSpace($ApiKeyName)
+$hasCloudShortcutConfig = $hasExplicitEndpoint -and $hasExplicitModel -and ($hasExplicitApiKeyEnv -or $hasExplicitApiKeyName)
+$hasWhisperShortcutConfig = $hasExplicitWhisperCLI -and $hasExplicitWhisperModel
+$hasExistingShortcutConfig = $SkipSmoke -and $hasExplicitConfigPath
+$shortcutHasRunnableConfig = $hasCloudShortcutConfig -or $hasWhisperShortcutConfig -or $hasExistingShortcutConfig
 
 if ([string]::IsNullOrWhiteSpace($ConfigPath)) {
     if (($hasExplicitEndpoint -or $hasExplicitModel -or $hasExplicitWhisperCLI -or $hasExplicitWhisperModel -or $RunDictation) -and
@@ -247,8 +246,8 @@ if (!$SkipSmoke) {
 
 if ($CreateShortcut) {
     Invoke-Step "create user shortcut" {
-        if ($usesInstallSmokeConfig) {
-            throw "CreateShortcut requires -ConfigPath, -RunDictation, or real Endpoint/Model or WhisperCLI/WhisperModel args"
+        if (!$shortcutHasRunnableConfig -and !$AllowSmokeShortcut) {
+            throw "CreateShortcut requires cloud Endpoint/Model with ApiKeyEnv/ApiKeyName, local WhisperCLI/WhisperModel, or -SkipSmoke with -ConfigPath"
         }
         if ([System.Environment]::OSVersion.Platform -ne [System.PlatformID]::Win32NT) {
             throw "CreateShortcut is only available on Windows"
