@@ -2,6 +2,7 @@
 
 ## v1.81 - Unreleased
 
+- Cleaned bounded "on second thought" self-corrections.
 - Cleaned leading slash, backslash, and pipe separator noise from short mid-sentence fragments.
 - Cleaned bounded "hold on" and "hang on" hesitation self-corrections.
 - Cleaned bounded bare "wait" self-corrections such as "Use model, wait module.".

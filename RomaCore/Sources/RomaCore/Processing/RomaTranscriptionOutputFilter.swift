@@ -516,6 +516,7 @@ public struct RomaTranscriptionOutputFilter {
             (?:[,;:…]|\.\.\.)\s*(?:oops|whoops|woops)\s*[,;:]? |
             (?:[,;:…]|\.\.\.)\s*my\s+bad\s*[,;:]? |
             (?:[,;:…]|\.\.\.)\s*correction\s*[,;:]? |
+            (?:[,;:…]|\.\.\.)\s*on\s+second\s+thought\s*[,;:]? |
             (?:[,;:…]|\.\.\.)\s*sorry\s*[,;:]?\s+i\s+mean\s*[,;:]? |
             (?:[,;:…]|\.\.\.)\s*sorry\s*[,;:]?\s+i\s+meant\s*[,;:]? |
             sorry\s*[,;:]?\s+i\s+mean\s*[,;:]? |
@@ -1302,7 +1303,7 @@ public struct RomaTranscriptionOutputFilter {
 
     private static func preserveBacktrackingMarkersAfterPauseFillers(in text: String) -> String {
         guard let regex = try? NSRegularExpression(
-            pattern: #"(?i)([,;:…]|\.\.\.)[ \t]+(?:u+h+|u+m+|h+m+|m+h+|m{2,}|(?-i:[aA]h+[eE][mM]+|[eE]h+[mM]+|[eE][hH]+m+)|e+h+|e+r+|a+h+|h+uh+)(?:[.,;:!?…]+)?[ \t]+(actually(?:[ \t]+no|[ \t]+make[ \t]+it)?|better[ \t]+make[ \t]+it|sorry[ \t]+i[ \t]+mean|sorry[ \t]+i[ \t]+meant|i[ \t]+mean|i[ \t]+meant|i[ \t]+should[ \t]+say|make[ \t]+that|make[ \t]+it|call[ \t]+it|wait[ \t]+no|no[ \t]+wait|no[ \t]+actually|rather|instead|oops|whoops|woops|my[ \t]+bad|correction)(?=\s)"#
+            pattern: #"(?i)([,;:…]|\.\.\.)[ \t]+(?:u+h+|u+m+|h+m+|m+h+|m{2,}|(?-i:[aA]h+[eE][mM]+|[eE]h+[mM]+|[eE][hH]+m+)|e+h+|e+r+|a+h+|h+uh+)(?:[.,;:!?…]+)?[ \t]+(actually(?:[ \t]+no|[ \t]+make[ \t]+it)?|better[ \t]+make[ \t]+it|sorry[ \t]+i[ \t]+mean|sorry[ \t]+i[ \t]+meant|i[ \t]+mean|i[ \t]+meant|i[ \t]+should[ \t]+say|make[ \t]+that|make[ \t]+it|call[ \t]+it|wait[ \t]+no|no[ \t]+wait|no[ \t]+actually|on[ \t]+second[ \t]+thought|rather|instead|oops|whoops|woops|my[ \t]+bad|correction)(?=\s)"#
         ) else {
             return text
         }
@@ -5508,6 +5509,7 @@ public struct RomaTranscriptionOutputFilter {
             "no i mean",
             "no i meant",
             "no actually",
+            "on second thought",
             "hold on",
             "hang on",
             "wait actually",
@@ -5560,6 +5562,7 @@ public struct RomaTranscriptionOutputFilter {
             "nevermind",
             "no actually",
             "no wait",
+            "on second thought",
             "hold on",
             "hang on",
             "wait",

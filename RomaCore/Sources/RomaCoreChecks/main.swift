@@ -1603,6 +1603,21 @@ struct RomaCoreChecks {
                 "hang on hesitation correction"
             ),
             (
+                "Use model, on second thought module.",
+                "Use module.",
+                "on second thought hesitation correction"
+            ),
+            (
+                "Use model, um on second thought module.",
+                "Use module.",
+                "pause filler before on second thought correction"
+            ),
+            (
+                "Let's meet at two, on second thought three tomorrow.",
+                "Let's meet at three tomorrow.",
+                "on second thought correction should preserve suffix"
+            ),
+            (
                 "Use model, wait actually module.",
                 "Use module.",
                 "wait actually correction"
@@ -2661,6 +2676,11 @@ struct RomaCoreChecks {
                 "Please hang on, module loads.",
                 "Please hang on, module loads.",
                 "hang on prose guard"
+            ),
+            (
+                "On second thought, module loads.",
+                "On second thought, module loads.",
+                "on second thought prose guard"
             ),
             (
                 "The phrase actually wait no is useful.",
