@@ -54,6 +54,7 @@
 - Added a packaged `whisper-cli-doctor` preflight to the Windows laptop proof runner so local-whisper setup fails before interactive proof steps.
 - Added a packaged `miniaudio-record-proof` preflight to the Windows laptop proof runner so microphone access fails before interactive proof steps.
 - Added a packaged `windows-keyboard-hook-proof` preflight to the Windows laptop proof runner so hold-hotkey delivery fails before dictation.
+- Added a Windows laptop `-PreflightOnly` mode that runs hotkey, microphone, and local-whisper checks before cloud/full-proof setup.
 - Exposed shared Windows record, hold, and clipboard defaults in doctor and artifact proof output.
 - Required Windows package smoke to assert shared proof-agent defaults.
 - Required Windows agent smoke to assert shared user-facing agent defaults.

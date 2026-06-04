@@ -6156,6 +6156,12 @@ struct RomaCoreChecks {
             "Windows laptop proof runner should preflight real hold-hotkey delivery through packaged RomaProofAgent"
         )
         try require(
+            laptopProofScript.contains("PreflightOnly") &&
+                laptopProofScript.contains("windows_laptop_preflight_only=true") &&
+                laptopProofScript.contains("windows_laptop_preflight_ok=true"),
+            "Windows laptop proof runner should let native preflights run before cloud/full-proof setup"
+        )
+        try require(
             laptopProofScript.contains("startup-shortcuts"),
             "Windows laptop proof runner should use proof-owned startup shortcut directories"
         )

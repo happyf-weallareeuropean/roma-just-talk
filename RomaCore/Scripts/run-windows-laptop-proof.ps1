@@ -19,6 +19,7 @@ param(
     [int]$HoldTimeoutSeconds = 15,
     [int]$RecordSeconds = 2,
     [double]$MicPreflightSeconds = 1,
+    [switch]$PreflightOnly,
     [switch]$RestoreClipboard,
     [switch]$NoRestoreClipboard,
     [double]$ClipboardRestoreDelaySeconds = 2
@@ -311,14 +312,16 @@ if (![string]::IsNullOrWhiteSpace($StartupShortcutDir)) {
     $StartupShortcutDir = Resolve-FullPath -Path $StartupShortcutDir
 }
 
-if ([string]::IsNullOrWhiteSpace($Endpoint) -or
-    [string]::IsNullOrWhiteSpace($Model)) {
-    throw "Endpoint and Model are required for the cloud dictation proof"
-}
+if (!$PreflightOnly) {
+    if ([string]::IsNullOrWhiteSpace($Endpoint) -or
+        [string]::IsNullOrWhiteSpace($Model)) {
+        throw "Endpoint and Model are required for the cloud dictation proof"
+    }
 
-if ([string]::IsNullOrWhiteSpace($ApiKeyEnv) -and
-    [string]::IsNullOrWhiteSpace($ApiKeyName)) {
-    throw "Cloud proof requires ApiKeyEnv or ApiKeyName"
+    if ([string]::IsNullOrWhiteSpace($ApiKeyEnv) -and
+        [string]::IsNullOrWhiteSpace($ApiKeyName)) {
+        throw "Cloud proof requires ApiKeyEnv or ApiKeyName"
+    }
 }
 
 if ([string]::IsNullOrWhiteSpace($WhisperCLI) -or
@@ -386,6 +389,17 @@ Invoke-Step "local whisper CLI preflight" {
         -WhisperModelPath $WhisperModel `
         -OutputDir $preflightOutputDir `
         -ExtraArguments $whisperArguments
+}
+
+if ($PreflightOnly) {
+    Write-Host ""
+    Write-Host "windows_laptop_proof_dir=$ProofDir"
+    Write-Host "windows_laptop_proof_session_id=$proofSessionId"
+    Write-Host "windows_laptop_hotkey_delivery_preflight=true"
+    Write-Host "windows_laptop_mic_preflight=$micPreflightPath"
+    Write-Host "windows_laptop_preflight_only=true"
+    Write-Host "windows_laptop_preflight_ok=true"
+    exit 0
 }
 
 $cloudArgs = @(
