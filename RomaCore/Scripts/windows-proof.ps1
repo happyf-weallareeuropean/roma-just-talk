@@ -94,6 +94,34 @@ function Assert-NonEmptyFile {
     Write-Host "bytes=$($item.Length)"
 }
 
+function Resolve-SwiftProductExecutable {
+    param(
+        [Parameter(Mandatory = $true)]
+        [string]$Name
+    )
+
+    $binDirLines = @(swift build --show-bin-path)
+    if ($LASTEXITCODE -ne 0 -or $binDirLines.Count -eq 0) {
+        throw "Could not resolve SwiftPM binary path"
+    }
+
+    $binDir = ($binDirLines |
+        Where-Object { ![string]::IsNullOrWhiteSpace($_) } |
+        Select-Object -Last 1).Trim()
+    $candidates = @(
+        (Join-Path $binDir "$Name.exe"),
+        (Join-Path $binDir $Name)
+    )
+
+    foreach ($candidate in $candidates) {
+        if (Test-Path -LiteralPath $candidate) {
+            return $candidate
+        }
+    }
+
+    throw "SwiftPM product executable was not found: $Name in $binDir"
+}
+
 function New-WindowsAgentConfigArgs {
     param(
         [Parameter(Mandatory = $true)]
@@ -208,6 +236,25 @@ try {
 
     Invoke-Step "whisper.cpp CLI doctor" {
         swift run RomaProofAgent whisper-cli-doctor
+    }
+
+    Invoke-Step "whisper.cpp CLI mock proof" {
+        swift build --product RomaWhisperCLIMock
+        $mockWhisperCLI = Resolve-SwiftProductExecutable -Name "RomaWhisperCLIMock"
+        $whisperOutput = swift run RomaProofAgent whisper-cli-proof `
+            --audio $coreProof `
+            --whisper-cli $mockWhisperCLI `
+            --whisper-model $coreProof `
+            --language en `
+            --prompt "roma just talk" 2>&1 | Out-String
+        if ($LASTEXITCODE -ne 0) {
+            Write-Host $whisperOutput
+            throw "whisper-cli-proof failed"
+        }
+        Write-Host $whisperOutput
+        Assert-OutputContains -Output $whisperOutput -Expected "provider=whisper.cpp-cli"
+        Assert-OutputContains -Output $whisperOutput -Expected "language=en"
+        Assert-OutputContains -Output $whisperOutput -Expected "transcript_text=roma just talk local proof"
     }
 
     $pipelineProof = Join-Path $OutputDir "pipeline-proof.wav"

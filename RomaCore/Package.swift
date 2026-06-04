@@ -23,6 +23,10 @@ let package = Package(
         .executable(
             name: "RomaWindowsAgent",
             targets: ["RomaWindowsAgent"]
+        ),
+        .executable(
+            name: "RomaWhisperCLIMock",
+            targets: ["RomaWhisperCLIMock"]
         )
     ],
     targets: [
@@ -49,6 +53,9 @@ let package = Package(
         .executableTarget(
             name: "RomaWindowsAgent",
             dependencies: ["RomaCore"]
+        ),
+        .executableTarget(
+            name: "RomaWhisperCLIMock"
         )
     ]
 )
