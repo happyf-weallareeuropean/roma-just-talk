@@ -20,6 +20,21 @@ function Invoke-Step {
     & $Command
 }
 
+function Assert-OutputContains {
+    param(
+        [Parameter(Mandatory = $true)]
+        [string]$Output,
+        [Parameter(Mandatory = $true)]
+        [string]$Expected
+    )
+
+    if (!$Output.Contains($Expected)) {
+        throw "Expected command output to contain '$Expected'"
+    }
+
+    Write-Host "asserted_output=$Expected"
+}
+
 function Resolve-ProductExecutable {
     param(
         [Parameter(Mandatory = $true)]
@@ -240,6 +255,17 @@ try {
             -ConfigPath $configPath `
             -RestoreClipboard `
             -ClipboardRestoreDelaySeconds 0
+    }
+
+    Invoke-Step "packaged proof agent smoke" {
+        $proofAgentOutputText = & $proofAgentOutput doctor 2>&1 | Out-String
+        if ($LASTEXITCODE -ne 0) {
+            Write-Host $proofAgentOutputText
+            throw "RomaProofAgent doctor failed"
+        }
+        Write-Host $proofAgentOutputText
+        Assert-OutputContains -Output $proofAgentOutputText -Expected "windows_paste_adapter_source=true"
+        Assert-OutputContains -Output $proofAgentOutputText -Expected "windows_dictation_proof_source=true"
     }
 
     Invoke-Step "packaged local whisper config smoke" {

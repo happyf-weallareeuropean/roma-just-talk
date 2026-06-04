@@ -4,6 +4,7 @@
 
 - Cleaned bounded "hold on" and "hang on" hesitation self-corrections.
 - Cleaned bounded bare "wait" self-corrections such as "Use model, wait module.".
+- Smoked packaged `RomaProofAgent.exe` before uploading the Windows agent artifact.
 - Packaged `RomaProofAgent.exe` and added artifact-wrapper JSON proof for Notepad paste verification.
 - Removed "ahem..." throat-clear filler artifacts while preserving all-caps marker prose.
 - Removed "ehm..." pause-filler artifacts while preserving all-caps acronym prose.
