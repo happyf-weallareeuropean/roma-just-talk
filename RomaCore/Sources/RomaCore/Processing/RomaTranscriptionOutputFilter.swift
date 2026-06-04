@@ -6394,6 +6394,7 @@ public struct RomaTranscriptionOutputFilter {
             }
         }
         strippedText = unwrapNestedSquareBracketedBoundaryOutput(strippedText)
+        strippedText = unwrapNoisyAngleBracketedBoundaryOutput(strippedText)
         guard isShortFragment(strippedText) else { return strippedText }
 
         if hasPreservedBalancedBoundary(strippedText) ||
@@ -6417,6 +6418,48 @@ public struct RomaTranscriptionOutputFilter {
         }
 
         return unwrappedInnerText
+    }
+
+    private static func unwrapNoisyAngleBracketedBoundaryOutput(_ text: String) -> String {
+        let trimmedText = text.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard trimmedText.first == "<",
+              trimmedText.last == ">" else {
+            return text
+        }
+
+        let innerStart = trimmedText.index(after: trimmedText.startIndex)
+        let innerEnd = trimmedText.index(before: trimmedText.endIndex)
+        let innerText = String(trimmedText[innerStart..<innerEnd])
+            .trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !innerText.isEmpty else { return text }
+
+        let pipeUnwrappedText = unwrapPipeWrappedFragment(innerText)
+        let squareUnwrappedText = unwrapSquareBracketedWholeOutput(pipeUnwrappedText)
+        let candidateText = squareUnwrappedText.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !candidateText.isEmpty else { return text }
+        guard isShortFragment(candidateText) else { return text }
+
+        let didUnwrapNestedBoundary = candidateText != innerText
+        let didRemoveNoisyPunctuation = removeTrailingNoisyFragmentPunctuation(from: candidateText) != candidateText
+        guard didUnwrapNestedBoundary || didRemoveNoisyPunctuation else {
+            return text
+        }
+
+        return candidateText
+    }
+
+    private static func unwrapPipeWrappedFragment(_ text: String) -> String {
+        let trimmedText = text.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard trimmedText.first == "|",
+              trimmedText.last == "|",
+              trimmedText.count >= 3 else {
+            return text
+        }
+
+        let innerStart = trimmedText.index(after: trimmedText.startIndex)
+        let innerEnd = trimmedText.index(before: trimmedText.endIndex)
+        return String(trimmedText[innerStart..<innerEnd])
+            .trimmingCharacters(in: .whitespacesAndNewlines)
     }
 
     private static func startsWithRemovableNonASCIIBoundaryWrapper(_ text: String) -> Bool {

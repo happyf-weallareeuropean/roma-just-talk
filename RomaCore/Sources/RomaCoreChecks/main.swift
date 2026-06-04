@@ -435,6 +435,29 @@ struct RomaCoreChecks {
             "shared insertion polish should unwrap parenthesized square-bracketed fragments"
         )
         try require(
+            RomaTranscriptionOutputFilter.applyInsertionPolish("<Model.>", context: midSentenceContext) == "model",
+            "shared insertion polish should unwrap noisy angle-bracketed fragments"
+        )
+        try require(
+            RomaTranscriptionOutputFilter.applyInsertionPolish(
+                "< A final word. >",
+                context: midSentenceContext
+            ) == "a final word",
+            "shared insertion polish should unwrap spaced angle-bracketed phrases"
+        )
+        try require(
+            RomaTranscriptionOutputFilter.applyInsertionPolish("<[Model.]>", context: midSentenceContext) == "model",
+            "shared insertion polish should unwrap angle-wrapped square-bracketed fragments"
+        )
+        try require(
+            RomaTranscriptionOutputFilter.applyInsertionPolish("<|Model.|>", context: midSentenceContext) == "model",
+            "shared insertion polish should unwrap angle-wrapped pipe fragments"
+        )
+        try require(
+            RomaTranscriptionOutputFilter.applyInsertionPolish("<model>", context: midSentenceContext) == "<model>",
+            "shared insertion polish should preserve literal angle tokens"
+        )
+        try require(
             RomaTranscriptionOutputFilter.applyInsertionPolish("【Model.】", context: midSentenceContext) == "model",
             "shared insertion polish should unwrap corner-bracketed fragments"
         )
@@ -3361,6 +3384,29 @@ struct RomaCoreChecks {
         try require(
             RomaTranscriptionOutputFilter.applyInsertionPolish("[A final word!]", context: nil) == "a final word",
             "insertion polish should strip noisy sentence marks from bracketed final phrases"
+        )
+        try require(
+            RomaTranscriptionOutputFilter.applyInsertionPolish("<Model.>", context: midSentenceContext) == "model",
+            "insertion polish should unwrap noisy angle-bracketed fragments"
+        )
+        try require(
+            RomaTranscriptionOutputFilter.applyInsertionPolish(
+                "< A final word. >",
+                context: midSentenceContext
+            ) == "a final word",
+            "insertion polish should unwrap spaced angle-bracketed phrases"
+        )
+        try require(
+            RomaTranscriptionOutputFilter.applyInsertionPolish("<[Model.]>", context: midSentenceContext) == "model",
+            "insertion polish should unwrap angle-wrapped square-bracketed fragments"
+        )
+        try require(
+            RomaTranscriptionOutputFilter.applyInsertionPolish("<|Model.|>", context: midSentenceContext) == "model",
+            "insertion polish should unwrap angle-wrapped pipe fragments"
+        )
+        try require(
+            RomaTranscriptionOutputFilter.applyInsertionPolish("<model>", context: midSentenceContext) == "<model>",
+            "insertion polish should preserve literal angle tokens"
         )
         try require(
             RomaTranscriptionOutputFilter.applyInsertionPolish("'Model.'", context: nil) == "'model'",
