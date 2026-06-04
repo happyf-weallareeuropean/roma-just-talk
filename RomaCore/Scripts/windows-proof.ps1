@@ -9,6 +9,10 @@ param(
     [string]$TranscribeApiKeyName = "",
     [string]$TranscribeLanguage = "",
     [string]$TranscribePrompt = "",
+    [string]$WhisperCLI = "",
+    [string]$WhisperModel = "",
+    [string]$WhisperOutputDir = "",
+    [string[]]$WhisperArgument = @(),
     [string[]]$WordReplacement = @(),
     [switch]$SkipMic,
     [switch]$RunInteractiveHotkey,
@@ -131,22 +135,35 @@ function New-WindowsAgentConfigArgs {
 
     $configArgs = @(
         "run", "RomaWindowsAgent", "write-config",
-        "--config", $ConfigPath,
-        "--endpoint", $TranscribeEndpoint,
-        "--model", $TranscribeModel
+        "--config", $ConfigPath
     )
     if (![string]::IsNullOrWhiteSpace($OutputPath)) {
         $configArgs += @("--out", $OutputPath)
+    }
+    if (![string]::IsNullOrWhiteSpace($WhisperCLI)) {
+        $configArgs += @("--whisper-cli", $WhisperCLI, "--whisper-model", $WhisperModel)
+        if (![string]::IsNullOrWhiteSpace($WhisperOutputDir)) {
+            $configArgs += @("--whisper-output-dir", $WhisperOutputDir)
+        }
+        foreach ($argument in $WhisperArgument) {
+            if (![string]::IsNullOrWhiteSpace($argument)) {
+                $configArgs += @("--whisper-arg", $argument)
+            }
+        }
+    } else {
+        $configArgs += @("--endpoint", $TranscribeEndpoint, "--model", $TranscribeModel)
     }
     if ($UseHoldHook) {
         $configArgs += @("--hold-hook", "--timeout", "$HoldTimeoutSeconds")
     } else {
         $configArgs += @("--toggle", "--seconds", "$RecordSeconds")
     }
-    if (![string]::IsNullOrWhiteSpace($TranscribeApiKeyName)) {
-        $configArgs += @("--api-key-name", $TranscribeApiKeyName, "--secret-dir", $secretProofDir)
-    } else {
-        $configArgs += @("--api-key-env", $TranscribeApiKeyEnv)
+    if ([string]::IsNullOrWhiteSpace($WhisperCLI)) {
+        if (![string]::IsNullOrWhiteSpace($TranscribeApiKeyName)) {
+            $configArgs += @("--api-key-name", $TranscribeApiKeyName, "--secret-dir", $secretProofDir)
+        } else {
+            $configArgs += @("--api-key-env", $TranscribeApiKeyEnv)
+        }
     }
     if (![string]::IsNullOrWhiteSpace($TranscribeLanguage)) {
         $configArgs += @("--language", $TranscribeLanguage)
@@ -182,6 +199,21 @@ if ($RestoreClipboard -and $NoRestoreClipboard) {
 if ($ClipboardRestoreDelaySeconds -lt 0) {
     throw "ClipboardRestoreDelaySeconds must be non-negative"
 }
+
+if ((![string]::IsNullOrWhiteSpace($WhisperCLI) -or
+    ![string]::IsNullOrWhiteSpace($WhisperModel)) -and
+    (![string]::IsNullOrWhiteSpace($TranscribeEndpoint) -or
+    ![string]::IsNullOrWhiteSpace($TranscribeModel) -or
+    ![string]::IsNullOrWhiteSpace($TranscribeApiKeyName))) {
+    throw "WhisperCLI/WhisperModel and TranscribeEndpoint/TranscribeModel/API-key-name are mutually exclusive for Windows agent config"
+}
+
+if ((![string]::IsNullOrWhiteSpace($WhisperCLI) -and [string]::IsNullOrWhiteSpace($WhisperModel)) -or
+    ([string]::IsNullOrWhiteSpace($WhisperCLI) -and ![string]::IsNullOrWhiteSpace($WhisperModel))) {
+    throw "WhisperCLI and WhisperModel must be provided together"
+}
+
+$hasLocalWhisper = ![string]::IsNullOrWhiteSpace($WhisperCLI)
 
 $packageRoot = Resolve-Path "$PSScriptRoot\.."
 $OutputDir = $ExecutionContext.SessionState.Path.GetUnresolvedProviderPathFromPSPath($OutputDir)
@@ -289,6 +321,10 @@ try {
     }
     $hasTranscriptionKey = ![string]::IsNullOrWhiteSpace($transcribeApiKeyEnvValue) -or
         ![string]::IsNullOrWhiteSpace($TranscribeApiKeyName)
+    $hasCloudTranscriptionConfig = ![string]::IsNullOrWhiteSpace($TranscribeEndpoint) -and
+        ![string]::IsNullOrWhiteSpace($TranscribeModel) -and
+        $hasTranscriptionKey
+    $hasWindowsAgentTranscriptionConfig = $hasLocalWhisper -or $hasCloudTranscriptionConfig
 
     if (![string]::IsNullOrWhiteSpace($TranscribeApiKeyName) -and
         ![string]::IsNullOrWhiteSpace($transcribeApiKeyEnvValue)) {
@@ -374,9 +410,7 @@ try {
     }
 
     $agentConfig = Join-Path $OutputDir "windows-agent.json"
-    if (![string]::IsNullOrWhiteSpace($TranscribeEndpoint) -and
-        ![string]::IsNullOrWhiteSpace($TranscribeModel) -and
-        $hasTranscriptionKey) {
+    if ($hasWindowsAgentTranscriptionConfig) {
         Invoke-Step "windows agent config proof" {
             $agentConfigArgs = New-WindowsAgentConfigArgs -ConfigPath $agentConfig
             $configOutput = swift @agentConfigArgs 2>&1 | Out-String
@@ -387,12 +421,19 @@ try {
             Write-Host $configOutput
             Assert-OutputContains -Output $configOutput -Expected "written=true"
             Assert-OutputContains -Output $configOutput -Expected "config=$agentConfig"
+            if ($hasLocalWhisper) {
+                Assert-OutputContains -Output $configOutput -Expected "transcription_client=whisper.cpp-cli"
+                Assert-OutputContains -Output $configOutput -Expected "whisper_cli=$WhisperCLI"
+            } else {
+                Assert-OutputContains -Output $configOutput -Expected "transcription_client=openai-compatible"
+                Assert-OutputContains -Output $configOutput -Expected "endpoint=$TranscribeEndpoint"
+            }
             Assert-NonEmptyFile -Path $agentConfig
         }
     } else {
         Write-Host ""
         Write-Host "== windows agent config proof skipped =="
-        Write-Host "pass -TranscribeEndpoint, -TranscribeModel, and -TranscribeApiKeyEnv or -TranscribeApiKeyName to prove reusable agent config"
+        Write-Host "pass local -WhisperCLI and -WhisperModel, or cloud -TranscribeEndpoint, -TranscribeModel, and key args to prove reusable agent config"
     }
 
     if ($RunInteractivePaste) {
@@ -458,14 +499,12 @@ try {
     } else {
         Write-Host ""
         Write-Host "== windows dictation proof skipped =="
-        Write-Host "rerun with -RunInteractiveDictation and transcription args to prove hotkey -> pre-roll WAV -> STT"
+        Write-Host "rerun with -RunInteractiveDictation and cloud transcription args to prove proof-agent hotkey -> pre-roll WAV -> STT"
     }
 
     if ($RunInteractiveWindowsAgent) {
-        if ([string]::IsNullOrWhiteSpace($TranscribeEndpoint) -or
-            [string]::IsNullOrWhiteSpace($TranscribeModel) -or
-            !$hasTranscriptionKey) {
-            throw "RunInteractiveWindowsAgent requires -TranscribeEndpoint, -TranscribeModel, and -TranscribeApiKeyEnv or -TranscribeApiKeyName"
+        if (!$hasWindowsAgentTranscriptionConfig) {
+            throw "RunInteractiveWindowsAgent requires local -WhisperCLI and -WhisperModel, or cloud -TranscribeEndpoint, -TranscribeModel, and key args"
         }
 
         $agentProof = Join-Path $OutputDir "windows-agent-dictation.wav"
@@ -486,6 +525,11 @@ try {
             }
             Write-Host $configOutput
             Assert-OutputContains -Output $configOutput -Expected "written=true"
+            if ($hasLocalWhisper) {
+                Assert-OutputContains -Output $configOutput -Expected "transcription_client=whisper.cpp-cli"
+            } else {
+                Assert-OutputContains -Output $configOutput -Expected "transcription_client=openai-compatible"
+            }
             Assert-NonEmptyFile -Path $agentConfig
 
             $agentArgs = @(
@@ -498,7 +542,7 @@ try {
     } else {
         Write-Host ""
         Write-Host "== windows agent dictate skipped =="
-        Write-Host "rerun with -RunInteractiveWindowsAgent and transcription args to prove the user-facing Windows agent"
+        Write-Host "rerun with -RunInteractiveWindowsAgent and local or cloud transcription args to prove the user-facing Windows agent"
     }
 
     Write-Host ""

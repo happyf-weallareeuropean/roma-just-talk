@@ -192,6 +192,7 @@ Useful script options:
 - `-OutputDir C:\tmp\roma-proof` writes proof WAVs somewhere explicit.
 - `-TranscribeEndpoint https://api.groq.com/openai/v1/audio/transcriptions -TranscribeModel whisper-large-v3-turbo -TranscribeApiKeyEnv GROQ_API_KEY` runs the OpenAI-compatible transcription proof.
 - `-TranscribeApiKeyName groq` stores `-TranscribeApiKeyEnv` into DPAPI and uses the stored key for transcription.
+- `-WhisperCLI C:\path\whisper-cli.exe -WhisperModel C:\path\ggml-base.en.bin` writes the user-facing Windows agent config for local whisper.cpp transcription.
 - `-TranscribeAudio C:\tmp\proof.wav` uses an existing WAV for transcription, useful with `-SkipMic`.
 - `-TranscribeLanguage en` and `-TranscribePrompt "roma just talk"` pass optional STT hints.
 - `-WordReplacement "just talk=roma-just-talk"` adds a proof-time dictionary replacement before optional paste.
@@ -293,6 +294,7 @@ User-facing Windows agent proof:
 
 ```powershell
 powershell -ExecutionPolicy Bypass -File .\Scripts\windows-proof.ps1 -RunInteractiveWindowsAgent -UseHoldHook -PasteDictation -TranscribeEndpoint https://api.groq.com/openai/v1/audio/transcriptions -TranscribeModel whisper-large-v3-turbo -TranscribeApiKeyEnv GROQ_API_KEY -WordReplacement "just talk=roma-just-talk"
+powershell -ExecutionPolicy Bypass -File .\Scripts\windows-proof.ps1 -RunInteractiveWindowsAgent -UseHoldHook -PasteDictation -WhisperCLI C:\path\whisper-cli.exe -WhisperModel C:\path\ggml-base.en.bin -WordReplacement "just talk=roma-just-talk"
 ```
 
 Manual proof:
