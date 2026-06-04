@@ -1279,6 +1279,7 @@ public struct RomaTranscriptionOutputFilter {
 
         filteredText = removeStandaloneDiscourseFillers(from: filteredText)
         filteredText = removeLeadingDiscourseFillers(from: filteredText)
+        filteredText = removeLeadingWellFiller(from: filteredText)
         filteredText = removeLeadingUnpunctuatedDiscourseFiller(from: filteredText)
         filteredText = removeLeadingUnpunctuatedLikeFiller(from: filteredText)
         filteredText = removeLeadingBasicallyFiller(from: filteredText)
@@ -1419,6 +1420,30 @@ public struct RomaTranscriptionOutputFilter {
         }
 
         return filteredText
+    }
+
+    private static func removeLeadingWellFiller(from text: String) -> String {
+        let trimmedText = text.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard let regex = try? NSRegularExpression(pattern: #"(?i)^well(?:[ \t]*(?:[,;:…]+|\.\.\.))?[ \t]+"#),
+              let match = regex.firstMatch(in: trimmedText, range: NSRange(trimmedText.startIndex..., in: trimmedText)),
+              let matchRange = Range(match.range, in: trimmedText) else {
+            return text
+        }
+
+        let suffix = String(trimmedText[matchRange.upperBound...])
+            .trimmingCharacters(in: .whitespacesAndNewlines)
+        if isLeadingFillerFollowedByClauseStarter(suffix) {
+            return suffix
+        }
+
+        var nestedSuffix = removeLeadingDiscourseFillers(from: suffix)
+        nestedSuffix = removeLeadingUnpunctuatedDiscourseFiller(from: nestedSuffix)
+        guard nestedSuffix != suffix,
+              isLeadingFillerFollowedByClauseStarter(nestedSuffix) else {
+            return text
+        }
+
+        return nestedSuffix
     }
 
     private static func removeLeadingUnpunctuatedDiscourseFiller(from text: String) -> String {

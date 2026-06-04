@@ -1276,6 +1276,31 @@ struct RomaCoreChecks {
                 "unpunctuated leading you know what i mean filler before this clause"
             ),
             (
+                "Well, this works.",
+                "this works.",
+                "punctuated leading well filler before this clause"
+            ),
+            (
+                "Well this works.",
+                "this works.",
+                "unpunctuated leading well filler before this clause"
+            ),
+            (
+                "Well I think this works.",
+                "I think this works.",
+                "unpunctuated leading well filler before i clause"
+            ),
+            (
+                "Well, I mean, this works.",
+                "this works.",
+                "leading well i mean filler chain"
+            ),
+            (
+                "Well, you know this works.",
+                "this works.",
+                "leading well you know filler chain"
+            ),
+            (
                 "Like, this works.",
                 "this works.",
                 "leading like filler"
@@ -3399,6 +3424,16 @@ struct RomaCoreChecks {
                 "I mean the model is ready.",
                 "I mean the model is ready.",
                 "unpunctuated leading i mean determiner noun phrase guard"
+            ),
+            (
+                "Well water is clean.",
+                "Well water is clean.",
+                "leading well noun phrase guard"
+            ),
+            (
+                "Wellness works.",
+                "Wellness works.",
+                "wellness word boundary guard"
             ),
             (
                 "Okay, this works.",

@@ -2,6 +2,7 @@
 
 ## v1.81 - Unreleased
 
+- Cleaned leading "well" fillers before clear clause starters.
 - Cleaned bounded "backtrack" and "back track" spoken corrections.
 - Cleaned unpunctuated leading "I mean" and "you know" fillers before clear clause starters.
 - Cleaned leading "so" fillers before clear clause starters.
