@@ -45,6 +45,7 @@
 - Added explicit action prompts for the Windows laptop proof runner's hold-to-talk and Notepad paste steps.
 - Exposed shared Windows record, hold, and clipboard defaults in doctor and artifact proof output.
 - Required Windows package smoke to assert shared proof-agent defaults.
+- Required Windows agent smoke to assert shared user-facing agent defaults.
 - Required Windows hold-to-talk proof reports to preserve the runtime event order from pre-roll through transcript output.
 - Hardened Windows targeted paste foreground activation with `AttachThreadInput` before `SetForegroundWindow`.
 - Required full Windows laptop proof reports to share one proof session id.
