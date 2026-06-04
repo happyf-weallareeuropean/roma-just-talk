@@ -343,6 +343,10 @@ public struct RomaTranscriptionOutputFilter {
     private static let preservedSingleWordQuestionFragments: Set<String> = [
         "how", "what", "when", "where", "which", "who", "why"
     ]
+    private static let preservedTerminalPeriodAbbreviations: Set<String> = [
+        "dr.", "e.g.", "etc.", "i.e.", "jr.", "mr.", "mrs.", "ms.", "prof.",
+        "sr.", "st.", "u.k.", "u.n.", "u.s.", "vs."
+    ]
     
     private static let nonSpeechBracketPatterns = [
         #"\[\s*([^\[\]]{1,80})\s*\]"#,
@@ -3231,7 +3235,7 @@ public struct RomaTranscriptionOutputFilter {
 
     private static func protectPunctuationSpacingSpans(in text: String) -> (text: String, spans: [String]) {
         guard let regex = try? NSRegularExpression(
-            pattern: #"(?i)\b\d{1,2}:\d{2}(?::\d{2})?(?:\.\d{1,3})?\b|\b(?:https?://|www\.)[A-Za-z0-9._~:/?#\[\]@!$&'()*+,;=%-]+|(?<![\p{L}\p{N}])\.[A-Za-z][A-Za-z0-9._-]{0,63}"#
+            pattern: #"(?i)\b\d{1,2}:\d{2}(?::\d{2})?(?:\.\d{1,3})?\b|\b(?:https?://|www\.)[A-Za-z0-9._~:/?#\[\]@!$&'()*+,;=%-]+|(?<![\p{L}\p{N}])(?:[A-Za-z]\.){2,}(?![\p{L}\p{N}])|(?<![\p{L}\p{N}])\.[A-Za-z][A-Za-z0-9._-]{0,63}"#
         ) else {
             return (text, [])
         }
@@ -5720,7 +5724,7 @@ public struct RomaTranscriptionOutputFilter {
 
     private static func removeTrailingShortFragmentPunctuation(from text: String) -> String {
         var result = removeTrailingPunctuationAfterPreservedBoundary(from: text)
-        result = removeTrailingFragmentPunctuation(from: result)
+        result = removeTrailingFragmentPunctuationPreservingAbbreviation(from: result)
         result = removeTrailingSpacedFragmentSymbols(from: result)
         result = removeTrailingSentenceFragmentPunctuationInsidePreservedBoundary(from: result)
         while let lastScalar = result.unicodeScalars.last,
@@ -5732,13 +5736,26 @@ public struct RomaTranscriptionOutputFilter {
     }
 
     private static func removeTrailingNoisyFragmentPunctuation(from text: String) -> String {
-        var result = removeTrailingFragmentPunctuation(from: text)
+        var result = removeTrailingFragmentPunctuationPreservingAbbreviation(from: text)
         result = removeTrailingSpacedFragmentSymbols(from: result)
         while let lastScalar = result.unicodeScalars.last,
               removableTrailingSentenceFragmentPunctuation.contains(lastScalar) {
             result.removeLast()
         }
         return result.trimmingCharacters(in: .whitespacesAndNewlines)
+    }
+
+    private static func removeTrailingFragmentPunctuationPreservingAbbreviation(from text: String) -> String {
+        var result = text.trimmingCharacters(in: .whitespacesAndNewlines)
+        while let lastScalar = result.unicodeScalars.last,
+              removableTrailingFragmentPunctuation.contains(lastScalar) {
+            if lastScalar == ".", isTerminalPeriodAbbreviation(result) {
+                break
+            }
+            result.removeLast()
+            result = result.trimmingCharacters(in: .whitespacesAndNewlines)
+        }
+        return result
     }
 
     private static func removeTrailingPunctuationAfterPreservedBoundary(from text: String) -> String {
@@ -5779,7 +5796,8 @@ public struct RomaTranscriptionOutputFilter {
     private static func removeTrailingContinuationPeriod(from text: String) -> String {
         let result = text.trimmingCharacters(in: .whitespacesAndNewlines)
         guard result.last == ".",
-              !result.hasSuffix("...") else {
+              !result.hasSuffix("..."),
+              !isTerminalPeriodAbbreviation(result) else {
             return text
         }
 
@@ -5906,6 +5924,20 @@ public struct RomaTranscriptionOutputFilter {
         }
 
         return wordCount(in: textWithoutTrailingFragmentPunctuation) <= 3
+    }
+
+    private static func isTerminalPeriodAbbreviation(_ text: String) -> Bool {
+        let trimmedText = text.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard trimmedText.last == "." else { return false }
+
+        if preservedTerminalPeriodAbbreviations.contains(trimmedText.lowercased()) {
+            return true
+        }
+
+        guard let regex = try? NSRegularExpression(pattern: #"(?i)^(?:[a-z]\.){2,}$"#) else {
+            return false
+        }
+        return regex.firstMatch(in: trimmedText, range: NSRange(trimmedText.startIndex..., in: trimmedText)) != nil
     }
 
     private static func isShortPreservedBoundaryFragment(_ text: String) -> Bool {

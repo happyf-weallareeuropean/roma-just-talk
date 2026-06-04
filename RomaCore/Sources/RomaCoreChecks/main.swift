@@ -211,6 +211,14 @@ struct RomaCoreChecks {
             "shared insertion polish should preserve proper-name mid-sentence phrase starts"
         )
         try require(
+            RomaTranscriptionOutputFilter.applyInsertionPolish("U.S.", context: midSentenceContext) == "U.S.",
+            "shared insertion polish should preserve abbreviation periods in mid-sentence fragments"
+        )
+        try require(
+            RomaTranscriptionOutputFilter.applyInsertionPolish("[U.S.]", context: midSentenceContext) == "U.S.",
+            "shared insertion polish should preserve abbreviation periods in bracketed fragments"
+        )
+        try require(
             RomaTranscriptionOutputFilter.applyInsertionPolish("Model!", context: midSentenceContext) == "model",
             "shared insertion polish should remove noisy exclamation marks from mid-sentence fragments"
         )
@@ -399,6 +407,11 @@ struct RomaCoreChecks {
                 "[blank_audio]",
                 "",
                 "standalone bracketed underscored non-speech artifact"
+            ),
+            (
+                "[U.S.]",
+                "U.S.",
+                "standalone bracketed abbreviation guard"
             ),
             (
                 "[humming].",
@@ -3269,6 +3282,39 @@ struct RomaCoreChecks {
         try require(
             await bracketedFragmentInserter.pastedText == " model",
             "pipeline should paste bracketed artifact polish"
+        )
+
+        let bracketedAbbreviationRecorder = FakeRecorder()
+        let bracketedAbbreviationInserter = FakeTextInsertion()
+        let bracketedAbbreviationPipeline = DictationPipeline(
+            recorder: bracketedAbbreviationRecorder,
+            transcriptionService: FakeTranscriptionService(
+                expectedFileName: "bracketed-abbreviation-proof.wav",
+                text: "[U.S.]"
+            ),
+            textInsertion: bracketedAbbreviationInserter
+        )
+        let bracketedAbbreviationRequest = DictationPipelineRequest(
+            outputURL: URL(fileURLWithPath: "/tmp/bracketed-abbreviation-proof.wav"),
+            model: model,
+            shouldInsertTranscription: true,
+            textProcessing: DictationTextProcessingConfiguration(
+                insertionContext: TextInsertionContext(precedingText: "...so this")
+            )
+        )
+
+        try await bracketedAbbreviationRecorder.startPreRollBuffering()
+        let bracketedAbbreviationResult = try await bracketedAbbreviationPipeline.runRecordingWindow(
+            bracketedAbbreviationRequest
+        ) {}
+
+        try require(
+            bracketedAbbreviationResult.processedText == " U.S.",
+            "pipeline should preserve abbreviation periods in bracketed mid-sentence fragments"
+        )
+        try require(
+            await bracketedAbbreviationInserter.pastedText == " U.S.",
+            "pipeline should paste abbreviation periods in bracketed mid-sentence fragments"
         )
 
         let quotedFragmentRecorder = FakeRecorder()
