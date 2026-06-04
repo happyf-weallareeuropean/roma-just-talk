@@ -6130,7 +6130,7 @@ public struct RomaTranscriptionOutputFilter {
 
     private static func collapseSeparatorRepeatedWords(in text: String) -> String {
         guard let regex = try? NSRegularExpression(
-            pattern: #"(?i)(?<![\p{L}\p{N}])([\p{L}\p{N}][\p{L}\p{N}'’ʼ-]{0,63})[ \t]+(?:[,;:…–—-]|\.\.\.)+[ \t]+\1(?=[ \t]+[\p{L}\p{N}]|[.!?,;:…]|\s*$)"#
+            pattern: #"(?i)(?<![\p{L}\p{N}])([\p{L}\p{N}][\p{L}\p{N}'’ʼ]{0,63})[ \t]*(?:[,;:…–—-]|\.\.\.)+[ \t]*\1(?=[ \t]+[\p{L}\p{N}]|[.!?,;:…]|\s*$)"#
         ) else {
             return text
         }
@@ -6153,6 +6153,7 @@ public struct RomaTranscriptionOutputFilter {
                 let word = String(collapsedText[wordRange])
                 let normalizedWord = word.lowercased()
                 guard (normalizedWord.count > 1 || normalizedWord == "i"),
+                      word.rangeOfCharacter(from: .letters) != nil,
                       !preservedRepeatedWords.contains(normalizedWord) else {
                     continue
                 }

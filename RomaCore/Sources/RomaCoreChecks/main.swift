@@ -483,9 +483,19 @@ struct RomaCoreChecks {
                 "separator repeated pronoun"
             ),
             (
+                "I-I think this works.",
+                "I think this works.",
+                "tight separator repeated pronoun"
+            ),
+            (
                 "This — this works.",
                 "This works.",
                 "dash separated repeated word"
+            ),
+            (
+                "This-this works.",
+                "This works.",
+                "tight dash separated repeated word"
             ),
             (
                 "x - x is zero.",
@@ -493,9 +503,19 @@ struct RomaCoreChecks {
                 "single-letter separator repeat guard"
             ),
             (
+                "x-x is zero.",
+                "x-x is zero.",
+                "tight single-letter separator repeat guard"
+            ),
+            (
                 "No - no, this is wrong.",
                 "No - no, this is wrong.",
                 "preserved separator repeated word"
+            ),
+            (
+                "No-no, this is wrong.",
+                "No-no, this is wrong.",
+                "tight preserved separator repeated word"
             ),
             (
                 "mm-hmm... uh-huh, I think so.",
