@@ -2,6 +2,7 @@
 
 ## v1.81 - Unreleased
 
+- Cleaned bounded "I mean to say" self-corrections.
 - Cleaned tight hyphenated repeated-word stutters such as "I-I think".
 - Cleaned bounded "let me rephrase" self-corrections.
 - Cleaned bounded "on second thought" self-corrections.

@@ -1653,6 +1653,21 @@ struct RomaCoreChecks {
                 "let me rephrase correction should preserve suffix"
             ),
             (
+                "Use model, I mean to say module.",
+                "Use module.",
+                "i mean to say correction"
+            ),
+            (
+                "Use model, um I mean to say module.",
+                "Use module.",
+                "pause filler before i mean to say correction"
+            ),
+            (
+                "Let's meet at two, I mean to say three tomorrow.",
+                "Let's meet at three tomorrow.",
+                "i mean to say correction should preserve suffix"
+            ),
+            (
                 "Use model, wait actually module.",
                 "Use module.",
                 "wait actually correction"
@@ -2721,6 +2736,11 @@ struct RomaCoreChecks {
                 "Let me rephrase, module loads.",
                 "Let me rephrase, module loads.",
                 "let me rephrase prose guard"
+            ),
+            (
+                "I mean to say, module loads.",
+                "I mean to say, module loads.",
+                "i mean to say prose guard"
             ),
             (
                 "The phrase actually wait no is useful.",
