@@ -5812,6 +5812,20 @@ struct RomaCoreChecks {
                 "Windows artifact proof script should assert doctor default output \(expectedLine)"
             )
         }
+        let packageDefaultAssertions = [
+            "default_record_seconds=2.0",
+            "default_hold_timeout_seconds=15.0",
+            "default_hold_timeout_milliseconds=15000",
+            "default_clipboard_restore_delay_seconds=2.0",
+            "maximum_clipboard_restore_delay_seconds=4294967.295"
+        ]
+        for expectedLine in packageDefaultAssertions {
+            try require(
+                packageScript.contains(#"Assert-OutputContains -Output $proofAgentOutputText"#) &&
+                    packageScript.contains(#"-Expected "\#(expectedLine)""#),
+                "Windows package script should assert packaged proof-agent default output \(expectedLine)"
+            )
+        }
         try require(
             pasteProofSource.contains(
                 "restoreDelaySeconds: TimeInterval = WindowsClipboardRestoreConfiguration.defaultRestoreDelaySeconds"
