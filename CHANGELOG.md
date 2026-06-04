@@ -51,6 +51,7 @@
 - Cleaned bounded bare "wait" self-corrections such as "Use model, wait module.".
 - Added explicit action prompts for the Windows laptop proof runner's hold-to-talk and Notepad paste steps.
 - Added a packaged `whisper-cli-doctor` preflight to the Windows laptop proof runner so local-whisper setup fails before interactive proof steps.
+- Added a packaged `miniaudio-record-proof` preflight to the Windows laptop proof runner so microphone access fails before interactive proof steps.
 - Exposed shared Windows record, hold, and clipboard defaults in doctor and artifact proof output.
 - Required Windows package smoke to assert shared proof-agent defaults.
 - Required Windows agent smoke to assert shared user-facing agent defaults.

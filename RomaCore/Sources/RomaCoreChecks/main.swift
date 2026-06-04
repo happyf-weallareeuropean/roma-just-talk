@@ -6113,6 +6113,13 @@ struct RomaCoreChecks {
             "Windows laptop proof runner should preflight real whisper CLI paths through packaged RomaProofAgent"
         )
         try require(
+            laptopProofScript.contains("microphone preflight") &&
+                laptopProofScript.contains("miniaudio-record-proof") &&
+                laptopProofScript.contains("MicPreflightSeconds") &&
+                laptopProofScript.contains("microphone_preflight_ok=true"),
+            "Windows laptop proof runner should preflight real microphone capture through packaged RomaProofAgent"
+        )
+        try require(
             laptopProofScript.contains("startup-shortcuts"),
             "Windows laptop proof runner should use proof-owned startup shortcut directories"
         )

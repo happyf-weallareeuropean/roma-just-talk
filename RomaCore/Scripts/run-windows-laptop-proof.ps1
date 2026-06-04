@@ -18,6 +18,7 @@ param(
     [string]$StartupShortcutDir = "",
     [int]$HoldTimeoutSeconds = 15,
     [int]$RecordSeconds = 2,
+    [double]$MicPreflightSeconds = 1,
     [switch]$RestoreClipboard,
     [switch]$NoRestoreClipboard,
     [double]$ClipboardRestoreDelaySeconds = 2
@@ -46,6 +47,23 @@ function Require-File {
     if (!(Test-Path -LiteralPath $Path)) {
         throw "Required file was not found: $Path"
     }
+}
+
+function Require-FileWithMinimumBytes {
+    param(
+        [Parameter(Mandatory = $true)]
+        [string]$Path,
+        [int64]$MinimumBytes = 1
+    )
+
+    Require-File -Path $Path
+    $item = Get-Item -LiteralPath $Path
+    if ($item.Length -lt $MinimumBytes) {
+        throw "Expected file to have at least $MinimumBytes bytes: $Path bytes=$($item.Length)"
+    }
+
+    Write-Host "proof_file=$Path"
+    Write-Host "proof_file_bytes=$($item.Length)"
 }
 
 function Assert-OutputContains {
@@ -100,6 +118,32 @@ function Write-NotepadPastePrompt {
     Write-Host "ACTION_REQUIRED=local_whisper_notepad_paste"
     Write-Host "notepad=will_open_and_verify_file"
     Write-Host "manual_focus_required=false"
+}
+
+function Invoke-MicrophonePreflight {
+    param(
+        [Parameter(Mandatory = $true)]
+        [string]$ProofAgentPath,
+        [Parameter(Mandatory = $true)]
+        [string]$OutputPath,
+        [Parameter(Mandatory = $true)]
+        [double]$Seconds
+    )
+
+    $output = & $ProofAgentPath miniaudio-record-proof `
+        --out $OutputPath `
+        --seconds "$Seconds" 2>&1 | Out-String
+    if ($LASTEXITCODE -ne 0) {
+        Write-Host $output
+        throw "RomaProofAgent miniaudio-record-proof failed during laptop microphone preflight"
+    }
+
+    Write-Host $output
+    Assert-OutputContains -Output $output -Expected "sample_rate=16000"
+    Assert-OutputContains -Output $output -Expected "channels=1"
+    Require-FileWithMinimumBytes -Path $OutputPath -MinimumBytes 45
+    Write-Host "microphone_preflight_wav=$OutputPath"
+    Write-Host "microphone_preflight_ok=true"
 }
 
 function Invoke-LocalWhisperPreflight {
@@ -215,6 +259,10 @@ if ($ClipboardRestoreDelaySeconds -lt 0) {
     throw "ClipboardRestoreDelaySeconds must be non-negative"
 }
 
+if ($MicPreflightSeconds -le 0) {
+    throw "MicPreflightSeconds must be positive"
+}
+
 if ([System.Environment]::OSVersion.Platform -ne [System.PlatformID]::Win32NT) {
     throw "Windows laptop proof must run on Windows"
 }
@@ -268,6 +316,7 @@ $proofSessionId = [guid]::NewGuid().ToString("D")
 $cloudReport = Join-Path $ProofDir "cloud-dictation-proof.json"
 $localWhisperDictationReport = Join-Path $ProofDir "local-whisper-dictation-proof.json"
 $localWhisperNotepadReport = Join-Path $ProofDir "local-whisper-notepad-paste-proof.json"
+$micPreflightPath = Join-Path $ProofDir "mic-preflight.wav"
 
 $cloudInstallDir = Join-Path $ProofDir "cloud-install"
 $cloudConfigPath = Join-Path $cloudInstallDir "windows-agent.json"
@@ -281,6 +330,13 @@ if ([string]::IsNullOrWhiteSpace($startupShortcutBaseDir)) {
 }
 $cloudStartupShortcutDir = Join-Path $startupShortcutBaseDir "cloud"
 $localStartupShortcutDir = Join-Path $startupShortcutBaseDir "local-whisper"
+
+Invoke-Step "microphone preflight" {
+    Invoke-MicrophonePreflight `
+        -ProofAgentPath $proofAgent `
+        -OutputPath $micPreflightPath `
+        -Seconds $MicPreflightSeconds
+}
 
 Invoke-Step "local whisper CLI preflight" {
     $preflightOutputDir = ""
@@ -395,6 +451,7 @@ Write-Host ""
 Write-Host "windows_laptop_proof_dir=$ProofDir"
 Write-Host "windows_laptop_proof_session_id=$proofSessionId"
 Write-Host "windows_laptop_startup_shortcut_base_dir=$startupShortcutBaseDir"
+Write-Host "windows_laptop_mic_preflight=$micPreflightPath"
 Write-Host "windows_laptop_cloud_report=$cloudReport"
 Write-Host "windows_laptop_local_whisper_report=$localWhisperDictationReport"
 Write-Host "windows_laptop_notepad_report=$localWhisperNotepadReport"
