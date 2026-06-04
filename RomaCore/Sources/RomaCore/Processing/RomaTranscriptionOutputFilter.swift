@@ -445,6 +445,10 @@ public struct RomaTranscriptionOutputFilter {
     private static let blockedPreviousWordsForTerminalYouKnow: Set<String> = [
         "do", "does", "did", "don't", "if", "know", "let", "should", "to", "whether", "will", "would"
     ]
+    private static let blockedPreviousWordsForTerminalIMean: Set<String> = [
+        "do", "does", "did", "don't", "explain", "if", "know", "phrase", "say", "saying",
+        "tell", "that", "what", "whether", "will", "would"
+    ]
     private static let allowedPreviousWordsForUnpunctuatedLikeFiller: Set<String> = [
         "am", "are", "be", "been", "being", "i'm", "im", "is", "it's", "its",
         "that's", "thats", "they're", "theyre", "was", "we're", "were", "you're", "youre"
@@ -1652,16 +1656,16 @@ public struct RomaTranscriptionOutputFilter {
 
     private static func removeTerminalDiscourseFillers(from text: String) -> String {
         guard let regex = try? NSRegularExpression(
-            pattern: #"(?i)^([\s\S]*?)[ \t]+you[ \t]+know(?:[ \t]+what[ \t]+i[ \t]+mean)?[ \t]*([.!?])\s*$"#
+            pattern: #"(?i)^([\s\S]*?)[ \t]+(you[ \t]+know(?:[ \t]+what[ \t]+i[ \t]+mean)?|i[ \t]+mean)[ \t]*([.!?])?\s*$"#
         ) else {
             return text
         }
 
         let range = NSRange(text.startIndex..., in: text)
         guard let match = regex.firstMatch(in: text, range: range),
-              match.numberOfRanges >= 3,
+              match.numberOfRanges >= 4,
               let prefixRange = Range(match.range(at: 1), in: text),
-              let punctuationRange = Range(match.range(at: 2), in: text) else {
+              let fillerRange = Range(match.range(at: 2), in: text) else {
             return text
         }
 
@@ -1671,12 +1675,24 @@ public struct RomaTranscriptionOutputFilter {
             .trimmingCharacters(in: softPhrasePunctuation)
             .trimmingCharacters(in: .whitespacesAndNewlines)
         guard wordCount(in: trimmedPrefix) >= 2,
-              let previousWord = previousWord(in: trimmedPrefix),
-              !blockedPreviousWordsForTerminalYouKnow.contains(previousWord) else {
+              let previousWord = previousWord(in: trimmedPrefix) else {
             return text
         }
 
-        return "\(trimmedPrefix)\(String(text[punctuationRange]))"
+        let filler = normalizedRepeatedClause(String(text[fillerRange]))
+        if filler.hasPrefix("you know") {
+            guard !blockedPreviousWordsForTerminalYouKnow.contains(previousWord) else {
+                return text
+            }
+        } else if filler == "i mean" {
+            guard !blockedPreviousWordsForTerminalIMean.contains(previousWord) else {
+                return text
+            }
+        }
+
+        let punctuation = Range(match.range(at: 3), in: text)
+            .map { String(text[$0]) } ?? ""
+        return "\(trimmedPrefix)\(punctuation)"
     }
 
     private static func removeTerminalAcknowledgementFillers(from text: String) -> String {

@@ -2,6 +2,7 @@
 
 ## v1.81 - Unreleased
 
+- Dropped unpunctuated terminal discourse filler tails such as "This works I mean".
 - Collapsed trailing partial repeats of the preceding short sentence start.
 - Prevented punctuation spacing cleanup from inserting spaces before non-ASCII closing boundaries.
 - Unwrapped noisy balanced non-ASCII boundary fragments without dropping only the closing mark.

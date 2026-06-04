@@ -1702,14 +1702,29 @@ struct RomaCoreChecks {
                 "terminal discourse filler"
             ),
             (
+                "This works you know",
+                "This works",
+                "unpunctuated terminal discourse filler"
+            ),
+            (
                 "This works you know what I mean.",
                 "This works.",
                 "long terminal discourse filler"
             ),
             (
+                "This works you know what I mean",
+                "This works",
+                "unpunctuated long terminal discourse filler"
+            ),
+            (
                 "This works, you know what I mean.",
                 "This works.",
                 "punctuated long terminal discourse filler"
+            ),
+            (
+                "This works I mean",
+                "This works",
+                "unpunctuated terminal i mean filler"
             ),
             (
                 "This works, um yeah.",
@@ -3912,6 +3927,11 @@ struct RomaCoreChecks {
                 "terminal you know guard"
             ),
             (
+                "I know you know",
+                "I know you know",
+                "unpunctuated terminal you know guard"
+            ),
+            (
                 "You know this already.",
                 "You know this already.",
                 "leading you know prose guard"
@@ -4020,6 +4040,16 @@ struct RomaCoreChecks {
                 "Do you know what I mean?",
                 "Do you know what I mean?",
                 "terminal you know what I mean guard"
+            ),
+            (
+                "Do you know what I mean",
+                "Do you know what I mean",
+                "unpunctuated terminal you know what I mean guard"
+            ),
+            (
+                "Tell me what I mean",
+                "Tell me what I mean",
+                "unpunctuated terminal i mean prose guard"
             ),
             (
                 "\"What?\".",
