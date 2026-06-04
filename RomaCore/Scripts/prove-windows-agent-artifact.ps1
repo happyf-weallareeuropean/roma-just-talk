@@ -175,6 +175,30 @@ function Invoke-PackagedListenerSmoke {
     return $output
 }
 
+function Invoke-InstalledListenerSmoke {
+    param(
+        [Parameter(Mandatory = $true)]
+        [string]$RunScriptPath,
+        [Parameter(Mandatory = $true)]
+        [string]$ConfigPath
+    )
+
+    $output = & $RunScriptPath `
+        -InstallDir $InstallDir `
+        -ConfigPath $ConfigPath `
+        -Listen `
+        -MaxSessions 0 2>&1 | Out-String
+    if ($LASTEXITCODE -ne 0) {
+        Write-Host $output
+        throw "Installed launcher listen smoke failed"
+    }
+
+    Write-Host $output
+    Assert-OutputContains -Output $output -Expected "mode=RomaWindowsAgent listen"
+    Assert-OutputContains -Output $output -Expected "listen_completed_sessions=0"
+    return $output
+}
+
 function Get-FileProof {
     param(
         [Parameter(Mandatory = $true)]
@@ -694,6 +718,7 @@ function Write-ProofReport {
             installed_launcher = (Get-DoctorOutputProof -Output $script:installedLauncherDoctorOutput)
         }
         packaged_listener = (Get-ListenerSmokeProof -Output $script:packagedListenerOutput)
+        installed_listener = (Get-ListenerSmokeProof -Output $script:installedListenerOutput)
         files = [ordered]@{
             packaged_agent = (Get-FileProof -Path $agentPath)
             packaged_proof_agent = (Get-FileProof -Path $script:proofAgentPath)
@@ -782,6 +807,7 @@ $script:packagedWhisperCLI = ""
 $script:packagedAgentDoctorOutput = ""
 $script:packagedProofAgentDoctorOutput = ""
 $script:packagedListenerOutput = ""
+$script:installedListenerOutput = ""
 $script:packagedNativeDoctorOutputs = [ordered]@{
     register_hotkey = ""
     keyboard_hook = ""
@@ -1040,6 +1066,14 @@ Invoke-Step "installed launcher doctor" {
         throw "Installed launcher doctor failed"
     }
     Write-Host $script:installedLauncherDoctorOutput
+}
+
+Invoke-Step "installed listener smoke" {
+    $installedRun = Join-Path $InstallDir "run-windows-agent.ps1"
+    Require-File -Path $installedRun
+    $script:installedListenerOutput = Invoke-InstalledListenerSmoke `
+        -RunScriptPath $installedRun `
+        -ConfigPath $ConfigPath
 }
 
 if ($RunNotepadPasteProof) {

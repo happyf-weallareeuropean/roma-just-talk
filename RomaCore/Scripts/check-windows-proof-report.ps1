@@ -12,6 +12,7 @@ param(
     [switch]$RequireProofAgentSurface,
     [switch]$RequireNativeDoctorSurface,
     [switch]$RequirePackagedListener,
+    [switch]$RequireInstalledListener,
     [switch]$RequirePackagedMock,
     [switch]$RequireHoldHook,
     [switch]$RequireCloudConfig,
@@ -343,6 +344,19 @@ function Assert-PackagedListenerProof {
     Write-Host "proof_packaged_listener=listen_zero_session"
 }
 
+function Assert-InstalledListenerProof {
+    param(
+        [Parameter(Mandatory = $true)]
+        [object]$Proof
+    )
+
+    Assert-Boolean -Object $Proof -Name "output_present" -Expected $true
+    Assert-Boolean -Object $Proof -Name "mode_listen" -Expected $true
+    Assert-Boolean -Object $Proof -Name "zero_session" -Expected $true
+    Assert-Boolean -Object $Proof -Name "completed_zero_sessions" -Expected $true
+    Write-Host "proof_installed_listener=listen_zero_session"
+}
+
 function Set-ExpectedModeFromProfile {
     param(
         [Parameter(Mandatory = $true)]
@@ -384,6 +398,7 @@ function Get-ProofProfileRequirements {
                 "proof_agent_source_surface",
                 "native_doctor_surface",
                 "packaged_listener",
+                "installed_listener",
                 "hold_hook_config",
                 "cloud_config",
                 "real_cloud_backend",
@@ -401,6 +416,7 @@ function Get-ProofProfileRequirements {
                 "proof_agent_source_surface",
                 "native_doctor_surface",
                 "packaged_listener",
+                "installed_listener",
                 "hold_hook_config",
                 "local_whisper_config",
                 "real_whisper_backend",
@@ -416,6 +432,7 @@ function Get-ProofProfileRequirements {
                 "proof_agent_source_surface",
                 "native_doctor_surface",
                 "packaged_listener",
+                "installed_listener",
                 "hold_hook_config",
                 "local_whisper_config",
                 "real_whisper_backend",
@@ -432,6 +449,7 @@ function Get-ProofProfileRequirements {
                 "proof_agent_source_surface",
                 "native_doctor_surface",
                 "packaged_listener",
+                "installed_listener",
                 "packaged_whisper_mock",
                 "hold_hook_config",
                 "local_whisper_config"
@@ -470,6 +488,7 @@ switch ($RequireProofProfile) {
         $RequireProofAgentSurface = $true
         $RequireNativeDoctorSurface = $true
         $RequirePackagedListener = $true
+        $RequireInstalledListener = $true
         $RequireHoldHook = $true
         $RequireCloudConfig = $true
         $RequireRealCloudBackend = $true
@@ -486,6 +505,7 @@ switch ($RequireProofProfile) {
         $RequireProofAgentSurface = $true
         $RequireNativeDoctorSurface = $true
         $RequirePackagedListener = $true
+        $RequireInstalledListener = $true
         $RequireHoldHook = $true
         $RequireWhisperConfig = $true
         $RequireRealWhisperBackend = $true
@@ -500,6 +520,7 @@ switch ($RequireProofProfile) {
         $RequireProofAgentSurface = $true
         $RequireNativeDoctorSurface = $true
         $RequirePackagedListener = $true
+        $RequireInstalledListener = $true
         $RequireHoldHook = $true
         $RequireWhisperConfig = $true
         $RequireRealWhisperBackend = $true
@@ -515,6 +536,7 @@ switch ($RequireProofProfile) {
         $RequireProofAgentSurface = $true
         $RequireNativeDoctorSurface = $true
         $RequirePackagedListener = $true
+        $RequireInstalledListener = $true
         $RequirePackagedMock = $true
         $RequireHoldHook = $true
         $RequireWhisperConfig = $true
@@ -615,6 +637,10 @@ if ($RequireNativeDoctorSurface) {
 
 if ($RequirePackagedListener) {
     Assert-PackagedListenerProof -Proof (Require-Property -Object $report -Name "packaged_listener")
+}
+
+if ($RequireInstalledListener) {
+    Assert-InstalledListenerProof -Proof (Require-Property -Object $report -Name "installed_listener")
 }
 
 if ($RequireHoldHook) {
