@@ -527,6 +527,7 @@ public struct RomaTranscriptionOutputFilter {
             (?:[,;:…]|\.\.\.)\s*correction\s*[,;:]? |
             (?:[,;:…]|\.\.\.)\s*on\s+second\s+thought\s*[,;:]? |
             (?:[,;:…]|\.\.\.)\s*let\s+me\s+rephrase\s*[,;:]? |
+            (?:[,;:…]|\.\.\.)\s*back\s*track\s*[,;:]? |
             (?:[,;:…]|\.\.\.)\s*(?:just\s+)?to\s+clarify\s*[,;:]? |
             (?:[,;:…]|\.\.\.)\s*(?:just\s+)?to\s+be\s+clear\s*[,;:]? |
             (?:[,;:…]|\.\.\.)\s*for\s+clarity\s*[,;:]? |
@@ -5655,6 +5656,8 @@ public struct RomaTranscriptionOutputFilter {
             "i meant to say",
             "on second thought",
             "let me rephrase",
+            "backtrack",
+            "back track",
             "just to clarify",
             "to clarify",
             "just to be clear",
@@ -5773,6 +5776,8 @@ public struct RomaTranscriptionOutputFilter {
             "i meant to say",
             "on second thought",
             "let me rephrase",
+            "backtrack",
+            "back track",
             "just to clarify",
             "to clarify",
             "just to be clear",

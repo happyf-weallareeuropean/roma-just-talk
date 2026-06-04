@@ -3141,6 +3141,11 @@ struct RomaCoreChecks {
                 "actually wait nevermind phrase guard"
             ),
             (
+                "We need to backtrack module changes.",
+                "We need to backtrack module changes.",
+                "backtrack prose guard"
+            ),
+            (
                 "Please never mind the details.",
                 "Please never mind the details.",
                 "never mind prose guard"
