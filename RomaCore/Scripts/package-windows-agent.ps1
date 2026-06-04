@@ -154,6 +154,8 @@ try {
     $runScriptOutput = Join-Path $OutputDir "run-windows-agent.ps1"
     $installScriptSource = Join-Path $PSScriptRoot "install-windows-agent.ps1"
     $installScriptOutput = Join-Path $OutputDir "install-windows-agent.ps1"
+    $proofScriptSource = Join-Path $PSScriptRoot "prove-windows-agent-artifact.ps1"
+    $proofScriptOutput = Join-Path $OutputDir "prove-windows-agent-artifact.ps1"
     $configPath = Join-Path $OutputDir "sample-windows-agent.json"
     $localWhisperConfigPath = Join-Path $OutputDir "sample-local-whisper-agent.json"
     $installProofDir = Join-Path $OutputDir "install-proof"
@@ -187,6 +189,8 @@ try {
         Write-Host "run_script=$runScriptOutput"
         Copy-Item -LiteralPath $installScriptSource -Destination $installScriptOutput -Force
         Write-Host "install_script=$installScriptOutput"
+        Copy-Item -LiteralPath $proofScriptSource -Destination $proofScriptOutput -Force
+        Write-Host "proof_script=$proofScriptOutput"
     }
 
     $swiftRuntime = @{}
@@ -259,6 +263,7 @@ try {
         "smoke_script=$smokeScriptOutput",
         "run_script=$runScriptOutput",
         "install_script=$installScriptOutput",
+        "proof_script=$proofScriptOutput",
         "swift_runtime_dir=$($swiftRuntime.Directory)",
         "swift_runtime_dlls=$($swiftRuntime.DllCount)",
         "bytes=$($agentFile.Length)"

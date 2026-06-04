@@ -133,6 +133,7 @@ Invoke-Step "copy package files" {
         "smoke-windows-agent.ps1",
         "run-windows-agent.ps1",
         "install-windows-agent.ps1",
+        "prove-windows-agent-artifact.ps1",
         "manifest.txt",
         "sample-windows-agent.json"
     )

@@ -206,11 +206,12 @@ Packaged artifact smoke test:
 
 ```powershell
 powershell -ExecutionPolicy Bypass -File C:\tmp\roma-windows-agent\smoke-windows-agent.ps1 -PackageDir C:\tmp\roma-windows-agent
+powershell -ExecutionPolicy Bypass -File C:\tmp\roma-windows-agent\prove-windows-agent-artifact.ps1 -PackageDir C:\tmp\roma-windows-agent -DoctorOnly
 powershell -ExecutionPolicy Bypass -File C:\tmp\roma-windows-agent\smoke-windows-agent.ps1 -PackageDir C:\tmp\roma-windows-agent -Endpoint https://api.groq.com/openai/v1/audio/transcriptions -Model whisper-large-v3-turbo -ApiKeyEnv GROQ_API_KEY -RunDictation -PasteDictation
 powershell -ExecutionPolicy Bypass -File C:\tmp\roma-windows-agent\smoke-windows-agent.ps1 -PackageDir C:\tmp\roma-windows-agent -Endpoint https://api.groq.com/openai/v1/audio/transcriptions -Model whisper-large-v3-turbo -ApiKeyEnv GROQ_API_KEY -ApiKeyName groq -RunDictation -PasteDictation
 ```
 
-The first command proves the packaged `RomaWindowsAgent.exe doctor` and `write-config` path without SwiftPM. The second command is the laptop proof: hold `Ctrl+Shift+R`, speak, release, transcribe, and optionally paste through the same config path. The third command first saves `GROQ_API_KEY` into the packaged agent's DPAPI secret store as `groq`, then writes config using the stored key name.
+The first command proves the packaged `RomaWindowsAgent.exe doctor` and `write-config` path without SwiftPM. The second command validates the packaged artifact, manifest, required scripts, and Swift runtime DLL before any laptop install. The third command is the laptop proof: hold `Ctrl+Shift+R`, speak, release, transcribe, and optionally paste through the same config path. The fourth command first saves `GROQ_API_KEY` into the packaged agent's DPAPI secret store as `groq`, then writes config using the stored key name.
 
 `package-windows-agent.ps1` copies Swift runtime DLLs from the PATH directory containing `swiftCore.dll` into the artifact. On Windows, packaging fails if no runtime DLLs are copied or if `swiftCore.dll` is missing from the artifact; that keeps CI from passing only because the runner has Swift on `PATH`.
 
@@ -232,6 +233,15 @@ powershell -ExecutionPolicy Bypass -File "$env:LOCALAPPDATA\roma-just-talk\agent
 powershell -ExecutionPolicy Bypass -File "$env:LOCALAPPDATA\roma-just-talk\agent\run-windows-agent.ps1" -WhisperCLI C:\path\whisper-cli.exe -WhisperModel C:\path\ggml-base.en.bin -PasteDictation
 ```
 
+Artifact-to-laptop proof wrapper:
+
+```powershell
+powershell -ExecutionPolicy Bypass -File C:\tmp\roma-windows-agent\prove-windows-agent-artifact.ps1 -PackageDir C:\tmp\roma-windows-agent -WhisperCLI C:\path\whisper-cli.exe -WhisperModel C:\path\ggml-base.en.bin -CreateShortcut
+powershell -ExecutionPolicy Bypass -File C:\tmp\roma-windows-agent\prove-windows-agent-artifact.ps1 -PackageDir C:\tmp\roma-windows-agent -Endpoint https://api.groq.com/openai/v1/audio/transcriptions -Model whisper-large-v3-turbo -ApiKeyEnv GROQ_API_KEY -ApiKeyName groq -UseHoldHook -RunDictation -PasteDictation -CreateShortcut
+```
+
+The wrapper validates the packaged artifact and manifest, runs the packaged agent doctor, delegates install/config/shortcut work to `install-windows-agent.ps1`, then verifies the installed launcher with `-DoctorOnly`. It is the preferred laptop handoff command because it reuses the proven scripts instead of adding a second install path.
+
 Add `-CreateShortcut` to `install-windows-agent.ps1` after passing real endpoint/model/API-key args, whisper-cli/model args, or `-SkipSmoke` with an existing `-ConfigPath`. The installer refuses to create a user shortcut for the default mock smoke config. The shortcut points at the same config path the installer just smoked. CI package smoke uses the proof-only `-AllowSmokeShortcut` path, creates the shortcut in a temporary folder, verifies its arguments include that config, and verifies the launcher with `-DoctorOnly`.
 
 Windows agent config:
@@ -251,7 +261,7 @@ CI proof:
 - `.github/workflows/romacore.yml` builds `RomaCore` on macOS and Windows.
 - The Windows job verifies Visual Studio C++ tools, installs the official Swift toolchain with `winget install --id Swift.Toolchain`, then runs `windows-proof.ps1 -SkipMic`.
 - CI is noninteractive, so it proves Windows compilation, PowerShell parse validity, pre-roll/WAV output, shared cleanup/replacement/paste text processing, DPAPI secret round-trip, stored-key transcription against a local mock STT endpoint, local `whisper-cli` argument shaping plus mock process execution, reusable `RomaWindowsAgent` config writing, and hotkey/paste doctor paths. It does not prove real microphone permission, real hotkey delivery, local whisper inference, or paste into Notepad.
-- CI also runs `package-windows-agent.ps1`, requires Swift runtime DLLs in the artifact, verifies the packaged `RomaWindowsAgent.exe` through `smoke-windows-agent.ps1`, asserts generated JSON config for both cloud endpoint/model and local whisper-cli modes, proves no-admin installs for both cloud/default and local whisper-cli config into temp directories, verifies the installed launcher with `-DoctorOnly`, creates a proof-only mock shortcut in a temp folder, creates a real local-whisper shortcut in a separate temp folder, verifies both shortcuts point at their smoked configs, records the install config and shortcut paths in `manifest.txt`, and uploads a `roma-windows-agent` artifact for laptop smoke tests.
+- CI also runs `package-windows-agent.ps1`, requires Swift runtime DLLs in the artifact, verifies the packaged `RomaWindowsAgent.exe` through `smoke-windows-agent.ps1`, asserts generated JSON config for both cloud endpoint/model and local whisper-cli modes, proves no-admin installs for both cloud/default and local whisper-cli config into temp directories, verifies the installed launcher with `-DoctorOnly`, creates a proof-only mock shortcut in a temp folder, creates a real local-whisper shortcut in a separate temp folder, verifies both shortcuts point at their smoked configs, records the install config and shortcut paths in `manifest.txt`, packages `prove-windows-agent-artifact.ps1` as the laptop handoff verifier, and uploads a `roma-windows-agent` artifact for laptop smoke tests.
 
 Raw command sequence:
 
