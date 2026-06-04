@@ -5779,6 +5779,39 @@ struct RomaCoreChecks {
                 "Windows proof script should assert doctor default output \(expectedLine)"
             )
         }
+        let proofReportDefaultFields = [
+            "default_record_seconds",
+            "default_hold_timeout_seconds",
+            "default_hold_timeout_milliseconds",
+            "default_clipboard_restore_delay_seconds",
+            "maximum_clipboard_restore_delay_seconds"
+        ]
+        for field in proofReportDefaultFields {
+            try require(
+                proveScript.contains(#"\#(field) = $Output.Contains("#),
+                "Windows artifact proof reports should record doctor default field \(field)"
+            )
+            try require(
+                checkReportScript.contains(#"Assert-Boolean -Object $Proof -Name "\#(field)" -Expected $true"#),
+                "Windows proof report checker should require doctor default field \(field)"
+            )
+        }
+        let artifactDefaultAssertions = [
+            "default_record_seconds=2.0",
+            "default_hold_timeout_seconds=15.0",
+            "default_hold_timeout_milliseconds=15000",
+            "default_clipboard_restore_delay_seconds=2.0",
+            "maximum_clipboard_restore_delay_seconds=4294967.295",
+            "default_timeout_seconds=15.0",
+            "default_timeout_milliseconds=15000"
+        ]
+        for expectedLine in artifactDefaultAssertions {
+            try require(
+                proveScript.contains(#"Assert-OutputContains -Output "#) &&
+                    proveScript.contains(#"-Expected "\#(expectedLine)""#),
+                "Windows artifact proof script should assert doctor default output \(expectedLine)"
+            )
+        }
         try require(
             pasteProofSource.contains(
                 "restoreDelaySeconds: TimeInterval = WindowsClipboardRestoreConfiguration.defaultRestoreDelaySeconds"
