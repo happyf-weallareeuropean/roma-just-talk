@@ -505,6 +505,13 @@ Assert-NonEmptyString -Object $report -Name "generated_at"
 Assert-NonEmptyString -Object $report -Name "proof_mode"
 Assert-NonEmptyString -Object $report -Name "package_dir"
 Assert-NonEmptyString -Object $report -Name "install_dir"
+$packageIdentity = Require-Property -Object $report -Name "package_identity"
+Assert-StringEquals `
+    -Actual ([string](Require-Property -Object $packageIdentity -Name "algorithm")) `
+    -Expected "sha256" `
+    -Name "package_identity.algorithm"
+Assert-NonEmptyString -Object $packageIdentity -Name "fingerprint"
+Assert-NumberGreaterThan -Object $packageIdentity -Name "entry_count" -Minimum 0
 
 if ($RequireWindowsPlatform) {
     $os = Require-Property -Object $report -Name "os"

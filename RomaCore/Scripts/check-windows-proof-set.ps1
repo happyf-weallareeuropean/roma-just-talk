@@ -99,6 +99,23 @@ function Assert-SameReportValue {
     }
 }
 
+function Get-ReportPackageFingerprint {
+    param(
+        [Parameter(Mandatory = $true)]
+        [object]$Report,
+        [Parameter(Mandatory = $true)]
+        [string]$ReportName
+    )
+
+    $packageIdentity = Require-ReportProperty -Report $Report -Name "package_identity" -ReportName $ReportName
+    $algorithm = [string](Require-ReportProperty -Report $packageIdentity -Name "algorithm" -ReportName $ReportName)
+    if ($algorithm -ne "sha256") {
+        throw "Proof set report $ReportName has unsupported package identity algorithm: $algorithm"
+    }
+
+    return [string](Require-ReportProperty -Report $packageIdentity -Name "fingerprint" -ReportName $ReportName)
+}
+
 function Assert-SameLaptopProofSet {
     param(
         [Parameter(Mandatory = $true)]
@@ -131,6 +148,7 @@ function Assert-SameLaptopProofSet {
     $expectedPlatform = [string](Require-ReportProperty -Report $firstOS -Name "platform" -ReportName $firstName)
     $expectedMachine = [string](Require-ReportProperty -Report $firstOS -Name "machine" -ReportName $firstName)
     $expectedPackageDir = [string](Require-ReportProperty -Report $firstReport -Name "package_dir" -ReportName $firstName)
+    $expectedPackageFingerprint = Get-ReportPackageFingerprint -Report $firstReport -ReportName $firstName
 
     if ($expectedPlatform -ne "Win32NT") {
         throw "Full laptop proof must run on Windows, got platform $expectedPlatform"
@@ -140,6 +158,9 @@ function Assert-SameLaptopProofSet {
     }
     if ([string]::IsNullOrWhiteSpace($expectedPackageDir)) {
         throw "Full laptop proof report is missing package_dir"
+    }
+    if ([string]::IsNullOrWhiteSpace($expectedPackageFingerprint)) {
+        throw "Full laptop proof report is missing package identity fingerprint"
     }
 
     foreach ($entry in $reports) {
@@ -161,10 +182,16 @@ function Assert-SameLaptopProofSet {
             -Expected $expectedPackageDir `
             -Actual ([string](Require-ReportProperty -Report $report -Name "package_dir" -ReportName $reportName)) `
             -ReportName $reportName
+        Assert-SameReportValue `
+            -Name "package_identity.fingerprint" `
+            -Expected $expectedPackageFingerprint `
+            -Actual (Get-ReportPackageFingerprint -Report $report -ReportName $reportName) `
+            -ReportName $reportName
     }
 
     Write-Host "proof_set_machine=$expectedMachine"
     Write-Host "proof_set_package_dir=$expectedPackageDir"
+    Write-Host "proof_set_package_fingerprint=$expectedPackageFingerprint"
 }
 
 $script:checkReportScript = Join-Path $PSScriptRoot "check-windows-proof-report.ps1"
