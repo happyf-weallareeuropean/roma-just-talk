@@ -344,8 +344,9 @@ public struct RomaTranscriptionOutputFilter {
         "how", "what", "when", "where", "which", "who", "why"
     ]
     private static let preservedTerminalPeriodAbbreviations: Set<String> = [
-        "dr.", "e.g.", "etc.", "i.e.", "jr.", "mr.", "mrs.", "ms.", "prof.",
-        "sr.", "st.", "u.k.", "u.n.", "u.s.", "vs."
+        "d.phil.", "dr.", "e.g.", "ed.d.", "etc.", "i.e.", "jr.", "ll.m.",
+        "m.phil.", "mr.", "mrs.", "ms.", "ph.d.", "prof.", "sc.d.", "sr.",
+        "st.", "u.k.", "u.n.", "u.s.", "vs."
     ]
     
     private static let nonSpeechBracketPatterns = [
@@ -3235,7 +3236,7 @@ public struct RomaTranscriptionOutputFilter {
 
     private static func protectPunctuationSpacingSpans(in text: String) -> (text: String, spans: [String]) {
         guard let regex = try? NSRegularExpression(
-            pattern: #"(?i)\b\d{1,2}:\d{2}(?::\d{2})?(?:\.\d{1,3})?\b|\b(?:https?://|www\.)[A-Za-z0-9._~:/?#\[\]@!$&'()*+,;=%-]+|(?<![\p{L}\p{N}])(?:[A-Za-z]\.){2,}(?![\p{L}\p{N}])|(?<![\p{L}\p{N}])\.[A-Za-z][A-Za-z0-9._-]{0,63}"#
+            pattern: #"(?i)\b\d{1,2}:\d{2}(?::\d{2})?(?:\.\d{1,3})?\b|\b(?:https?://|www\.)[A-Za-z0-9._~:/?#\[\]@!$&'()*+,;=%-]+|(?<![\p{L}\p{N}])(?:[A-Za-z]{1,4}\.){2,}(?![\p{L}\p{N}])|(?<![\p{L}\p{N}])\.[A-Za-z][A-Za-z0-9._-]{0,63}"#
         ) else {
             return (text, [])
         }

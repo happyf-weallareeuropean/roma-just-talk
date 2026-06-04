@@ -24,6 +24,7 @@ struct TranscriptionOutputFilterTests {
 
         #expect(TranscriptionOutputFilter.filter("[Model.]") == "Model.")
         #expect(TranscriptionOutputFilter.filter("[U.S.]") == "U.S.")
+        #expect(TranscriptionOutputFilter.filter("[Ph.D.]") == "Ph.D.")
         #expect(TranscriptionOutputFilter.filter("[humming].") == "")
         #expect(TranscriptionOutputFilter.filter("[inaudible]") == "")
         #expect(TranscriptionOutputFilter.filter("[blank_audio]") == "")
@@ -205,6 +206,7 @@ struct TranscriptionOutputFilterTests {
         #expect(TranscriptionOutputFilter.applyInsertionPolish("Felix.", context: midSentenceContext) == "Felix")
         #expect(TranscriptionOutputFilter.applyInsertionPolish("Felix is ready.", context: midSentenceContext) == "Felix is ready")
         #expect(TranscriptionOutputFilter.applyInsertionPolish("U.S.", context: midSentenceContext) == "U.S.")
+        #expect(TranscriptionOutputFilter.applyInsertionPolish("Ph.D.", context: midSentenceContext) == "Ph.D.")
         #expect(TranscriptionOutputFilter.applyInsertionPolish("Dr.", context: midSentenceContext) == "Dr.")
         #expect(TranscriptionOutputFilter.applyInsertionSpacing("model", context: midSentenceContext) == " model")
         #expect(TranscriptionOutputFilter.applyInsertionSpacing("Model", context: questionContext) == " Model")
@@ -251,6 +253,7 @@ struct TranscriptionOutputFilterTests {
         #expect(TranscriptionOutputFilter.applyInsertionPolish("[Model.]", context: midSentenceContext) == "model")
         #expect(TranscriptionOutputFilter.applyInsertionPolish("[A final word.]", context: midSentenceContext) == "a final word")
         #expect(TranscriptionOutputFilter.applyInsertionPolish("[U.S.]", context: midSentenceContext) == "U.S.")
+        #expect(TranscriptionOutputFilter.applyInsertionPolish("[Ph.D.]", context: midSentenceContext) == "Ph.D.")
         #expect(TranscriptionOutputFilter.applyInsertionPolish("[Dr.]", context: midSentenceContext) == "Dr.")
         #expect(TranscriptionOutputFilter.applyInsertionPolish("[Model.]", context: nil) == "model")
         #expect(TranscriptionOutputFilter.applyInsertionPolish("[Model.].", context: nil) == "model")

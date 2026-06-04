@@ -2,6 +2,7 @@
 
 ## v1.81 - Unreleased
 
+- Preserved mixed abbreviation periods in short and bracketed final fragments such as "Ph.D." and "[Ph.D.]".
 - Preserved abbreviation periods in short mid-sentence and bracketed final fragments such as "U.S." and "[U.S.]".
 - Covered bracketed STT final-fragment cleanup through the dictation pipeline for mid-sentence insertion.
 - Preserved proper-name casing from word replacements during mid-sentence insertion polish.

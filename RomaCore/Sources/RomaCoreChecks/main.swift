@@ -219,6 +219,10 @@ struct RomaCoreChecks {
             "shared insertion polish should preserve abbreviation periods in bracketed fragments"
         )
         try require(
+            RomaTranscriptionOutputFilter.applyInsertionPolish("[Ph.D.]", context: midSentenceContext) == "Ph.D.",
+            "shared insertion polish should preserve mixed abbreviation periods in bracketed fragments"
+        )
+        try require(
             RomaTranscriptionOutputFilter.applyInsertionPolish("Model!", context: midSentenceContext) == "model",
             "shared insertion polish should remove noisy exclamation marks from mid-sentence fragments"
         )
@@ -412,6 +416,11 @@ struct RomaCoreChecks {
                 "[U.S.]",
                 "U.S.",
                 "standalone bracketed abbreviation guard"
+            ),
+            (
+                "[Ph.D.]",
+                "Ph.D.",
+                "standalone bracketed mixed abbreviation guard"
             ),
             (
                 "[humming].",
@@ -3315,6 +3324,39 @@ struct RomaCoreChecks {
         try require(
             await bracketedAbbreviationInserter.pastedText == " U.S.",
             "pipeline should paste abbreviation periods in bracketed mid-sentence fragments"
+        )
+
+        let bracketedMixedAbbreviationRecorder = FakeRecorder()
+        let bracketedMixedAbbreviationInserter = FakeTextInsertion()
+        let bracketedMixedAbbreviationPipeline = DictationPipeline(
+            recorder: bracketedMixedAbbreviationRecorder,
+            transcriptionService: FakeTranscriptionService(
+                expectedFileName: "bracketed-mixed-abbreviation-proof.wav",
+                text: "[Ph.D.]"
+            ),
+            textInsertion: bracketedMixedAbbreviationInserter
+        )
+        let bracketedMixedAbbreviationRequest = DictationPipelineRequest(
+            outputURL: URL(fileURLWithPath: "/tmp/bracketed-mixed-abbreviation-proof.wav"),
+            model: model,
+            shouldInsertTranscription: true,
+            textProcessing: DictationTextProcessingConfiguration(
+                insertionContext: TextInsertionContext(precedingText: "...so this")
+            )
+        )
+
+        try await bracketedMixedAbbreviationRecorder.startPreRollBuffering()
+        let bracketedMixedAbbreviationResult = try await bracketedMixedAbbreviationPipeline.runRecordingWindow(
+            bracketedMixedAbbreviationRequest
+        ) {}
+
+        try require(
+            bracketedMixedAbbreviationResult.processedText == " Ph.D.",
+            "pipeline should preserve mixed abbreviation periods in bracketed mid-sentence fragments"
+        )
+        try require(
+            await bracketedMixedAbbreviationInserter.pastedText == " Ph.D.",
+            "pipeline should paste mixed abbreviation periods in bracketed mid-sentence fragments"
         )
 
         let quotedFragmentRecorder = FakeRecorder()
