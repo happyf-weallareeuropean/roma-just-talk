@@ -1,6 +1,8 @@
 import Foundation
 
 public struct WindowsClipboardRestoreConfiguration: Codable, Equatable, Hashable, Sendable {
+    public static let maximumRestoreDelaySeconds = Double(UInt32.max) / 1_000
+
     public var restoreClipboard: Bool
     public var restoreDelaySeconds: TimeInterval
 

@@ -350,7 +350,9 @@ public struct RomaWindowsAgentConfiguration: Codable, Equatable, Sendable {
             maximum: Self.maximumHoldTimeoutSeconds
         )
         if let clipboardRestoreDelaySeconds,
-           !clipboardRestoreDelaySeconds.isFinite || clipboardRestoreDelaySeconds < 0 {
+           !clipboardRestoreDelaySeconds.isFinite ||
+            clipboardRestoreDelaySeconds < 0 ||
+            clipboardRestoreDelaySeconds > WindowsClipboardRestoreConfiguration.maximumRestoreDelaySeconds {
             throw RomaCommandLineOptionsError.invalidOptionValue("--clipboard-restore-delay")
         }
         if restoreClipboardAfterPaste == false, clipboardRestoreDelaySeconds != nil {

@@ -49,6 +49,7 @@ public enum WindowsDictationRuntimeError: Error, LocalizedError, Equatable {
     case unsupported
     case invalidRecordDuration(TimeInterval)
     case invalidHoldTimeoutMilliseconds(UInt32)
+    case invalidClipboardRestoreDelay(TimeInterval)
 
     public var errorDescription: String? {
         switch self {
@@ -58,6 +59,8 @@ public enum WindowsDictationRuntimeError: Error, LocalizedError, Equatable {
             return "Windows toggle record duration must be finite and between \(RomaWindowsAgentConfiguration.minimumRecordSeconds) and \(RomaWindowsAgentConfiguration.maximumRecordSeconds) seconds; got \(seconds)."
         case .invalidHoldTimeoutMilliseconds(let milliseconds):
             return "Windows hold timeout must be positive; got \(milliseconds) milliseconds."
+        case .invalidClipboardRestoreDelay(let seconds):
+            return "Windows clipboard restore delay must be finite and between 0 and \(WindowsClipboardRestoreConfiguration.maximumRestoreDelaySeconds) seconds; got \(seconds)."
         }
     }
 }
@@ -76,7 +79,7 @@ public enum WindowsDictationRuntime {
         transcriptionService: TranscriptionService,
         onEvent: @escaping @Sendable (WindowsDictationRuntimeEvent) -> Void = { _ in }
     ) async throws -> DictationPipelineResult {
-        try validateTrigger(request.trigger)
+        try validateRequest(request)
 
         #if os(Windows)
         let recorder = MiniaudioCaptureRecorder()
@@ -150,6 +153,27 @@ public enum WindowsDictationRuntime {
             guard timeoutMilliseconds > 0 else {
                 throw WindowsDictationRuntimeError.invalidHoldTimeoutMilliseconds(timeoutMilliseconds)
             }
+        }
+    }
+
+    public static func validateRequest(_ request: WindowsDictationRuntimeRequest) throws {
+        try validateTrigger(request.trigger)
+        if request.shouldPaste {
+            try validateClipboardRestoreConfiguration(request.clipboardRestoreConfiguration)
+        }
+    }
+
+    public static func validateClipboardRestoreConfiguration(
+        _ configuration: WindowsClipboardRestoreConfiguration
+    ) throws {
+        guard configuration.restoreClipboard else {
+            return
+        }
+        let delaySeconds = configuration.restoreDelaySeconds
+        guard delaySeconds.isFinite,
+              delaySeconds >= 0,
+              delaySeconds <= WindowsClipboardRestoreConfiguration.maximumRestoreDelaySeconds else {
+            throw WindowsDictationRuntimeError.invalidClipboardRestoreDelay(delaySeconds)
         }
     }
 

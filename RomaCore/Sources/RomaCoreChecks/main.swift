@@ -4638,6 +4638,14 @@ struct RomaCoreChecks {
 
         do {
             try RomaWindowsAgentConfiguration(
+                clipboardRestoreDelaySeconds: WindowsClipboardRestoreConfiguration.maximumRestoreDelaySeconds + 1
+            ).validate()
+            throw CheckFailure("config should reject oversized clipboard restore delay")
+        } catch RomaCommandLineOptionsError.invalidOptionValue {
+        }
+
+        do {
+            try RomaWindowsAgentConfiguration(
                 endpoint: "https://api.example.com/v1/audio/transcriptions",
                 model: "cloud-model",
                 apiKeyEnvironment: "ROMA_KEY",
@@ -4747,6 +4755,35 @@ struct RomaCoreChecks {
             model: model,
             trigger: .toggle(recordSeconds: 1)
         )
+        try WindowsDictationRuntime.validateRequest(request)
+        try WindowsDictationRuntime.validateRequest(
+            WindowsDictationRuntimeRequest(
+                outputURL: URL(fileURLWithPath: "/tmp/windows-runtime-proof.wav"),
+                model: model,
+                shouldPaste: true,
+                clipboardRestoreConfiguration: WindowsClipboardRestoreConfiguration(
+                    restoreClipboard: false,
+                    restoreDelaySeconds: .infinity
+                ),
+                trigger: .toggle(recordSeconds: 1)
+            )
+        )
+
+        do {
+            try WindowsDictationRuntime.validateRequest(
+                WindowsDictationRuntimeRequest(
+                    outputURL: URL(fileURLWithPath: "/tmp/windows-runtime-proof.wav"),
+                    model: model,
+                    shouldPaste: true,
+                    clipboardRestoreConfiguration: WindowsClipboardRestoreConfiguration(
+                        restoreDelaySeconds: .nan
+                    ),
+                    trigger: .toggle(recordSeconds: 1)
+                )
+            )
+            throw CheckFailure("Windows dictation runtime should reject non-finite clipboard restore delay")
+        } catch WindowsDictationRuntimeError.invalidClipboardRestoreDelay(_) {
+        }
 
         do {
             _ = try await WindowsDictationRuntime.run(
