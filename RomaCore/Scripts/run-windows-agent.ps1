@@ -256,6 +256,15 @@ if (!$hasConfig) {
     throw "Config was not found at $ConfigPath; rerun with cloud Endpoint/Model/API key or local WhisperCLI/WhisperModel"
 }
 
+$configDoctorOutput = & $AgentPath config-doctor --config $ConfigPath 2>&1 | Out-String
+if ($LASTEXITCODE -ne 0) {
+    Write-Host $configDoctorOutput
+    throw "RomaWindowsAgent config-doctor failed"
+}
+Write-Host $configDoctorOutput
+Assert-OutputContains -Output $configDoctorOutput -Expected "config_valid=true"
+Assert-OutputContains -Output $configDoctorOutput -Expected "transcription_client="
+
 $agentMode = if ($Listen) { "listen" } else { "dictate" }
 $agentArgs = @(
     $agentMode,

@@ -340,6 +340,23 @@ Invoke-Step "agent config" {
     }
 }
 
+Invoke-Step "agent config doctor" {
+    $configDoctorOutput = & $AgentPath config-doctor --config $ConfigPath 2>&1 | Out-String
+    if ($LASTEXITCODE -ne 0) {
+        Write-Host $configDoctorOutput
+        throw "RomaWindowsAgent config-doctor failed"
+    }
+    Write-Host $configDoctorOutput
+    Assert-OutputContains -Output $configDoctorOutput -Expected "config_valid=true"
+    Assert-OutputContains -Output $configDoctorOutput -Expected "transcription_client="
+    if ($usesWhisperCLI) {
+        Assert-OutputContains -Output $configDoctorOutput -Expected "whisper_cli_exists=true"
+        Assert-OutputContains -Output $configDoctorOutput -Expected "whisper_model_exists=true"
+    } else {
+        Assert-OutputContains -Output $configDoctorOutput -Expected "api_key_resolved=true"
+    }
+}
+
 if ($RunDictation) {
     Invoke-Step "agent dictate" {
         if ($shouldUseHoldHook) {

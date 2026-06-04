@@ -6034,6 +6034,13 @@ struct RomaCoreChecks {
             "Windows proof agent should print native adapter runtime availability on Windows"
         )
         try require(
+            windowsAgentSource.contains(#"case "config-doctor":"#) &&
+                windowsAgentSource.contains(#"print("config_valid=true")"#) &&
+                windowsAgentSource.contains(#""api_key_resolved=true""#) &&
+                windowsAgentSource.contains(#""whisper_cli_exists=true""#),
+            "Windows agent should expose a config doctor before capture starts"
+        )
+        try require(
             proofAgentSource.contains(#"case "windows-hotkey-availability-proof":"#) &&
                 proofAgentSource.contains(#"print("hotkey_registration_available=true")"#),
             "Windows proof agent should expose a noninteractive RegisterHotKey availability proof"
@@ -6206,6 +6213,18 @@ struct RomaCoreChecks {
                 "Windows run script should assert installed launcher contract output \(expectedLine)"
             )
         }
+        try require(
+            runScript.contains("config-doctor --config $ConfigPath") &&
+                runScript.contains(#"Assert-OutputContains -Output $configDoctorOutput -Expected "config_valid=true""#),
+            "Windows run script should validate config before launching sessions"
+        )
+        try require(
+            smokeScript.contains(#"Invoke-Step "agent config doctor""#) &&
+                smokeScript.contains(#"Assert-OutputContains -Output $configDoctorOutput -Expected "config_valid=true""#) &&
+                smokeScript.contains(#"Assert-OutputContains -Output $configDoctorOutput -Expected "api_key_resolved=true""#) &&
+                smokeScript.contains(#"Assert-OutputContains -Output $configDoctorOutput -Expected "whisper_cli_exists=true""#),
+            "Windows smoke script should prove config doctor for cloud and local whisper setup"
+        )
         try require(
             pasteProofSource.contains(
                 "restoreDelaySeconds: TimeInterval = WindowsClipboardRestoreConfiguration.defaultRestoreDelaySeconds"

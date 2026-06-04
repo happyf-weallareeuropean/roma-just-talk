@@ -26,6 +26,8 @@ struct RomaWindowsAgent {
             try saveKeyFromEnvironment(arguments: Array(arguments.dropFirst()))
         case "write-config":
             try writeConfiguration(arguments: Array(arguments.dropFirst()))
+        case "config-doctor":
+            try printConfigurationDoctor(arguments: Array(arguments.dropFirst()))
         default:
             printUsage()
         }
@@ -216,6 +218,35 @@ struct RomaWindowsAgent {
         print("written=true")
     }
 
+    private static func printConfigurationDoctor(arguments: [String]) throws {
+        let options = RomaCommandLineOptions(arguments)
+        let url = RomaWindowsAgentConfiguration.url(from: options)
+        let configuration = try loadConfiguration(from: options, allowMissing: true)
+            .applyingOverrides(from: options)
+
+        try configuration.validateTranscriptionSettings()
+        let setupProofLines = try runnableTranscriptionSetupProof(configuration)
+        let transcriptionClient = try makeTranscriptionClient(from: configuration)
+        let clipboardRestoreConfiguration = configuration.clipboardRestoreConfiguration()
+
+        print("agent=roma-windows-agent")
+        print("config=\(url.path)")
+        print("config_exists=\(FileManager.default.fileExists(atPath: url.path))")
+        print("config_valid=true")
+        print("transcription_client=\(transcriptionClient.name)")
+        for line in transcriptionClient.details {
+            print(line)
+        }
+        for line in setupProofLines {
+            print(line)
+        }
+        print("recording_mode=\((configuration.usesHoldHook ?? false) ? "hold" : "toggle")")
+        print("paste=\(configuration.shouldPaste ?? false)")
+        print("restore_clipboard_after_paste=\(clipboardRestoreConfiguration.restoreClipboard)")
+        print("clipboard_restore_delay_seconds=\(clipboardRestoreConfiguration.restoreDelaySeconds)")
+        print("word_replacements=\(configuration.wordReplacements.count)")
+    }
+
     private static func printEvent(_ event: WindowsDictationRuntimeEvent) {
         switch event {
         case .preRollBuffering:
@@ -306,6 +337,30 @@ struct RomaWindowsAgent {
         )
     }
 
+    private static func runnableTranscriptionSetupProof(
+        _ configuration: RomaWindowsAgentConfiguration
+    ) throws -> [String] {
+        guard configuration.usesWhisperCLI else {
+            _ = try configuration.apiKeySource().resolve()
+            return ["api_key_resolved=true"]
+        }
+
+        try requireExistingFile(try configuration.requireWhisperCLIPath(), option: "--whisper-cli")
+        try requireExistingFile(try configuration.requireWhisperModelPath(), option: "--whisper-model")
+        return [
+            "whisper_cli_exists=true",
+            "whisper_model_exists=true"
+        ]
+    }
+
+    private static func requireExistingFile(_ path: String, option: String) throws {
+        var isDirectory: ObjCBool = false
+        guard FileManager.default.fileExists(atPath: path, isDirectory: &isDirectory),
+              !isDirectory.boolValue else {
+            throw RomaCommandLineOptionsError.invalidOptionValue(option)
+        }
+    }
+
     private static var platformName: String {
         #if os(Windows)
         return "windows"
@@ -324,6 +379,7 @@ struct RomaWindowsAgent {
         print("  RomaWindowsAgent save-key-from-env --key groq --value-env GROQ_API_KEY [--secret-dir C:\\tmp\\roma-secrets]")
         print("  RomaWindowsAgent write-config --endpoint https://api.example.com/v1/audio/transcriptions --model whisper-large-v3-turbo --api-key-name groq [--config C:\\tmp\\roma-agent.json] [--hold-hook] [--paste] [--no-restore-clipboard]")
         print("  RomaWindowsAgent write-config --whisper-cli C:\\path\\whisper-cli.exe --whisper-model C:\\path\\ggml-base.en.bin [--config C:\\tmp\\roma-agent.json] [--hold-hook] [--paste]")
+        print("  RomaWindowsAgent config-doctor [--config C:\\tmp\\roma-agent.json]")
         print("  RomaWindowsAgent dictate [--config C:\\tmp\\roma-agent.json] [--endpoint https://api.example.com/v1/audio/transcriptions --model whisper-large-v3-turbo --api-key-env OPENAI_API_KEY] [--out proof.wav] [--seconds 2] [--replace \"just talk=roma-just-talk\"] [--paste] [--clipboard-restore-delay 2]")
         print("  RomaWindowsAgent dictate --whisper-cli C:\\path\\whisper-cli.exe --whisper-model C:\\path\\ggml-base.en.bin [--hold-hook] [--paste]")
         print("  RomaWindowsAgent dictate --hold-hook --timeout 15 --endpoint https://api.example.com/v1/audio/transcriptions --model whisper-large-v3-turbo --api-key-name groq [--paste] [--no-restore-clipboard]")
