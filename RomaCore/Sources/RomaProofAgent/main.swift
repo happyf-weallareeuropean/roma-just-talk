@@ -43,6 +43,10 @@ struct RomaProofAgent {
             printTranscribeProofDoctor()
         case "transcribe-proof":
             try await runTranscribeProof(arguments: Array(arguments.dropFirst()))
+        case "whisper-cli-doctor":
+            try printWhisperCLIDoctor(arguments: Array(arguments.dropFirst()))
+        case "whisper-cli-proof":
+            try await runWhisperCLIProof(arguments: Array(arguments.dropFirst()))
         default:
             printUsage()
         }
@@ -62,6 +66,7 @@ struct RomaProofAgent {
         print("windows_dpapi_secret_store_source=true")
         print("miniaudio_capture_adapter_source=true")
         print("openai_compatible_transcription_source=true")
+        print("whisper_cli_transcription_source=true")
         print("transcription_output_filter_source=true")
         print("word_replacement_processor_source=true")
         print("windows_dictation_runtime_source=true")
@@ -376,6 +381,73 @@ struct RomaProofAgent {
         print("network_required=true")
     }
 
+    private static func printWhisperCLIDoctor(arguments: [String]) throws {
+        let configuration = try makeWhisperCLIConfiguration(
+            arguments: arguments,
+            allowPlaceholders: true
+        )
+        let audioURL = URL(fileURLWithPath: optionalValue(after: "--audio", in: arguments) ?? "proof.wav")
+        let model = TranscriptionModelDescriptor(
+            name: configuration.modelURL.lastPathComponent,
+            displayName: configuration.modelURL.lastPathComponent,
+            provider: .whisper
+        )
+        let invocation = configuration.makeInvocation(
+            for: TranscriptionRequest(
+                audioURL: audioURL,
+                model: model,
+                language: optionalValue(after: "--language", in: arguments),
+                prompt: optionalValue(after: "--prompt", in: arguments)
+            ),
+            outputBaseName: "roma-whisper-proof"
+        )
+
+        print("platform=\(platformName)")
+        print("transcription_client=whisper.cpp-cli")
+        print("runtime=external_process")
+        print("network_required=false")
+        print("executable=\(configuration.executableURL.path)")
+        print("model_file=\(configuration.modelURL.path)")
+        print("audio=\(audioURL.path)")
+        print("output_format=json")
+        print("json_output=\(invocation.jsonOutputURL.path)")
+        print("timeout_seconds=\(configuration.timeoutSeconds)")
+        print("extra_arguments=\(configuration.extraArguments.count)")
+        print("arguments=\(oneLine(invocation.arguments.joined(separator: " ")))")
+    }
+
+    private static func runWhisperCLIProof(arguments: [String]) async throws {
+        let configuration = try makeWhisperCLIConfiguration(arguments: arguments)
+        let audioURL = URL(fileURLWithPath: try value(after: "--audio", in: arguments))
+        let model = TranscriptionModelDescriptor(
+            name: configuration.modelURL.lastPathComponent,
+            displayName: configuration.modelURL.lastPathComponent,
+            provider: .whisper
+        )
+        let service = WhisperCLITranscriptionService(configuration: configuration)
+        let result = try await service.transcribe(
+            TranscriptionRequest(
+                audioURL: audioURL,
+                model: model,
+                language: optionalValue(after: "--language", in: arguments),
+                prompt: optionalValue(after: "--prompt", in: arguments)
+            )
+        )
+
+        print("provider=whisper.cpp-cli")
+        print("whisper_cli=\(configuration.executableURL.path)")
+        print("model_file=\(configuration.modelURL.path)")
+        print("audio=\(audioURL.path)")
+        if let language = result.language {
+            print("language=\(language)")
+        }
+        if let duration = result.durationSeconds {
+            print("duration_seconds=\(String(format: "%.3f", duration))")
+        }
+        print("transcript_length=\(result.text.count)")
+        print("transcript_text=\(oneLine(result.text))")
+    }
+
     private static func runMiniaudioRecordProof(arguments: [String]) async throws {
         let outputURL = URL(fileURLWithPath: try value(after: "--out", in: arguments))
         let seconds = try doubleValue(after: "--seconds", in: arguments, default: 2)
@@ -484,6 +556,40 @@ struct RomaProofAgent {
         )
     }
 
+    private static func makeWhisperCLIConfiguration(
+        arguments: [String],
+        allowPlaceholders: Bool = false
+    ) throws -> WhisperCLITranscriptionConfiguration {
+        let executablePath: String
+        if let value = optionalValue(after: "--whisper-cli", in: arguments) {
+            executablePath = value
+        } else if allowPlaceholders {
+            executablePath = defaultWhisperCLIPath
+        } else {
+            throw AgentError.missingOption("--whisper-cli")
+        }
+
+        let modelPath: String
+        if let value = optionalValue(after: "--whisper-model", in: arguments) {
+            modelPath = value
+        } else if allowPlaceholders {
+            modelPath = defaultWhisperModelPath
+        } else {
+            throw AgentError.missingOption("--whisper-model")
+        }
+
+        let outputDirectory = optionalValue(after: "--output-dir", in: arguments)
+            ?? FileManager.default.temporaryDirectory.path
+
+        return WhisperCLITranscriptionConfiguration(
+            executableURL: URL(fileURLWithPath: executablePath),
+            modelURL: URL(fileURLWithPath: modelPath),
+            outputDirectoryURL: URL(fileURLWithPath: outputDirectory, isDirectory: true),
+            extraArguments: try values(after: "--whisper-arg", in: arguments),
+            timeoutSeconds: try doubleValue(after: "--timeout", in: arguments, default: 120)
+        )
+    }
+
     private static func printTranscriptionResult(
         _ result: TranscriptionResult,
         endpointText: String,
@@ -569,6 +675,8 @@ struct RomaProofAgent {
         print("  RomaProofAgent transcribe-proof-doctor")
         print("  RomaProofAgent transcribe-proof --audio proof.wav --endpoint https://api.example.com/v1/audio/transcriptions --model whisper-large-v3-turbo --api-key-env OPENAI_API_KEY")
         print("  RomaProofAgent transcribe-proof --audio proof.wav --endpoint https://api.example.com/v1/audio/transcriptions --model whisper-large-v3-turbo --api-key-name groq --secret-dir C:\\tmp\\roma-secrets")
+        print("  RomaProofAgent whisper-cli-doctor [--whisper-cli C:\\path\\whisper-cli.exe --whisper-model C:\\path\\ggml-base.en.bin]")
+        print("  RomaProofAgent whisper-cli-proof --audio proof.wav --whisper-cli C:\\path\\whisper-cli.exe --whisper-model C:\\path\\ggml-base.en.bin [--language en] [--prompt \"roma just talk\"]")
     }
 
     private static var platformName: String {
@@ -589,6 +697,22 @@ struct RomaProofAgent {
 
     private static func oneLine(_ text: String) -> String {
         RomaCommandLineText.oneLine(text)
+    }
+
+    private static var defaultWhisperCLIPath: String {
+        #if os(Windows)
+        return "C:\\path\\whisper-cli.exe"
+        #else
+        return "/path/to/whisper-cli"
+        #endif
+    }
+
+    private static var defaultWhisperModelPath: String {
+        #if os(Windows)
+        return "C:\\path\\ggml-base.en.bin"
+        #else
+        return "/path/to/ggml-base.en.bin"
+        #endif
     }
 }
 

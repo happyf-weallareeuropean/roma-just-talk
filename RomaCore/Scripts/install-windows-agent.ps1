@@ -7,6 +7,10 @@ param(
     [string]$ApiKeyEnv = "PATH",
     [string]$ApiKeyName = "",
     [string]$SecretDir = "",
+    [string]$WhisperCLI = "",
+    [string]$WhisperModel = "",
+    [string]$WhisperOutputDir = "",
+    [string[]]$WhisperArgument = @(),
     [string]$Language = "",
     [string]$Prompt = "",
     [string[]]$WordReplacement = @("just talk=roma-just-talk"),
@@ -76,9 +80,11 @@ $InstallDir = Resolve-FullPath -Path $InstallDir
 
 $hasExplicitEndpoint = $PSBoundParameters.ContainsKey("Endpoint")
 $hasExplicitModel = $PSBoundParameters.ContainsKey("Model")
+$hasExplicitWhisperCLI = $PSBoundParameters.ContainsKey("WhisperCLI")
+$hasExplicitWhisperModel = $PSBoundParameters.ContainsKey("WhisperModel")
 
 if ([string]::IsNullOrWhiteSpace($ConfigPath)) {
-    if (($hasExplicitEndpoint -or $hasExplicitModel -or $RunDictation) -and
+    if (($hasExplicitEndpoint -or $hasExplicitModel -or $hasExplicitWhisperCLI -or $hasExplicitWhisperModel -or $RunDictation) -and
         ![string]::IsNullOrWhiteSpace($env:APPDATA)) {
         $ConfigPath = Join-Path $env:APPDATA "roma-just-talk\windows-agent.json"
     } else {
@@ -161,6 +167,23 @@ if (!$SkipSmoke) {
         }
         if (![string]::IsNullOrWhiteSpace($SecretDir)) {
             $smokeArgs += @("-SecretDir", $SecretDir)
+        }
+        if ($hasExplicitWhisperCLI) {
+            $smokeArgs += @("-WhisperCLI", $WhisperCLI)
+        }
+        if ($hasExplicitWhisperModel) {
+            $smokeArgs += @("-WhisperModel", $WhisperModel)
+        }
+        if (![string]::IsNullOrWhiteSpace($WhisperOutputDir)) {
+            $smokeArgs += @("-WhisperOutputDir", $WhisperOutputDir)
+        }
+        $whisperArguments = @(
+            $WhisperArgument |
+                Where-Object { ![string]::IsNullOrWhiteSpace($_) }
+        )
+        if ($whisperArguments.Count -gt 0) {
+            $smokeArgs += "-WhisperArgument"
+            $smokeArgs += $whisperArguments
         }
         if (![string]::IsNullOrWhiteSpace($Language)) {
             $smokeArgs += @("-Language", $Language)

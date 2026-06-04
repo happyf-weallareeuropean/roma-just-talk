@@ -59,9 +59,7 @@ struct RomaWindowsAgent {
         let configuration = try loadConfiguration(from: options)
             .applyingOverrides(from: options)
         let outputURL = URL(fileURLWithPath: configuration.outputPath ?? defaultOutputPath())
-        let endpointText = try configuration.requireEndpoint()
-        let modelName = try configuration.requireModel()
-        let apiKeySource = try configuration.apiKeySource()
+        let transcriptionClient = try makeTranscriptionClient(from: configuration)
         let shouldPaste = configuration.shouldPaste ?? false
         let clipboardRestoreConfiguration = configuration.clipboardRestoreConfiguration()
         let shouldUseHoldHook = configuration.usesHoldHook ?? false
@@ -72,34 +70,20 @@ struct RomaWindowsAgent {
             ? .hold(timeoutMilliseconds: timeoutMilliseconds)
             : .toggle(recordSeconds: seconds)
 
-        guard let endpointURL = URL(string: endpointText), endpointURL.scheme != nil else {
-            throw RomaCommandLineOptionsError.invalidOptionValue("--endpoint")
-        }
-
-        let service = OpenAICompatibleTranscriptionService(
-            configuration: OpenAICompatibleTranscriptionConfiguration(
-                endpointURL: endpointURL,
-                apiKey: try apiKeySource.resolve()
-            )
-        )
-        let model = TranscriptionModelDescriptor(
-            name: modelName,
-            displayName: modelName,
-            provider: .custom
-        )
-
         print("agent=roma-windows-agent")
+        print("transcription_client=\(transcriptionClient.name)")
+        for line in transcriptionClient.details {
+            print(line)
+        }
         print("recording_mode=\(shouldUseHoldHook ? "hold" : "toggle")")
         print("paste_requested=\(shouldPaste)")
         print("restore_clipboard_after_paste=\(clipboardRestoreConfiguration.restoreClipboard)")
         print("clipboard_restore_delay_seconds=\(clipboardRestoreConfiguration.restoreDelaySeconds)")
-        print("api_key_source=\(apiKeySource.kind)")
-        print("api_key_ref=\(apiKeySource.reference)")
 
         let result = try await WindowsDictationRuntime.run(
             WindowsDictationRuntimeRequest(
                 outputURL: outputURL,
-                model: model,
+                model: transcriptionClient.model,
                 language: configuration.language,
                 prompt: configuration.prompt,
                 shouldPaste: shouldPaste,
@@ -109,7 +93,7 @@ struct RomaWindowsAgent {
                 ),
                 trigger: trigger
             ),
-            transcriptionService: service
+            transcriptionService: transcriptionClient.service
         ) { event in
             printEvent(event)
         }
@@ -163,15 +147,21 @@ struct RomaWindowsAgent {
         let configuration = try loadConfiguration(from: options, allowMissing: true)
             .applyingOverrides(from: options)
 
-        _ = try configuration.requireEndpoint()
-        _ = try configuration.requireModel()
-        _ = try configuration.apiKeySource()
+        try configuration.validateTranscriptionSettings()
         try configuration.write(to: url)
 
         print("config=\(url.path)")
-        print("endpoint=\(try configuration.requireEndpoint())")
-        print("model=\(try configuration.requireModel())")
-        print("api_key_source=\(try configuration.apiKeySource().kind)")
+        if configuration.usesWhisperCLI {
+            print("transcription_client=whisper.cpp-cli")
+            print("whisper_cli=\(try configuration.requireWhisperCLIPath())")
+            print("whisper_model=\(try configuration.requireWhisperModelPath())")
+            print("whisper_extra_args=\(configuration.whisperExtraArguments.count)")
+        } else {
+            print("transcription_client=openai-compatible")
+            print("endpoint=\(try configuration.requireEndpoint())")
+            print("model=\(try configuration.requireModel())")
+            print("api_key_source=\(try configuration.apiKeySource().kind)")
+        }
         print("paste=\(configuration.shouldPaste ?? false)")
         print("restore_clipboard_after_paste=\(configuration.clipboardRestoreConfiguration().restoreClipboard)")
         print("clipboard_restore_delay_seconds=\(configuration.clipboardRestoreConfiguration().restoreDelaySeconds)")
@@ -217,6 +207,59 @@ struct RomaWindowsAgent {
         return try RomaWindowsAgentConfiguration.load(from: url)
     }
 
+    private static func makeTranscriptionClient(
+        from configuration: RomaWindowsAgentConfiguration
+    ) throws -> AgentTranscriptionClient {
+        if configuration.usesWhisperCLI {
+            let whisperConfiguration = try configuration.whisperCLIConfiguration()
+            let modelName = whisperConfiguration.modelURL.lastPathComponent
+            return AgentTranscriptionClient(
+                name: "whisper.cpp-cli",
+                service: WhisperCLITranscriptionService(configuration: whisperConfiguration),
+                model: TranscriptionModelDescriptor(
+                    name: modelName,
+                    displayName: modelName,
+                    provider: .whisper
+                ),
+                details: [
+                    "whisper_cli=\(whisperConfiguration.executableURL.path)",
+                    "whisper_model=\(whisperConfiguration.modelURL.path)",
+                    "whisper_output_dir=\(whisperConfiguration.outputDirectoryURL.path)",
+                    "whisper_extra_args=\(whisperConfiguration.extraArguments.count)"
+                ]
+            )
+        }
+
+        let endpointText = try configuration.requireEndpoint()
+        let modelName = try configuration.requireModel()
+        let apiKeySource = try configuration.apiKeySource()
+
+        guard let endpointURL = URL(string: endpointText), endpointURL.scheme != nil else {
+            throw RomaCommandLineOptionsError.invalidOptionValue("--endpoint")
+        }
+
+        return AgentTranscriptionClient(
+            name: "openai-compatible",
+            service: OpenAICompatibleTranscriptionService(
+                configuration: OpenAICompatibleTranscriptionConfiguration(
+                    endpointURL: endpointURL,
+                    apiKey: try apiKeySource.resolve()
+                )
+            ),
+            model: TranscriptionModelDescriptor(
+                name: modelName,
+                displayName: modelName,
+                provider: .custom
+            ),
+            details: [
+                "endpoint=\(endpointText)",
+                "model=\(modelName)",
+                "api_key_source=\(apiKeySource.kind)",
+                "api_key_ref=\(apiKeySource.reference)"
+            ]
+        )
+    }
+
     private static var platformName: String {
         #if os(Windows)
         return "windows"
@@ -234,7 +277,9 @@ struct RomaWindowsAgent {
         print("  RomaWindowsAgent doctor")
         print("  RomaWindowsAgent save-key-from-env --key groq --value-env GROQ_API_KEY [--secret-dir C:\\tmp\\roma-secrets]")
         print("  RomaWindowsAgent write-config --endpoint https://api.example.com/v1/audio/transcriptions --model whisper-large-v3-turbo --api-key-name groq [--config C:\\tmp\\roma-agent.json] [--hold-hook] [--paste] [--no-restore-clipboard]")
+        print("  RomaWindowsAgent write-config --whisper-cli C:\\path\\whisper-cli.exe --whisper-model C:\\path\\ggml-base.en.bin [--config C:\\tmp\\roma-agent.json] [--hold-hook] [--paste]")
         print("  RomaWindowsAgent dictate [--config C:\\tmp\\roma-agent.json] [--endpoint https://api.example.com/v1/audio/transcriptions --model whisper-large-v3-turbo --api-key-env OPENAI_API_KEY] [--out proof.wav] [--seconds 2] [--replace \"just talk=roma-just-talk\"] [--paste] [--clipboard-restore-delay 2]")
+        print("  RomaWindowsAgent dictate --whisper-cli C:\\path\\whisper-cli.exe --whisper-model C:\\path\\ggml-base.en.bin [--hold-hook] [--paste]")
         print("  RomaWindowsAgent dictate --hold-hook --timeout 15 --endpoint https://api.example.com/v1/audio/transcriptions --model whisper-large-v3-turbo --api-key-name groq [--paste] [--no-restore-clipboard]")
     }
 
@@ -250,4 +295,11 @@ struct RomaWindowsAgent {
         let line = "error=\(RomaCommandLineText.oneLine(description))\n"
         FileHandle.standardError.write(Data(line.utf8))
     }
+}
+
+private struct AgentTranscriptionClient {
+    var name: String
+    var service: any TranscriptionService
+    var model: TranscriptionModelDescriptor
+    var details: [String]
 }

@@ -8,6 +8,10 @@ param(
     [string]$ApiKeyEnv = "PATH",
     [string]$ApiKeyName = "",
     [string]$SecretDir = "",
+    [string]$WhisperCLI = "",
+    [string]$WhisperModel = "",
+    [string]$WhisperOutputDir = "",
+    [string[]]$WhisperArgument = @(),
     [string]$Language = "",
     [string]$Prompt = "",
     [string[]]$WordReplacement = @("just talk=roma-just-talk"),
@@ -167,8 +171,15 @@ $apiKeyEnvValue = if ([string]::IsNullOrWhiteSpace($ApiKeyEnv)) {
 } else {
     [Environment]::GetEnvironmentVariable($ApiKeyEnv)
 }
+$hasWhisperCLI = ![string]::IsNullOrWhiteSpace($WhisperCLI)
+$hasWhisperModel = ![string]::IsNullOrWhiteSpace($WhisperModel)
+$usesWhisperCLI = $hasWhisperCLI -or $hasWhisperModel
 
-if ($RunDictation -and
+if ($usesWhisperCLI -and (!$hasWhisperCLI -or !$hasWhisperModel)) {
+    throw "WhisperCLI and WhisperModel must be provided together"
+}
+
+if ($RunDictation -and !$usesWhisperCLI -and
     [string]::IsNullOrWhiteSpace($ApiKeyName) -and
     (!$hasExplicitApiKeyEnv -or [string]::IsNullOrWhiteSpace($apiKeyEnvValue))) {
     throw "RunDictation requires -ApiKeyEnv with a set environment variable, or pass -ApiKeyName with a saved key"
@@ -220,19 +231,32 @@ Invoke-Step "agent config" {
     $configArgs = @(
         "write-config",
         "--config", $ConfigPath,
-        "--endpoint", $Endpoint,
-        "--model", $Model,
         "--out", $dictationOutput
     )
+    if ($usesWhisperCLI) {
+        $configArgs += @("--whisper-cli", $WhisperCLI, "--whisper-model", $WhisperModel)
+        if (![string]::IsNullOrWhiteSpace($WhisperOutputDir)) {
+            $configArgs += @("--whisper-output-dir", $WhisperOutputDir)
+        }
+        foreach ($argument in $WhisperArgument) {
+            if (![string]::IsNullOrWhiteSpace($argument)) {
+                $configArgs += @("--whisper-arg", $argument)
+            }
+        }
+    } else {
+        $configArgs += @("--endpoint", $Endpoint, "--model", $Model)
+    }
     if ($shouldUseHoldHook) {
         $configArgs += @("--hold-hook", "--timeout", "$HoldTimeoutSeconds")
     } else {
         $configArgs += @("--toggle", "--seconds", "$RecordSeconds")
     }
-    if (![string]::IsNullOrWhiteSpace($ApiKeyName)) {
-        $configArgs += @("--api-key-name", $ApiKeyName, "--secret-dir", $SecretDir)
-    } else {
-        $configArgs += @("--api-key-env", $ApiKeyEnv)
+    if (!$usesWhisperCLI) {
+        if (![string]::IsNullOrWhiteSpace($ApiKeyName)) {
+            $configArgs += @("--api-key-name", $ApiKeyName, "--secret-dir", $SecretDir)
+        } else {
+            $configArgs += @("--api-key-env", $ApiKeyEnv)
+        }
     }
     if (![string]::IsNullOrWhiteSpace($Language)) {
         $configArgs += @("--language", $Language)
@@ -271,8 +295,13 @@ Invoke-Step "agent config" {
     Assert-NonEmptyFile -Path $ConfigPath
 
     $configJson = Get-Content -LiteralPath $ConfigPath -Raw | ConvertFrom-Json
-    Assert-JsonPropertyEquals -Object $configJson -Name "endpoint" -Expected $Endpoint
-    Assert-JsonPropertyEquals -Object $configJson -Name "model" -Expected $Model
+    if ($usesWhisperCLI) {
+        Assert-JsonPropertyEquals -Object $configJson -Name "whisperCLIPath" -Expected $WhisperCLI
+        Assert-JsonPropertyEquals -Object $configJson -Name "whisperModelPath" -Expected $WhisperModel
+    } else {
+        Assert-JsonPropertyEquals -Object $configJson -Name "endpoint" -Expected $Endpoint
+        Assert-JsonPropertyEquals -Object $configJson -Name "model" -Expected $Model
+    }
     Assert-JsonPropertyEquals -Object $configJson -Name "outputPath" -Expected $dictationOutput
     Assert-JsonPropertyEquals -Object $configJson -Name "usesHoldHook" -Expected $shouldUseHoldHook
     if ($PasteDictation) {

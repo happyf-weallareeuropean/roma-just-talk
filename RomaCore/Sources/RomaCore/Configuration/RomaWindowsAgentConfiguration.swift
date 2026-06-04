@@ -6,6 +6,10 @@ public struct RomaWindowsAgentConfiguration: Codable, Equatable, Sendable {
     public var apiKeyEnvironment: String?
     public var apiKeyName: String?
     public var secretDirectoryPath: String?
+    public var whisperCLIPath: String?
+    public var whisperModelPath: String?
+    public var whisperOutputDirectoryPath: String?
+    public var whisperExtraArguments: [String]
     public var language: String?
     public var prompt: String?
     public var outputPath: String?
@@ -17,12 +21,38 @@ public struct RomaWindowsAgentConfiguration: Codable, Equatable, Sendable {
     public var holdTimeoutSeconds: Double?
     public var wordReplacements: [RomaWordReplacementRule]
 
+    private enum CodingKeys: String, CodingKey {
+        case endpoint
+        case model
+        case apiKeyEnvironment
+        case apiKeyName
+        case secretDirectoryPath
+        case whisperCLIPath
+        case whisperModelPath
+        case whisperOutputDirectoryPath
+        case whisperExtraArguments
+        case language
+        case prompt
+        case outputPath
+        case shouldPaste
+        case restoreClipboardAfterPaste
+        case clipboardRestoreDelaySeconds
+        case usesHoldHook
+        case recordSeconds
+        case holdTimeoutSeconds
+        case wordReplacements
+    }
+
     public init(
         endpoint: String? = nil,
         model: String? = nil,
         apiKeyEnvironment: String? = nil,
         apiKeyName: String? = nil,
         secretDirectoryPath: String? = nil,
+        whisperCLIPath: String? = nil,
+        whisperModelPath: String? = nil,
+        whisperOutputDirectoryPath: String? = nil,
+        whisperExtraArguments: [String] = [],
         language: String? = nil,
         prompt: String? = nil,
         outputPath: String? = nil,
@@ -39,6 +69,10 @@ public struct RomaWindowsAgentConfiguration: Codable, Equatable, Sendable {
         self.apiKeyEnvironment = apiKeyEnvironment
         self.apiKeyName = apiKeyName
         self.secretDirectoryPath = secretDirectoryPath
+        self.whisperCLIPath = whisperCLIPath
+        self.whisperModelPath = whisperModelPath
+        self.whisperOutputDirectoryPath = whisperOutputDirectoryPath
+        self.whisperExtraArguments = whisperExtraArguments
         self.language = language
         self.prompt = prompt
         self.outputPath = outputPath
@@ -49,6 +83,45 @@ public struct RomaWindowsAgentConfiguration: Codable, Equatable, Sendable {
         self.recordSeconds = recordSeconds
         self.holdTimeoutSeconds = holdTimeoutSeconds
         self.wordReplacements = wordReplacements
+    }
+
+    public init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+
+        endpoint = try container.decodeIfPresent(String.self, forKey: .endpoint)
+        model = try container.decodeIfPresent(String.self, forKey: .model)
+        apiKeyEnvironment = try container.decodeIfPresent(String.self, forKey: .apiKeyEnvironment)
+        apiKeyName = try container.decodeIfPresent(String.self, forKey: .apiKeyName)
+        secretDirectoryPath = try container.decodeIfPresent(String.self, forKey: .secretDirectoryPath)
+        whisperCLIPath = try container.decodeIfPresent(String.self, forKey: .whisperCLIPath)
+        whisperModelPath = try container.decodeIfPresent(String.self, forKey: .whisperModelPath)
+        whisperOutputDirectoryPath = try container.decodeIfPresent(
+            String.self,
+            forKey: .whisperOutputDirectoryPath
+        )
+        whisperExtraArguments = try container.decodeIfPresent(
+            [String].self,
+            forKey: .whisperExtraArguments
+        ) ?? []
+        language = try container.decodeIfPresent(String.self, forKey: .language)
+        prompt = try container.decodeIfPresent(String.self, forKey: .prompt)
+        outputPath = try container.decodeIfPresent(String.self, forKey: .outputPath)
+        shouldPaste = try container.decodeIfPresent(Bool.self, forKey: .shouldPaste)
+        restoreClipboardAfterPaste = try container.decodeIfPresent(
+            Bool.self,
+            forKey: .restoreClipboardAfterPaste
+        )
+        clipboardRestoreDelaySeconds = try container.decodeIfPresent(
+            Double.self,
+            forKey: .clipboardRestoreDelaySeconds
+        )
+        usesHoldHook = try container.decodeIfPresent(Bool.self, forKey: .usesHoldHook)
+        recordSeconds = try container.decodeIfPresent(Double.self, forKey: .recordSeconds)
+        holdTimeoutSeconds = try container.decodeIfPresent(Double.self, forKey: .holdTimeoutSeconds)
+        wordReplacements = try container.decodeIfPresent(
+            [RomaWordReplacementRule].self,
+            forKey: .wordReplacements
+        ) ?? []
     }
 
     public static func defaultURL() -> URL {
@@ -91,6 +164,25 @@ public struct RomaWindowsAgentConfiguration: Codable, Equatable, Sendable {
 
     public func applyingOverrides(from options: RomaCommandLineOptions) throws -> RomaWindowsAgentConfiguration {
         var configuration = self
+        let selectsOpenAICompatible = options.contains("--endpoint") ||
+            options.contains("--api-key-env") ||
+            options.contains("--api-key-name")
+        let selectsWhisperCLI = options.contains("--whisper-cli") ||
+            options.contains("--whisper-model")
+
+        if selectsOpenAICompatible {
+            configuration.whisperCLIPath = nil
+            configuration.whisperModelPath = nil
+            configuration.whisperOutputDirectoryPath = nil
+            configuration.whisperExtraArguments = []
+        }
+        if selectsWhisperCLI {
+            configuration.endpoint = nil
+            configuration.model = nil
+            configuration.apiKeyEnvironment = nil
+            configuration.apiKeyName = nil
+            configuration.secretDirectoryPath = nil
+        }
 
         if let value = options.optionalValue(after: "--endpoint") {
             configuration.endpoint = value
@@ -108,6 +200,18 @@ public struct RomaWindowsAgentConfiguration: Codable, Equatable, Sendable {
         }
         if let value = options.optionalValue(after: "--secret-dir") {
             configuration.secretDirectoryPath = value
+        }
+        if let value = options.optionalValue(after: "--whisper-cli") {
+            configuration.whisperCLIPath = value
+        }
+        if let value = options.optionalValue(after: "--whisper-model") {
+            configuration.whisperModelPath = value
+        }
+        if let value = options.optionalValue(after: "--whisper-output-dir") {
+            configuration.whisperOutputDirectoryPath = value
+        }
+        if options.contains("--whisper-arg") {
+            configuration.whisperExtraArguments = try options.values(after: "--whisper-arg")
         }
         if let value = options.optionalValue(after: "--language") {
             configuration.language = value
@@ -165,6 +269,22 @@ public struct RomaWindowsAgentConfiguration: Codable, Equatable, Sendable {
         )
     }
 
+    public var usesWhisperCLI: Bool {
+        whisperCLIPath != nil || whisperModelPath != nil
+    }
+
+    public func whisperCLIConfiguration() throws -> WhisperCLITranscriptionConfiguration {
+        WhisperCLITranscriptionConfiguration(
+            executableURL: URL(fileURLWithPath: try requireWhisperCLIPath()),
+            modelURL: URL(fileURLWithPath: try requireWhisperModelPath()),
+            outputDirectoryURL: URL(
+                fileURLWithPath: whisperOutputDirectoryPath ?? FileManager.default.temporaryDirectory.path,
+                isDirectory: true
+            ),
+            extraArguments: whisperExtraArguments
+        )
+    }
+
     public func clipboardRestoreConfiguration() -> WindowsClipboardRestoreConfiguration {
         WindowsClipboardRestoreConfiguration(
             restoreClipboard: restoreClipboardAfterPaste ?? true,
@@ -178,6 +298,37 @@ public struct RomaWindowsAgentConfiguration: Codable, Equatable, Sendable {
 
     public func requireModel() throws -> String {
         try required(model, option: "--model")
+    }
+
+    public func requireWhisperCLIPath() throws -> String {
+        try required(whisperCLIPath, option: "--whisper-cli")
+    }
+
+    public func requireWhisperModelPath() throws -> String {
+        try required(whisperModelPath, option: "--whisper-model")
+    }
+
+    public func validateTranscriptionSettings() throws {
+        try validate()
+
+        if usesWhisperCLI {
+            _ = try requireWhisperCLIPath()
+            _ = try requireWhisperModelPath()
+            if endpoint != nil ||
+                model != nil ||
+                apiKeyEnvironment != nil ||
+                apiKeyName != nil ||
+                secretDirectoryPath != nil {
+                throw RomaCommandLineOptionsError.conflictingOptions(
+                    "OpenAI-compatible endpoint/key options and --whisper-cli"
+                )
+            }
+            return
+        }
+
+        _ = try requireEndpoint()
+        _ = try requireModel()
+        _ = try apiKeySource()
     }
 
     public func validate() throws {

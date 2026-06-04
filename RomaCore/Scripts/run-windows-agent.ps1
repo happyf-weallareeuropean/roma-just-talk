@@ -7,6 +7,10 @@ param(
     [string]$ApiKeyEnv = "",
     [string]$ApiKeyName = "",
     [string]$SecretDir = "",
+    [string]$WhisperCLI = "",
+    [string]$WhisperModel = "",
+    [string]$WhisperOutputDir = "",
+    [string[]]$WhisperArgument = @(),
     [string]$Language = "",
     [string]$Prompt = "",
     [string[]]$WordReplacement = @(),
@@ -107,14 +111,28 @@ if ($DoctorOnly) {
 
 $hasEndpoint = ![string]::IsNullOrWhiteSpace($Endpoint)
 $hasModel = ![string]::IsNullOrWhiteSpace($Model)
+$hasWhisperCLI = ![string]::IsNullOrWhiteSpace($WhisperCLI)
+$hasWhisperModel = ![string]::IsNullOrWhiteSpace($WhisperModel)
 $hasConfig = Test-Path -LiteralPath $ConfigPath
 
-if ($hasEndpoint -or $hasModel) {
+if (($hasEndpoint -or $hasModel) -and ($hasWhisperCLI -or $hasWhisperModel)) {
+    throw "Endpoint/Model and WhisperCLI/WhisperModel are mutually exclusive"
+}
+
+if ($hasEndpoint -or $hasModel -or $hasWhisperCLI -or $hasWhisperModel) {
+    $configArgs = @(
+        "write-config",
+        "--config", $ConfigPath
+    )
+
     if (!$hasEndpoint -or !$hasModel) {
-        throw "Endpoint and Model must be provided together to write config"
+        if (!$hasWhisperCLI -or !$hasWhisperModel) {
+            throw "Pass Endpoint and Model together, or pass WhisperCLI and WhisperModel together"
+        }
     }
 
-    if (![string]::IsNullOrWhiteSpace($ApiKeyName) -and
+    if ($hasEndpoint -and
+        ![string]::IsNullOrWhiteSpace($ApiKeyName) -and
         ![string]::IsNullOrWhiteSpace($ApiKeyEnv) -and
         ![string]::IsNullOrWhiteSpace([Environment]::GetEnvironmentVariable($ApiKeyEnv))) {
         $saveKeyArgs = @(
@@ -131,23 +149,32 @@ if ($hasEndpoint -or $hasModel) {
         Write-Host $saveKeyOutput
     }
 
-    $configArgs = @(
-        "write-config",
-        "--config", $ConfigPath,
-        "--endpoint", $Endpoint,
-        "--model", $Model
-    )
+    if ($hasWhisperCLI) {
+        $configArgs += @("--whisper-cli", $WhisperCLI, "--whisper-model", $WhisperModel)
+        if (![string]::IsNullOrWhiteSpace($WhisperOutputDir)) {
+            $configArgs += @("--whisper-output-dir", $WhisperOutputDir)
+        }
+        foreach ($argument in $WhisperArgument) {
+            if (![string]::IsNullOrWhiteSpace($argument)) {
+                $configArgs += @("--whisper-arg", $argument)
+            }
+        }
+    } else {
+        $configArgs += @("--endpoint", $Endpoint, "--model", $Model)
+    }
     if ($UseHoldHook -or !$UseToggle) {
         $configArgs += @("--hold-hook", "--timeout", "$HoldTimeoutSeconds")
     } else {
         $configArgs += @("--toggle", "--seconds", "$RecordSeconds")
     }
-    if (![string]::IsNullOrWhiteSpace($ApiKeyName)) {
-        $configArgs += @("--api-key-name", $ApiKeyName, "--secret-dir", $SecretDir)
-    } elseif (![string]::IsNullOrWhiteSpace($ApiKeyEnv)) {
-        $configArgs += @("--api-key-env", $ApiKeyEnv)
-    } else {
-        throw "Pass ApiKeyEnv or ApiKeyName when writing config"
+    if ($hasEndpoint) {
+        if (![string]::IsNullOrWhiteSpace($ApiKeyName)) {
+            $configArgs += @("--api-key-name", $ApiKeyName, "--secret-dir", $SecretDir)
+        } elseif (![string]::IsNullOrWhiteSpace($ApiKeyEnv)) {
+            $configArgs += @("--api-key-env", $ApiKeyEnv)
+        } else {
+            throw "Pass ApiKeyEnv or ApiKeyName when writing cloud config"
+        }
     }
     if (![string]::IsNullOrWhiteSpace($Language)) {
         $configArgs += @("--language", $Language)
@@ -186,7 +213,7 @@ if ($hasEndpoint -or $hasModel) {
 }
 
 if (!$hasConfig) {
-    throw "Config was not found at $ConfigPath; rerun with Endpoint, Model, and ApiKeyEnv or ApiKeyName"
+    throw "Config was not found at $ConfigPath; rerun with cloud Endpoint/Model/API key or local WhisperCLI/WhisperModel"
 }
 
 Write-Host "waiting_for_hotkey=Ctrl+Shift+R"

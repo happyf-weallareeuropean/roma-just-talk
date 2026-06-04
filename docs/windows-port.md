@@ -52,6 +52,7 @@ Reusable now:
 - `PCM16WAVFile` now lives in `RomaCore` as Foundation-only PCM16 WAV output for proof recordings.
 - `MiniaudioCaptureRecorder` now lives in `RomaCore` and feeds miniaudio capture frames into the shared pre-roll/WAV path.
 - `OpenAICompatibleTranscriptionService` now lives in `RomaCore` as a Foundation-only multipart HTTP proof path for OpenAI-compatible cloud STT.
+- `WhisperCLITranscriptionService` now lives in `RomaCore` as a Foundation-only bridge to the proven `whisper-cli` executable and ggml model files.
 - `DictationPipeline` now lives in `RomaCore` as the shared record -> transcribe -> shared cleanup -> optional paste orchestration.
 - `RomaTranscriptionOutputFilter` now lives in `RomaCore` as the shared Foundation-only post-STT cleanup and insertion-polish path.
 - `RomaWordReplacementProcessor` now lives in `RomaCore` as the shared dictionary replacement matching path.
@@ -118,7 +119,7 @@ These are the lowest-redo candidates because they map directly to the behavior a
 | Need | Windows path | Why |
 | --- | --- | --- |
 | Rolling mic capture | miniaudio first, raw WASAPI second | miniaudio is single-file C, supports capture, WASAPI, Core Audio, conversion, and ring buffers. `RomaProofAgent miniaudio-record-proof` is the first source path for this. |
-| Local Whisper | whisper.cpp C API or CLI/DLL | Current app already uses whisper.cpp; upstream supports Windows with MSVC/MinGW and CPU/GPU paths. |
+| Local Whisper | whisper.cpp CLI first, C API/DLL second | Current app already uses whisper.cpp; upstream supports Windows with MSVC/MinGW and CPU/GPU paths. `WhisperCLITranscriptionService` keeps this as an external executable seam before linking the C++ engine into Swift. |
 | Cloud STT | Existing OpenAI-compatible provider logic behind a portable API-key source | Low native surface; fastest proof if local model packaging is not ready. `RomaProofAgent transcribe-proof` is the first source path for this. |
 | Global shortcut | `RegisterHotKey` for toggle proof | Simple system-wide hotkey, enough for MVP toggle mode. `RomaProofAgent windows-hotkey-proof` is the first source path for this. |
 | Push-to-talk keydown/keyup | `WH_KEYBOARD_LL` after toggle proof | Needed for hold behavior. `RomaProofAgent windows-keyboard-hook-proof` is the first source path for this and still keeps the hook work in a native adapter. |
@@ -226,6 +227,7 @@ The installer also copies `run-windows-agent.ps1`. Use it to start the installed
 ```powershell
 powershell -ExecutionPolicy Bypass -File "$env:LOCALAPPDATA\roma-just-talk\agent\run-windows-agent.ps1"
 powershell -ExecutionPolicy Bypass -File "$env:LOCALAPPDATA\roma-just-talk\agent\run-windows-agent.ps1" -Endpoint https://api.groq.com/openai/v1/audio/transcriptions -Model whisper-large-v3-turbo -ApiKeyEnv GROQ_API_KEY -ApiKeyName groq -PasteDictation
+powershell -ExecutionPolicy Bypass -File "$env:LOCALAPPDATA\roma-just-talk\agent\run-windows-agent.ps1" -WhisperCLI C:\path\whisper-cli.exe -WhisperModel C:\path\ggml-base.en.bin -PasteDictation
 ```
 
 Add `-CreateShortcut` to `install-windows-agent.ps1` to create a user Start Menu shortcut that runs `run-windows-agent.ps1` without administrator rights. CI package smoke creates the shortcut in a temporary folder and verifies the launcher with `-DoctorOnly`.
@@ -236,6 +238,8 @@ Windows agent config:
 swift run RomaWindowsAgent save-key-from-env --key groq --value-env GROQ_API_KEY
 swift run RomaWindowsAgent write-config --endpoint https://api.groq.com/openai/v1/audio/transcriptions --model whisper-large-v3-turbo --api-key-name groq --hold-hook --paste --clipboard-restore-delay 2 --replace "just talk=roma-just-talk"
 swift run RomaWindowsAgent dictate
+swift run RomaWindowsAgent write-config --whisper-cli C:\path\whisper-cli.exe --whisper-model C:\path\ggml-base.en.bin --hold-hook --paste --replace "just talk=roma-just-talk"
+swift run RomaWindowsAgent dictate
 ```
 
 Use `--config C:\tmp\roma-agent.json` on `write-config` and `dictate` when you want an explicit config path instead of `%APPDATA%\roma-just-talk\windows-agent.json`. Paste restores the previous text clipboard by default; use `--no-restore-clipboard` to leave dictated text on the clipboard, or `--clipboard-restore-delay 0` for smoke tests that should not wait.
@@ -244,7 +248,7 @@ CI proof:
 
 - `.github/workflows/romacore.yml` builds `RomaCore` on macOS and Windows.
 - The Windows job verifies Visual Studio C++ tools, installs the official Swift toolchain with `winget install --id Swift.Toolchain`, then runs `windows-proof.ps1 -SkipMic`.
-- CI is noninteractive, so it proves Windows compilation, PowerShell parse validity, pre-roll/WAV output, shared cleanup/replacement/paste text processing, DPAPI secret round-trip, stored-key transcription against a local mock STT endpoint, reusable `RomaWindowsAgent` config writing, and hotkey/paste doctor paths. It does not prove real microphone permission, real hotkey delivery, or paste into Notepad.
+- CI is noninteractive, so it proves Windows compilation, PowerShell parse validity, pre-roll/WAV output, shared cleanup/replacement/paste text processing, DPAPI secret round-trip, stored-key transcription against a local mock STT endpoint, local `whisper-cli` argument shaping, reusable `RomaWindowsAgent` config writing, and hotkey/paste doctor paths. It does not prove real microphone permission, real hotkey delivery, local whisper inference, or paste into Notepad.
 - CI also runs `package-windows-agent.ps1`, requires Swift runtime DLLs in the artifact, verifies the packaged `RomaWindowsAgent.exe` through `smoke-windows-agent.ps1`, asserts the generated JSON config contains the expected endpoint/model/output/mode and clipboard-restore settings, proves no-admin install into a temp directory, verifies the installed launcher with `-DoctorOnly`, creates a user shortcut in a temp folder, and uploads a `roma-windows-agent` artifact for laptop smoke tests.
 
 Raw command sequence:
@@ -259,6 +263,8 @@ swift run RomaProofAgent pre-roll-proof --out core-proof.wav
 swift run RomaProofAgent miniaudio-capture-doctor
 swift run RomaProofAgent miniaudio-record-proof --out mic-proof.wav --seconds 2
 swift run RomaProofAgent transcribe-proof-doctor
+swift run RomaProofAgent whisper-cli-doctor
+swift run RomaProofAgent whisper-cli-proof --audio mic-proof.wav --whisper-cli C:\path\whisper-cli.exe --whisper-model C:\path\ggml-base.en.bin --language en --prompt "roma just talk"
 swift run RomaProofAgent dictation-pipeline-proof --out pipeline-proof.wav --text "hmm... just talk." --replace "just talk=roma-just-talk"
 swift run RomaProofAgent dictation-pipeline-proof --out mid-sentence-proof.wav --text "Model." --preceding-text "...so this"
 swift run RomaProofAgent transcribe-proof --audio mic-proof.wav --endpoint https://api.groq.com/openai/v1/audio/transcriptions --model whisper-large-v3-turbo --api-key-env GROQ_API_KEY
@@ -274,6 +280,7 @@ swift run RomaProofAgent windows-secret-proof --dir C:\tmp\roma-secrets
 swift run RomaProofAgent windows-secret-save-from-env --dir C:\tmp\roma-secrets --key groq --value-env GROQ_API_KEY
 swift run RomaWindowsAgent save-key-from-env --key groq --value-env GROQ_API_KEY
 swift run RomaWindowsAgent write-config --endpoint https://api.groq.com/openai/v1/audio/transcriptions --model whisper-large-v3-turbo --api-key-name groq --hold-hook --paste --clipboard-restore-delay 2 --replace "just talk=roma-just-talk"
+swift run RomaWindowsAgent write-config --whisper-cli C:\path\whisper-cli.exe --whisper-model C:\path\ggml-base.en.bin --hold-hook --paste --replace "just talk=roma-just-talk"
 swift run RomaWindowsAgent dictate
 swift run RomaWindowsAgent dictate --hold-hook --endpoint https://api.groq.com/openai/v1/audio/transcriptions --model whisper-large-v3-turbo --api-key-name groq --paste --no-restore-clipboard
 swift run RomaProofAgent transcribe-proof --audio mic-proof.wav --endpoint https://api.groq.com/openai/v1/audio/transcriptions --model whisper-large-v3-turbo --api-key-name groq --secret-dir C:\tmp\roma-secrets

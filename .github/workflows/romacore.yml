@@ -46,6 +46,7 @@ jobs:
           test -s "$RUNNER_TEMP/roma-core-proof.wav"
           swift run RomaProofAgent miniaudio-capture-doctor
           swift run RomaProofAgent transcribe-proof-doctor
+          swift run RomaProofAgent whisper-cli-doctor
           swift run RomaProofAgent dictation-pipeline-proof --out "$RUNNER_TEMP/roma-pipeline-proof.wav" --text "hmm... just talk." --replace "just talk=roma-just-talk"
           test -s "$RUNNER_TEMP/roma-pipeline-proof.wav"
           swift run RomaProofAgent windows-hotkey-doctor

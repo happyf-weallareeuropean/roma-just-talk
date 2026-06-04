@@ -206,6 +206,10 @@ try {
         swift run RomaProofAgent transcribe-proof-doctor
     }
 
+    Invoke-Step "whisper.cpp CLI doctor" {
+        swift run RomaProofAgent whisper-cli-doctor
+    }
+
     $pipelineProof = Join-Path $OutputDir "pipeline-proof.wav"
     Invoke-Step "dictation pipeline cleanup proof" {
         $pipelineOutput = swift run RomaProofAgent dictation-pipeline-proof `
