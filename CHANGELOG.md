@@ -16,6 +16,7 @@
 - Formatted nested spoken bullet outlines using "indent", "sub", "outdent", and "dedent" commands.
 - Formatted compact spoken markdown tables such as "markdown table name age row Felix thirty".
 - Split repeated spoken task commands such as "todo ... todo ..." and "checked task ... checked task ..." into separate checklist rows.
+- Strengthened Windows laptop proof reports to assert Win32NT platform and positive pre-roll seconds.
 - Added Windows artifact proof-report fields for packaged and installed doctor permission-surface output.
 - Asserted the Windows doctor permission split in CI and packaged smoke proofs.
 - Split Windows doctor output into OS permission grants and no-prompt native capabilities.

@@ -246,6 +246,7 @@ jobs:
           & "$env:RUNNER_TEMP\roma-windows-agent\check-windows-proof-report.ps1" `
             -ProofReportPath "$env:RUNNER_TEMP\roma-wrapper-install\proof-report.json" `
             -ExpectedMode packaged-whisper-mock `
+            -RequireWindowsPlatform `
             -RequireInstall `
             -RequireShortcut `
             -RequireStartupShortcut `

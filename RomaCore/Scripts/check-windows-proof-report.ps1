@@ -2,6 +2,7 @@ param(
     [Parameter(Mandatory = $true)]
     [string]$ProofReportPath,
     [string]$ExpectedMode = "",
+    [switch]$RequireWindowsPlatform,
     [switch]$RequireInstall,
     [switch]$RequireShortcut,
     [switch]$RequireStartupShortcut,
@@ -92,6 +93,24 @@ function Assert-NonEmptyString {
     Write-Host "proof_value=$Name value=$value"
 }
 
+function Assert-NumberGreaterThan {
+    param(
+        [Parameter(Mandatory = $true)]
+        [object]$Object,
+        [Parameter(Mandatory = $true)]
+        [string]$Name,
+        [Parameter(Mandatory = $true)]
+        [double]$Minimum
+    )
+
+    $actual = [double](Require-Property -Object $Object -Name $Name)
+    if ($actual -le $Minimum) {
+        throw "Expected $Name to be greater than $Minimum, got $actual"
+    }
+
+    Write-Host "proof_number=$Name value=$actual minimum=$Minimum"
+}
+
 function Assert-DictationRuntimeProof {
     param(
         [Parameter(Mandatory = $true)]
@@ -102,6 +121,8 @@ function Assert-DictationRuntimeProof {
     Assert-FileProof -Proof $runtime -Name "dictation_runtime_log"
     Assert-Boolean -Object $runtime -Name "reported_wrote" -Expected $true
     Assert-Boolean -Object $runtime -Name "reported_pre_roll" -Expected $true
+    Assert-Boolean -Object $runtime -Name "reported_positive_pre_roll" -Expected $true
+    Assert-NumberGreaterThan -Object $runtime -Name "included_pre_roll_seconds" -Minimum 0
     Assert-Boolean -Object $runtime -Name "reported_processed_text" -Expected $true
 
     return $runtime
@@ -137,6 +158,16 @@ Assert-NonEmptyString -Object $report -Name "generated_at"
 Assert-NonEmptyString -Object $report -Name "proof_mode"
 Assert-NonEmptyString -Object $report -Name "package_dir"
 Assert-NonEmptyString -Object $report -Name "install_dir"
+
+if ($RequireWindowsPlatform) {
+    $os = Require-Property -Object $report -Name "os"
+    $platform = [string](Require-Property -Object $os -Name "platform")
+    if ($platform -ne "Win32NT") {
+        throw "Expected os.platform to be Win32NT, got $platform"
+    }
+
+    Write-Host "proof_windows_platform=$platform"
+}
 
 if (![string]::IsNullOrWhiteSpace($ExpectedMode)) {
     $actualMode = [string](Require-Property -Object $report -Name "proof_mode")
