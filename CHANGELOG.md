@@ -2,6 +2,7 @@
 
 ## v1.81 - Unreleased
 
+- Preserved leading line and paragraph commands when dictation starts with "new line", "new paragraph", or "press enter".
 - Started dictated bullet and numbered lists on a new line when inserting after existing text.
 - Formatted spoken numbered-list prefixes such as "number one ... number two ..." without turning connector prose into lists.
 - Stripped noisy trailing periods from mid-sentence fragments with internal initials such as "J.R.R. Tolkien.".

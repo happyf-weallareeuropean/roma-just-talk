@@ -154,7 +154,7 @@ public final class DictationPipeline: @unchecked Sendable {
         )
         let replacedText = RomaWordReplacementProcessor.apply(
             configuration.wordReplacements,
-            to: filteredText.trimmingCharacters(in: .whitespacesAndNewlines)
+            to: filteredText.trimmingCharacters(in: .whitespaces)
         )
         let cleanedText = RomaTranscriptionOutputFilter.applyCleanupPreferences(
             replacedText,

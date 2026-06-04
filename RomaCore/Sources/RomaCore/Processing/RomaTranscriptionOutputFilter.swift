@@ -865,6 +865,7 @@ public struct RomaTranscriptionOutputFilter {
         if cleanupLevel == .polished {
             filteredText = applyBacktrackingCorrections(in: filteredText)
         }
+        let leadingFormattingNewlineCount = leadingSpokenFormattingNewlineCount(in: filteredText)
         filteredText = applySpokenFormattingCommands(in: filteredText)
         if cleanupLevel == .polished {
             filteredText = applyDeletePreviousLineCommands(in: filteredText)
@@ -893,6 +894,7 @@ public struct RomaTranscriptionOutputFilter {
 
         // Clean whitespace
         filteredText = normalizeWhitespace(filteredText)
+        filteredText = restoreLeadingNewlines(leadingFormattingNewlineCount, to: filteredText)
 
         return filteredText
     }
@@ -1021,23 +1023,29 @@ public struct RomaTranscriptionOutputFilter {
     }
 
     public static func applyInsertionPolish(_ text: String, context: TextInsertionContext?) -> String {
-        let normalizedText = normalizeWhitespace(text)
-        if context != nil,
+        let leadingNewlineCount = leadingNewlineCount(in: text)
+        let activeContext = leadingNewlineCount > 0 ? nil : context
+        let polishInput = text.dropFirst(leadingNewlineCount)
+        let normalizedText = normalizeWhitespace(String(polishInput))
+
+        if activeContext != nil,
            let enclosure = standaloneSpokenEnclosureOutput(in: normalizedText) {
-            return enclosure
+            return restoreLeadingNewlines(leadingNewlineCount, to: enclosure)
         }
 
         let wasWholeSquareBracketedOutput = isWholeSquareBracketedOutput(normalizedText)
         var polishedText = stripBoundaryNoise(from: normalizedText)
         polishedText = removeRedundantOuterPunctuationAfterPreservedBoundary(from: polishedText)
         polishedText = removeLeadingPausePunctuation(from: polishedText)
-        guard !polishedText.isEmpty else { return polishedText }
+        guard !polishedText.isEmpty else {
+            return restoreLeadingNewlines(leadingNewlineCount, to: polishedText)
+        }
 
         let shouldTreatAsFragment = isShortFragment(polishedText) ||
             (wasWholeSquareBracketedOutput &&
                 isShortFragment(removeTrailingNoisyFragmentPunctuation(from: polishedText)))
         let shouldUseFragmentPolish: Bool
-        if let context, isContinuingSentence(after: context.precedingText) {
+        if let activeContext, isContinuingSentence(after: activeContext.precedingText) {
             shouldUseFragmentPolish = shouldTreatAsFragment
         } else {
             shouldUseFragmentPolish = shouldTreatAsFragment &&
@@ -1055,22 +1063,24 @@ public struct RomaTranscriptionOutputFilter {
             }
         }
 
-        if let context,
+        if let activeContext,
            let punctuation = standaloneSpokenPunctuationOutput(in: polishedText),
-           canAttachStandalonePunctuation(after: context.precedingText) {
-            return punctuation
+           canAttachStandalonePunctuation(after: activeContext.precedingText) {
+            return restoreLeadingNewlines(leadingNewlineCount, to: punctuation)
         }
 
-        if let context {
-            guard isContinuingSentence(after: context.precedingText) else {
-                return polishedText
+        if let activeContext {
+            guard isContinuingSentence(after: activeContext.precedingText) else {
+                return restoreLeadingNewlines(leadingNewlineCount, to: polishedText)
             }
             polishedText = removeTrailingContinuationPeriod(from: polishedText)
-            return lowercaseInitialWordIfSafe(in: polishedText)
+            return restoreLeadingNewlines(leadingNewlineCount, to: lowercaseInitialWordIfSafe(in: polishedText))
         }
 
-        guard shouldUseFragmentPolish else { return polishedText }
-        return lowercaseInitialWordIfSafe(in: polishedText)
+        guard shouldUseFragmentPolish else {
+            return restoreLeadingNewlines(leadingNewlineCount, to: polishedText)
+        }
+        return restoreLeadingNewlines(leadingNewlineCount, to: lowercaseInitialWordIfSafe(in: polishedText))
     }
 
     private static func standaloneSpokenPunctuationOutput(in text: String) -> String? {
@@ -3349,6 +3359,74 @@ public struct RomaTranscriptionOutputFilter {
             with: "$1",
             options: .regularExpression
         )
+    }
+
+    private static func leadingSpokenFormattingNewlineCount(in text: String) -> Int {
+        for command in spokenFormattingCommands where command.replacement == "\n" || command.replacement == "\n\n" {
+            if let count = leadingSpokenFormattingNewlineCount(
+                in: text,
+                pattern: command.pattern,
+                replacement: command.replacement,
+                blockedNextWords: []
+            ) {
+                return count
+            }
+        }
+
+        for command in guardedSpokenFormattingCommands where command.replacement == "\n" || command.replacement == "\n\n" {
+            if let count = leadingSpokenFormattingNewlineCount(
+                in: text,
+                pattern: command.pattern,
+                replacement: command.replacement,
+                blockedNextWords: command.blockedNextWords
+            ) {
+                return count
+            }
+        }
+
+        return 0
+    }
+
+    private static func leadingSpokenFormattingNewlineCount(
+        in text: String,
+        pattern: String,
+        replacement: String,
+        blockedNextWords: Set<String>
+    ) -> Int? {
+        guard let regex = try? NSRegularExpression(pattern: pattern),
+              let match = regex.firstMatch(in: text, range: NSRange(text.startIndex..., in: text)),
+              let matchRange = Range(match.range, in: text) else {
+            return nil
+        }
+
+        let prefix = text[..<matchRange.lowerBound]
+        guard prefix.allSatisfy(\.isWhitespace) else { return nil }
+
+        let suffix = String(text[matchRange.upperBound...])
+        if let nextWord = nextWord(in: suffix),
+           blockedNextWords.contains(nextWord) {
+            return nil
+        }
+
+        return replacement.filter(\.isNewline).count
+    }
+
+    private static func restoreLeadingNewlines(_ count: Int, to text: String) -> String {
+        guard count > 0,
+              text.first?.isNewline != true else {
+            return text
+        }
+
+        return String(repeating: "\n", count: count) + text
+    }
+
+    private static func leadingNewlineCount(in text: String) -> Int {
+        var count = 0
+        for character in text {
+            guard character.isNewline else { break }
+            count += 1
+        }
+        return count
     }
 
     private static func applyBacktrackingCorrections(in text: String) -> String {

@@ -314,6 +314,14 @@ struct RomaCoreChecks {
             "shared insertion polish should preserve trailing path slash fragments"
         )
         try require(
+            RomaTranscriptionOutputFilter.applyInsertionPolish("\ndetails.", context: midSentenceContext) == "\ndetails",
+            "shared insertion polish should preserve leading line breaks"
+        )
+        try require(
+            RomaTranscriptionOutputFilter.applyInsertionPolish("\n\nDetails.", context: midSentenceContext) == "\n\nDetails",
+            "shared insertion polish should preserve leading paragraph breaks"
+        )
+        try require(
             RomaTranscriptionOutputFilter.applyInsertionSpacing("model", context: midSentenceContext) == " model",
             "shared insertion spacing should add a leading space after words"
         )
@@ -1881,6 +1889,21 @@ struct RomaCoreChecks {
                 "Intro split here Details.",
                 "Intro\n\nDetails.",
                 "split here paragraph command"
+            ),
+            (
+                "New line details.",
+                "\ndetails.",
+                "leading new line command"
+            ),
+            (
+                "New paragraph Details.",
+                "\n\nDetails.",
+                "leading new paragraph command"
+            ),
+            (
+                "Press enter details.",
+                "\ndetails.",
+                "leading press enter command"
             ),
             (
                 "First thing new sentence second thing.",
