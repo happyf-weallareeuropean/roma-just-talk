@@ -4049,8 +4049,8 @@ public struct RomaTranscriptionOutputFilter {
         let punctuatedText = normalizeDuplicatePhrasePunctuation(protectedText.text)
         let spacedText = punctuatedText
             .replacingOccurrences(of: #"\s+([,.;:!?])"#, with: "$1", options: .regularExpression)
-            .replacingOccurrences(of: #"([,.;:!?])([^\s,.;:!?\]\)}"”’])"#, with: "$1 $2", options: .regularExpression)
-            .replacingOccurrences(of: #"\s+([)\]\}])"#, with: "$1", options: .regularExpression)
+            .replacingOccurrences(of: #"([,.;:!?])([^\s,.;:!?\]\)}"”’】》〉）｝］」』〕])"#, with: "$1 $2", options: .regularExpression)
+            .replacingOccurrences(of: #"\s+([)\]\}】》〉）｝］」』〕])"#, with: "$1", options: .regularExpression)
 
         let normalizedText = spacedText
             .replacingOccurrences(

@@ -3995,6 +3995,11 @@ struct RomaCoreChecks {
                 "\"What?\".",
                 "\"What?\".",
                 "punctuation before closing quote guard"
+            ),
+            (
+                "【What?】",
+                "【What?】",
+                "punctuation before non-ascii closing boundary guard"
             )
         ]
 
@@ -4095,6 +4100,16 @@ struct RomaCoreChecks {
         try require(
             RomaTranscriptionOutputFilter.applyInsertionPolish("【What?】", context: midSentenceContext) == "【what?】",
             "insertion polish should preserve corner-bracketed question words"
+        )
+        try require(
+            RomaTranscriptionOutputFilter.applyInsertionSpacing(
+                RomaTranscriptionOutputFilter.applyInsertionPolish(
+                    RomaTranscriptionOutputFilter.filter("【What?】"),
+                    context: midSentenceContext
+                ),
+                context: midSentenceContext
+            ) == " 【what?】",
+            "insertion pipeline should not add internal spacing before non-ascii closing boundaries"
         )
         try require(
             RomaTranscriptionOutputFilter.applyInsertionPolish("What?]", context: midSentenceContext) == "what?]",

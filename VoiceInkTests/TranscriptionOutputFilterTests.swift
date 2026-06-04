@@ -138,6 +138,7 @@ struct TranscriptionOutputFilterTests {
         #expect(TranscriptionOutputFilter.filter("Use [typing speed] now.") == "Use [typing speed] now.")
         #expect(TranscriptionOutputFilter.filter("Use [typing-speed] now.") == "Use [typing-speed] now.")
         #expect(TranscriptionOutputFilter.filter("Use [speaker notes] now.") == "Use [speaker notes] now.")
+        #expect(TranscriptionOutputFilter.filter("【What?】") == "【What?】")
         #expect(TranscriptionOutputFilter.filter("hmm.... eh... I I think think this this works.") == "I think this works.")
         #expect(TranscriptionOutputFilter.filter("I think this works. I think this works") == "I think this works.")
         #expect(TranscriptionOutputFilter.filter("New York. New York") == "New York. New York")
@@ -335,6 +336,15 @@ struct TranscriptionOutputFilterTests {
         #expect(TranscriptionOutputFilter.applyInsertionPolish("What?\"", context: midSentenceContext) == "what?\"")
         #expect(TranscriptionOutputFilter.applyInsertionPolish("What?]", context: midSentenceContext) == "what?]")
         #expect(TranscriptionOutputFilter.applyInsertionPolish("【What?】", context: midSentenceContext) == "【what?】")
+        #expect(
+            TranscriptionOutputFilter.applyInsertionSpacing(
+                TranscriptionOutputFilter.applyInsertionPolish(
+                    TranscriptionOutputFilter.filter("【What?】"),
+                    context: midSentenceContext
+                ),
+                context: midSentenceContext
+            ) == " 【what?】"
+        )
         #expect(TranscriptionOutputFilter.applyInsertionPolish("U.S.\"", context: midSentenceContext) == "U.S.")
         #expect(TranscriptionOutputFilter.applyInsertionPolish("The Model.", context: midSentenceContext) == "the model")
         #expect(TranscriptionOutputFilter.applyInsertionPolish("A Final Word.", context: midSentenceContext) == "a final word")

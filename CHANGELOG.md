@@ -2,6 +2,7 @@
 
 ## v1.81 - Unreleased
 
+- Prevented punctuation spacing cleanup from inserting spaces before non-ASCII closing boundaries.
 - Unwrapped noisy balanced non-ASCII boundary fragments without dropping only the closing mark.
 - Required Windows dictation proof reports to assert the recorded audio stays 16 kHz mono PCM.
 - Required Windows proof reports to assert the user-facing runtime still uses the shared `DictationPipeline`.
