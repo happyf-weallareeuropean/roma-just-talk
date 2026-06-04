@@ -2,7 +2,7 @@
 
 ## v1.81 - Unreleased
 
-- Joined generated sentence breaks before short continuation fragments such as "so this. [Model.]".
+- Joined generated sentence breaks and soft separators before short continuation fragments such as "so this. [Model.]".
 - Collapsed repeated short sentences that differ only by final punctuation.
 - Dropped trailing pause and acknowledgement filler tails such as "this works, um yeah.".
 - Dropped filler-only pause plus acknowledgement chains such as "uh okay yeah.".

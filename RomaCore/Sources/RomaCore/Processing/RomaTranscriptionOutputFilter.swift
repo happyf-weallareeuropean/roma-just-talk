@@ -1007,7 +1007,7 @@ public struct RomaTranscriptionOutputFilter {
             filteredText = collapseRepeatedShortClauses(in: filteredText)
             filteredText = collapseRepeatedShortSentences(in: filteredText)
             filteredText = collapseMismatchedRepeatedShortSentences(in: filteredText)
-            filteredText = collapseGeneratedSentenceBoundaryBeforeShortFragment(in: filteredText)
+            filteredText = collapseGeneratedSeparatorBeforeShortFragment(in: filteredText)
         }
 
         // Clean whitespace
@@ -6727,9 +6727,45 @@ public struct RomaTranscriptionOutputFilter {
         return second
     }
 
-    private static func collapseGeneratedSentenceBoundaryBeforeShortFragment(in text: String) -> String {
-        var collapsedText = collapseGeneratedBoundaryBeforeBracketedShortFragment(in: text)
+    private static func collapseGeneratedSeparatorBeforeShortFragment(in text: String) -> String {
+        var collapsedText = collapseGeneratedSoftSeparatorBeforeBracketedShortFragment(in: text)
+        collapsedText = collapseGeneratedBoundaryBeforeBracketedShortFragment(in: collapsedText)
         collapsedText = collapseGeneratedBoundaryBeforePlainShortFragment(in: collapsedText)
+        return collapsedText
+    }
+
+    private static func collapseGeneratedSoftSeparatorBeforeBracketedShortFragment(in text: String) -> String {
+        guard let regex = try? NSRegularExpression(
+            pattern: #"(?<![\p{L}\p{N}'’ʼ-])([\p{L}\p{N}][\p{L}\p{N}'’ʼ-]{0,63})[ \t]*(?:[,;:…]|[–—-])[ \t]+(\[[^\[\]\n]{1,80}\])([.!?])?(?=\s|$)"#
+        ) else {
+            return text
+        }
+
+        var collapsedText = text
+        let matches = regex.matches(in: collapsedText, range: NSRange(collapsedText.startIndex..., in: collapsedText)).reversed()
+
+        for match in matches {
+            guard match.numberOfRanges >= 4,
+                  let fullRange = Range(match.range, in: collapsedText),
+                  let previousWordRange = Range(match.range(at: 1), in: collapsedText),
+                  let fragmentRange = Range(match.range(at: 2), in: collapsedText),
+                  let cleanedFragment = cleanedGeneratedBoundaryContinuationFragment(
+                    String(collapsedText[fragmentRange]),
+                    requiresGeneratedCasing: false
+                  ) else {
+                continue
+            }
+
+            let previousWord = String(collapsedText[previousWordRange])
+            guard canJoinGeneratedSentenceBoundary(after: previousWord),
+                  !isPreservedGeneratedQuestionFragment(String(collapsedText[fragmentRange])) else {
+                continue
+            }
+
+            let punctuation = generatedBoundaryTerminalPunctuation(for: cleanedFragment)
+            collapsedText.replaceSubrange(fullRange, with: "\(previousWord) \(cleanedFragment)\(punctuation)")
+        }
+
         return collapsedText
     }
 
@@ -6977,6 +7013,9 @@ public struct RomaTranscriptionOutputFilter {
         if hasInternalSentenceBoundary(removeTrailingFragmentPunctuation(from: strippedText)) {
             return strippedText
         }
+        if containsInlinePreservedBoundary(strippedText) {
+            return strippedText
+        }
 
         if hasPreservedBalancedBoundary(strippedText) ||
             hasPreservedBalancedBoundary(removeTrailingFragmentPunctuation(from: strippedText)) {
@@ -6986,6 +7025,22 @@ public struct RomaTranscriptionOutputFilter {
         let boundaryCharacters = CharacterSet(charactersIn: #"[]{}()"“”‘’'"`【】《》〈〉（）｛｝［］「」『』〔〕"#)
         strippedText = strippedText.trimmingCharacters(in: boundaryCharacters.union(.whitespacesAndNewlines))
         return normalizeWhitespace(strippedText)
+    }
+
+    private static func containsInlinePreservedBoundary(_ text: String) -> Bool {
+        let trimmedText = text.trimmingCharacters(in: .whitespacesAndNewlines)
+        var index = trimmedText.startIndex
+
+        while index < trimmedText.endIndex {
+            let character = trimmedText[index]
+            if preservedClosingBoundary(for: character) != nil,
+               index != trimmedText.startIndex {
+                return true
+            }
+            index = trimmedText.index(after: index)
+        }
+
+        return false
     }
 
     private static func unwrapNestedSquareBracketedBoundaryOutput(_ text: String) -> String {

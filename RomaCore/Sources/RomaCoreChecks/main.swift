@@ -706,6 +706,21 @@ struct RomaCoreChecks {
                 "generated sentence boundary before bracketed short continuation fragment"
             ),
             (
+                "So this, [Model.]",
+                "So this model.",
+                "generated comma before bracketed short continuation fragment"
+            ),
+            (
+                "So this - [Model.]",
+                "So this model.",
+                "generated dash before bracketed short continuation fragment"
+            ),
+            (
+                "So this: [Model.]",
+                "So this model.",
+                "generated colon before bracketed short continuation fragment"
+            ),
+            (
                 "I think this is. [A final word.]",
                 "I think this is a final word.",
                 "generated sentence boundary before bracketed short continuation phrase"
@@ -4148,6 +4163,11 @@ struct RomaCoreChecks {
             RomaTranscriptionOutputFilter.applyInsertionPolish("It works. [Model.]", context: nil) ==
                 "It works. [Model.]",
             "insertion polish should preserve inline bracketed fragments after complete sentences"
+        )
+        try require(
+            RomaTranscriptionOutputFilter.applyInsertionPolish("It works, [Model.]", context: nil) ==
+                "It works, [Model.]",
+            "insertion polish should preserve inline bracketed fragments after complete clauses"
         )
         try require(
             RomaTranscriptionOutputFilter.applyInsertionPolish("... Model.", context: midSentenceContext) == "model",
