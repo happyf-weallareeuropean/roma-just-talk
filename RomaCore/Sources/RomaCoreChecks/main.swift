@@ -2261,9 +2261,24 @@ struct RomaCoreChecks {
                 "scratch that out correction"
             ),
             (
+                "Wrong phrase scratch this. Right phrase.",
+                "Right phrase.",
+                "scratch this correction"
+            ),
+            (
+                "Wrong phrase scratch this out. Right phrase.",
+                "Right phrase.",
+                "scratch this out correction"
+            ),
+            (
                 "Wrong phrase strike that right phrase.",
                 "right phrase.",
                 "natural strike that correction"
+            ),
+            (
+                "Wrong phrase strike this right phrase.",
+                "right phrase.",
+                "natural strike this correction"
             ),
             (
                 "Wrong phrase strike that out right phrase.",
@@ -2271,9 +2286,19 @@ struct RomaCoreChecks {
                 "natural strike that out correction"
             ),
             (
+                "Wrong phrase strike this out right phrase.",
+                "right phrase.",
+                "natural strike this out correction"
+            ),
+            (
                 "Wrong phrase cross that out right phrase.",
                 "right phrase.",
                 "natural cross that out correction"
+            ),
+            (
+                "Wrong phrase cross this out right phrase.",
+                "right phrase.",
+                "natural cross this out correction"
             ),
             (
                 "Wrong phrase delete that right phrase.",
@@ -2281,9 +2306,19 @@ struct RomaCoreChecks {
                 "natural delete that correction"
             ),
             (
+                "Wrong phrase delete this right phrase.",
+                "right phrase.",
+                "natural delete this correction"
+            ),
+            (
                 "Wrong phrase cancel that. Right phrase.",
                 "Right phrase.",
                 "cancel that correction"
+            ),
+            (
+                "Wrong phrase cancel this. Right phrase.",
+                "Right phrase.",
+                "cancel this correction"
             ),
             (
                 "Wrong phrase disregard that. Right phrase.",
@@ -2296,9 +2331,19 @@ struct RomaCoreChecks {
                 "ignore that correction"
             ),
             (
+                "Wrong phrase ignore this. Right phrase.",
+                "Right phrase.",
+                "ignore this correction"
+            ),
+            (
                 "Wrong phrase forget that. Right phrase.",
                 "Right phrase.",
                 "forget that correction"
+            ),
+            (
+                "Wrong phrase forget this. Right phrase.",
+                "Right phrase.",
+                "forget this correction"
             ),
             (
                 "Wrong phrase cut that. Right phrase.",
@@ -2309,6 +2354,11 @@ struct RomaCoreChecks {
                 "Wrong phrase drop that. Right phrase.",
                 "Right phrase.",
                 "drop that correction"
+            ),
+            (
+                "Use model scratch this modules.",
+                "Use modules.",
+                "scratch this inline correction"
             ),
             (
                 "Use old model delete last word module.",
@@ -3256,9 +3306,59 @@ struct RomaCoreChecks {
                 "scratch command prose guard"
             ),
             (
+                "Scratch this itch.",
+                "Scratch this itch.",
+                "scratch this command prose guard"
+            ),
+            (
+                "I want to scratch that itch.",
+                "I want to scratch that itch.",
+                "inline scratch that prose guard"
+            ),
+            (
+                "I want to scratch this itch.",
+                "I want to scratch this itch.",
+                "inline scratch this prose guard"
+            ),
+            (
+                "I want to delete that file.",
+                "I want to delete that file.",
+                "inline delete that prose guard"
+            ),
+            (
+                "I want to delete this file.",
+                "I want to delete this file.",
+                "inline delete this prose guard"
+            ),
+            (
+                "Can you delete that file?",
+                "Can you delete that file?",
+                "request delete that prose guard"
+            ),
+            (
+                "Can you delete this file?",
+                "Can you delete this file?",
+                "request delete this prose guard"
+            ),
+            (
+                "I will ignore that warning.",
+                "I will ignore that warning.",
+                "inline ignore that prose guard"
+            ),
+            (
+                "I will ignore this warning.",
+                "I will ignore this warning.",
+                "inline ignore this prose guard"
+            ),
+            (
                 "Cancel that meeting.",
                 "Cancel that meeting.",
                 "cancel that prose guard"
+            ),
+            (
+                "Cancel this meeting.",
+                "Cancel this meeting.",
+                "cancel this prose guard"
             ),
             (
                 "Disregard that warning.",
@@ -3266,14 +3366,29 @@ struct RomaCoreChecks {
                 "disregard that prose guard"
             ),
             (
+                "Disregard this warning.",
+                "Disregard this warning.",
+                "disregard this prose guard"
+            ),
+            (
                 "Ignore that warning.",
                 "Ignore that warning.",
                 "ignore that prose guard"
             ),
             (
+                "Ignore this warning.",
+                "Ignore this warning.",
+                "ignore this prose guard"
+            ),
+            (
                 "Forget that idea.",
                 "Forget that idea.",
                 "forget that prose guard"
+            ),
+            (
+                "Forget this idea.",
+                "Forget this idea.",
+                "forget this prose guard"
             ),
             (
                 "Cut that cable.",
@@ -5025,6 +5140,10 @@ struct RomaCoreChecks {
         try require(
             checkReportScript.contains(#"Assert-Boolean -Object $Proof -Name "secret_store_dpapi" -Expected $true"#),
             "Windows proof checker should require the user-facing agent to report DPAPI secrets"
+        )
+        try require(
+            checkReportScript.contains(#""agent_runtime_wiring""#),
+            "Windows proof profiles should print agent runtime wiring coverage"
         )
         try require(
             checkSetScript.contains("manifest.source_commit"),

@@ -544,7 +544,7 @@ public struct RomaTranscriptionOutputFilter {
             (?:[,;:…]|\.\.\.)\s*call\s+it\s*[,;:]? |
             replace\s+(?:that|it)\s+with |
             change\s+(?:that|it)\s+to |
-            (?:(?:scratch|strike|delete|remove|erase|undo|cancel|disregard|ignore|forget|cut|drop)\s+that\s+out|cross\s+that\s+out|(?:scratch|strike|delete|remove|erase|undo|cancel|disregard|ignore|forget|cut|drop)\s+that(?!\s+(?:out|words?|lines?|sentences?|paragraphs?)\b)) |
+            (?:(?:scratch|strike|delete|remove|erase|undo|cancel|disregard|ignore|forget|cut|drop)\s+(?:that|this)\s+out|cross\s+(?:that|this)\s+out|(?:scratch|strike|delete|remove|erase|undo|cancel|disregard|ignore|forget|cut|drop)\s+(?:that|this)(?!\s+(?:out|words?|lines?|sentences?|paragraphs?)\b)) |
             (?:[,;:…]|\.\.\.)\s*hold\s+on\s*[,;:]? |
             (?:[,;:…]|\.\.\.)\s*hang\s+on\s*[,;:]? |
             (?:[,;:…]|\.\.\.)?\s*wait\s*[,;:]?\s+never\s*mind\s*[,;:]? |
@@ -574,7 +574,7 @@ public struct RomaTranscriptionOutputFilter {
         )
         \s*[,;:]?\s+
         """#
-    private static let scratchThatCommandPattern = #"(?i)(?<![\p{L}\p{N}])(?:(?:scratch|strike|delete|remove|erase|undo|cancel|disregard|ignore|forget|cut|drop)\s+that(?:\s+out)?|cross\s+that\s+out)(?:\s*[.!?,;:…]+|(?=\s*$|\s*\n))"#
+    private static let scratchThatCommandPattern = #"(?i)(?<![\p{L}\p{N}])(?:(?:scratch|strike|delete|remove|erase|undo|cancel|disregard|ignore|forget|cut|drop)\s+(?:that|this)(?:\s+out)?|cross\s+(?:that|this)\s+out)(?:\s*[.!?,;:…]+|(?=\s*$|\s*\n))"#
     private static let deletePreviousWordCommandPattern = #"(?i)(?<![\p{L}\p{N}])(?:delete|remove|erase|undo|scratch|strike|cancel|drop)\s+(?:(?:the\s+)?(?:last|previous)(?:\s+(\d|one|two|three|four|five))?|that|this)\s+words?(?:\s*[.!?,;:…]+|(?=\s*$|\s*\n)|\s+)"#
     private static let deletePreviousLineCommandPattern = #"(?i)(?<![\p{L}\p{N}])(?:delete|remove|erase|undo|scratch|strike|cancel|drop)\s+(?:(?:the\s+)?(?:last|previous)|that|this)\s+line(?:\s*[.!?,;:…]+|(?=\s*$|\s*\n)|\s+)"#
     private static let deletePreviousParagraphCommandPattern = #"(?i)(?<![\p{L}\p{N}])(?:delete|remove|erase|undo|scratch|strike|cancel|drop)\s+(?:(?:the\s+)?(?:last|previous)|that|this)\s+paragraph(?:\s*[.!?,;:…]+|(?=\s*$|\s*\n)|\s+)"#
@@ -589,7 +589,9 @@ public struct RomaTranscriptionOutputFilter {
         "command", "commands", "phrase", "phrases", "say", "saying", "word", "words"
     ]
     private static let blockedPreviousWordsForEraseThat: Set<String> = [
-        "command", "commands", "say", "saying", "word", "words"
+        "can", "could", "command", "commands", "did", "do", "does", "he", "i", "it", "may", "might",
+        "must", "never", "not", "said", "say", "saying", "says", "shall", "she", "should", "they",
+        "to", "we", "will", "word", "words", "would", "you"
     ]
     private static let blockedFirstCorrectionWordsForReplaceThat: Set<String> = [
         "is", "means"
@@ -5725,29 +5727,54 @@ public struct RomaTranscriptionOutputFilter {
             "hang on",
             "scratch that",
             "scratch that out",
+            "scratch this",
+            "scratch this out",
             "cross that out",
+            "cross this out",
             "strike that",
             "strike that out",
+            "strike this",
+            "strike this out",
             "delete that",
             "delete that out",
+            "delete this",
+            "delete this out",
             "remove that",
             "remove that out",
+            "remove this",
+            "remove this out",
             "erase that",
             "erase that out",
+            "erase this",
+            "erase this out",
             "undo that",
             "undo that out",
+            "undo this",
+            "undo this out",
             "cancel that",
             "cancel that out",
+            "cancel this",
+            "cancel this out",
             "disregard that",
             "disregard that out",
+            "disregard this",
+            "disregard this out",
             "ignore that",
             "ignore that out",
+            "ignore this",
+            "ignore this out",
             "forget that",
             "forget that out",
+            "forget this",
+            "forget this out",
             "cut that",
             "cut that out",
+            "cut this",
+            "cut this out",
             "drop that",
             "drop that out",
+            "drop this",
+            "drop this out",
             "wait actually",
             "wait i mean",
             "wait i meant",
@@ -5764,29 +5791,54 @@ public struct RomaTranscriptionOutputFilter {
         return [
             "scratch that",
             "scratch that out",
+            "scratch this",
+            "scratch this out",
             "cross that out",
+            "cross this out",
             "strike that",
             "strike that out",
+            "strike this",
+            "strike this out",
             "delete that",
             "delete that out",
+            "delete this",
+            "delete this out",
             "remove that",
             "remove that out",
+            "remove this",
+            "remove this out",
             "erase that",
             "erase that out",
+            "erase this",
+            "erase this out",
             "undo that",
             "undo that out",
+            "undo this",
+            "undo this out",
             "cancel that",
             "cancel that out",
+            "cancel this",
+            "cancel this out",
             "disregard that",
             "disregard that out",
+            "disregard this",
+            "disregard this out",
             "ignore that",
             "ignore that out",
+            "ignore this",
+            "ignore this out",
             "forget that",
             "forget that out",
+            "forget this",
+            "forget this out",
             "cut that",
             "cut that out",
+            "cut this",
+            "cut this out",
             "drop that",
-            "drop that out"
+            "drop that out",
+            "drop this",
+            "drop this out"
         ].contains(normalizedMarker)
     }
 

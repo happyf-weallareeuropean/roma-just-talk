@@ -2,6 +2,7 @@
 
 ## v1.81 - Unreleased
 
+- Cleaned "scratch this" correction commands while preserving ordinary "delete that/this" prose.
 - Preserved literal "yeah right" starts while cleaning stacked acknowledgement fillers.
 - Cleaned stacked leading "okay/yeah/right" filler chains before clear clause starters.
 - Cleaned leading "okay/yeah/right, well" filler chains before clear clause starters.
@@ -53,6 +54,7 @@
 - Required Windows agent packaging to run on Windows so non-Windows Swift binaries cannot be mislabeled as laptop artifacts.
 - Required Windows artifact proof reports to assert native adapter runtime availability from `RomaProofAgent`.
 - Required Windows artifact proof reports to assert the user-facing agent is wired to `WindowsDictationRuntime`, miniaudio, Win32 paste, and DPAPI.
+- Added named Windows proof-profile coverage output for user-facing agent runtime wiring.
 - Added a packaged Windows laptop proof runner that executes cloud dictation, local whisper dictation, Notepad paste, and proof-set validation through existing scripts.
 - Added a Windows proof-set checker for full laptop and artifact-smoke report bundles.
 - Strengthened Windows laptop proof profiles to reject loopback/mock cloud endpoints and packaged mock whisper backends.
