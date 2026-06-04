@@ -393,6 +393,23 @@ public struct RomaTranscriptionOutputFilter {
         "voiceink": "VoiceInk",
         "xcode": "Xcode"
     ]
+    private static let multiWordProductPhraseHeads: [[String]] = [
+        ["eleven", "labs"],
+        ["next", "js"],
+        ["node", "js"],
+        ["open", "ai"],
+        ["voice", "ink"]
+    ]
+    private static let productCorrectionTailWords: Set<String> = [
+        "agent", "agents", "api", "apis", "app", "apps", "branch", "branches",
+        "client", "clients", "command", "commands", "component", "components",
+        "database", "databases", "endpoint", "endpoints", "file", "files",
+        "function", "functions", "issue", "issues", "model", "models", "module",
+        "modules", "package", "packages", "pod", "pods", "project", "projects",
+        "request", "requests", "route", "routes", "server", "servers", "setting",
+        "settings", "site", "sites", "ticket", "tickets", "type", "types",
+        "voice", "voices", "worker", "workers"
+    ]
     private static let blockedNextWordsForSpokenPossessive: Set<String> = [
         "character", "characters", "is", "mark", "marks", "means", "meaning", "suffix", "symbol", "symbols"
     ]
@@ -4607,6 +4624,14 @@ public struct RomaTranscriptionOutputFilter {
             return compactTokenCorrection
         }
 
+        if let productPhraseCorrection = boundedProductPhraseCorrection(
+            beforeMarker: beforeMarker,
+            correctionTokens: correctionTokens,
+            in: text
+        ) {
+            return productPhraseCorrection
+        }
+
         guard correction.wordCount > 1 else {
             return defaultCorrection
         }
@@ -4680,6 +4705,82 @@ public struct RomaTranscriptionOutputFilter {
         }
 
         return words.reversed()
+    }
+
+    private static func boundedProductPhraseCorrection(
+        beforeMarker: String,
+        correctionTokens: [WordToken],
+        in text: String
+    ) -> (
+        range: Range<String.Index>,
+        wordCount: Int,
+        removalWordCount: Int,
+        replacementText: String?
+    )? {
+        guard let sourceWordCount = trailingProductCorrectionPhraseWordCount(in: beforeMarker),
+              let correctionWordCount = leadingProductCorrectionPhraseWordCount(in: correctionTokens.map { $0.text }) else {
+            return nil
+        }
+
+        let correctionRange = correctionTokens[0].range.lowerBound..<correctionTokens[correctionWordCount - 1].range.upperBound
+        return (correctionRange, correctionWordCount, sourceWordCount, nil)
+    }
+
+    private static func trailingProductCorrectionPhraseWordCount(in text: String) -> Int? {
+        let words = wordTokens(in: text).map { $0.text }
+        guard words.count >= 2 else { return nil }
+
+        let maxCandidateCount = min(maxBacktrackingCorrectionWords, words.count)
+        for wordCount in stride(from: maxCandidateCount, through: 2, by: -1) {
+            let candidate = Array(words.suffix(wordCount))
+            guard isProductCorrectionPhrase(candidate) else { continue }
+            return wordCount
+        }
+
+        return nil
+    }
+
+    private static func leadingProductCorrectionPhraseWordCount(in words: [String]) -> Int? {
+        guard words.count >= 2 else { return nil }
+
+        let maxCandidateCount = min(maxBacktrackingCorrectionWords, words.count)
+        for wordCount in stride(from: maxCandidateCount, through: 2, by: -1) {
+            let candidate = Array(words.prefix(wordCount))
+            guard isProductCorrectionPhrase(candidate) else { continue }
+            return wordCount
+        }
+
+        return nil
+    }
+
+    private static func isProductCorrectionPhrase(_ words: [String]) -> Bool {
+        guard let headWordCount = productPhraseHeadWordCount(in: words),
+              words.count > headWordCount else {
+            return false
+        }
+
+        return words.dropFirst(headWordCount).allSatisfy(isProductCorrectionTailWord)
+    }
+
+    private static func productPhraseHeadWordCount(in words: [String]) -> Int? {
+        for headWords in multiWordProductPhraseHeads.sorted(by: { $0.count > $1.count }) {
+            guard words.count >= headWords.count,
+                  Array(words.prefix(headWords.count)) == headWords else {
+                continue
+            }
+            return headWords.count
+        }
+
+        guard let firstWord = words.first,
+              properNameFragmentCasing[firstWord] != nil else {
+            return nil
+        }
+
+        return 1
+    }
+
+    private static func isProductCorrectionTailWord(_ word: String) -> Bool {
+        productCorrectionTailWords.contains(word) || commonTechnicalAcronyms[word] != nil
     }
 
     private static func boundedSpokenTextCaseCorrection(

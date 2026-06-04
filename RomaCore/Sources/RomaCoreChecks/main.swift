@@ -356,6 +356,13 @@ struct RomaCoreChecks {
             "shared insertion polish should normalize all-caps AI provider names"
         )
         try require(
+            RomaTranscriptionOutputFilter.applyInsertionPolish(
+                RomaTranscriptionOutputFilter.filter("GITHUB ISSUE wait no LINEAR TICKET."),
+                context: midSentenceContext
+            ) == "Linear ticket",
+            "shared insertion polish should replace all-caps dictated product correction phrases"
+        )
+        try require(
             RomaTranscriptionOutputFilter.applyInsertionPolish("NEW YORK.", context: midSentenceContext) == "NEW YORK",
             "shared insertion polish should not lowercase unknown all-caps proper-name phrases"
         )
@@ -2177,6 +2184,36 @@ struct RomaCoreChecks {
                 "Use user underscore id wait no account underscore id today.",
                 "Use account_id today.",
                 "wait no correction should replace spoken identifier phrase"
+            ),
+            (
+                "GitHub issue wait no Linear ticket.",
+                "Linear ticket.",
+                "wait no correction should replace product issue phrase"
+            ),
+            (
+                "Use Vercel project wait no Supabase client.",
+                "Use Supabase client.",
+                "wait no correction should replace product client phrase"
+            ),
+            (
+                "Use Vercel project wait no Supabase client tomorrow.",
+                "Use Supabase client tomorrow.",
+                "wait no product correction should preserve suffix"
+            ),
+            (
+                "OpenAI model wait no Anthropic API.",
+                "Anthropic API.",
+                "wait no correction should replace provider API phrase"
+            ),
+            (
+                "Next JS route wait no Cloudflare worker.",
+                "Cloudflare worker.",
+                "wait no correction should replace spaced product route phrase"
+            ),
+            (
+                "Use GitHub issue or actually Linear ticket.",
+                "Use GitHub issue or actually Linear ticket.",
+                "multi-word or actually product phrase should stay prose"
             ),
             (
                 "Open docs dot example dot com wait no dot org today.",

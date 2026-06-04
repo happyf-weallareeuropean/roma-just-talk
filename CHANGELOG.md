@@ -2,6 +2,7 @@
 
 ## v1.81 - Unreleased
 
+- Replaced whole product phrases in self-corrections such as "GitHub issue wait no Linear ticket" without leaving the old product name.
 - Normalized more all-caps developer product fragments such as "VERCEL PROJECT" and "NEXT JS ROUTE" mid-sentence.
 - Normalized all-caps product and platform phrase fragments such as "GITHUB ISSUE" and "IOS APP" mid-sentence.
 - Lowercased more all-caps ordinary code and product fragments such as "ENDPOINT" and "PAYLOAD" mid-sentence.

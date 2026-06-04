@@ -370,6 +370,12 @@ struct TranscriptionOutputFilterTests {
         #expect(TranscriptionOutputFilter.applyInsertionPolish("NODE JS SERVER.", context: midSentenceContext) == "Node.js server")
         #expect(TranscriptionOutputFilter.applyInsertionPolish("TYPESCRIPT TYPE.", context: midSentenceContext) == "TypeScript type")
         #expect(TranscriptionOutputFilter.applyInsertionPolish("OPENAI MODEL.", context: midSentenceContext) == "OpenAI model")
+        #expect(
+            TranscriptionOutputFilter.applyInsertionPolish(
+                TranscriptionOutputFilter.filter("GITHUB ISSUE wait no LINEAR TICKET."),
+                context: midSentenceContext
+            ) == "Linear ticket"
+        )
         #expect(TranscriptionOutputFilter.applyInsertionPolish("NEW YORK.", context: midSentenceContext) == "NEW YORK")
         #expect(TranscriptionOutputFilter.applyInsertionPolish("Model.\"", context: midSentenceContext) == "model")
         #expect(TranscriptionOutputFilter.applyInsertionPolish("Model!\"", context: midSentenceContext) == "model")
@@ -704,6 +710,12 @@ struct TranscriptionOutputFilterTests {
         #expect(TranscriptionOutputFilter.filter("Open docs dot example dot com slash api wait no docs dot example dot com slash v2 today.") == "Open docs.example.com/v2 today.")
         #expect(TranscriptionOutputFilter.filter("Email old at sign example dot com wait no new at sign example dot com today.") == "Email new@example.com today.")
         #expect(TranscriptionOutputFilter.filter("Use user underscore id wait no account underscore id today.") == "Use account_id today.")
+        #expect(TranscriptionOutputFilter.filter("GitHub issue wait no Linear ticket.") == "Linear ticket.")
+        #expect(TranscriptionOutputFilter.filter("Use Vercel project wait no Supabase client.") == "Use Supabase client.")
+        #expect(TranscriptionOutputFilter.filter("Use Vercel project wait no Supabase client tomorrow.") == "Use Supabase client tomorrow.")
+        #expect(TranscriptionOutputFilter.filter("OpenAI model wait no Anthropic API.") == "Anthropic API.")
+        #expect(TranscriptionOutputFilter.filter("Next JS route wait no Cloudflare worker.") == "Cloudflare worker.")
+        #expect(TranscriptionOutputFilter.filter("Use GitHub issue or actually Linear ticket.") == "Use GitHub issue or actually Linear ticket.")
         #expect(TranscriptionOutputFilter.filter("Open docs dot example dot com wait no dot org today.") == "Open docs.example.org today.")
         #expect(TranscriptionOutputFilter.filter("Open docs dot example dot com slash api wait no slash v2 today.") == "Open docs.example.com/v2 today.")
         #expect(TranscriptionOutputFilter.filter("Email old at sign example dot com wait no at sign new dot com today.") == "Email old@new.com today.")
