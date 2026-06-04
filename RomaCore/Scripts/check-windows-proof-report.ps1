@@ -7,6 +7,7 @@ param(
     [switch]$RequireShortcut,
     [switch]$RequireStartupShortcut,
     [switch]$RequirePermissionSurface,
+    [switch]$RequireProofAgentSurface,
     [switch]$RequirePackagedMock,
     [switch]$RequireHoldHook,
     [switch]$RequireCloudConfig,
@@ -147,6 +148,29 @@ function Assert-DoctorOutputProof {
     Write-Host "proof_doctor=$Name"
 }
 
+function Assert-ProofAgentDoctorOutputProof {
+    param(
+        [Parameter(Mandatory = $true)]
+        [object]$Proof,
+        [Parameter(Mandatory = $true)]
+        [string]$Name
+    )
+
+    Assert-Boolean -Object $Proof -Name "output_present" -Expected $true
+    Assert-Boolean -Object $Proof -Name "swift_core" -Expected $true
+    Assert-Boolean -Object $Proof -Name "pre_roll_config" -Expected $true
+    Assert-Boolean -Object $Proof -Name "windows_paste_adapter_source" -Expected $true
+    Assert-Boolean -Object $Proof -Name "windows_permission_surface_source" -Expected $true
+    Assert-Boolean -Object $Proof -Name "windows_dictation_runtime_source" -Expected $true
+    Assert-Boolean -Object $Proof -Name "windows_dictation_proof_source" -Expected $true
+    Assert-Boolean -Object $Proof -Name "miniaudio_capture_adapter_source" -Expected $true
+    Assert-Boolean -Object $Proof -Name "openai_compatible_transcription_source" -Expected $true
+    Assert-Boolean -Object $Proof -Name "whisper_cli_transcription_source" -Expected $true
+    Assert-Boolean -Object $Proof -Name "transcription_output_filter_source" -Expected $true
+    Assert-Boolean -Object $Proof -Name "word_replacement_processor_source" -Expected $true
+    Write-Host "proof_agent_doctor=$Name"
+}
+
 $ProofReportPath = $ExecutionContext.SessionState.Path.GetUnresolvedProviderPathFromPSPath($ProofReportPath)
 if (!(Test-Path -LiteralPath $ProofReportPath)) {
     throw "Proof report was not found: $ProofReportPath"
@@ -211,6 +235,12 @@ if ($RequirePermissionSurface) {
         $installedDoctor = Require-Property -Object $doctor -Name "installed_launcher"
         Assert-DoctorOutputProof -Proof $installedDoctor -Name "installed_launcher"
     }
+}
+
+if ($RequireProofAgentSurface) {
+    $doctor = Require-Property -Object $report -Name "doctor"
+    $packagedProofAgent = Require-Property -Object $doctor -Name "packaged_proof_agent"
+    Assert-ProofAgentDoctorOutputProof -Proof $packagedProofAgent -Name "packaged_proof_agent"
 }
 
 if ($RequireHoldHook) {

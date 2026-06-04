@@ -393,6 +393,27 @@ function Get-DoctorOutputProof {
     }
 }
 
+function Get-ProofAgentDoctorOutputProof {
+    param(
+        [string]$Output = ""
+    )
+
+    return [ordered]@{
+        output_present = ![string]::IsNullOrWhiteSpace($Output)
+        swift_core = $Output.Contains("swift_core=true")
+        pre_roll_config = $Output.Contains("pre_roll_seconds=")
+        windows_paste_adapter_source = $Output.Contains("windows_paste_adapter_source=true")
+        windows_permission_surface_source = $Output.Contains("windows_permission_surface_source=true")
+        windows_dictation_runtime_source = $Output.Contains("windows_dictation_runtime_source=true")
+        windows_dictation_proof_source = $Output.Contains("windows_dictation_proof_source=true")
+        miniaudio_capture_adapter_source = $Output.Contains("miniaudio_capture_adapter_source=true")
+        openai_compatible_transcription_source = $Output.Contains("openai_compatible_transcription_source=true")
+        whisper_cli_transcription_source = $Output.Contains("whisper_cli_transcription_source=true")
+        transcription_output_filter_source = $Output.Contains("transcription_output_filter_source=true")
+        word_replacement_processor_source = $Output.Contains("word_replacement_processor_source=true")
+    }
+}
+
 function Write-ProofReport {
     param(
         [Parameter(Mandatory = $true)]
@@ -444,6 +465,7 @@ function Write-ProofReport {
         config = (Get-ConfigProof)
         doctor = [ordered]@{
             packaged_agent = (Get-DoctorOutputProof -Output $script:packagedAgentDoctorOutput)
+            packaged_proof_agent = (Get-ProofAgentDoctorOutputProof -Output $script:packagedProofAgentDoctorOutput)
             installed_launcher = (Get-DoctorOutputProof -Output $script:installedLauncherDoctorOutput)
         }
         files = [ordered]@{
@@ -521,6 +543,7 @@ $manifestPath = Join-Path $PackageDir "manifest.txt"
 $script:artifactManifest = @{}
 $script:packagedWhisperCLI = ""
 $script:packagedAgentDoctorOutput = ""
+$script:packagedProofAgentDoctorOutput = ""
 $script:installedLauncherDoctorOutput = ""
 $script:notepadPasteProof = New-NotepadPasteProof
 
@@ -588,6 +611,17 @@ Invoke-Step "packaged agent doctor" {
         throw "RomaWindowsAgent doctor failed"
     }
     Write-Host $script:packagedAgentDoctorOutput
+}
+
+Invoke-Step "packaged proof agent doctor" {
+    $script:packagedProofAgentDoctorOutput = & $script:proofAgentPath doctor 2>&1 | Out-String
+    if ($LASTEXITCODE -ne 0) {
+        Write-Host $script:packagedProofAgentDoctorOutput
+        throw "RomaProofAgent doctor failed"
+    }
+    Write-Host $script:packagedProofAgentDoctorOutput
+    Assert-OutputContains -Output $script:packagedProofAgentDoctorOutput -Expected "windows_paste_adapter_source=true"
+    Assert-OutputContains -Output $script:packagedProofAgentDoctorOutput -Expected "windows_dictation_proof_source=true"
 }
 
 if ($DoctorOnly) {

@@ -226,7 +226,16 @@ jobs:
         run: |
           & "$env:RUNNER_TEMP\roma-windows-agent\prove-windows-agent-artifact.ps1" `
             -PackageDir "$env:RUNNER_TEMP\roma-windows-agent" `
+            -InstallDir "$env:RUNNER_TEMP\roma-wrapper-doctor\install" `
+            -ProofReportPath "$env:RUNNER_TEMP\roma-wrapper-doctor\proof-report.json" `
             -DoctorOnly
+
+          & "$env:RUNNER_TEMP\roma-windows-agent\check-windows-proof-report.ps1" `
+            -ProofReportPath "$env:RUNNER_TEMP\roma-wrapper-doctor\proof-report.json" `
+            -ExpectedMode doctor-only `
+            -RequireWindowsPlatform `
+            -RequirePermissionSurface `
+            -RequireProofAgentSurface
 
       - name: Verify Windows agent artifact local whisper install
         run: |
@@ -251,6 +260,7 @@ jobs:
             -RequireShortcut `
             -RequireStartupShortcut `
             -RequirePermissionSurface `
+            -RequireProofAgentSurface `
             -RequirePackagedMock `
             -RequireHoldHook `
             -RequireWhisperConfig
@@ -261,6 +271,7 @@ jobs:
           name: romacore-windows-proof
           path: |
             ${{ runner.temp }}\roma-proof
+            ${{ runner.temp }}\roma-wrapper-doctor\proof-report.json
             ${{ runner.temp }}\roma-wrapper-install\proof-report.json
           if-no-files-found: error
 
