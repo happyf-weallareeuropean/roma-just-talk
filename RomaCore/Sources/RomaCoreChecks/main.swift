@@ -10,6 +10,7 @@ struct RomaCoreChecks {
         try checkPCM16WAVFileWritesCanonicalHeader()
         try checkMiniaudioRecorderUsesSpeechPCMContract()
         try checkOpenAICompatibleMultipartBody()
+        try checkWhisperCLITranscriptionService()
         try checkTranscriptionOutputFilter()
         try checkPostSTTCleanupTortureCorpus()
         try checkWordReplacementProcessor()
@@ -171,6 +172,73 @@ struct RomaCoreChecks {
         try require(body.contains("name=\"prompt\"\r\n\r\nroma vocabulary"), "multipart should include prompt")
         try require(multipart.data.range(of: audioData) != nil, "multipart should preserve raw audio bytes")
         try require(body.hasSuffix("--Boundary-RomaProof--\r\n"), "multipart should close the boundary")
+    }
+
+    private static func checkWhisperCLITranscriptionService() throws {
+        let configuration = WhisperCLITranscriptionConfiguration(
+            executableURL: URL(fileURLWithPath: "/tools/whisper-cli"),
+            modelURL: URL(fileURLWithPath: "/models/ggml-base.en.bin"),
+            outputDirectoryURL: URL(fileURLWithPath: "/tmp/roma-whisper", isDirectory: true),
+            extraArguments: ["--beam-size", "1"],
+            timeoutSeconds: 42
+        )
+        let request = TranscriptionRequest(
+            audioURL: URL(fileURLWithPath: "/tmp/proof.wav"),
+            model: TranscriptionModelDescriptor(
+                name: "ggml-base.en.bin",
+                displayName: "Base EN",
+                provider: .whisper
+            ),
+            language: "en",
+            prompt: "roma just talk"
+        )
+        let invocation = configuration.makeInvocation(
+            for: request,
+            outputBaseName: "local-proof"
+        )
+
+        try require(invocation.executableURL.path == "/tools/whisper-cli", "whisper CLI invocation should keep executable")
+        try require(
+            invocation.arguments == [
+                "-m", "/models/ggml-base.en.bin",
+                "-f", "/tmp/proof.wav",
+                "-nt",
+                "-np",
+                "-oj",
+                "-of", "/tmp/roma-whisper/local-proof",
+                "-l", "en",
+                "--prompt", "roma just talk",
+                "--beam-size", "1"
+            ],
+            "whisper CLI invocation should map model, audio, JSON output, hints, and extra args"
+        )
+        try require(
+            invocation.jsonOutputURL.path == "/tmp/roma-whisper/local-proof.json",
+            "whisper CLI invocation should derive JSON output path"
+        )
+        try require(configuration.timeoutSeconds == 42, "whisper CLI config should keep timeout")
+
+        let topLevelJSON = Data(#"{"text":" roma just talk ","language":"en","duration":1.5}"#.utf8)
+        let topLevelResult = try WhisperCLITranscriptionService.decodeJSONResult(from: topLevelJSON)
+        try require(
+            topLevelResult == TranscriptionResult(text: "roma just talk", language: "en", durationSeconds: 1.5),
+            "whisper CLI parser should decode simple text JSON"
+        )
+
+        let segmentedJSON = Data(
+            #"{"result":{"language":"en","duration":1.25},"transcription":[{"text":" roma "},{"text":"just talk"}]}"#.utf8
+        )
+        let segmentedResult = try WhisperCLITranscriptionService.decodeJSONResult(from: segmentedJSON)
+        try require(
+            segmentedResult == TranscriptionResult(text: "roma just talk", language: "en", durationSeconds: 1.25),
+            "whisper CLI parser should decode segmented whisper.cpp JSON"
+        )
+
+        do {
+            _ = try WhisperCLITranscriptionService.decodeJSONResult(from: Data(#"{"text":"   "}"#.utf8))
+            throw CheckFailure("whisper CLI parser should reject empty text")
+        } catch WhisperCLITranscriptionError.noTranscriptionReturned {
+        }
     }
 
     private static func checkTranscriptionOutputFilter() throws {
@@ -3036,6 +3104,46 @@ struct RomaCoreChecks {
             "merged config should resolve env key source"
         )
 
+        let localWhisper = try merged.applyingOverrides(from: RomaCommandLineOptions([
+            "--whisper-cli", "/tools/whisper-cli",
+            "--whisper-model", "/models/ggml-base.en.bin",
+            "--whisper-output-dir", "/tmp/roma-whisper",
+            "--whisper-arg", "--beam-size",
+            "--whisper-arg", "1"
+        ]))
+        try require(localWhisper.usesWhisperCLI, "whisper CLI config should select local transcription")
+        try require(localWhisper.endpoint == nil, "whisper CLI override should clear cloud endpoint")
+        try require(localWhisper.model == nil, "whisper CLI override should clear cloud model")
+        try require(localWhisper.apiKeyEnvironment == nil, "whisper CLI override should clear env key")
+        try require(localWhisper.apiKeyName == nil, "whisper CLI override should clear stored key")
+        try require(
+            localWhisper.whisperExtraArguments == ["--beam-size", "1"],
+            "whisper CLI config should preserve repeated extra args"
+        )
+        try localWhisper.validateTranscriptionSettings()
+        let whisperCLIConfiguration = try localWhisper.whisperCLIConfiguration()
+        try require(
+            whisperCLIConfiguration.executableURL.path == "/tools/whisper-cli",
+            "whisper CLI config should resolve executable URL"
+        )
+        try require(
+            whisperCLIConfiguration.modelURL.path == "/models/ggml-base.en.bin",
+            "whisper CLI config should resolve model URL"
+        )
+
+        let cloudAgain = try localWhisper.applyingOverrides(from: RomaCommandLineOptions([
+            "--endpoint", "https://api.example.com/v1/audio/transcriptions",
+            "--model", "cloud-model",
+            "--api-key-env", "ROMA_KEY"
+        ]))
+        try require(!cloudAgain.usesWhisperCLI, "cloud override should clear local whisper mode")
+        try require(cloudAgain.whisperCLIPath == nil, "cloud override should clear whisper CLI path")
+        try require(cloudAgain.whisperModelPath == nil, "cloud override should clear whisper model path")
+        try require(
+            try cloudAgain.requireModel() == "cloud-model",
+            "cloud override should keep cloud model"
+        )
+
         let url = URL(fileURLWithPath: "/tmp/roma-windows-agent-config-check.json")
         try merged.write(to: url)
         let loaded = try RomaWindowsAgentConfiguration.load(from: url)
@@ -3056,6 +3164,18 @@ struct RomaCoreChecks {
                 clipboardRestoreDelaySeconds: 2
             ).validate()
             throw CheckFailure("config should reject restore delay when clipboard restore is disabled")
+        } catch RomaCommandLineOptionsError.conflictingOptions {
+        }
+
+        do {
+            try RomaWindowsAgentConfiguration(
+                endpoint: "https://api.example.com/v1/audio/transcriptions",
+                model: "cloud-model",
+                apiKeyEnvironment: "ROMA_KEY",
+                whisperCLIPath: "/tools/whisper-cli",
+                whisperModelPath: "/models/ggml-base.en.bin"
+            ).validateTranscriptionSettings()
+            throw CheckFailure("config should reject mixed cloud and whisper CLI transcription settings")
         } catch RomaCommandLineOptionsError.conflictingOptions {
         }
     }

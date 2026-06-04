@@ -154,7 +154,7 @@ public final class WhisperCLITranscriptionService: TranscriptionService, @unchec
 
         return TranscriptionResult(
             text: text,
-            language: decoded.language,
+            language: decoded.languageCode,
             durationSeconds: decoded.durationSeconds
         )
     }
@@ -238,8 +238,18 @@ private struct WhisperCLIJSONOutput: Decodable {
             return text
         }
         return transcription?
-            .compactMap(\.text)
+            .compactMap { segment in
+                guard let text = segment.text?.trimmingCharacters(in: .whitespacesAndNewlines),
+                      !text.isEmpty else {
+                    return nil
+                }
+                return text
+            }
             .joined(separator: " ") ?? ""
+    }
+
+    var languageCode: String? {
+        language ?? result?.language
     }
 
     var durationSeconds: Double? {
