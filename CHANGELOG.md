@@ -2,6 +2,7 @@
 
 ## v1.81 - Unreleased
 
+- Split repeated spoken task commands such as "todo ... todo ..." and "checked task ... checked task ..." into separate checklist rows.
 - Added local `whisper.cpp` CLI transcription config and proof commands for the Windows agent.
 - Preserved leading line and paragraph commands when dictation starts with "new line", "new paragraph", or "press enter".
 - Started dictated bullet and numbered lists on a new line when inserting after existing text.

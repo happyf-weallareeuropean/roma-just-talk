@@ -174,6 +174,11 @@ public struct RomaTranscriptionOutputFilter {
         let kind: SpokenMarkdownCommandKind
     }
 
+    private struct SpokenMarkdownTaskCommandMatch {
+        let range: Range<String.Index>
+        let state: SpokenMarkdownTaskState
+    }
+
     private struct SpokenMarkdownLinkTail {
         let wordCount: Int
         let commandText: String
@@ -418,6 +423,12 @@ public struct RomaTranscriptionOutputFilter {
     private static let markdownHeadingPattern = #"(?im)(^|\n)[ \t]*(?:heading|header)[ \t]+(one|two|three|1|2|3)[ \t]+([^\n]+)"#
     private static let uncheckedMarkdownTaskPattern = #"(?im)(^|\n)[ \t]*(?:todo|to[ \t]+do|checkbox|check[ \t]+box|unchecked[ \t]+(?:task|checkbox|check[ \t]+box))[ \t]+([^\n]+)"#
     private static let checkedMarkdownTaskPattern = #"(?im)(^|\n)[ \t]*(?:(?:checked|done|completed)[ \t]+(?:task|checkbox|check[ \t]+box))[ \t]+([^\n]+)"#
+    private static let nestedUncheckedMarkdownTaskCommandPattern = #"(?i)(?<![\p{L}\p{N}])(?:todo|to[ \t]+do|checkbox|check[ \t]+box|unchecked[ \t]+(?:task|checkbox|check[ \t]+box))[ \t]+"#
+    private static let nestedCheckedMarkdownTaskCommandPattern = #"(?i)(?<![\p{L}\p{N}])(?:(?:checked|done|completed)[ \t]+(?:task|checkbox|check[ \t]+box))[ \t]+"#
+    private static let blockedNextWordsForNestedMarkdownTaskCommand: Set<String> = [
+        "command", "commands", "from", "in", "is", "means", "of", "phrase",
+        "phrases", "shortcut", "shortcuts"
+    ]
     private static let inlineCodePattern = #"(?i)(?<![\p{L}\p{N}])inline[ \t]+code[ \t]+((?:(?!for\b|from\b|in\b|into\b|on\b|to\b|with\b)[\p{L}\p{N}_./@:+#-]+[ \t]*){1,4})([.!?])?(?=\s+(?:for|from|in|into|on|to|with)\b|\s|$)"#
     private static let markdownLinkPattern = #"(?im)(^|\n)[ \t]*(?:markdown[ \t]+)?link[ \t]+([^\n]{1,80}?)[ \t]+to[ \t]+([^ \t\n]+)([ \t]+(?:for|from|in|into|on|to|with)\b[^\n.!?]*)?[ \t]*([.!?])?(?=\n|$)"#
     private static let openCodeBlockPattern = #"(?im)(^|\n)[ \t]*(?:open|start)[ \t]+code[ \t]+block(?:[ \t]+([A-Za-z0-9_+#.-]+))?[ \t]*(?=\n|$)"#
@@ -2740,11 +2751,12 @@ public struct RomaTranscriptionOutputFilter {
             pattern: checkedMarkdownTaskPattern,
             state: .checked
         )
-        return applySpokenMarkdownTaskCommand(
+        let taskText = applySpokenMarkdownTaskCommand(
             in: checkedText,
             pattern: uncheckedMarkdownTaskPattern,
             state: .unchecked
         )
+        return splitNestedSpokenMarkdownTasks(in: taskText)
     }
 
     private static func applySpokenMarkdownTaskCommand(
@@ -2779,6 +2791,113 @@ public struct RomaTranscriptionOutputFilter {
         }
 
         return formattedText
+    }
+
+    private static func splitNestedSpokenMarkdownTasks(in text: String) -> String {
+        var formattedText = text
+
+        for _ in 0..<8 {
+            guard let splitText = splitFirstNestedSpokenMarkdownTask(in: formattedText) else {
+                break
+            }
+
+            formattedText = splitText
+        }
+
+        return formattedText
+    }
+
+    private static func splitFirstNestedSpokenMarkdownTask(in text: String) -> String? {
+        guard let regex = try? NSRegularExpression(pattern: #"(?m)^- \[(?: |x)\] [^\n]+$"#) else {
+            return nil
+        }
+
+        let matches = regex.matches(in: text, range: NSRange(text.startIndex..., in: text))
+        for match in matches {
+            guard let lineRange = Range(match.range, in: text) else {
+                continue
+            }
+
+            let line = String(text[lineRange])
+            guard let splitLine = splitNestedSpokenMarkdownTaskLine(line) else {
+                continue
+            }
+
+            var splitText = text
+            splitText.replaceSubrange(lineRange, with: splitLine)
+            return splitText
+        }
+
+        return nil
+    }
+
+    private static func splitNestedSpokenMarkdownTaskLine(_ line: String) -> String? {
+        let prefixes = ["- [ ] ", "- [x] "]
+        guard let prefix = prefixes.first(where: { line.hasPrefix($0) }) else {
+            return nil
+        }
+
+        let contentStart = line.index(line.startIndex, offsetBy: prefix.count)
+        let content = String(line[contentStart...])
+        guard let command = firstNestedSpokenMarkdownTaskCommand(in: content),
+              command.range.lowerBound > content.startIndex else {
+            return nil
+        }
+
+        let beforeContent = markdownLineContent(String(content[..<command.range.lowerBound]))
+        let afterContent = markdownLineContent(String(content[command.range.upperBound...]))
+        guard !beforeContent.isEmpty,
+              !afterContent.isEmpty,
+              shouldApplySpokenMarkdownLineCommand(to: afterContent) else {
+            return nil
+        }
+
+        let checkbox = command.state == .checked ? "[x]" : "[ ]"
+        return "\(prefix)\(beforeContent)\n- \(checkbox) \(afterContent)"
+    }
+
+    private static func firstNestedSpokenMarkdownTaskCommand(in content: String) -> SpokenMarkdownTaskCommandMatch? {
+        let uncheckedCommand = firstNestedSpokenMarkdownTaskCommand(
+            in: content,
+            pattern: nestedUncheckedMarkdownTaskCommandPattern,
+            state: .unchecked
+        )
+        let checkedCommand = firstNestedSpokenMarkdownTaskCommand(
+            in: content,
+            pattern: nestedCheckedMarkdownTaskCommandPattern,
+            state: .checked
+        )
+
+        return [uncheckedCommand, checkedCommand]
+            .compactMap { $0 }
+            .min { $0.range.lowerBound < $1.range.lowerBound }
+    }
+
+    private static func firstNestedSpokenMarkdownTaskCommand(
+        in content: String,
+        pattern: String,
+        state: SpokenMarkdownTaskState
+    ) -> SpokenMarkdownTaskCommandMatch? {
+        guard let regex = try? NSRegularExpression(pattern: pattern) else {
+            return nil
+        }
+
+        let matches = regex.matches(in: content, range: NSRange(content.startIndex..., in: content))
+        for match in matches {
+            guard let range = Range(match.range, in: content) else {
+                continue
+            }
+
+            let suffix = String(content[range.upperBound...])
+            if let nextWord = nextWord(in: suffix),
+               blockedNextWordsForNestedMarkdownTaskCommand.contains(nextWord) {
+                continue
+            }
+
+            return SpokenMarkdownTaskCommandMatch(range: range, state: state)
+        }
+
+        return nil
     }
 
     private static func applySpokenMarkdownInlineCode(in text: String) -> String {
