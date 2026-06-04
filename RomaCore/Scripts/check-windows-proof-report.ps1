@@ -107,8 +107,14 @@ function Assert-ShortcutProof {
     Assert-NonEmptyString -Object $Proof -Name "working_directory"
     Assert-Boolean -Object $Proof -Name "target_is_powershell" -Expected $true
     Assert-Boolean -Object $Proof -Name "references_run_script" -Expected $true
+    Assert-NonEmptyString -Object $Proof -Name "expected_file_argument"
+    Assert-Boolean -Object $Proof -Name "has_exact_file_argument" -Expected $true
     Assert-Boolean -Object $Proof -Name "has_config_path_argument" -Expected $true
     Assert-Boolean -Object $Proof -Name "references_config_path" -Expected $true
+    Assert-NonEmptyString -Object $Proof -Name "expected_config_argument"
+    Assert-Boolean -Object $Proof -Name "has_exact_config_argument" -Expected $true
+    Assert-Boolean -Object $Proof -Name "has_no_profile_argument" -Expected $true
+    Assert-Boolean -Object $Proof -Name "has_execution_policy_bypass" -Expected $true
     Assert-Boolean -Object $Proof -Name "runs_listener" -Expected $true
     Assert-Boolean -Object $Proof -Name "working_directory_is_install_dir" -Expected $true
 }

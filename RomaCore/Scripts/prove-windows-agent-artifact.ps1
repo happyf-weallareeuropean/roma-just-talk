@@ -296,6 +296,19 @@ function Get-PackageIdentityProof {
     }
 }
 
+function Test-ContainsText {
+    param(
+        [string]$Text = "",
+        [string]$Needle = ""
+    )
+
+    if ([string]::IsNullOrEmpty($Needle)) {
+        return $false
+    }
+
+    return $Text.IndexOf($Needle, [System.StringComparison]::OrdinalIgnoreCase) -ge 0
+}
+
 function Get-ShortcutProof {
     param(
         [Parameter(Mandatory = $true)]
@@ -318,6 +331,8 @@ function Get-ShortcutProof {
     $targetPath = [string]$shortcut.TargetPath
     $arguments = [string]$shortcut.Arguments
     $savedWorkingDirectory = [string]$shortcut.WorkingDirectory
+    $expectedFileArgument = "-File `"$RunScriptPath`""
+    $expectedConfigArgument = "-ConfigPath `"$ConfigPath`""
 
     $proof["target_path"] = $targetPath
     $proof["arguments"] = $arguments
@@ -325,10 +340,16 @@ function Get-ShortcutProof {
     $proof["description"] = [string]$shortcut.Description
     $proof["window_style"] = [int]$shortcut.WindowStyle
     $proof["target_is_powershell"] = $targetPath.EndsWith("powershell.exe", [System.StringComparison]::OrdinalIgnoreCase)
-    $proof["references_run_script"] = ![string]::IsNullOrWhiteSpace($RunScriptPath) -and $arguments.Contains($RunScriptPath)
-    $proof["references_config_path"] = ![string]::IsNullOrWhiteSpace($ConfigPath) -and $arguments.Contains($ConfigPath)
-    $proof["has_config_path_argument"] = $arguments.Contains("-ConfigPath")
-    $proof["runs_listener"] = $arguments.Contains("-Listen")
+    $proof["references_run_script"] = ![string]::IsNullOrWhiteSpace($RunScriptPath) -and (Test-ContainsText -Text $arguments -Needle $RunScriptPath)
+    $proof["references_config_path"] = ![string]::IsNullOrWhiteSpace($ConfigPath) -and (Test-ContainsText -Text $arguments -Needle $ConfigPath)
+    $proof["expected_file_argument"] = $expectedFileArgument
+    $proof["expected_config_argument"] = $expectedConfigArgument
+    $proof["has_exact_file_argument"] = Test-ContainsText -Text $arguments -Needle $expectedFileArgument
+    $proof["has_config_path_argument"] = Test-ContainsText -Text $arguments -Needle "-ConfigPath"
+    $proof["has_exact_config_argument"] = Test-ContainsText -Text $arguments -Needle $expectedConfigArgument
+    $proof["has_no_profile_argument"] = Test-ContainsText -Text $arguments -Needle "-NoProfile"
+    $proof["has_execution_policy_bypass"] = Test-ContainsText -Text $arguments -Needle "-ExecutionPolicy Bypass"
+    $proof["runs_listener"] = Test-ContainsText -Text $arguments -Needle "-Listen"
     $proof["working_directory_is_install_dir"] = $savedWorkingDirectory.Equals($WorkingDirectory, [System.StringComparison]::OrdinalIgnoreCase)
 
     return $proof
