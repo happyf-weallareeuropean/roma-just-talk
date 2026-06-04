@@ -873,6 +873,16 @@ struct RomaCoreChecks {
                 "leading unbracketed static noise artifact"
             ),
             (
+                "foreign language. Continue now.",
+                "Continue now.",
+                "leading unbracketed foreign language artifact"
+            ),
+            (
+                "speaking foreign language. Continue now.",
+                "Continue now.",
+                "leading unbracketed speaking foreign language artifact"
+            ),
+            (
                 "The background noise matters.",
                 "The background noise matters.",
                 "unbracketed background noise prose guard"
@@ -901,6 +911,16 @@ struct RomaCoreChecks {
                 "Static noise matters.",
                 "Static noise matters.",
                 "unbracketed static noise prose guard"
+            ),
+            (
+                "The foreign language class starts soon.",
+                "The foreign language class starts soon.",
+                "unbracketed foreign language prose guard"
+            ),
+            (
+                "Speaking foreign language phrases helps.",
+                "Speaking foreign language phrases helps.",
+                "unbracketed speaking foreign language prose guard"
             ),
             (
                 "The dog coughs.",

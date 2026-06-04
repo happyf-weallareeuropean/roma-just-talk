@@ -2,6 +2,7 @@
 
 ## v1.81 - Unreleased
 
+- Removed unbracketed foreign-language ASR artifacts such as "foreign language." and "speaking foreign language.".
 - Removed unbracketed environmental ASR artifacts such as "music playing.", "keyboard typing.", "phone ringing.", and "static noise.".
 - Removed more unbracketed non-speech ASR phrase artifacts such as "clears throat.", "background noise.", and "inaudible.".
 - Lowercased ordinary title-cased words inside short mid-sentence fragments such as "The Model." while preserving acronyms like "API".

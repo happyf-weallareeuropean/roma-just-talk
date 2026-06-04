@@ -267,11 +267,13 @@ public struct RomaTranscriptionOutputFilter {
             beep(?:ing)? | breath(?:ing|es)? | clapping |
             clears?\s+(?:his\s+|her\s+|their\s+)?throat | clearing\s+throat |
             coughs? | coughing | crowd\s+(?:applause|chatter|noise|talking) |
+            foreign\s+language |
             keyboard\s+typing |
             hum(?:ming)? | inaudible | indistinct | laugh(?:s|ing)? | laughter |
             mumbles? | mumbling | music\s+playing | no\s+(?:audio|sound|speech) |
             phone\s+ringing |
             sighs? | sighing | silence | silent | sneezes? | sneezing |
+            speaking\s+foreign\s+language |
             static(?:\s+noise)? | typing | unclear | unintelligible
         )
         (?:\s+(?:continues?|indistinctly|loudly|quietly|softly|sounds?)){0,3}
