@@ -453,6 +453,11 @@ struct RomaCoreChecks {
                 "pause noise and repeated words"
             ),
             (
+                "ehm... I think this works.",
+                "I think this works.",
+                "leading ehm pause filler"
+            ),
+            (
                 "I, I think this works.",
                 "I think this works.",
                 "punctuated repeated word"
@@ -521,6 +526,11 @@ struct RomaCoreChecks {
                 "This; eh, works.",
                 "This works.",
                 "embedded semicolon pause filler"
+            ),
+            (
+                "This, ehm, works.",
+                "This works.",
+                "embedded ehm pause filler"
             ),
             (
                 "This… hmm, works.",
@@ -1158,6 +1168,11 @@ struct RomaCoreChecks {
                 "punctuated long terminal discourse filler"
             ),
             (
+                "The EHM project stays.",
+                "The EHM project stays.",
+                "all-caps ehm acronym prose guard"
+            ),
+            (
                 "Thank you for watching.",
                 "",
                 "standalone watching boilerplate"
@@ -1541,6 +1556,11 @@ struct RomaCoreChecks {
                 "Let's meet at two, hmm wait no three.",
                 "Let's meet at three.",
                 "pause before wait no correction"
+            ),
+            (
+                "Use model, ehm wait no module.",
+                "Use module.",
+                "ehm before wait no correction"
             ),
             (
                 "Use model, wait actually module.",

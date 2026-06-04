@@ -2,6 +2,7 @@
 
 ## v1.81 - Unreleased
 
+- Removed "ehm..." pause-filler artifacts while preserving all-caps acronym prose.
 - Removed ambient/background sound ASR artifacts such as "ambient noise." and "background sounds.".
 - Removed unbracketed foreign-language ASR artifacts such as "foreign language." and "speaking foreign language.".
 - Removed unbracketed environmental ASR artifacts such as "music playing.", "keyboard typing.", "phone ringing.", and "static noise.".

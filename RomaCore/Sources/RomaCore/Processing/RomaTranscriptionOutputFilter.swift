@@ -1256,7 +1256,7 @@ public struct RomaTranscriptionOutputFilter {
         filteredText = removeUnpunctuatedHedgeFillers(from: filteredText)
         filteredText = preserveBacktrackingMarkersAfterPauseFillers(in: filteredText)
 
-        let embeddedPausePattern = #"(?i)(?<=[\p{L}\p{N}])[,;:…][ \t]+(?:u+h+|u+m+|h+m+|m+h+|m{2,}|e+h+|e+r+|a+h+|h+uh+)(?:[.,;:!?…]+)?(?=[ \t]+[\p{L}\p{N}])"#
+        let embeddedPausePattern = #"(?i)(?<=[\p{L}\p{N}])[,;:…][ \t]+(?:u+h+|u+m+|h+m+|m+h+|m{2,}|(?-i:[eE]h+[mM]+|[eE][hH]+m+)|e+h+|e+r+|a+h+|h+uh+)(?:[.,;:!?…]+)?(?=[ \t]+[\p{L}\p{N}])"#
         if let regex = try? NSRegularExpression(pattern: embeddedPausePattern) {
             let range = NSRange(filteredText.startIndex..., in: filteredText)
             filteredText = regex.stringByReplacingMatches(in: filteredText, options: [], range: range, withTemplate: "")
@@ -1268,7 +1268,7 @@ public struct RomaTranscriptionOutputFilter {
             filteredText = regex.stringByReplacingMatches(in: filteredText, options: [], range: range, withTemplate: "")
         }
 
-        let spokenPausePattern = #"(?i)(?<![\p{L}\p{N}])(?:u+h+|u+m+|h+m+|m+h+|m{2,}|e+h+|e+r+|a+h+|h+uh+)(?:[.,;:!?…]+)?(?![\p{L}\p{N}])"#
+        let spokenPausePattern = #"(?i)(?<![\p{L}\p{N}])(?:u+h+|u+m+|h+m+|m+h+|m{2,}|(?-i:[eE]h+[mM]+|[eE][hH]+m+)|e+h+|e+r+|a+h+|h+uh+)(?:[.,;:!?…]+)?(?![\p{L}\p{N}])"#
         if let regex = try? NSRegularExpression(pattern: spokenPausePattern) {
             let range = NSRange(filteredText.startIndex..., in: filteredText)
             filteredText = regex.stringByReplacingMatches(in: filteredText, options: [], range: range, withTemplate: "")
@@ -1298,7 +1298,7 @@ public struct RomaTranscriptionOutputFilter {
 
     private static func preserveBacktrackingMarkersAfterPauseFillers(in text: String) -> String {
         guard let regex = try? NSRegularExpression(
-            pattern: #"(?i)([,;:…]|\.\.\.)[ \t]+(?:u+h+|u+m+|h+m+|m+h+|m{2,}|e+h+|e+r+|a+h+|h+uh+)(?:[.,;:!?…]+)?[ \t]+(actually(?:[ \t]+no|[ \t]+make[ \t]+it)?|better[ \t]+make[ \t]+it|sorry[ \t]+i[ \t]+mean|sorry[ \t]+i[ \t]+meant|i[ \t]+mean|i[ \t]+meant|i[ \t]+should[ \t]+say|make[ \t]+that|make[ \t]+it|call[ \t]+it|wait[ \t]+no|no[ \t]+wait|no[ \t]+actually|rather|instead|oops|whoops|woops|my[ \t]+bad|correction)(?=\s)"#
+            pattern: #"(?i)([,;:…]|\.\.\.)[ \t]+(?:u+h+|u+m+|h+m+|m+h+|m{2,}|(?-i:[eE]h+[mM]+|[eE][hH]+m+)|e+h+|e+r+|a+h+|h+uh+)(?:[.,;:!?…]+)?[ \t]+(actually(?:[ \t]+no|[ \t]+make[ \t]+it)?|better[ \t]+make[ \t]+it|sorry[ \t]+i[ \t]+mean|sorry[ \t]+i[ \t]+meant|i[ \t]+mean|i[ \t]+meant|i[ \t]+should[ \t]+say|make[ \t]+that|make[ \t]+it|call[ \t]+it|wait[ \t]+no|no[ \t]+wait|no[ \t]+actually|rather|instead|oops|whoops|woops|my[ \t]+bad|correction)(?=\s)"#
         ) else {
             return text
         }
@@ -1343,7 +1343,7 @@ public struct RomaTranscriptionOutputFilter {
             .filter { !$0.isEmpty }
             .sorted { $0.count > $1.count }
             .joined(separator: "|")
-        let pauseNoise = #"m+h+m+|m+[\s-]+h+m+|u+h+[\s-]+h*u+h+|u+h+[\s-]+u+h+|u+m+[\s-]+h+m+|u+h+|u+m+|h+m+|m+h+|m{2,}|e+h+|e+r+|a+h+|h+uh+"#
+        let pauseNoise = #"m+h+m+|m+[\s-]+h+m+|u+h+[\s-]+h*u+h+|u+h+[\s-]+u+h+|u+m+[\s-]+h+m+|u+h+|u+m+|h+m+|m+h+|m{2,}|(?-i:[eE]h+[mM]+|[eE][hH]+m+)|e+h+|e+r+|a+h+|h+uh+"#
         let discourseNoise = #"you[ \t]+know|i[ \t]+mean|like|ok(?:ay)?|all[ \t]+right|alright|right|yeah"#
         let pattern = #"(?i)^\s*(?:"# + [pauseNoise, discourseNoise, fillerWords]
             .filter { !$0.isEmpty }
