@@ -295,7 +295,8 @@ public struct RomaWindowsAgentConfiguration: Codable, Equatable, Sendable {
     public func clipboardRestoreConfiguration() -> WindowsClipboardRestoreConfiguration {
         WindowsClipboardRestoreConfiguration(
             restoreClipboard: restoreClipboardAfterPaste ?? true,
-            restoreDelaySeconds: clipboardRestoreDelaySeconds ?? 2
+            restoreDelaySeconds: clipboardRestoreDelaySeconds
+                ?? WindowsClipboardRestoreConfiguration.defaultRestoreDelaySeconds
         )
     }
 

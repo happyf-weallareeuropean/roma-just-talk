@@ -4561,6 +4561,20 @@ struct RomaCoreChecks {
             "Windows agent default hold timeout should stay shared"
         )
         try require(
+            WindowsClipboardRestoreConfiguration.defaultRestoreDelaySeconds == 2,
+            "Windows clipboard restore default delay should stay shared"
+        )
+        try require(
+            WindowsClipboardRestoreConfiguration().restoreDelaySeconds ==
+                WindowsClipboardRestoreConfiguration.defaultRestoreDelaySeconds,
+            "Windows clipboard restore configuration should use the shared default delay"
+        )
+        try require(
+            RomaWindowsAgentConfiguration().clipboardRestoreConfiguration().restoreDelaySeconds ==
+                WindowsClipboardRestoreConfiguration.defaultRestoreDelaySeconds,
+            "Windows agent clipboard restore configuration should use the shared default delay"
+        )
+        try require(
             try RomaWindowsAgentConfiguration().resolvedRecordDurationNanoseconds() == 2_000_000_000,
             "Windows default record duration conversion should stay shared"
         )
@@ -5530,6 +5544,10 @@ struct RomaCoreChecks {
             contentsOf: packageRoot.appendingPathComponent("Sources/CWindowsSupport/roma_windows_foreground.c"),
             encoding: .utf8
         )
+        let pasteProofSource = try String(
+            contentsOf: packageRoot.appendingPathComponent("Sources/RomaCore/Windows/WindowsPasteProof.swift"),
+            encoding: .utf8
+        )
         let proveScript = try String(
             contentsOf: scriptsRoot.appendingPathComponent("prove-windows-agent-artifact.ps1"),
             encoding: .utf8
@@ -5598,6 +5616,12 @@ struct RomaCoreChecks {
         try require(
             proofAgentSource.contains(#"print("native_windows_adapters=true")"#),
             "Windows proof agent should print native adapter runtime availability on Windows"
+        )
+        try require(
+            pasteProofSource.contains(
+                "restoreDelaySeconds: TimeInterval = WindowsClipboardRestoreConfiguration.defaultRestoreDelaySeconds"
+            ),
+            "Windows paste proof options should share the clipboard restore delay default"
         )
         try require(
             checkReportScript.contains(#"Assert-Boolean -Object $Proof -Name "native_windows_adapters" -Expected $true"#),

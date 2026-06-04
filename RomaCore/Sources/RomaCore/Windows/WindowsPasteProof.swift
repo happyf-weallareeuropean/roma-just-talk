@@ -54,7 +54,7 @@ public struct WindowsPasteOptions: Equatable, Hashable, Sendable {
 
     public init(
         restoreClipboard: Bool = true,
-        restoreDelaySeconds: TimeInterval = 2,
+        restoreDelaySeconds: TimeInterval = WindowsClipboardRestoreConfiguration.defaultRestoreDelaySeconds,
         targetProcessID: UInt32? = nil
     ) {
         self.restoreClipboard = restoreClipboard
