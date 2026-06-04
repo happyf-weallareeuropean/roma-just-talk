@@ -6076,6 +6076,13 @@ struct RomaCoreChecks {
             "Windows laptop proof runner should stamp every report with one proof session id"
         )
         try require(
+            laptopProofScript.contains("local whisper CLI preflight") &&
+                laptopProofScript.contains(#""RomaProofAgent.exe""#) &&
+                laptopProofScript.contains("whisper-cli-doctor") &&
+                laptopProofScript.contains("local_whisper_preflight_ok=true"),
+            "Windows laptop proof runner should preflight real whisper CLI paths through packaged RomaProofAgent"
+        )
+        try require(
             laptopProofScript.contains("startup-shortcuts"),
             "Windows laptop proof runner should use proof-owned startup shortcut directories"
         )

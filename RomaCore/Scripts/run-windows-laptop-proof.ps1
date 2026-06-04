@@ -48,6 +48,21 @@ function Require-File {
     }
 }
 
+function Assert-OutputContains {
+    param(
+        [Parameter(Mandatory = $true)]
+        [string]$Output,
+        [Parameter(Mandatory = $true)]
+        [string]$Expected
+    )
+
+    if (!$Output.Contains($Expected)) {
+        throw "Expected command output to contain '$Expected'"
+    }
+
+    Write-Host "asserted_output=$Expected"
+}
+
 function Invoke-Step {
     param(
         [Parameter(Mandatory = $true)]
@@ -85,6 +100,48 @@ function Write-NotepadPastePrompt {
     Write-Host "ACTION_REQUIRED=local_whisper_notepad_paste"
     Write-Host "notepad=will_open_and_verify_file"
     Write-Host "manual_focus_required=false"
+}
+
+function Invoke-LocalWhisperPreflight {
+    param(
+        [Parameter(Mandatory = $true)]
+        [string]$ProofAgentPath,
+        [Parameter(Mandatory = $true)]
+        [string]$WhisperCLIPath,
+        [Parameter(Mandatory = $true)]
+        [string]$WhisperModelPath,
+        [string]$OutputDir = "",
+        [string[]]$ExtraArguments = @()
+    )
+
+    $doctorArgs = @(
+        "whisper-cli-doctor",
+        "--whisper-cli", $WhisperCLIPath,
+        "--whisper-model", $WhisperModelPath
+    )
+    if (![string]::IsNullOrWhiteSpace($OutputDir)) {
+        $doctorArgs += @("--output-dir", $OutputDir)
+    }
+    foreach ($argument in $ExtraArguments) {
+        if (![string]::IsNullOrWhiteSpace($argument)) {
+            $doctorArgs += @("--whisper-arg", $argument)
+        }
+    }
+
+    $output = & $ProofAgentPath @doctorArgs 2>&1 | Out-String
+    if ($LASTEXITCODE -ne 0) {
+        Write-Host $output
+        throw "RomaProofAgent whisper-cli-doctor failed during laptop preflight"
+    }
+
+    Write-Host $output
+    Assert-OutputContains -Output $output -Expected "transcription_client=whisper.cpp-cli"
+    Assert-OutputContains -Output $output -Expected "network_required=false"
+    Assert-OutputContains -Output $output -Expected "executable="
+    Assert-OutputContains -Output $output -Expected "model_file="
+    Write-Host "local_whisper_preflight_cli=$WhisperCLIPath"
+    Write-Host "local_whisper_preflight_model=$WhisperModelPath"
+    Write-Host "local_whisper_preflight_ok=true"
 }
 
 function Add-CommonProofArgs {
@@ -194,11 +251,17 @@ $WhisperCLI = Resolve-FullPath -Path $WhisperCLI
 $WhisperModel = Resolve-FullPath -Path $WhisperModel
 Require-File -Path $WhisperCLI
 Require-File -Path $WhisperModel
+$whisperArguments = @(
+    $WhisperArgument |
+        Where-Object { ![string]::IsNullOrWhiteSpace($_) }
+)
 
 $proofScript = Join-Path $PackageDir "prove-windows-agent-artifact.ps1"
 $checkSetScript = Join-Path $PackageDir "check-windows-proof-set.ps1"
+$proofAgent = Join-Path $PackageDir "RomaProofAgent.exe"
 Require-File -Path $proofScript
 Require-File -Path $checkSetScript
+Require-File -Path $proofAgent
 
 $proofSessionId = [guid]::NewGuid().ToString("D")
 
@@ -218,6 +281,19 @@ if ([string]::IsNullOrWhiteSpace($startupShortcutBaseDir)) {
 }
 $cloudStartupShortcutDir = Join-Path $startupShortcutBaseDir "cloud"
 $localStartupShortcutDir = Join-Path $startupShortcutBaseDir "local-whisper"
+
+Invoke-Step "local whisper CLI preflight" {
+    $preflightOutputDir = ""
+    if (![string]::IsNullOrWhiteSpace($WhisperOutputDir)) {
+        $preflightOutputDir = Resolve-FullPath -Path $WhisperOutputDir
+    }
+    Invoke-LocalWhisperPreflight `
+        -ProofAgentPath $proofAgent `
+        -WhisperCLIPath $WhisperCLI `
+        -WhisperModelPath $WhisperModel `
+        -OutputDir $preflightOutputDir `
+        -ExtraArguments $whisperArguments
+}
 
 $cloudArgs = @(
     "-PackageDir", $PackageDir,
@@ -259,10 +335,6 @@ $localArgs = @(
 if (![string]::IsNullOrWhiteSpace($WhisperOutputDir)) {
     $localArgs += @("-WhisperOutputDir", (Resolve-FullPath -Path $WhisperOutputDir))
 }
-$whisperArguments = @(
-    $WhisperArgument |
-        Where-Object { ![string]::IsNullOrWhiteSpace($_) }
-)
 if ($whisperArguments.Count -gt 0) {
     $localArgs += "-WhisperArgument"
     $localArgs += $whisperArguments
