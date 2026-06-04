@@ -2,6 +2,7 @@
 
 ## v1.81 - Unreleased
 
+- Unwrapped noisy balanced non-ASCII boundary fragments without dropping only the closing mark.
 - Required Windows proof reports to assert the user-facing runtime still uses the shared `DictationPipeline`.
 - Removed unmatched trailing generated brackets and parens after noisy short mid-sentence fragment marks.
 - Removed trailing generated quotes after noisy emphatic or question marks on short mid-sentence fragments.

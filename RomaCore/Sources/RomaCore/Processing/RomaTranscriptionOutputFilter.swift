@@ -7157,6 +7157,7 @@ public struct RomaTranscriptionOutputFilter {
             }
         }
         strippedText = unwrapNestedSquareBracketedBoundaryOutput(strippedText)
+        strippedText = unwrapNoisyNestedBoundaryFragment(strippedText)
         strippedText = unwrapNoisyAngleBracketedBoundaryOutput(strippedText)
         strippedText = unwrapNoisyMarkdownBoundaryOutput(strippedText)
         guard isShortFragment(strippedText) else { return strippedText }
@@ -7555,6 +7556,7 @@ public struct RomaTranscriptionOutputFilter {
         while let lastScalar = result.unicodeScalars.last,
               removableTrailingGeneratedBoundaryPunctuation.contains(lastScalar) {
             guard !hasBalancedQuoteBoundary(result),
+                  nonASCIIBoundaryInnerText(in: result) == nil,
                   !hasPreservedBalancedBoundary(result) else {
                 break
             }

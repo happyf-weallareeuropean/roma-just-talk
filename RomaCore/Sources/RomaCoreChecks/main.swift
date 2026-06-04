@@ -549,6 +549,10 @@ struct RomaCoreChecks {
             "shared insertion polish should unwrap corner-bracketed fragments"
         )
         try require(
+            RomaTranscriptionOutputFilter.applyInsertionPolish("【Model!】", context: midSentenceContext) == "model",
+            "shared insertion polish should unwrap noisy emphatic corner-bracketed fragments"
+        )
+        try require(
             RomaTranscriptionOutputFilter.applyInsertionPolish("《Model.》", context: midSentenceContext) == "model",
             "shared insertion polish should unwrap book-title-bracketed fragments"
         )
@@ -4081,8 +4085,16 @@ struct RomaCoreChecks {
             "insertion polish should remove trailing generated parens after noisy question punctuation"
         )
         try require(
+            RomaTranscriptionOutputFilter.applyInsertionPolish("【Model!】", context: midSentenceContext) == "model",
+            "insertion polish should unwrap noisy emphatic corner-bracketed fragments"
+        )
+        try require(
             RomaTranscriptionOutputFilter.applyInsertionPolish("What?\"", context: midSentenceContext) == "what?\"",
             "insertion polish should preserve trailing quotes after question words"
+        )
+        try require(
+            RomaTranscriptionOutputFilter.applyInsertionPolish("【What?】", context: midSentenceContext) == "【what?】",
+            "insertion polish should preserve corner-bracketed question words"
         )
         try require(
             RomaTranscriptionOutputFilter.applyInsertionPolish("What?]", context: midSentenceContext) == "what?]",
