@@ -294,6 +294,11 @@ function Assert-DictationRuntimeProof {
     if ($RequireExpectedTranscriptText) {
         Assert-Boolean -Object $runtime -Name "expected_transcript_text_required" -Expected $true
         Assert-NonEmptyString -Object $runtime -Name "expected_transcript_text"
+        Assert-Boolean -Object $runtime -Name "processed_transcript_text_present" -Expected $true
+        Assert-StringEquals `
+            -Actual ([string](Require-Property -Object $runtime -Name "expected_transcript_text_source")) `
+            -Expected "processed_transcript_text" `
+            -Name "expected_transcript_text_source"
         Assert-Boolean -Object $runtime -Name "expected_transcript_text_found" -Expected $true
     }
 

@@ -550,6 +550,7 @@ function Get-DictationRuntimeProof {
     $includedPreRollSeconds = Get-OutputNumber -Content $content -Name "included_pre_roll_seconds"
     $rawTranscriptLength = Get-OutputNumber -Content $content -Name "raw_transcript_length"
     $processedTranscriptLength = Get-OutputNumber -Content $content -Name "processed_transcript_length"
+    $processedTranscriptText = Get-OutputValue -Content $content -Name "processed_transcript_text"
     $proof["reported_wrote"] = $content.Contains("wrote=")
     $proof["wrote_path"] = $wrotePath
     if (![string]::IsNullOrWhiteSpace($wrotePath)) {
@@ -564,7 +565,8 @@ function Get-DictationRuntimeProof {
     $proof["processed_transcript_length"] = $processedTranscriptLength
     $proof["reported_positive_raw_transcript"] = ($null -ne $rawTranscriptLength) -and ($rawTranscriptLength -gt 0)
     $proof["reported_positive_processed_transcript"] = ($null -ne $processedTranscriptLength) -and ($processedTranscriptLength -gt 0)
-    $proof["reported_processed_text"] = $content.Contains("processed_transcript_text=")
+    $proof["reported_processed_text"] = ![string]::IsNullOrWhiteSpace($processedTranscriptText)
+    $proof["processed_transcript_text_present"] = ![string]::IsNullOrWhiteSpace($processedTranscriptText)
     $proof["reported_paste_sent"] = $content.Contains("paste_sent=true")
     $proof["reported_paste_not_sent"] = $content.Contains("paste_sent=false")
     $proof["reported_hold_mode"] = $content.Contains("recording_mode=hold")
@@ -573,10 +575,11 @@ function Get-DictationRuntimeProof {
     $proof["reported_hold_key_up"] = $content.Contains("hold_key_up=true")
     $expectedTranscriptTextFound = $false
     if (![string]::IsNullOrWhiteSpace($ExpectedTranscriptText)) {
-        $expectedTranscriptTextFound = Test-ContainsText -Text $content -Needle $ExpectedTranscriptText
+        $expectedTranscriptTextFound = Test-ContainsText -Text $processedTranscriptText -Needle $ExpectedTranscriptText
     }
     $proof["expected_transcript_text"] = $ExpectedTranscriptText
     $proof["expected_transcript_text_required"] = ![string]::IsNullOrWhiteSpace($ExpectedTranscriptText)
+    $proof["expected_transcript_text_source"] = "processed_transcript_text"
     $proof["expected_transcript_text_found"] = $expectedTranscriptTextFound
 
     return $proof
