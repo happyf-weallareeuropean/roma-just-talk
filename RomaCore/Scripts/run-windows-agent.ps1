@@ -53,6 +53,20 @@ function Require-File {
     }
 }
 
+function Assert-OutputContains {
+    param(
+        [Parameter(Mandatory = $true)]
+        [string]$Output,
+        [Parameter(Mandatory = $true)]
+        [string]$Expected
+    )
+
+    if (!$Output.Contains($Expected)) {
+        Write-Host $Output
+        throw "Expected output to contain: $Expected"
+    }
+}
+
 if ($UseHoldHook -and $UseToggle) {
     throw "UseHoldHook and UseToggle are mutually exclusive"
 }
@@ -117,6 +131,11 @@ if ($LASTEXITCODE -ne 0) {
     throw "RomaWindowsAgent doctor failed"
 }
 Write-Host $doctorOutput
+Assert-OutputContains -Output $doctorOutput -Expected "default_record_seconds=2.0"
+Assert-OutputContains -Output $doctorOutput -Expected "default_hold_timeout_seconds=15.0"
+Assert-OutputContains -Output $doctorOutput -Expected "default_hold_timeout_milliseconds=15000"
+Assert-OutputContains -Output $doctorOutput -Expected "default_clipboard_restore_delay_seconds=2.0"
+Assert-OutputContains -Output $doctorOutput -Expected "maximum_clipboard_restore_delay_seconds=4294967.295"
 if ($DoctorOnly) {
     exit 0
 }

@@ -5842,6 +5842,12 @@ struct RomaCoreChecks {
                     smokeScript.contains(#"-Expected "\#(expectedLine)""#),
                 "Windows smoke script should assert packaged agent default output \(expectedLine)"
             )
+            try require(
+                runScript.contains("function Assert-OutputContains") &&
+                    runScript.contains(#"Assert-OutputContains -Output $doctorOutput"#) &&
+                    runScript.contains(#"-Expected "\#(expectedLine)""#),
+                "Windows run script should assert installed launcher default output \(expectedLine)"
+            )
         }
         try require(
             pasteProofSource.contains(
