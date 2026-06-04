@@ -118,6 +118,10 @@ if ($RestoreClipboard -and $NoRestoreClipboard) {
     throw "RestoreClipboard and NoRestoreClipboard are mutually exclusive"
 }
 
+if ([System.Environment]::OSVersion.Platform -ne [System.PlatformID]::Win32NT) {
+    throw "Windows laptop proof must run on Windows"
+}
+
 if ([string]::IsNullOrWhiteSpace($PackageDir)) {
     $PackageDir = $PSScriptRoot
 }
@@ -146,6 +150,10 @@ if ([string]::IsNullOrWhiteSpace($WhisperCLI) -or
     [string]::IsNullOrWhiteSpace($WhisperModel)) {
     throw "WhisperCLI and WhisperModel are required for local whisper laptop proof"
 }
+$WhisperCLI = Resolve-FullPath -Path $WhisperCLI
+$WhisperModel = Resolve-FullPath -Path $WhisperModel
+Require-File -Path $WhisperCLI
+Require-File -Path $WhisperModel
 
 $proofScript = Join-Path $PackageDir "prove-windows-agent-artifact.ps1"
 $checkSetScript = Join-Path $PackageDir "check-windows-proof-set.ps1"
@@ -192,8 +200,8 @@ $localArgs = @(
     "-InstallDir", $localInstallDir,
     "-ConfigPath", $localConfigPath,
     "-ProofReportPath", $localWhisperDictationReport,
-    "-WhisperCLI", (Resolve-FullPath -Path $WhisperCLI),
-    "-WhisperModel", (Resolve-FullPath -Path $WhisperModel)
+    "-WhisperCLI", $WhisperCLI,
+    "-WhisperModel", $WhisperModel
 )
 if (![string]::IsNullOrWhiteSpace($WhisperOutputDir)) {
     $localArgs += @("-WhisperOutputDir", (Resolve-FullPath -Path $WhisperOutputDir))
@@ -218,8 +226,8 @@ $notepadArgs = @(
     "-InstallDir", $notepadInstallDir,
     "-ConfigPath", $notepadConfigPath,
     "-ProofReportPath", $localWhisperNotepadReport,
-    "-WhisperCLI", (Resolve-FullPath -Path $WhisperCLI),
-    "-WhisperModel", (Resolve-FullPath -Path $WhisperModel),
+    "-WhisperCLI", $WhisperCLI,
+    "-WhisperModel", $WhisperModel,
     "-RunNotepadPasteProof"
 )
 if (![string]::IsNullOrWhiteSpace($WhisperOutputDir)) {
