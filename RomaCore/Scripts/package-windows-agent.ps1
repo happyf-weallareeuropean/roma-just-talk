@@ -156,6 +156,14 @@ try {
     $installScriptOutput = Join-Path $OutputDir "install-windows-agent.ps1"
     $configPath = Join-Path $OutputDir "sample-windows-agent.json"
     $localWhisperConfigPath = Join-Path $OutputDir "sample-local-whisper-agent.json"
+    $installProofDir = Join-Path $OutputDir "install-proof"
+    $installProofConfigPath = Join-Path $installProofDir "windows-agent.json"
+    $shortcutDir = Join-Path $OutputDir "shortcuts"
+    $shortcutPath = Join-Path $shortcutDir "Roma Just Talk Agent.lnk"
+    $localWhisperInstallProofDir = Join-Path $OutputDir "install-proof-local-whisper"
+    $localWhisperInstallConfigPath = Join-Path $localWhisperInstallProofDir "windows-agent.json"
+    $localWhisperShortcutDir = Join-Path $OutputDir "shortcuts-local-whisper"
+    $localWhisperShortcutPath = Join-Path $localWhisperShortcutDir "Roma Just Talk Agent.lnk"
 
     Invoke-Step "copy agent executable" {
         Copy-Item -LiteralPath $agentSource.FullName -Destination $agentOutput -Force
@@ -210,26 +218,26 @@ try {
     Invoke-Step "packaged agent install smoke" {
         & $installScriptOutput `
             -PackageDir $OutputDir `
-            -InstallDir (Join-Path $OutputDir "install-proof") `
-            -ConfigPath (Join-Path $OutputDir "install-proof\windows-agent.json") `
+            -InstallDir $installProofDir `
+            -ConfigPath $installProofConfigPath `
             -RestoreClipboard `
             -ClipboardRestoreDelaySeconds 0 `
             -CreateShortcut `
             -AllowSmokeShortcut `
-            -ShortcutDir (Join-Path $OutputDir "shortcuts")
+            -ShortcutDir $shortcutDir
     }
 
     Invoke-Step "packaged local whisper install smoke" {
         & $installScriptOutput `
             -PackageDir $OutputDir `
-            -InstallDir (Join-Path $OutputDir "install-proof-local-whisper") `
-            -ConfigPath (Join-Path $OutputDir "install-proof-local-whisper\windows-agent.json") `
+            -InstallDir $localWhisperInstallProofDir `
+            -ConfigPath $localWhisperInstallConfigPath `
             -WhisperCLI $mockWhisperSource.FullName `
             -WhisperModel $agentOutput `
             -RestoreClipboard `
             -ClipboardRestoreDelaySeconds 0 `
             -CreateShortcut `
-            -ShortcutDir (Join-Path $OutputDir "shortcuts-local-whisper")
+            -ShortcutDir $localWhisperShortcutDir
     }
 
     $manifestPath = Join-Path $OutputDir "manifest.txt"
@@ -242,6 +250,12 @@ try {
         "sample_config=$configPath",
         "sample_local_whisper_config=$localWhisperConfigPath",
         "whisper_cli_mock=$($mockWhisperSource.FullName)",
+        "install_proof_dir=$installProofDir",
+        "install_proof_config=$installProofConfigPath",
+        "install_proof_shortcut=$shortcutPath",
+        "local_whisper_install_proof_dir=$localWhisperInstallProofDir",
+        "local_whisper_install_config=$localWhisperInstallConfigPath",
+        "local_whisper_shortcut=$localWhisperShortcutPath",
         "smoke_script=$smokeScriptOutput",
         "run_script=$runScriptOutput",
         "install_script=$installScriptOutput",
