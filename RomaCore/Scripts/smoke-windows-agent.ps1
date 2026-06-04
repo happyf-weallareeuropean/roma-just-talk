@@ -198,6 +198,11 @@ Invoke-Step "agent doctor" {
     }
     Write-Host $doctorOutput
     Assert-OutputContains -Output $doctorOutput -Expected "agent=roma-windows-agent"
+    Assert-OutputContains -Output $doctorOutput -Expected "os_permission_grants=microphone"
+    Assert-OutputContains -Output $doctorOutput -Expected "native_capabilities=RegisterHotKey"
+    Assert-OutputContains -Output $doctorOutput -Expected "admin_required=false"
+    Assert-OutputContains -Output $doctorOutput -Expected "startup_permission_prompt=false"
+    Assert-OutputContains -Output $doctorOutput -Expected "screen_capture_required=false"
     if ($isWindowsHost) {
         Assert-OutputContains -Output $doctorOutput -Expected "runtime_available=true"
     }

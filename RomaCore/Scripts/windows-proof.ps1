@@ -238,7 +238,17 @@ try {
     }
 
     Invoke-Step "windows agent doctor" {
-        swift run RomaWindowsAgent doctor
+        $windowsAgentDoctorOutput = swift run RomaWindowsAgent doctor 2>&1 | Out-String
+        if ($LASTEXITCODE -ne 0) {
+            Write-Host $windowsAgentDoctorOutput
+            throw "RomaWindowsAgent doctor failed"
+        }
+        Write-Host $windowsAgentDoctorOutput
+        Assert-OutputContains -Output $windowsAgentDoctorOutput -Expected "os_permission_grants=microphone"
+        Assert-OutputContains -Output $windowsAgentDoctorOutput -Expected "native_capabilities=RegisterHotKey"
+        Assert-OutputContains -Output $windowsAgentDoctorOutput -Expected "admin_required=false"
+        Assert-OutputContains -Output $windowsAgentDoctorOutput -Expected "startup_permission_prompt=false"
+        Assert-OutputContains -Output $windowsAgentDoctorOutput -Expected "screen_capture_required=false"
     }
 
     $coreProof = Join-Path $OutputDir "core-proof.wav"
@@ -398,7 +408,17 @@ try {
     }
 
     Invoke-Step "windows permission doctor" {
-        swift run RomaProofAgent windows-permission-doctor
+        $permissionDoctorOutput = swift run RomaProofAgent windows-permission-doctor 2>&1 | Out-String
+        if ($LASTEXITCODE -ne 0) {
+            Write-Host $permissionDoctorOutput
+            throw "RomaProofAgent windows-permission-doctor failed"
+        }
+        Write-Host $permissionDoctorOutput
+        Assert-OutputContains -Output $permissionDoctorOutput -Expected "os_permission_grants=microphone"
+        Assert-OutputContains -Output $permissionDoctorOutput -Expected "native_capabilities=RegisterHotKey"
+        Assert-OutputContains -Output $permissionDoctorOutput -Expected "admin_required=false"
+        Assert-OutputContains -Output $permissionDoctorOutput -Expected "startup_permission_prompt=false"
+        Assert-OutputContains -Output $permissionDoctorOutput -Expected "screen_capture_required=false"
     }
 
     Invoke-Step "windows secret doctor" {
