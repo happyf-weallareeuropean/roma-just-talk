@@ -364,6 +364,17 @@ public struct RomaTranscriptionOutputFilter {
         "ux": "UX",
         "xml": "XML"
     ]
+    private static let properNameFragmentCasing = [
+        "apple": "Apple",
+        "github": "GitHub",
+        "ios": "iOS",
+        "ipados": "iPadOS",
+        "macos": "macOS",
+        "roma": "Roma",
+        "swift": "Swift",
+        "voiceink": "VoiceInk",
+        "xcode": "Xcode"
+    ]
     private static let blockedNextWordsForSpokenPossessive: Set<String> = [
         "character", "characters", "is", "mark", "marks", "means", "meaning", "suffix", "symbol", "symbols"
     ]
@@ -407,6 +418,10 @@ public struct RomaTranscriptionOutputFilter {
         "tickets", "to", "token", "tool", "type", "types", "use", "user", "users", "value", "values", "variable",
         "variables", "view", "was", "we", "what", "when", "where", "which", "will", "window", "with", "word", "words",
         "work", "workspace", "workspaces", "would", "yeah", "you"
+    ]
+    private static let leadingModifierLowercaseFragments: Set<String> = [
+        "cloud", "current", "default", "direct", "full", "local", "main", "native", "new", "old",
+        "private", "public", "remote", "same", "shared", "test"
     ]
     private static let sentenceBoundaryContinuationPreviousWords: Set<String> = [
         "a", "about", "after", "an", "and", "are", "as", "at", "be", "been", "being",
@@ -8118,18 +8133,23 @@ public struct RomaTranscriptionOutputFilter {
         }
 
         var result = text
-        let matches = regex.matches(in: result, range: NSRange(result.startIndex..., in: result)).reversed()
-        for match in matches {
+        let matches = regex.matches(in: result, range: NSRange(result.startIndex..., in: result))
+        let matchedWords = matches.map { match -> String in
+            guard let wordRange = Range(match.range, in: result) else { return "" }
+            return String(result[wordRange])
+        }
+        for (matchIndex, match) in matches.enumerated().reversed() {
             guard let wordRange = Range(match.range, in: result) else {
                 continue
             }
 
             let word = String(result[wordRange])
-            guard shouldLowercaseLikelyFragmentWord(word) else {
+            let nextWord = matchIndex + 1 < matchedWords.count ? matchedWords[matchIndex + 1] : nil
+            guard shouldNormalizeLikelyFragmentWord(word, nextWord: nextWord) else {
                 continue
             }
 
-            result.replaceSubrange(wordRange, with: lowercaseLikelyFragmentWord(word))
+            result.replaceSubrange(wordRange, with: normalizeLikelyFragmentWord(word))
         }
 
         return result
@@ -8142,16 +8162,16 @@ public struct RomaTranscriptionOutputFilter {
     ) -> String {
         let firstWordRange = firstLetterRange.lowerBound..<firstWordEnd
         let firstWord = String(text[firstWordRange])
-        guard shouldLowercaseLikelyFragmentWord(firstWord) else {
+        guard shouldNormalizeLikelyFragmentWord(firstWord, nextWord: nil) else {
             return text
         }
 
         var result = text
-        result.replaceSubrange(firstWordRange, with: lowercaseLikelyFragmentWord(firstWord))
+        result.replaceSubrange(firstWordRange, with: normalizeLikelyFragmentWord(firstWord))
         return result
     }
 
-    private static func shouldLowercaseLikelyFragmentWord(_ word: String) -> Bool {
+    private static func shouldNormalizeLikelyFragmentWord(_ word: String, nextWord: String?) -> Bool {
         let comparisonWord = word.trimmingCharacters(in: apostropheLikeCharacters)
         guard let firstCharacter = comparisonWord.first, firstCharacter.isUppercase else {
             return false
@@ -8159,9 +8179,21 @@ public struct RomaTranscriptionOutputFilter {
 
         if comparisonWord == "I" { return false }
         let normalizedWord = comparisonWord.lowercased()
+        let isAllCapsWord = comparisonWord.count > 1 && comparisonWord.allSatisfy { !$0.isLetter || $0.isUppercase }
+
+        if isAllCapsWord && properNameFragmentCasing[normalizedWord] != nil {
+            return true
+        }
+
+        if leadingModifierLowercaseFragments.contains(normalizedWord),
+           let nextWord,
+           isLikelyFragmentContinuationWord(nextWord) {
+            return true
+        }
+
         guard likelyLowercaseFragments.contains(normalizedWord) else { return false }
 
-        if comparisonWord.count > 1 && comparisonWord.allSatisfy({ !$0.isLetter || $0.isUppercase }) {
+        if isAllCapsWord {
             return commonTechnicalAcronyms[normalizedWord] == nil
         }
         if comparisonWord.dropFirst().contains(where: { $0.isUppercase }) { return false }
@@ -8169,8 +8201,19 @@ public struct RomaTranscriptionOutputFilter {
         return true
     }
 
-    private static func lowercaseLikelyFragmentWord(_ word: String) -> String {
+    private static func isLikelyFragmentContinuationWord(_ word: String) -> Bool {
+        let normalizedWord = word.trimmingCharacters(in: apostropheLikeCharacters).lowercased()
+        return likelyLowercaseFragments.contains(normalizedWord) ||
+            commonTechnicalAcronyms[normalizedWord] != nil ||
+            properNameFragmentCasing[normalizedWord] != nil
+    }
+
+    private static func normalizeLikelyFragmentWord(_ word: String) -> String {
+        let comparisonWord = word.trimmingCharacters(in: apostropheLikeCharacters)
         if word.count > 1 && word.allSatisfy({ !$0.isLetter || $0.isUppercase }) {
+            if let properNameCasing = properNameFragmentCasing[comparisonWord.lowercased()] {
+                return properNameCasing
+            }
             return word.lowercased()
         }
         return String(word.prefix(1)).lowercased() + word.dropFirst()

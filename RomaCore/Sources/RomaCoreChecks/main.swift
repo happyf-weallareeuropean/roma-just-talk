@@ -300,6 +300,30 @@ struct RomaCoreChecks {
             "shared insertion polish should lowercase all-caps ordinary status nouns"
         )
         try require(
+            RomaTranscriptionOutputFilter.applyInsertionPolish("NEW PAYLOAD.", context: midSentenceContext) == "new payload",
+            "shared insertion polish should lowercase all-caps modifiers before ordinary code nouns"
+        )
+        try require(
+            RomaTranscriptionOutputFilter.applyInsertionPolish("GITHUB ISSUE.", context: midSentenceContext) == "GitHub issue",
+            "shared insertion polish should normalize all-caps product names in mid-sentence fragments"
+        )
+        try require(
+            RomaTranscriptionOutputFilter.applyInsertionPolish("SWIFT PACKAGE.", context: midSentenceContext) == "Swift package",
+            "shared insertion polish should normalize all-caps language names in mid-sentence fragments"
+        )
+        try require(
+            RomaTranscriptionOutputFilter.applyInsertionPolish("MACOS SETTING.", context: midSentenceContext) == "macOS setting",
+            "shared insertion polish should normalize all-caps platform names in mid-sentence fragments"
+        )
+        try require(
+            RomaTranscriptionOutputFilter.applyInsertionPolish("IOS APP.", context: midSentenceContext) == "iOS app",
+            "shared insertion polish should normalize all-caps Apple platform fragments"
+        )
+        try require(
+            RomaTranscriptionOutputFilter.applyInsertionPolish("NEW YORK.", context: midSentenceContext) == "NEW YORK",
+            "shared insertion polish should not lowercase unknown all-caps proper-name phrases"
+        )
+        try require(
             RomaTranscriptionOutputFilter.applyInsertionPolish("Model.\"", context: midSentenceContext) == "model",
             "shared insertion polish should remove trailing generated quotes after final punctuation"
         )
