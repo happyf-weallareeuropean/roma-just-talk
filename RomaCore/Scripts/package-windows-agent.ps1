@@ -196,6 +196,86 @@ function Get-GitMetadata {
     }
 }
 
+function New-FileProof {
+    param(
+        [Parameter(Mandatory = $true)]
+        [string]$Path
+    )
+
+    $item = Get-Item -LiteralPath $Path
+    return [ordered]@{
+        path = $Path
+        exists = $true
+        bytes = $item.Length
+    }
+}
+
+function Get-CurrentWindowsUserSid {
+    $identity = [System.Security.Principal.WindowsIdentity]::GetCurrent()
+    if ($null -eq $identity -or $null -eq $identity.User) {
+        throw "Current Windows user SID was not available"
+    }
+
+    return [string]$identity.User.Value
+}
+
+function Write-LaptopPreflightCheckerSmokeReport {
+    param(
+        [Parameter(Mandatory = $true)]
+        [string]$ReportPath,
+        [Parameter(Mandatory = $true)]
+        [string]$PackageDir,
+        [Parameter(Mandatory = $true)]
+        [string]$ProofDir,
+        [Parameter(Mandatory = $true)]
+        [string]$ProofAgentPath,
+        [Parameter(Mandatory = $true)]
+        [string]$WhisperCLIPath,
+        [Parameter(Mandatory = $true)]
+        [string]$WhisperModelPath
+    )
+
+    New-Item -ItemType Directory -Force -Path $ProofDir | Out-Null
+    $micPreflightPath = Join-Path $ProofDir "ci-mic-preflight.wav"
+    $wavBytes = [byte[]]::new(46)
+    $riffBytes = [System.Text.Encoding]::ASCII.GetBytes("RIFF")
+    [System.Array]::Copy($riffBytes, $wavBytes, $riffBytes.Length)
+    [System.IO.File]::WriteAllBytes($micPreflightPath, $wavBytes)
+
+    $report = [ordered]@{
+        generated_at = (Get-Date).ToUniversalTime().ToString("o")
+        proof_session_id = [guid]::NewGuid().ToString("D")
+        proof_mode = "windows-laptop-preflight"
+        preflight_only = $true
+        package_dir = $PackageDir
+        proof_dir = $ProofDir
+        os = [ordered]@{
+            platform = [System.Environment]::OSVersion.Platform.ToString()
+            version = [System.Environment]::OSVersion.VersionString
+            machine = $env:COMPUTERNAME
+            user_name = $env:USERNAME
+            user_domain = $env:USERDOMAIN
+            user_sid = Get-CurrentWindowsUserSid
+        }
+        preflights = [ordered]@{
+            hotkey_delivery = $true
+            microphone = $true
+            local_whisper = $true
+        }
+        files = [ordered]@{
+            proof_agent = New-FileProof -Path $ProofAgentPath
+            mic_preflight_wav = New-FileProof -Path $micPreflightPath
+            whisper_cli = New-FileProof -Path $WhisperCLIPath
+            whisper_model = New-FileProof -Path $WhisperModelPath
+        }
+    }
+
+    $report |
+        ConvertTo-Json -Depth 6 |
+        Set-Content -LiteralPath $ReportPath -Encoding UTF8
+    Write-Host "laptop_preflight_checker_smoke_report=$ReportPath"
+}
+
 $packageRoot = Resolve-Path "$PSScriptRoot\.."
 if ([System.Environment]::OSVersion.Platform -ne [System.PlatformID]::Win32NT) {
     throw "package-windows-agent.ps1 must run on Windows so packaged executables and Swift runtime DLLs are Windows artifacts"
@@ -250,6 +330,8 @@ try {
     $localWhisperInstallConfigPath = Join-Path $localWhisperInstallProofDir "windows-agent.json"
     $localWhisperShortcutDir = Join-Path $OutputDir "shortcuts-local-whisper"
     $localWhisperShortcutPath = Join-Path $localWhisperShortcutDir "Roma Just Talk Agent.lnk"
+    $laptopPreflightCheckerSmokeDir = Join-Path $OutputDir "laptop-preflight-checker-smoke"
+    $laptopPreflightCheckerSmokeReport = Join-Path $laptopPreflightCheckerSmokeDir "preflight-proof.json"
 
     Invoke-Step "copy agent executable" {
         Copy-Item -LiteralPath $agentSource.FullName -Destination $agentOutput -Force
@@ -387,6 +469,25 @@ try {
             -ShortcutDir $localWhisperShortcutDir
     }
 
+    Invoke-Step "laptop preflight report checker smoke" {
+        Write-LaptopPreflightCheckerSmokeReport `
+            -ReportPath $laptopPreflightCheckerSmokeReport `
+            -PackageDir $OutputDir `
+            -ProofDir $laptopPreflightCheckerSmokeDir `
+            -ProofAgentPath $proofAgentOutput `
+            -WhisperCLIPath $mockWhisperOutput `
+            -WhisperModelPath $agentOutput
+        $checkerOutputText = & $checkSetScriptOutput `
+            -LaptopPreflightReportPath $laptopPreflightCheckerSmokeReport `
+            -RequireLaptopPreflight 2>&1 | Out-String
+        if ($LASTEXITCODE -ne 0) {
+            Write-Host $checkerOutputText
+            throw "Laptop preflight report checker smoke failed"
+        }
+        Write-Host $checkerOutputText
+        Assert-OutputContains -Output $checkerOutputText -Expected "proof_set_ok=laptop-preflight"
+    }
+
     $manifestPath = Join-Path $OutputDir "manifest.txt"
     $agentFile = Get-Item -LiteralPath $agentOutput
     @(
@@ -408,6 +509,7 @@ try {
         "local_whisper_install_proof_dir=$localWhisperInstallProofDir",
         "local_whisper_install_config=$localWhisperInstallConfigPath",
         "local_whisper_shortcut=$localWhisperShortcutPath",
+        "laptop_preflight_checker_smoke_report=$laptopPreflightCheckerSmokeReport",
         "smoke_script=$smokeScriptOutput",
         "run_script=$runScriptOutput",
         "install_script=$installScriptOutput",
