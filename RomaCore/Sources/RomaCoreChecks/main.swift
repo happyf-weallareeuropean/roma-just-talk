@@ -853,6 +853,26 @@ struct RomaCoreChecks {
                 "leading unbracketed no speech artifact"
             ),
             (
+                "music playing. Let's continue.",
+                "Let's continue.",
+                "leading unbracketed music playing artifact"
+            ),
+            (
+                "keyboard typing. Use this.",
+                "Use this.",
+                "leading unbracketed keyboard typing artifact"
+            ),
+            (
+                "phone ringing. Call me back.",
+                "Call me back.",
+                "leading unbracketed phone ringing artifact"
+            ),
+            (
+                "static noise. Continue now.",
+                "Continue now.",
+                "leading unbracketed static noise artifact"
+            ),
+            (
                 "The background noise matters.",
                 "The background noise matters.",
                 "unbracketed background noise prose guard"
@@ -861,6 +881,26 @@ struct RomaCoreChecks {
                 "Clears throat exercises help.",
                 "Clears throat exercises help.",
                 "unbracketed clears throat prose guard"
+            ),
+            (
+                "Music playing helps focus.",
+                "Music playing helps focus.",
+                "unbracketed music playing prose guard"
+            ),
+            (
+                "Keyboard typing speed matters.",
+                "Keyboard typing speed matters.",
+                "unbracketed keyboard typing prose guard"
+            ),
+            (
+                "The phone ringing woke me.",
+                "The phone ringing woke me.",
+                "unbracketed phone ringing prose guard"
+            ),
+            (
+                "Static noise matters.",
+                "Static noise matters.",
+                "unbracketed static noise prose guard"
             ),
             (
                 "The dog coughs.",
