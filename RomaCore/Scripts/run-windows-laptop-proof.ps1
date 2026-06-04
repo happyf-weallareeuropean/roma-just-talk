@@ -120,6 +120,36 @@ function Write-NotepadPastePrompt {
     Write-Host "manual_focus_required=false"
 }
 
+function Write-HotkeyDeliveryPreflightPrompt {
+    Write-Host ""
+    Write-Host "ACTION_REQUIRED=hotkey_delivery_preflight"
+    Write-Host "hold_hotkey=Ctrl+Shift+R"
+    Write-Host "press_and_release_hotkey=true"
+    Write-Host "hold_timeout_seconds=$HoldTimeoutSeconds"
+}
+
+function Invoke-HotkeyDeliveryPreflight {
+    param(
+        [Parameter(Mandatory = $true)]
+        [string]$ProofAgentPath,
+        [Parameter(Mandatory = $true)]
+        [int]$TimeoutSeconds
+    )
+
+    $output = & $ProofAgentPath windows-keyboard-hook-proof `
+        --timeout "$TimeoutSeconds" 2>&1 | Out-String
+    if ($LASTEXITCODE -ne 0) {
+        Write-Host $output
+        throw "RomaProofAgent windows-keyboard-hook-proof failed during laptop hotkey preflight"
+    }
+
+    Write-Host $output
+    Assert-OutputContains -Output $output -Expected "waiting_for_hold=Ctrl+Shift+R"
+    Assert-OutputContains -Output $output -Expected "key_down=true"
+    Assert-OutputContains -Output $output -Expected "key_up=true"
+    Write-Host "hotkey_delivery_preflight_ok=true"
+}
+
 function Invoke-MicrophonePreflight {
     param(
         [Parameter(Mandatory = $true)]
@@ -331,6 +361,13 @@ if ([string]::IsNullOrWhiteSpace($startupShortcutBaseDir)) {
 $cloudStartupShortcutDir = Join-Path $startupShortcutBaseDir "cloud"
 $localStartupShortcutDir = Join-Path $startupShortcutBaseDir "local-whisper"
 
+Invoke-Step "hotkey delivery preflight" {
+    Write-HotkeyDeliveryPreflightPrompt
+    Invoke-HotkeyDeliveryPreflight `
+        -ProofAgentPath $proofAgent `
+        -TimeoutSeconds $HoldTimeoutSeconds
+}
+
 Invoke-Step "microphone preflight" {
     Invoke-MicrophonePreflight `
         -ProofAgentPath $proofAgent `
@@ -451,6 +488,7 @@ Write-Host ""
 Write-Host "windows_laptop_proof_dir=$ProofDir"
 Write-Host "windows_laptop_proof_session_id=$proofSessionId"
 Write-Host "windows_laptop_startup_shortcut_base_dir=$startupShortcutBaseDir"
+Write-Host "windows_laptop_hotkey_delivery_preflight=true"
 Write-Host "windows_laptop_mic_preflight=$micPreflightPath"
 Write-Host "windows_laptop_cloud_report=$cloudReport"
 Write-Host "windows_laptop_local_whisper_report=$localWhisperDictationReport"
