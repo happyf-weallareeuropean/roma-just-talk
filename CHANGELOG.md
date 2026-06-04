@@ -2,6 +2,7 @@
 
 ## v1.81 - Unreleased
 
+- Cleaned bounded bare "wait" self-corrections such as "Use model, wait module.".
 - Removed "ahem..." throat-clear filler artifacts while preserving all-caps marker prose.
 - Removed "ehm..." pause-filler artifacts while preserving all-caps acronym prose.
 - Removed ambient/background sound ASR artifacts such as "ambient noise." and "background sounds.".

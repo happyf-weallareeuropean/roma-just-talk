@@ -1583,6 +1583,16 @@ struct RomaCoreChecks {
                 "ehm before wait no correction"
             ),
             (
+                "Use model, wait module.",
+                "Use module.",
+                "bare wait correction"
+            ),
+            (
+                "Use model, wait new module.",
+                "Use new module.",
+                "bare wait short phrase correction"
+            ),
+            (
                 "Use model, wait actually module.",
                 "Use module.",
                 "wait actually correction"
@@ -2626,6 +2636,11 @@ struct RomaCoreChecks {
                 "There is no wait time.",
                 "There is no wait time.",
                 "no wait prose guard"
+            ),
+            (
+                "Please wait, module loads.",
+                "Please wait, module loads.",
+                "bare wait prose guard"
             ),
             (
                 "The phrase actually wait no is useful.",

@@ -528,10 +528,11 @@ public struct RomaTranscriptionOutputFilter {
             scratch\s+that(?!\s+out\b) |
             (?:[,;:…]|\.\.\.)?\s*wait\s*[,;:]?\s+never\s*mind\s*[,;:]? |
             (?:[,;:…]|\.\.\.)?\s*wait\s*[,;:]?\s+nevermind\s*[,;:]? |
-            wait\s+no |
+            (?:[,;:…]|\.\.\.)?\s*wait\s*[,;:]?\s+no\s*[,;:]? |
             (?:[,;:…]|\.\.\.)\s*wait\s*[,;:]?\s+actually\s*[,;:]? |
             (?:[,;:…]|\.\.\.)\s*wait\s*[,;:]?\s+i\s+mean\s*[,;:]? |
             (?:[,;:…]|\.\.\.)\s*wait\s*[,;:]?\s+i\s+meant\s*[,;:]? |
+            (?:[,;:…]|\.\.\.)\s*wait\s*[,;:]?(?!\s+(?:no|actually|i\s+mean|i\s+meant|never\s*mind|nevermind)\b) |
             (?:[,;:…]|\.\.\.)\s*no\s*[,;:]?\s+wait\s*[,;:]? |
             no\s*[,;:]?\s+i\s+mean\s*[,;:]? |
             no\s*[,;:]?\s+i\s+meant\s*[,;:]? |
@@ -5507,6 +5508,7 @@ public struct RomaTranscriptionOutputFilter {
             "wait actually",
             "wait i mean",
             "wait i meant",
+            "wait",
             "wait never mind",
             "wait nevermind",
             "never mind",
@@ -5553,6 +5555,7 @@ public struct RomaTranscriptionOutputFilter {
             "nevermind",
             "no actually",
             "no wait",
+            "wait",
             "wait never mind",
             "wait nevermind",
             "wait no"
