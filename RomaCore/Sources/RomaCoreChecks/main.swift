@@ -1654,6 +1654,16 @@ struct RomaCoreChecks {
                 "sorry correction"
             ),
             (
+                "Set color blue sorry red.",
+                "Set color red.",
+                "bare sorry correction"
+            ),
+            (
+                "Use local sorry cloud.",
+                "Use cloud.",
+                "bare sorry one-word correction"
+            ),
+            (
                 "Wrong phrase scratch that. Right phrase.",
                 "Right phrase.",
                 "scratch that correction"
@@ -2397,6 +2407,21 @@ struct RomaCoreChecks {
                 "I am sorry this happened.",
                 "I am sorry this happened.",
                 "sorry prose guard"
+            ),
+            (
+                "I am really sorry this happened.",
+                "I am really sorry this happened.",
+                "bare sorry apology intensifier guard"
+            ),
+            (
+                "Sorry for the delay.",
+                "Sorry for the delay.",
+                "leading sorry apology guard"
+            ),
+            (
+                "I said sorry yesterday.",
+                "I said sorry yesterday.",
+                "reported sorry apology guard"
             ),
             (
                 "I am, um actually, not sure.",

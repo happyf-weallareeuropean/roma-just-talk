@@ -519,6 +519,7 @@ public struct RomaTranscriptionOutputFilter {
             sorry\s+no |
             (?:[,;:…]|\.\.\.)\s*sorry\s*[,;:]? |
             no\s*[,;:]?\s+sorry |
+            sorry |
             (?:[,;:…]|\.\.\.)\s*rather\s*[,;:]? |
             or\s+rather |
             or\s+actually |
@@ -544,6 +545,13 @@ public struct RomaTranscriptionOutputFilter {
     ]
     private static let blockedFirstCorrectionWordsForReplaceThat: Set<String> = [
         "is", "means"
+    ]
+    private static let blockedPreviousWordsForBareSorryCorrection: Set<String> = [
+        "am", "are", "felt", "feel", "feeling", "is", "really", "said", "say", "saying", "says", "so",
+        "truly", "very", "was", "were"
+    ]
+    private static let blockedFirstCorrectionWordsForBareSorryCorrection: Set<String> = [
+        "about", "for", "that", "this", "to"
     ]
     private static let blockedSingleWordPrefixesForMakeCallCorrection: Set<String> = [
         "please"
@@ -5387,8 +5395,14 @@ public struct RomaTranscriptionOutputFilter {
             return false
         }
 
+        if isBareSorryBacktrackingMarker(markerText),
+           !shouldApplyBareSorryBacktrackingMarker(beforeMarker: beforeMarker, correctionText: correctionText) {
+            return false
+        }
+
         guard isReplaceOrChangeBacktrackingMarker(markerText) ||
                 isGuardedNaturalBacktrackingMarker(markerText) ||
+                isBareSorryBacktrackingMarker(markerText) ||
                 isOrAlternativeBacktrackingMarker(markerText) else {
             return true
         }
@@ -5456,6 +5470,24 @@ public struct RomaTranscriptionOutputFilter {
             "or actually",
             "or wait no"
         ].contains(normalizedMarker)
+    }
+
+    private static func isBareSorryBacktrackingMarker(_ markerText: String) -> Bool {
+        normalizedBacktrackingMarker(markerText) == "sorry"
+    }
+
+    private static func shouldApplyBareSorryBacktrackingMarker(beforeMarker: String, correctionText: String) -> Bool {
+        if let previousWord = previousWord(in: beforeMarker),
+           blockedPreviousWordsForBareSorryCorrection.contains(previousWord) {
+            return false
+        }
+
+        if let firstCorrectionWord = firstWord(in: correctionText),
+           blockedFirstCorrectionWordsForBareSorryCorrection.contains(firstCorrectionWord) {
+            return false
+        }
+
+        return true
     }
 
     private static func isSingleWordReplacementBacktrackingMarker(_ markerText: String) -> Bool {

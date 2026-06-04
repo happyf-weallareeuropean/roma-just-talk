@@ -2,6 +2,7 @@
 
 ## v1.81 - Unreleased
 
+- Handled bare "sorry" self-corrections such as "blue sorry red" while preserving apology prose.
 - Uppercased common standalone technical acronyms such as API, URL, UI, UX, AI, JSON, and SQL in cleaned dictation.
 - Formatted spoken long CLI flags such as "dash dash amend" as `--amend` without compacting them into the previous word.
 - Treated "end parenthesis", "end bracket", and "end brace" as spoken closing-enclosure commands.
