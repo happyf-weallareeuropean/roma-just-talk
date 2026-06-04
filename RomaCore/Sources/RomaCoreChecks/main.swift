@@ -2079,6 +2079,21 @@ struct RomaCoreChecks {
                 "chained spoken no space command"
             ),
             (
+                "Use the api key for the url.",
+                "Use the API key for the URL.",
+                "common technical acronym casing"
+            ),
+            (
+                "The ui and ux need ai polish.",
+                "The UI and UX need AI polish.",
+                "short technical acronym casing"
+            ),
+            (
+                "Return json from the sql query.",
+                "Return JSON from the SQL query.",
+                "data technical acronym casing"
+            ),
+            (
                 "Use all caps api key.",
                 "Use API KEY.",
                 "all caps text case command"
@@ -2092,6 +2107,11 @@ struct RomaCoreChecks {
                 "Use lowercase VoiceInk.",
                 "Use voiceink.",
                 "lowercase text case command"
+            ),
+            (
+                "Use lowercase API.",
+                "Use api.",
+                "explicit lowercase overrides acronym casing"
             ),
             (
                 "Use capitalize felix.",
@@ -2507,6 +2527,16 @@ struct RomaCoreChecks {
                 "The ellipsis symbol is useful.",
                 "The ellipsis symbol is useful.",
                 "ellipsis symbol prose guard"
+            ),
+            (
+                "The word api is lowercase in this example.",
+                "The word api is lowercase in this example.",
+                "literal acronym prose guard"
+            ),
+            (
+                "Use api.url in the example.",
+                "Use api.url in the example.",
+                "dotted acronym token guard"
             ),
             (
                 "The dash dash pattern is useful.",

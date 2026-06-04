@@ -312,6 +312,32 @@ public struct RomaTranscriptionOutputFilter {
     private static let compactConnectorWords: Set<String> = [
         "at", "back", "backslash", "dash", "dot", "forward", "hyphen", "sign", "slash", "underscore"
     ]
+    private static let commonTechnicalAcronyms = [
+        "ai": "AI",
+        "api": "API",
+        "asr": "ASR",
+        "cli": "CLI",
+        "cpu": "CPU",
+        "css": "CSS",
+        "csv": "CSV",
+        "gpu": "GPU",
+        "html": "HTML",
+        "http": "HTTP",
+        "https": "HTTPS",
+        "json": "JSON",
+        "llm": "LLM",
+        "ml": "ML",
+        "nlp": "NLP",
+        "pdf": "PDF",
+        "sdk": "SDK",
+        "sql": "SQL",
+        "stt": "STT",
+        "tts": "TTS",
+        "ui": "UI",
+        "url": "URL",
+        "ux": "UX",
+        "xml": "XML"
+    ]
     private static let blockedNextWordsForSpokenPossessive: Set<String> = [
         "character", "characters", "is", "mark", "marks", "means", "meaning", "suffix", "symbol", "symbols"
     ]
@@ -903,6 +929,7 @@ public struct RomaTranscriptionOutputFilter {
         filteredText = applySpokenContractionCommands(in: filteredText)
         filteredText = applySpokenPossessiveCommands(in: filteredText)
         filteredText = applySpokenNoSpaceCommands(in: filteredText)
+        filteredText = applyCommonTechnicalAcronymCasing(in: filteredText)
         filteredText = applySpokenTextCaseCommands(in: filteredText)
         filteredText = applySpokenCodeCaseCommands(in: filteredText)
         filteredText = applySpokenMarkdownCommands(in: filteredText)
@@ -2585,6 +2612,76 @@ public struct RomaTranscriptionOutputFilter {
         return compactText
     }
 
+    private static func applyCommonTechnicalAcronymCasing(in text: String) -> String {
+        let acronymPattern = commonTechnicalAcronyms.keys
+            .sorted { $0.count > $1.count }
+            .joined(separator: "|")
+        guard let regex = try? NSRegularExpression(
+            pattern: #"(?i)(?<![\p{L}\p{N}_./@:+#'-])(\#(acronymPattern))(?![\p{L}\p{N}_/@:+#'-]|\.[\p{L}\p{N}])"#
+        ) else {
+            return text
+        }
+
+        var formattedText = text
+        let matches = regex.matches(in: formattedText, range: NSRange(formattedText.startIndex..., in: formattedText))
+
+        for match in matches.reversed() {
+            guard match.numberOfRanges >= 2,
+                  let fullRange = Range(match.range(at: 0), in: formattedText),
+                  let acronymRange = Range(match.range(at: 1), in: formattedText),
+                  shouldApplyCommonTechnicalAcronymCasing(in: formattedText, acronymRange: fullRange) else {
+                continue
+            }
+
+            let key = String(formattedText[acronymRange]).lowercased()
+            guard let replacement = commonTechnicalAcronyms[key] else { continue }
+            formattedText.replaceSubrange(fullRange, with: replacement)
+        }
+
+        return formattedText
+    }
+
+    private static func shouldApplyCommonTechnicalAcronymCasing(
+        in text: String,
+        acronymRange: Range<String.Index>
+    ) -> Bool {
+        let beforeAcronym = String(text[..<acronymRange.lowerBound])
+        let afterAcronym = String(text[acronymRange.upperBound...])
+
+        if let previousWord = previousWord(in: beforeAcronym),
+           ["lowercase", "literal", "phrase", "word"].contains(previousWord) {
+            return false
+        }
+
+        if let nextWord = nextWord(in: afterAcronym),
+           ["lowercase", "phrase", "word"].contains(nextWord) {
+            return false
+        }
+
+        return !hasCompactAcronymDotContext(in: text, acronymRange: acronymRange)
+    }
+
+    private static func hasCompactAcronymDotContext(
+        in text: String,
+        acronymRange: Range<String.Index>
+    ) -> Bool {
+        if acronymRange.lowerBound > text.startIndex {
+            let previousIndex = text.index(before: acronymRange.lowerBound)
+            if text[previousIndex] == "." {
+                return true
+            }
+        }
+
+        guard acronymRange.upperBound < text.endIndex,
+              text[acronymRange.upperBound] == "." else {
+            return false
+        }
+
+        let afterDotIndex = text.index(after: acronymRange.upperBound)
+        return afterDotIndex < text.endIndex &&
+            (text[afterDotIndex].isLetter || text[afterDotIndex].isNumber)
+    }
+
     private static func applySpokenCodeCaseCommands(in text: String) -> String {
         var formattedText = text
 
@@ -3642,7 +3739,7 @@ public struct RomaTranscriptionOutputFilter {
 
     private static func protectPunctuationSpacingSpans(in text: String) -> (text: String, spans: [String]) {
         guard let regex = try? NSRegularExpression(
-            pattern: #"(?i)\b\d{1,2}:\d{2}(?::\d{2})?(?:\.\d{1,3})?\b|\b(?:https?://|www\.)[A-Za-z0-9._~:/?#\[\]@!$&'()*+,;=%-]+|(?<![\p{L}\p{N}])(?:[A-Za-z]{1,4}\.){2,}(?![\p{L}\p{N}])|(?<![\p{L}\p{N}])\.[A-Za-z][A-Za-z0-9._-]{0,63}"#
+            pattern: #"(?i)\b\d{1,2}:\d{2}(?::\d{2})?(?:\.\d{1,3})?\b|\b(?:https?://|www\.)[A-Za-z0-9._~:/?#\[\]@!$&'()*+,;=%-]+|\b[A-Za-z][A-Za-z0-9_-]{1,63}\.[A-Za-z][A-Za-z0-9_-]{1,63}(?:\.[A-Za-z][A-Za-z0-9_-]{1,63})*\b|(?<![\p{L}\p{N}])(?:[A-Za-z]{1,4}\.){2,}(?![\p{L}\p{N}])|(?<![\p{L}\p{N}])\.[A-Za-z][A-Za-z0-9._-]{0,63}"#
         ) else {
             return (text, [])
         }
