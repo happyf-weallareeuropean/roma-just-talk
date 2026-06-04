@@ -6778,8 +6778,8 @@ public struct RomaTranscriptionOutputFilter {
         guard !innerText.isEmpty else { return text }
 
         let pipeUnwrappedText = unwrapPipeWrappedFragment(innerText)
-        let squareUnwrappedText = unwrapSquareBracketedWholeOutput(pipeUnwrappedText)
-        let candidateText = squareUnwrappedText.trimmingCharacters(in: .whitespacesAndNewlines)
+        let nestedUnwrappedText = unwrapNoisyNestedBoundaryFragment(pipeUnwrappedText)
+        let candidateText = nestedUnwrappedText.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !candidateText.isEmpty else { return text }
         guard isShortFragment(candidateText) else { return text }
 
@@ -6790,6 +6790,52 @@ public struct RomaTranscriptionOutputFilter {
         }
 
         return candidateText
+    }
+
+    private static func unwrapNoisyNestedBoundaryFragment(_ text: String) -> String {
+        let trimmedText = text.trimmingCharacters(in: .whitespacesAndNewlines)
+        let squareUnwrappedText = unwrapSquareBracketedWholeOutput(trimmedText)
+        if squareUnwrappedText != trimmedText {
+            return squareUnwrappedText
+        }
+
+        guard let nonASCIIUnwrappedText = nonASCIIBoundaryInnerText(in: trimmedText),
+              isShortFragment(nonASCIIUnwrappedText),
+              removeTrailingNoisyFragmentPunctuation(from: nonASCIIUnwrappedText) != nonASCIIUnwrappedText else {
+            return text
+        }
+
+        return nonASCIIUnwrappedText
+    }
+
+    private static func nonASCIIBoundaryInnerText(in text: String) -> String? {
+        let trimmedText = text.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard let first = trimmedText.first,
+              let closing = nonASCIIClosingBoundary(for: first),
+              trimmedText.last == closing else {
+            return nil
+        }
+
+        let innerStart = trimmedText.index(after: trimmedText.startIndex)
+        let innerEnd = trimmedText.index(before: trimmedText.endIndex)
+        let innerText = String(trimmedText[innerStart..<innerEnd])
+            .trimmingCharacters(in: .whitespacesAndNewlines)
+        return innerText.isEmpty ? nil : innerText
+    }
+
+    private static func nonASCIIClosingBoundary(for opening: Character) -> Character? {
+        switch opening {
+        case "【": return "】"
+        case "《": return "》"
+        case "〈": return "〉"
+        case "（": return "）"
+        case "｛": return "｝"
+        case "［": return "］"
+        case "「": return "」"
+        case "『": return "』"
+        case "〔": return "〕"
+        default: return nil
+        }
     }
 
     private static func unwrapPipeWrappedFragment(_ text: String) -> String {
@@ -7039,6 +7085,7 @@ public struct RomaTranscriptionOutputFilter {
         result = removeTrailingFragmentPunctuationPreservingAbbreviation(from: result)
         result = removeTrailingSpacedFragmentSymbols(from: result)
         result = removeTrailingSentenceFragmentPunctuationInsidePreservedBoundary(from: result)
+        result = unwrapNoisyNestedBoundaryInsidePreservedBoundary(from: result)
         while let lastScalar = result.unicodeScalars.last,
               removableTrailingSentenceFragmentPunctuation.contains(lastScalar),
               isLikelyPunctuatedShortFragment(result) {
@@ -7098,7 +7145,8 @@ public struct RomaTranscriptionOutputFilter {
               let innerText = preservedBoundaryInnerText(in: candidate),
               let lastInnerScalar = innerText.trimmingCharacters(in: .whitespacesAndNewlines).unicodeScalars.last,
               removableTrailingFragmentPunctuation.contains(lastInnerScalar) ||
-                removableTrailingSentenceFragmentPunctuation.contains(lastInnerScalar) else {
+                removableTrailingSentenceFragmentPunctuation.contains(lastInnerScalar) ||
+                unwrapNoisyNestedBoundaryFragment(innerText) != innerText else {
             return text
         }
 
@@ -7197,6 +7245,27 @@ public struct RomaTranscriptionOutputFilter {
         }
 
         let cleanedInnerText = removeTrailingShortFragmentPunctuation(from: innerText)
+        return "\(first)\(cleanedInnerText)\(closing)"
+    }
+
+    private static func unwrapNoisyNestedBoundaryInsidePreservedBoundary(from text: String) -> String {
+        let trimmedText = text.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard let first = trimmedText.first,
+              let closing = preservedClosingBoundary(for: first),
+              trimmedText.last == closing,
+              let innerText = preservedBoundaryInnerText(in: trimmedText) else {
+            return text
+        }
+
+        let unwrappedInnerText = unwrapNoisyNestedBoundaryFragment(innerText)
+            .trimmingCharacters(in: .whitespacesAndNewlines)
+        guard unwrappedInnerText != innerText.trimmingCharacters(in: .whitespacesAndNewlines),
+              !unwrappedInnerText.isEmpty,
+              isShortFragment(unwrappedInnerText) else {
+            return text
+        }
+
+        let cleanedInnerText = removeTrailingNoisyFragmentPunctuation(from: unwrappedInnerText)
         return "\(first)\(cleanedInnerText)\(closing)"
     }
 

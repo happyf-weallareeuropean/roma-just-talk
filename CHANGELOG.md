@@ -2,6 +2,7 @@
 
 ## v1.81 - Unreleased
 
+- Cleaned quoted or angle-wrapped bracket artifacts around short mid-sentence fragments.
 - Cleaned single "yeah/okay/right" acknowledgements after leading pause fillers.
 - Cleaned "scratch this" correction commands while preserving ordinary "delete that/this" prose.
 - Preserved literal "yeah right" starts while cleaning stacked acknowledgement fillers.

@@ -3867,6 +3867,17 @@ struct RomaCoreChecks {
             "insertion polish should unwrap angle-wrapped square-bracketed fragments"
         )
         try require(
+            RomaTranscriptionOutputFilter.applyInsertionPolish(
+                "\"[A final word.]\".",
+                context: midSentenceContext
+            ) == "\"a final word\"",
+            "insertion polish should unwrap quoted square-bracketed final phrases"
+        )
+        try require(
+            RomaTranscriptionOutputFilter.applyInsertionPolish("<【Model.】>", context: midSentenceContext) == "model",
+            "insertion polish should unwrap angle-wrapped full-width bracketed fragments"
+        )
+        try require(
             RomaTranscriptionOutputFilter.applyInsertionPolish("<|Model.|>", context: midSentenceContext) == "model",
             "insertion polish should unwrap angle-wrapped pipe fragments"
         )
