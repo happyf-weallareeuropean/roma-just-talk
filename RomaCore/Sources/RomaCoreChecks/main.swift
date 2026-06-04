@@ -1827,6 +1827,16 @@ struct RomaCoreChecks {
                 "cardinal spoken sequence list"
             ),
             (
+                "Number one finish the report number two send the slides.",
+                "1. finish the report\n2. send the slides.",
+                "number-prefixed spoken sequence list"
+            ),
+            (
+                "My top goals are number one finish the report number two send the slides.",
+                "My top goals are\n1. finish the report\n2. send the slides.",
+                "prefixed number spoken sequence list"
+            ),
+            (
                 "Plan first confirm scope second ship patch.",
                 "Plan\n1. confirm scope\n2. ship patch.",
                 "ordinal spoken sequence list"
@@ -2090,6 +2100,16 @@ struct RomaCoreChecks {
                 "The first item is setup. The second item is launch.",
                 "The first item is setup. The second item is launch.",
                 "spoken sequence prose guard"
+            ),
+            (
+                "The number one priority is focus.",
+                "The number one priority is focus.",
+                "number one prose guard"
+            ),
+            (
+                "Compare option one and two tomorrow.",
+                "Compare option one and two tomorrow.",
+                "connector spoken sequence prose guard"
             ),
             (
                 "The phrase skip a line is useful.",

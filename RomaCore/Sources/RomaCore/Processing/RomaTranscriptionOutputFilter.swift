@@ -394,7 +394,7 @@ public struct RomaTranscriptionOutputFilter {
         "thinking", "trying", "waiting", "working"
     ]
     private static let inlineNumberedListMarkerPattern = #"(?<![\p{L}\p{N}])\d{1,2}\.\s+(?=\S)"#
-    private static let spokenSequenceListMarkerPattern = #"(?i)(?<![\p{L}\p{N}])(one|two|three|four|five|six|seven|eight|nine|first|second|third|fourth|fifth|sixth|seventh|eighth|ninth)(?:[.)])?[ \t]+(?=\S)"#
+    private static let spokenSequenceListMarkerPattern = #"(?i)(?<![\p{L}\p{N}])(?:number[ \t]+)?(one|two|three|four|five|six|seven|eight|nine|first|second|third|fourth|fifth|sixth|seventh|eighth|ninth)(?:[.)])?[ \t]+(?=\S)"#
     private static let spokenSequenceListMarkerValues: [String: Int] = [
         "one": 1, "first": 1,
         "two": 2, "second": 2,
@@ -411,9 +411,9 @@ public struct RomaTranscriptionOutputFilter {
         "section", "that", "the", "their", "these", "this", "those", "version", "your"
     ]
     private static let blockedNextWordsForSpokenSequenceListMarkers: Set<String> = [
-        "billion", "cent", "cents", "dollar", "dollars", "grade", "grades", "hundred",
+        "and", "billion", "cent", "cents", "dollar", "dollars", "grade", "grades", "hundred",
         "item", "items", "line", "lines", "million", "percent", "place", "places",
-        "point", "second", "seconds", "thing", "things", "thousand", "time", "times"
+        "point", "or", "second", "seconds", "thing", "things", "thousand", "time", "times"
     ]
     private static let markdownHeadingPattern = #"(?im)(^|\n)[ \t]*(?:heading|header)[ \t]+(one|two|three|1|2|3)[ \t]+([^\n]+)"#
     private static let uncheckedMarkdownTaskPattern = #"(?im)(^|\n)[ \t]*(?:todo|to[ \t]+do|checkbox|check[ \t]+box|unchecked[ \t]+(?:task|checkbox|check[ \t]+box))[ \t]+([^\n]+)"#
