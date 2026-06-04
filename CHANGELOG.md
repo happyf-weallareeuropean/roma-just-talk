@@ -44,6 +44,7 @@
 - Kept cloud and local Windows laptop startup shortcut proofs in separate proof-owned directories.
 - Made the Windows installer fail early when the installed listener executable is still running.
 - Made the Windows installer preserve the packaged proof agent and proof-set scripts.
+- Verified installed Windows proof-surface files against the packaged artifact hashes.
 - Rejected zero-length, non-finite, and overflowing Windows record and hold proof windows before runtime.
 - Hardened the Windows laptop proof runner to fail early outside Windows or with missing local whisper files.
 - Strengthened full Windows laptop proof-set validation to require the reports come from the same machine and packaged artifact.

@@ -5418,6 +5418,18 @@ struct RomaCoreChecks {
             "Windows installer should preserve the packaged proof surface"
         )
         try require(
+            proveScript.contains("installed_proof_agent") &&
+                proveScript.contains("installed_laptop_proof_script") &&
+                proveScript.contains("installed_check_set_script"),
+            "Windows artifact proof reports should record the installed proof surface"
+        )
+        try require(
+            checkReportScript.contains("installed_proof_agent_matches_package") &&
+                checkReportScript.contains("installed_laptop_proof_script_matches_package") &&
+                checkReportScript.contains("installed_check_set_script_matches_package"),
+            "Windows proof checker should verify installed proof surface hashes"
+        )
+        try require(
             checkSetScript.contains("proof_session_id"),
             "Windows proof-set checker should compare proof session ids across laptop reports"
         )

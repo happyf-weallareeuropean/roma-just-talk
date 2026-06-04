@@ -711,18 +711,48 @@ if ($RequirePackagedMock) {
 
 if ($RequireInstall) {
     $installedAgent = Require-Property -Object $files -Name "installed_agent"
+    $installedProofAgent = Require-Property -Object $files -Name "installed_proof_agent"
     $installedRunScript = Require-Property -Object $files -Name "installed_run_script"
+    $installedProofScript = Require-Property -Object $files -Name "installed_proof_script"
+    $installedLaptopProofScript = Require-Property -Object $files -Name "installed_laptop_proof_script"
+    $installedCheckReportScript = Require-Property -Object $files -Name "installed_check_report_script"
+    $installedCheckSetScript = Require-Property -Object $files -Name "installed_check_set_script"
     Assert-FileProof -Proof $installedAgent -Name "installed_agent"
+    Assert-FileProof -Proof $installedProofAgent -Name "installed_proof_agent"
     Assert-FileProof -Proof $installedRunScript -Name "installed_run_script"
+    Assert-FileProof -Proof $installedProofScript -Name "installed_proof_script"
+    Assert-FileProof -Proof $installedLaptopProofScript -Name "installed_laptop_proof_script"
+    Assert-FileProof -Proof $installedCheckReportScript -Name "installed_check_report_script"
+    Assert-FileProof -Proof $installedCheckSetScript -Name "installed_check_set_script"
     Assert-FileHashEquals `
         -ActualProof $installedAgent `
         -ExpectedProof (Require-Property -Object $files -Name "packaged_agent") `
         -Name "installed_agent_matches_package"
+    Assert-FileHashEquals `
+        -ActualProof $installedProofAgent `
+        -ExpectedProof (Require-Property -Object $files -Name "packaged_proof_agent") `
+        -Name "installed_proof_agent_matches_package"
     $packageIdentityFiles = Require-Property -Object $packageIdentity -Name "files"
     Assert-FileHashEquals `
         -ActualProof $installedRunScript `
         -ExpectedProof (Require-Property -Object $packageIdentityFiles -Name "run-windows-agent.ps1") `
         -Name "installed_run_script_matches_package"
+    Assert-FileHashEquals `
+        -ActualProof $installedProofScript `
+        -ExpectedProof (Require-Property -Object $packageIdentityFiles -Name "prove-windows-agent-artifact.ps1") `
+        -Name "installed_proof_script_matches_package"
+    Assert-FileHashEquals `
+        -ActualProof $installedLaptopProofScript `
+        -ExpectedProof (Require-Property -Object $packageIdentityFiles -Name "run-windows-laptop-proof.ps1") `
+        -Name "installed_laptop_proof_script_matches_package"
+    Assert-FileHashEquals `
+        -ActualProof $installedCheckReportScript `
+        -ExpectedProof (Require-Property -Object $packageIdentityFiles -Name "check-windows-proof-report.ps1") `
+        -Name "installed_check_report_script_matches_package"
+    Assert-FileHashEquals `
+        -ActualProof $installedCheckSetScript `
+        -ExpectedProof (Require-Property -Object $packageIdentityFiles -Name "check-windows-proof-set.ps1") `
+        -Name "installed_check_set_script_matches_package"
 
     $config = Require-Property -Object $report -Name "config"
     Assert-FileProof -Proof $config -Name "config"

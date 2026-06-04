@@ -828,7 +828,12 @@ function Write-ProofReport {
             packaged_proof_agent = (Get-FileHashProof -Path $script:proofAgentPath)
             packaged_whisper_cli_mock = (Get-FileHashProof -Path $script:packagedWhisperCLI)
             installed_agent = (Get-FileHashProof -Path (Join-Path $InstallDir "RomaWindowsAgent.exe"))
+            installed_proof_agent = (Get-FileHashProof -Path (Join-Path $InstallDir "RomaProofAgent.exe"))
             installed_run_script = (Get-FileHashProof -Path (Join-Path $InstallDir "run-windows-agent.ps1"))
+            installed_proof_script = (Get-FileHashProof -Path (Join-Path $InstallDir "prove-windows-agent-artifact.ps1"))
+            installed_laptop_proof_script = (Get-FileHashProof -Path (Join-Path $InstallDir "run-windows-laptop-proof.ps1"))
+            installed_check_report_script = (Get-FileHashProof -Path (Join-Path $InstallDir "check-windows-proof-report.ps1"))
+            installed_check_set_script = (Get-FileHashProof -Path (Join-Path $InstallDir "check-windows-proof-set.ps1"))
         }
         manifest = $script:artifactManifest
         package_identity = (Get-PackageIdentityProof)
