@@ -1727,6 +1727,26 @@ struct RomaCoreChecks {
                 "unpunctuated terminal i mean filler"
             ),
             (
+                "This works like",
+                "This works",
+                "unpunctuated terminal like filler"
+            ),
+            (
+                "This works basically",
+                "This works",
+                "unpunctuated terminal basically filler"
+            ),
+            (
+                "This works or something",
+                "This works",
+                "unpunctuated terminal or something filler"
+            ),
+            (
+                "This works or whatever",
+                "This works",
+                "unpunctuated terminal or whatever filler"
+            ),
+            (
                 "This works, um yeah.",
                 "This works.",
                 "terminal pause plus acknowledgement filler"
@@ -3900,6 +3920,21 @@ struct RomaCoreChecks {
                 "We can call it done.",
                 "We can call it done.",
                 "call it clause prose guard"
+            ),
+            (
+                "Click like",
+                "Click like",
+                "terminal like command guard"
+            ),
+            (
+                "I like",
+                "I like",
+                "terminal like prose guard"
+            ),
+            (
+                "This is basically",
+                "This is basically",
+                "terminal basically copula guard"
             ),
             (
                 "This, however, works.",

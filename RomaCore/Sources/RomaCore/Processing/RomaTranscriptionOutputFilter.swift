@@ -449,6 +449,10 @@ public struct RomaTranscriptionOutputFilter {
         "do", "does", "did", "don't", "explain", "if", "know", "phrase", "say", "saying",
         "tell", "that", "what", "whether", "will", "would"
     ]
+    private static let blockedPreviousWordsForTerminalHedgeTail: Set<String> = [
+        "am", "are", "be", "been", "being", "choose", "click", "feel", "feels", "hit",
+        "is", "like", "looks", "press", "select", "seems", "tap", "was", "were"
+    ]
     private static let allowedPreviousWordsForUnpunctuatedLikeFiller: Set<String> = [
         "am", "are", "be", "been", "being", "i'm", "im", "is", "it's", "its",
         "that's", "thats", "they're", "theyre", "was", "we're", "were", "you're", "youre"
@@ -1311,6 +1315,7 @@ public struct RomaTranscriptionOutputFilter {
         filteredText = removeLeadingSoFiller(from: filteredText)
         filteredText = removePunctuatedDiscourseFillers(from: filteredText)
         filteredText = removeTerminalDiscourseFillers(from: filteredText)
+        filteredText = removeTerminalHedgeFillerTails(from: filteredText)
         filteredText = removeTerminalAcknowledgementFillers(from: filteredText)
         filteredText = removeUnpunctuatedLikeFillers(from: filteredText)
         filteredText = removeUnpunctuatedHedgeFillers(from: filteredText)
@@ -1688,6 +1693,35 @@ public struct RomaTranscriptionOutputFilter {
             guard !blockedPreviousWordsForTerminalIMean.contains(previousWord) else {
                 return text
             }
+        }
+
+        let punctuation = Range(match.range(at: 3), in: text)
+            .map { String(text[$0]) } ?? ""
+        return "\(trimmedPrefix)\(punctuation)"
+    }
+
+    private static func removeTerminalHedgeFillerTails(from text: String) -> String {
+        guard let regex = try? NSRegularExpression(
+            pattern: #"(?i)^([\s\S]*?)[ \t]+(like|basically|or[ \t]+something|or[ \t]+whatever)[ \t]*([.!?])?\s*$"#
+        ) else {
+            return text
+        }
+
+        let range = NSRange(text.startIndex..., in: text)
+        guard let match = regex.firstMatch(in: text, range: range),
+              match.numberOfRanges >= 4,
+              let prefixRange = Range(match.range(at: 1), in: text) else {
+            return text
+        }
+
+        let trimmedPrefix = String(text[prefixRange])
+            .trimmingCharacters(in: .whitespacesAndNewlines)
+            .trimmingCharacters(in: softPhrasePunctuation)
+            .trimmingCharacters(in: .whitespacesAndNewlines)
+        guard wordCount(in: trimmedPrefix) >= 2,
+              let previousWord = previousWord(in: trimmedPrefix),
+              !blockedPreviousWordsForTerminalHedgeTail.contains(previousWord) else {
+            return text
         }
 
         let punctuation = Range(match.range(at: 3), in: text)
