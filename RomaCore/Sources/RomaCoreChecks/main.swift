@@ -1864,6 +1864,21 @@ struct RomaCoreChecks {
                 "put in quotes enclosure"
             ),
             (
+                "Use open parenthesis model end parenthesis now.",
+                "Use (model) now.",
+                "end parenthesis enclosure"
+            ),
+            (
+                "Use open bracket draft end bracket now.",
+                "Use [draft] now.",
+                "end bracket enclosure"
+            ),
+            (
+                "Use open brace user id colon one end brace now.",
+                "Use {user id: one} now.",
+                "end brace enclosure"
+            ),
+            (
                 "Hello, comma world.",
                 "Hello, world.",
                 "spoken comma over auto comma"
@@ -3000,12 +3015,20 @@ struct RomaCoreChecks {
             "insertion spacing should add a space before standalone opening parenthesis commands"
         )
         try require(
+            RomaTranscriptionOutputFilter.applyInsertionPolish("End parenthesis.", context: variableContext) == ")",
+            "insertion polish should attach standalone end parenthesis commands"
+        )
+        try require(
             RomaTranscriptionOutputFilter.applyInsertionPolish("Close bracket.", context: variableContext) == "]",
             "insertion polish should attach standalone close bracket commands"
         )
         try require(
             RomaTranscriptionOutputFilter.applyInsertionSpacing("]", context: variableContext) == "]",
             "insertion spacing should attach standalone closing bracket commands"
+        )
+        try require(
+            RomaTranscriptionOutputFilter.applyInsertionPolish("End brace.", context: variableContext) == "}",
+            "insertion polish should attach standalone end brace commands"
         )
         try require(
             RomaTranscriptionOutputFilter.applyInsertionPolish(

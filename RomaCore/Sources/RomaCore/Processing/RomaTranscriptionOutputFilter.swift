@@ -579,11 +579,11 @@ public struct RomaTranscriptionOutputFilter {
         (#"(?i)(?<![\p{L}\p{N}])(?:open|start)\s+(?:quote|quotation\s+marks?)(?![\p{L}\p{N}])"#, openQuotePlaceholder),
         (#"(?i)(?<![\p{L}\p{N}])(?:close|end)\s+(?:quote|quotation\s+marks?)(?![\p{L}\p{N}])"#, closeQuotePlaceholder),
         (#"(?i)(?<![\p{L}\p{N}])(?:open|left)\s+(?:paren|parenthesis|parentheses)(?![\p{L}\p{N}])"#, openParenthesisPlaceholder),
-        (#"(?i)(?<![\p{L}\p{N}])(?:close|right)\s+(?:paren|parenthesis|parentheses)(?![\p{L}\p{N}])"#, closeParenthesisPlaceholder),
+        (#"(?i)(?<![\p{L}\p{N}])(?:close|right|end)\s+(?:paren|parenthesis|parentheses)(?![\p{L}\p{N}])"#, closeParenthesisPlaceholder),
         (#"(?i)(?<![\p{L}\p{N}])(?:open|left)\s+(?:square\s+)?bracket(?![\p{L}\p{N}])"#, openBracketPlaceholder),
-        (#"(?i)(?<![\p{L}\p{N}])(?:close|right)\s+(?:square\s+)?bracket(?![\p{L}\p{N}])"#, closeBracketPlaceholder),
+        (#"(?i)(?<![\p{L}\p{N}])(?:close|right|end)\s+(?:square\s+)?bracket(?![\p{L}\p{N}])"#, closeBracketPlaceholder),
         (#"(?i)(?<![\p{L}\p{N}])(?:open|left)\s+(?:curly\s+)?brace(?![\p{L}\p{N}])"#, openBracePlaceholder),
-        (#"(?i)(?<![\p{L}\p{N}])(?:close|right)\s+(?:curly\s+)?brace(?![\p{L}\p{N}])"#, closeBracePlaceholder)
+        (#"(?i)(?<![\p{L}\p{N}])(?:close|right|end)\s+(?:curly\s+)?brace(?![\p{L}\p{N}])"#, closeBracePlaceholder)
     ]
     private static let spokenDoubleQuotePairPattern = #"(?i)(?<![\p{L}\p{N}])quote[ \t]+([^.!?\n]{1,160}?)[ \t]+unquote([.!?])?(?![\p{L}\p{N}])"#
     private static let spokenSingleQuotePairPattern = #"(?i)(?<![\p{L}\p{N}])single[ \t]+quote[ \t]+([^.!?\n]{1,160}?)[ \t]+single[ \t]+quote([.!?])?(?![\p{L}\p{N}])"#
@@ -827,6 +827,9 @@ public struct RomaTranscriptionOutputFilter {
         "right paren": ")",
         "right parenthesis": ")",
         "right parentheses": ")",
+        "end paren": ")",
+        "end parenthesis": ")",
+        "end parentheses": ")",
         "open bracket": "[",
         "open square bracket": "[",
         "left bracket": "[",
@@ -835,6 +838,8 @@ public struct RomaTranscriptionOutputFilter {
         "close square bracket": "]",
         "right bracket": "]",
         "right square bracket": "]",
+        "end bracket": "]",
+        "end square bracket": "]",
         "open brace": "{",
         "open curly brace": "{",
         "left brace": "{",
@@ -842,7 +847,9 @@ public struct RomaTranscriptionOutputFilter {
         "close brace": "}",
         "close curly brace": "}",
         "right brace": "}",
-        "right curly brace": "}"
+        "right curly brace": "}",
+        "end brace": "}",
+        "end curly brace": "}"
     ]
 
     public static func filter(

@@ -2,6 +2,7 @@
 
 ## v1.81 - Unreleased
 
+- Treated "end parenthesis", "end bracket", and "end brace" as spoken closing-enclosure commands.
 - Formatted nested spoken numbered outlines using "indent", "sub", "outdent", and "dedent" commands.
 - Formatted nested spoken bullet outlines using "indent", "sub", "outdent", and "dedent" commands.
 - Formatted compact spoken markdown tables such as "markdown table name age row Felix thirty".
