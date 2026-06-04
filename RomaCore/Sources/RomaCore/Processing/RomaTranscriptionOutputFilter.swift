@@ -246,7 +246,7 @@ public struct RomaTranscriptionOutputFilter {
     private static let removableLeadingFragmentPunctuation = CharacterSet(charactersIn: ".,;:…-–—。．，、；：")
     private static let removableTrailingFragmentPunctuation = CharacterSet(charactersIn: ".,;:…-–—。．，、；：")
     private static let removableTrailingSentenceFragmentPunctuation = CharacterSet(charactersIn: "!?！？")
-    private static let removableLeadingSpacedFragmentSymbols = "/\\|"
+    private static let removableLeadingSpacedFragmentSymbols = "/\\|•‣◦"
     private static let removableTrailingSpacedFragmentSymbols = "/\\|"
     private static let removableOpeningNonASCIIBoundaryWrappers = CharacterSet(charactersIn: "【《〈（｛［「『〔")
     private static let nonSpeechBracketContents: Set<String> = [
@@ -6395,6 +6395,7 @@ public struct RomaTranscriptionOutputFilter {
         }
         strippedText = unwrapNestedSquareBracketedBoundaryOutput(strippedText)
         strippedText = unwrapNoisyAngleBracketedBoundaryOutput(strippedText)
+        strippedText = unwrapNoisyMarkdownBoundaryOutput(strippedText)
         guard isShortFragment(strippedText) else { return strippedText }
 
         if hasPreservedBalancedBoundary(strippedText) ||
@@ -6460,6 +6461,44 @@ public struct RomaTranscriptionOutputFilter {
         let innerEnd = trimmedText.index(before: trimmedText.endIndex)
         return String(trimmedText[innerStart..<innerEnd])
             .trimmingCharacters(in: .whitespacesAndNewlines)
+    }
+
+    private static func unwrapNoisyMarkdownBoundaryOutput(_ text: String) -> String {
+        let trimmedText = text.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard let marker = trimmedText.first,
+              marker == "*" || marker == "_" else {
+            return text
+        }
+
+        var markerCount = 0
+        var prefixEnd = trimmedText.startIndex
+        while prefixEnd < trimmedText.endIndex,
+              trimmedText[prefixEnd] == marker,
+              markerCount < 3 {
+            markerCount += 1
+            prefixEnd = trimmedText.index(after: prefixEnd)
+        }
+        guard markerCount > 0,
+              prefixEnd < trimmedText.endIndex else {
+            return text
+        }
+
+        var suffixStart = trimmedText.endIndex
+        for _ in 0..<markerCount {
+            guard suffixStart > prefixEnd else { return text }
+            suffixStart = trimmedText.index(before: suffixStart)
+            guard trimmedText[suffixStart] == marker else { return text }
+        }
+
+        let innerText = String(trimmedText[prefixEnd..<suffixStart])
+            .trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !innerText.isEmpty,
+              isShortFragment(innerText),
+              removeTrailingNoisyFragmentPunctuation(from: innerText) != innerText else {
+            return text
+        }
+
+        return innerText
     }
 
     private static func startsWithRemovableNonASCIIBoundaryWrapper(_ text: String) -> Bool {

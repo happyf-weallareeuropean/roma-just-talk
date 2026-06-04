@@ -458,6 +458,34 @@ struct RomaCoreChecks {
             "shared insertion polish should preserve literal angle tokens"
         )
         try require(
+            RomaTranscriptionOutputFilter.applyInsertionPolish("*Model.*", context: midSentenceContext) == "model",
+            "shared insertion polish should unwrap noisy starred fragments"
+        )
+        try require(
+            RomaTranscriptionOutputFilter.applyInsertionPolish("_Model._", context: midSentenceContext) == "model",
+            "shared insertion polish should unwrap noisy underscored fragments"
+        )
+        try require(
+            RomaTranscriptionOutputFilter.applyInsertionPolish("**Model.**", context: midSentenceContext) == "model",
+            "shared insertion polish should unwrap noisy bold markdown fragments"
+        )
+        try require(
+            RomaTranscriptionOutputFilter.applyInsertionPolish("__Model.__", context: midSentenceContext) == "model",
+            "shared insertion polish should unwrap noisy bold underscore fragments"
+        )
+        try require(
+            RomaTranscriptionOutputFilter.applyInsertionPolish("*model*", context: midSentenceContext) == "*model*",
+            "shared insertion polish should preserve literal starred tokens"
+        )
+        try require(
+            RomaTranscriptionOutputFilter.applyInsertionPolish("_model_", context: midSentenceContext) == "_model_",
+            "shared insertion polish should preserve literal underscored tokens"
+        )
+        try require(
+            RomaTranscriptionOutputFilter.applyInsertionPolish("• Model.", context: midSentenceContext) == "model",
+            "shared insertion polish should remove leading bullet fragment noise"
+        )
+        try require(
             RomaTranscriptionOutputFilter.applyInsertionPolish("【Model.】", context: midSentenceContext) == "model",
             "shared insertion polish should unwrap corner-bracketed fragments"
         )
@@ -3407,6 +3435,34 @@ struct RomaCoreChecks {
         try require(
             RomaTranscriptionOutputFilter.applyInsertionPolish("<model>", context: midSentenceContext) == "<model>",
             "insertion polish should preserve literal angle tokens"
+        )
+        try require(
+            RomaTranscriptionOutputFilter.applyInsertionPolish("*Model.*", context: midSentenceContext) == "model",
+            "insertion polish should unwrap noisy starred fragments"
+        )
+        try require(
+            RomaTranscriptionOutputFilter.applyInsertionPolish("_Model._", context: midSentenceContext) == "model",
+            "insertion polish should unwrap noisy underscored fragments"
+        )
+        try require(
+            RomaTranscriptionOutputFilter.applyInsertionPolish("**Model.**", context: midSentenceContext) == "model",
+            "insertion polish should unwrap noisy bold markdown fragments"
+        )
+        try require(
+            RomaTranscriptionOutputFilter.applyInsertionPolish("__Model.__", context: midSentenceContext) == "model",
+            "insertion polish should unwrap noisy bold underscore fragments"
+        )
+        try require(
+            RomaTranscriptionOutputFilter.applyInsertionPolish("*model*", context: midSentenceContext) == "*model*",
+            "insertion polish should preserve literal starred tokens"
+        )
+        try require(
+            RomaTranscriptionOutputFilter.applyInsertionPolish("_model_", context: midSentenceContext) == "_model_",
+            "insertion polish should preserve literal underscored tokens"
+        )
+        try require(
+            RomaTranscriptionOutputFilter.applyInsertionPolish("• Model.", context: midSentenceContext) == "model",
+            "insertion polish should remove leading bullet fragment noise"
         )
         try require(
             RomaTranscriptionOutputFilter.applyInsertionPolish("'Model.'", context: nil) == "'model'",

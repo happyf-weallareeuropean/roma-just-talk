@@ -2,6 +2,7 @@
 
 ## v1.81 - Unreleased
 
+- Cleaned noisy markdown and bullet wrappers around short mid-sentence fragments.
 - Cleaned noisy angle wrappers around short mid-sentence fragments.
 - Cleaned nested quote/parenthesis wrappers around bracketed final-word artifacts.
 - Cleaned repeated trailing slash and pipe artifacts from short mid-sentence fragments.
