@@ -243,9 +243,9 @@ public struct RomaTranscriptionOutputFilter {
     private static let maxInsertionContextCharacters = 512
     private static let apostropheLikeCharacters = CharacterSet(charactersIn: "'’‘ʼ＇")
     private static let removableLeadingPausePunctuation = CharacterSet(charactersIn: ".…")
-    private static let removableLeadingFragmentPunctuation = CharacterSet(charactersIn: ".,;:…-–—")
-    private static let removableTrailingFragmentPunctuation = CharacterSet(charactersIn: ".,;:…-–—")
-    private static let removableTrailingSentenceFragmentPunctuation = CharacterSet(charactersIn: "!?")
+    private static let removableLeadingFragmentPunctuation = CharacterSet(charactersIn: ".,;:…-–—。．，、；：")
+    private static let removableTrailingFragmentPunctuation = CharacterSet(charactersIn: ".,;:…-–—。．，、；：")
+    private static let removableTrailingSentenceFragmentPunctuation = CharacterSet(charactersIn: "!?！？")
     private static let removableLeadingSpacedFragmentSymbols = "/\\|"
     private static let removableTrailingSpacedFragmentSymbols = "/\\|"
     private static let nonSpeechBracketContents: Set<String> = [
@@ -6396,7 +6396,7 @@ public struct RomaTranscriptionOutputFilter {
             return normalizeWhitespace(strippedText)
         }
 
-        let boundaryCharacters = CharacterSet(charactersIn: #"[]{}()"“”‘’'"`"#)
+        let boundaryCharacters = CharacterSet(charactersIn: #"[]{}()"“”‘’'"`【】《》〈〉（）｛｝"#)
         strippedText = strippedText.trimmingCharacters(in: boundaryCharacters.union(.whitespacesAndNewlines))
         return normalizeWhitespace(strippedText)
     }

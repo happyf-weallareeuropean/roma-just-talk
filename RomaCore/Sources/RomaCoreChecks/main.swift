@@ -342,6 +342,18 @@ struct RomaCoreChecks {
             "shared insertion polish should remove noisy pipe symbols from mid-sentence fragments"
         )
         try require(
+            RomaTranscriptionOutputFilter.applyInsertionPolish("Model。", context: midSentenceContext) == "model",
+            "shared insertion polish should remove noisy full-width periods from mid-sentence fragments"
+        )
+        try require(
+            RomaTranscriptionOutputFilter.applyInsertionPolish("Model？", context: midSentenceContext) == "model",
+            "shared insertion polish should remove noisy full-width question marks from mid-sentence fragments"
+        )
+        try require(
+            RomaTranscriptionOutputFilter.applyInsertionPolish("Model！", context: midSentenceContext) == "model",
+            "shared insertion polish should remove noisy full-width exclamation marks from mid-sentence fragments"
+        )
+        try require(
             RomaTranscriptionOutputFilter.applyInsertionPolish("What?", context: midSentenceContext) == "what?",
             "shared insertion polish should preserve one-word question fragments"
         )
@@ -401,6 +413,22 @@ struct RomaCoreChecks {
         try require(
             RomaTranscriptionOutputFilter.applyInsertionPolish("| [Model.]", context: midSentenceContext) == "model",
             "shared insertion polish should unwrap pipe-prefixed bracketed fragments"
+        )
+        try require(
+            RomaTranscriptionOutputFilter.applyInsertionPolish("【Model.】", context: midSentenceContext) == "model",
+            "shared insertion polish should unwrap corner-bracketed fragments"
+        )
+        try require(
+            RomaTranscriptionOutputFilter.applyInsertionPolish("《Model.》", context: midSentenceContext) == "model",
+            "shared insertion polish should unwrap book-title-bracketed fragments"
+        )
+        try require(
+            RomaTranscriptionOutputFilter.applyInsertionPolish("（Model.）", context: midSentenceContext) == "model",
+            "shared insertion polish should unwrap full-width parenthesized fragments"
+        )
+        try require(
+            RomaTranscriptionOutputFilter.applyInsertionPolish("... 【Model.】", context: midSentenceContext) == "model",
+            "shared insertion polish should unwrap ellipsis-prefixed corner-bracketed fragments"
         )
         try require(
             RomaTranscriptionOutputFilter.applyInsertionPolish("\ndetails.", context: midSentenceContext) == "\ndetails",
