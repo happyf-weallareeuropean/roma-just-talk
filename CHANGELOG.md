@@ -51,6 +51,7 @@
 - Prevented generated Windows proof artifacts from making clean package provenance appear dirty.
 - Required Windows CI packaging to reject artifacts whose manifest does not show clean source provenance.
 - Required Windows agent packaging to run on Windows so non-Windows Swift binaries cannot be mislabeled as laptop artifacts.
+- Required Windows artifact proof reports to assert native adapter runtime availability from `RomaProofAgent`.
 - Added a packaged Windows laptop proof runner that executes cloud dictation, local whisper dictation, Notepad paste, and proof-set validation through existing scripts.
 - Added a Windows proof-set checker for full laptop and artifact-smoke report bundles.
 - Strengthened Windows laptop proof profiles to reject loopback/mock cloud endpoints and packaged mock whisper backends.

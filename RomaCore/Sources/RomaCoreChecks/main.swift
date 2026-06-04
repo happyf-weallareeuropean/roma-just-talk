@@ -4953,6 +4953,10 @@ struct RomaCoreChecks {
             contentsOf: scriptsRoot.appendingPathComponent("check-windows-proof-set.ps1"),
             encoding: .utf8
         )
+        let proofAgentSource = try String(
+            contentsOf: packageRoot.appendingPathComponent("Sources/RomaProofAgent/main.swift"),
+            encoding: .utf8
+        )
         let workflowScript = try String(
             contentsOf: repositoryRoot.appendingPathComponent(".github/workflows/romacore.yml"),
             encoding: .utf8
@@ -4997,6 +5001,14 @@ struct RomaCoreChecks {
         try require(
             checkReportScript.contains("source_commit to be a 40-character git SHA"),
             "Windows proof checker should reject missing or malformed source commits"
+        )
+        try require(
+            proofAgentSource.contains(#"print("native_windows_adapters=true")"#),
+            "Windows proof agent should print native adapter runtime availability on Windows"
+        )
+        try require(
+            checkReportScript.contains(#"Assert-Boolean -Object $Proof -Name "native_windows_adapters" -Expected $true"#),
+            "Windows proof checker should require native adapter runtime evidence from the proof agent"
         )
         try require(
             checkSetScript.contains("manifest.source_commit"),

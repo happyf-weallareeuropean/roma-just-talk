@@ -58,7 +58,11 @@ struct RomaProofAgent {
         print("pre_roll_seconds=\(PreRollConfiguration().durationSeconds)")
         print("audio_format=pcm16_16000_mono")
         print("wav_writer=true")
+        #if os(Windows)
+        print("native_windows_adapters=true")
+        #else
         print("native_windows_adapters=false")
+        #endif
         print("windows_register_hotkey_adapter_source=true")
         print("windows_low_level_keyboard_hook_source=true")
         print("windows_paste_adapter_source=true")

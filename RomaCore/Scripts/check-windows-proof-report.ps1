@@ -371,6 +371,7 @@ function Assert-ProofAgentDoctorOutputProof {
 
     Assert-Boolean -Object $Proof -Name "output_present" -Expected $true
     Assert-Boolean -Object $Proof -Name "swift_core" -Expected $true
+    Assert-Boolean -Object $Proof -Name "native_windows_adapters" -Expected $true
     Assert-Boolean -Object $Proof -Name "pre_roll_config" -Expected $true
     Assert-Boolean -Object $Proof -Name "windows_paste_adapter_source" -Expected $true
     Assert-Boolean -Object $Proof -Name "windows_permission_surface_source" -Expected $true

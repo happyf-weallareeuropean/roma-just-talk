@@ -646,6 +646,7 @@ function Get-ProofAgentDoctorOutputProof {
     return [ordered]@{
         output_present = ![string]::IsNullOrWhiteSpace($Output)
         swift_core = $Output.Contains("swift_core=true")
+        native_windows_adapters = $Output.Contains("native_windows_adapters=true")
         pre_roll_config = $Output.Contains("pre_roll_seconds=")
         windows_paste_adapter_source = $Output.Contains("windows_paste_adapter_source=true")
         windows_permission_surface_source = $Output.Contains("windows_permission_surface_source=true")
