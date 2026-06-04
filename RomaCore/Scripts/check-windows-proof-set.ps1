@@ -363,6 +363,11 @@ function Assert-LaptopPreflightReport {
     $proofSessionId = Assert-NonEmptyReportString -Report $report -Name "proof_session_id" -ReportName $reportName
     $packageDir = Assert-NonEmptyReportString -Report $report -Name "package_dir" -ReportName $reportName
     $proofDir = Assert-NonEmptyReportString -Report $report -Name "proof_dir" -ReportName $reportName
+    $packageFingerprint = Get-ReportPackageFingerprint -Report $report -ReportName $reportName
+    if ([string]::IsNullOrWhiteSpace($packageFingerprint)) {
+        throw "Laptop preflight proof report is missing package identity fingerprint"
+    }
+    $source = Get-ReportSourceProvenance -Report $report -ReportName $reportName
 
     $os = Require-ReportProperty -Report $report -Name "os" -ReportName $reportName
     $platform = [string](Require-ReportProperty -Report $os -Name "platform" -ReportName $reportName)
@@ -410,7 +415,103 @@ function Assert-LaptopPreflightReport {
     Write-Host "proof_set_laptop_preflight_user=$userName"
     Write-Host "proof_set_laptop_preflight_user_sid=$userSid"
     Write-Host "proof_set_laptop_preflight_package_dir=$packageDir"
+    Write-Host "proof_set_laptop_preflight_package_fingerprint=$packageFingerprint"
+    Write-Host "proof_set_laptop_preflight_source_repository=$($source['Repository'])"
+    Write-Host "proof_set_laptop_preflight_source_branch=$($source['Branch'])"
+    Write-Host "proof_set_laptop_preflight_source_commit=$($source['Commit'])"
+    Write-Host "proof_set_laptop_preflight_source_dirty=$($source['Dirty'])"
     Write-Host "proof_set_laptop_preflight_proof_dir=$proofDir"
+    return $report
+}
+
+function Assert-SameLaptopPreflightProof {
+    param(
+        [Parameter(Mandatory = $true)]
+        [object]$PreflightReport,
+        [Parameter(Mandatory = $true)]
+        [string]$ExpectedProofSessionId,
+        [Parameter(Mandatory = $true)]
+        [string]$ExpectedPlatform,
+        [Parameter(Mandatory = $true)]
+        [string]$ExpectedMachine,
+        [Parameter(Mandatory = $true)]
+        [string]$ExpectedUserName,
+        [Parameter(Mandatory = $true)]
+        [string]$ExpectedUserDomain,
+        [Parameter(Mandatory = $true)]
+        [string]$ExpectedUserSid,
+        [Parameter(Mandatory = $true)]
+        [string]$ExpectedPackageDir,
+        [Parameter(Mandatory = $true)]
+        [string]$ExpectedPackageFingerprint,
+        [Parameter(Mandatory = $true)]
+        [object]$ExpectedSource
+    )
+
+    $reportName = "laptop_preflight"
+    Assert-SameReportValue `
+        -Name "proof_session_id" `
+        -Expected $ExpectedProofSessionId `
+        -Actual ([string](Require-ReportProperty -Report $PreflightReport -Name "proof_session_id" -ReportName $reportName)) `
+        -ReportName $reportName
+    $reportOS = Require-ReportProperty -Report $PreflightReport -Name "os" -ReportName $reportName
+    Assert-SameReportValue `
+        -Name "os.platform" `
+        -Expected $ExpectedPlatform `
+        -Actual ([string](Require-ReportProperty -Report $reportOS -Name "platform" -ReportName $reportName)) `
+        -ReportName $reportName
+    Assert-SameReportValue `
+        -Name "os.machine" `
+        -Expected $ExpectedMachine `
+        -Actual ([string](Require-ReportProperty -Report $reportOS -Name "machine" -ReportName $reportName)) `
+        -ReportName $reportName
+    Assert-SameReportValue `
+        -Name "os.user_name" `
+        -Expected $ExpectedUserName `
+        -Actual ([string](Require-ReportProperty -Report $reportOS -Name "user_name" -ReportName $reportName)) `
+        -ReportName $reportName
+    Assert-SameReportValue `
+        -Name "os.user_domain" `
+        -Expected $ExpectedUserDomain `
+        -Actual ([string](Require-ReportProperty -Report $reportOS -Name "user_domain" -ReportName $reportName)) `
+        -ReportName $reportName
+    Assert-SameReportValue `
+        -Name "os.user_sid" `
+        -Expected $ExpectedUserSid `
+        -Actual ([string](Require-ReportProperty -Report $reportOS -Name "user_sid" -ReportName $reportName)) `
+        -ReportName $reportName
+    Assert-SameReportValue `
+        -Name "package_dir" `
+        -Expected $ExpectedPackageDir `
+        -Actual ([string](Require-ReportProperty -Report $PreflightReport -Name "package_dir" -ReportName $reportName)) `
+        -ReportName $reportName
+    Assert-SameReportValue `
+        -Name "package_identity.fingerprint" `
+        -Expected $ExpectedPackageFingerprint `
+        -Actual (Get-ReportPackageFingerprint -Report $PreflightReport -ReportName $reportName) `
+        -ReportName $reportName
+    $source = Get-ReportSourceProvenance -Report $PreflightReport -ReportName $reportName
+    Assert-SameReportValue `
+        -Name "manifest.source_repository" `
+        -Expected ([string]$ExpectedSource['Repository']) `
+        -Actual ([string]$source['Repository']) `
+        -ReportName $reportName
+    Assert-SameReportValue `
+        -Name "manifest.source_branch" `
+        -Expected ([string]$ExpectedSource['Branch']) `
+        -Actual ([string]$source['Branch']) `
+        -ReportName $reportName
+    Assert-SameReportValue `
+        -Name "manifest.source_commit" `
+        -Expected ([string]$ExpectedSource['Commit']) `
+        -Actual ([string]$source['Commit']) `
+        -ReportName $reportName
+    Assert-SameReportValue `
+        -Name "manifest.source_dirty" `
+        -Expected ([string]$ExpectedSource['Dirty']) `
+        -Actual ([string]$source['Dirty']) `
+        -ReportName $reportName
+    Write-Host "proof_set_laptop_preflight_matches_full=true"
 }
 
 function Assert-SameLaptopProofSet {
@@ -420,7 +521,8 @@ function Assert-SameLaptopProofSet {
         [Parameter(Mandatory = $true)]
         [string]$LocalWhisperReportPath,
         [Parameter(Mandatory = $true)]
-        [string]$NotepadReportPath
+        [string]$NotepadReportPath,
+        [object]$LaptopPreflightReport = $null
     )
 
     $reports = @(
@@ -475,6 +577,20 @@ function Assert-SameLaptopProofSet {
     }
     if ([string]$expectedSource['Dirty'] -ne "false") {
         throw "Full laptop proof requires a clean packaged source checkout, got source_dirty=$($expectedSource['Dirty'])"
+    }
+
+    if ($null -ne $LaptopPreflightReport) {
+        Assert-SameLaptopPreflightProof `
+            -PreflightReport $LaptopPreflightReport `
+            -ExpectedProofSessionId $expectedProofSessionId `
+            -ExpectedPlatform $expectedPlatform `
+            -ExpectedMachine $expectedMachine `
+            -ExpectedUserName $expectedUserName `
+            -ExpectedUserDomain $expectedUserDomain `
+            -ExpectedUserSid $expectedUserSid `
+            -ExpectedPackageDir $expectedPackageDir `
+            -ExpectedPackageFingerprint $expectedPackageFingerprint `
+            -ExpectedSource $expectedSource
     }
 
     foreach ($entry in $reports) {
@@ -570,6 +686,7 @@ if ($RequireFullLaptopProof) {
     $RequireCloudDictation = $true
     $RequireLocalWhisperDictation = $true
     $RequireLocalWhisperNotepadPaste = $true
+    $RequireLaptopPreflight = $true
 }
 
 $hasExplicitRequirement = $RequireDoctorOnly -or
@@ -630,7 +747,7 @@ if ($RequireLocalWhisperNotepadPaste) {
 if ($RequireLaptopPreflight) {
     Write-Host ""
     Write-Host "== proof_set_check=laptop_preflight =="
-    Assert-LaptopPreflightReport -Path $LaptopPreflightReportPath
+    $script:laptopPreflightReport = Assert-LaptopPreflightReport -Path $LaptopPreflightReportPath
     Write-Host "proof_set_requirement=laptop_preflight status=pass report=$LaptopPreflightReportPath"
 }
 
@@ -645,7 +762,8 @@ if ($RequireFullLaptopProof) {
     Assert-SameLaptopProofSet `
         -CloudReportPath $CloudDictationReportPath `
         -LocalWhisperReportPath $LocalWhisperDictationReportPath `
-        -NotepadReportPath $LocalWhisperNotepadPasteReportPath
+        -NotepadReportPath $LocalWhisperNotepadPasteReportPath `
+        -LaptopPreflightReport $script:laptopPreflightReport
     Write-Host "proof_set_ok=full-laptop"
 } elseif ($RequireArtifactSmokeProof) {
     Assert-SameArtifactSmokeProofSet `

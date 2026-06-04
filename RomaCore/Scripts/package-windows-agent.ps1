@@ -232,7 +232,9 @@ function Write-LaptopPreflightCheckerSmokeReport {
         [Parameter(Mandatory = $true)]
         [string]$WhisperCLIPath,
         [Parameter(Mandatory = $true)]
-        [string]$WhisperModelPath
+        [string]$WhisperModelPath,
+        [Parameter(Mandatory = $true)]
+        [hashtable]$GitMetadata
     )
 
     New-Item -ItemType Directory -Force -Path $ProofDir | Out-Null
@@ -249,6 +251,17 @@ function Write-LaptopPreflightCheckerSmokeReport {
         preflight_only = $true
         package_dir = $PackageDir
         proof_dir = $ProofDir
+        manifest = [ordered]@{
+            source_repository = $GitMetadata.Repository
+            source_branch = $GitMetadata.Branch
+            source_commit = $GitMetadata.Commit
+            source_dirty = $GitMetadata.Dirty
+        }
+        package_identity = [ordered]@{
+            algorithm = "sha256"
+            fingerprint = "0000000000000000000000000000000000000000000000000000000000000000"
+            entry_count = 0
+        }
         os = [ordered]@{
             platform = [System.Environment]::OSVersion.Platform.ToString()
             version = [System.Environment]::OSVersion.VersionString
@@ -531,7 +544,8 @@ try {
             -ProofDir $laptopPreflightCheckerSmokeDir `
             -ProofAgentPath $proofAgentOutput `
             -WhisperCLIPath $mockWhisperOutput `
-            -WhisperModelPath $agentOutput
+            -WhisperModelPath $agentOutput `
+            -GitMetadata $gitMetadata
         $checkerOutputText = & $checkSetScriptOutput `
             -LaptopPreflightReportPath $laptopPreflightCheckerSmokeReport `
             -RequireLaptopPreflight 2>&1 | Out-String

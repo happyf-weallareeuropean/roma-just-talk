@@ -6436,29 +6436,37 @@ struct RomaCoreChecks {
                 laptopProofScript.contains("preflight_outputs") &&
                 laptopProofScript.contains("Get-HotkeyDeliveryPreflightProof") &&
                 laptopProofScript.contains("sample_rate_16000") &&
+                laptopProofScript.contains("manifest = $script:artifactManifest") &&
+                laptopProofScript.contains("package_identity = (Get-PackageIdentityProof)") &&
                 laptopProofScript.contains("-LaptopPreflightReportPath") &&
                 laptopProofScript.contains("-RequireLaptopPreflight"),
-            "Windows laptop preflight-only runner should write an archivable JSON proof report with output markers"
+            "Windows laptop preflight-only runner should write an archivable JSON proof report with output markers and artifact identity"
         )
         try require(
             checkSetScript.contains("RequireLaptopPreflight") &&
                 checkSetScript.contains("Assert-LaptopPreflightReport") &&
+                checkSetScript.contains("Assert-SameLaptopPreflightProof") &&
+                checkSetScript.contains(#"$RequireLaptopPreflight = $true"#) &&
                 checkSetScript.contains("preflight_outputs") &&
                 checkSetScript.contains(#"Assert-ReportBoolean -Report $hotkeyOutput -Name "key_down" -Expected $true"#) &&
                 checkSetScript.contains(#"Assert-ReportBoolean -Report $microphoneOutput -Name "sample_rate_16000" -Expected $true"#) &&
                 checkSetScript.contains(#"Assert-ReportBoolean -Report $localWhisperOutput -Name "network_required_false" -Expected $true"#) &&
+                checkSetScript.contains("proof_set_laptop_preflight_package_fingerprint=") &&
+                checkSetScript.contains("proof_set_laptop_preflight_matches_full=true") &&
                 checkSetScript.contains("proof_set_ok=laptop-preflight") &&
                 checkSetScript.contains("Laptop preflight proof must run on Windows"),
-            "Windows proof-set checker should validate laptop preflight reports and output markers"
+            "Windows proof-set checker should validate laptop preflight reports, output markers, and artifact identity"
         )
         try require(
             packageScript.contains("laptop preflight report checker smoke") &&
                 packageScript.contains("Write-LaptopPreflightCheckerSmokeReport") &&
                 packageScript.contains("preflight_outputs") &&
                 packageScript.contains("transcription_client_whisper") &&
+                packageScript.contains("package_identity") &&
+                packageScript.contains("source_repository = $GitMetadata.Repository") &&
                 packageScript.contains("laptop_preflight_checker_smoke_report") &&
                 packageScript.contains(#"-Expected "proof_set_ok=laptop-preflight""#),
-            "Windows package smoke should exercise the laptop preflight report checker output markers on Windows CI"
+            "Windows package smoke should exercise the laptop preflight report checker output markers and identity shape on Windows CI"
         )
         try require(
             packageScript.contains("Write-LaptopProofGuide") &&
