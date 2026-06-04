@@ -4629,6 +4629,35 @@ struct RomaCoreChecks {
     private static func checkWindowsDictationRuntimeDescriptor() async throws {
         guard !WindowsDictationRuntime.isRuntimeAvailable else { return }
 
+        try WindowsDictationRuntime.validateTrigger(.toggle(recordSeconds: 1))
+        try WindowsDictationRuntime.validateTrigger(.hold(timeoutMilliseconds: 1))
+
+        do {
+            try WindowsDictationRuntime.validateTrigger(.toggle(recordSeconds: 0))
+            throw CheckFailure("Windows dictation runtime should reject zero toggle record duration")
+        } catch WindowsDictationRuntimeError.invalidRecordDuration(_) {
+        }
+
+        do {
+            try WindowsDictationRuntime.validateTrigger(.toggle(recordSeconds: .infinity))
+            throw CheckFailure("Windows dictation runtime should reject non-finite toggle record duration")
+        } catch WindowsDictationRuntimeError.invalidRecordDuration(_) {
+        }
+
+        do {
+            try WindowsDictationRuntime.validateTrigger(
+                .toggle(recordSeconds: RomaWindowsAgentConfiguration.maximumRecordSeconds + 1)
+            )
+            throw CheckFailure("Windows dictation runtime should reject oversized toggle record duration")
+        } catch WindowsDictationRuntimeError.invalidRecordDuration(_) {
+        }
+
+        do {
+            try WindowsDictationRuntime.validateTrigger(.hold(timeoutMilliseconds: 0))
+            throw CheckFailure("Windows dictation runtime should reject zero hold timeout")
+        } catch WindowsDictationRuntimeError.invalidHoldTimeoutMilliseconds(_) {
+        }
+
         let model = TranscriptionModelDescriptor(
             name: "proof",
             displayName: "Proof",
@@ -4637,7 +4666,7 @@ struct RomaCoreChecks {
         let request = WindowsDictationRuntimeRequest(
             outputURL: URL(fileURLWithPath: "/tmp/windows-runtime-proof.wav"),
             model: model,
-            trigger: .toggle(recordSeconds: 0)
+            trigger: .toggle(recordSeconds: 1)
         )
 
         do {

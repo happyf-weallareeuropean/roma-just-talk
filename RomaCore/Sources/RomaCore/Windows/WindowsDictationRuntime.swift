@@ -47,11 +47,17 @@ public struct WindowsDictationRuntimeRequest: Sendable {
 
 public enum WindowsDictationRuntimeError: Error, LocalizedError, Equatable {
     case unsupported
+    case invalidRecordDuration(TimeInterval)
+    case invalidHoldTimeoutMilliseconds(UInt32)
 
     public var errorDescription: String? {
         switch self {
         case .unsupported:
             return "Windows dictation runtime is only available on Windows."
+        case .invalidRecordDuration(let seconds):
+            return "Windows toggle record duration must be finite, positive, and no greater than \(RomaWindowsAgentConfiguration.maximumRecordSeconds) seconds; got \(seconds)."
+        case .invalidHoldTimeoutMilliseconds(let milliseconds):
+            return "Windows hold timeout must be positive; got \(milliseconds) milliseconds."
         }
     }
 }
@@ -70,6 +76,8 @@ public enum WindowsDictationRuntime {
         transcriptionService: TranscriptionService,
         onEvent: @escaping @Sendable (WindowsDictationRuntimeEvent) -> Void = { _ in }
     ) async throws -> DictationPipelineResult {
+        try validateTrigger(request.trigger)
+
         #if os(Windows)
         let recorder = MiniaudioCaptureRecorder()
         let pipeline = DictationPipeline(
@@ -128,6 +136,21 @@ public enum WindowsDictationRuntime {
         #else
         throw WindowsDictationRuntimeError.unsupported
         #endif
+    }
+
+    public static func validateTrigger(_ trigger: WindowsDictationTrigger) throws {
+        switch trigger {
+        case .toggle(let recordSeconds):
+            guard recordSeconds.isFinite,
+                  recordSeconds > 0,
+                  recordSeconds <= RomaWindowsAgentConfiguration.maximumRecordSeconds else {
+                throw WindowsDictationRuntimeError.invalidRecordDuration(recordSeconds)
+            }
+        case .hold(let timeoutMilliseconds):
+            guard timeoutMilliseconds > 0 else {
+                throw WindowsDictationRuntimeError.invalidHoldTimeoutMilliseconds(timeoutMilliseconds)
+            }
+        }
     }
 
     private static func sleep(seconds: TimeInterval) async throws {
