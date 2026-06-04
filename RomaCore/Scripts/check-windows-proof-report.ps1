@@ -20,6 +20,7 @@ param(
     [switch]$RequireWhisperConfig,
     [switch]$RequireRealWhisperBackend,
     [switch]$RequireDictation,
+    [switch]$RequireExpectedTranscriptText,
     [switch]$RequirePaste,
     [switch]$RequireNotepadPaste
 )
@@ -290,6 +291,11 @@ function Assert-DictationRuntimeProof {
     Assert-Boolean -Object $runtime -Name "reported_positive_processed_transcript" -Expected $true
     Assert-NumberGreaterThan -Object $runtime -Name "raw_transcript_length" -Minimum 0
     Assert-NumberGreaterThan -Object $runtime -Name "processed_transcript_length" -Minimum 0
+    if ($RequireExpectedTranscriptText) {
+        Assert-Boolean -Object $runtime -Name "expected_transcript_text_required" -Expected $true
+        Assert-NonEmptyString -Object $runtime -Name "expected_transcript_text"
+        Assert-Boolean -Object $runtime -Name "expected_transcript_text_found" -Expected $true
+    }
 
     return $runtime
 }
@@ -452,6 +458,7 @@ function Get-ProofProfileRequirements {
                 "cloud_config",
                 "real_cloud_backend",
                 "dictation_runtime",
+                "expected_transcript_text",
                 "paste_sent"
             )
         }
@@ -473,6 +480,7 @@ function Get-ProofProfileRequirements {
                 "local_whisper_config",
                 "real_whisper_backend",
                 "dictation_runtime",
+                "expected_transcript_text",
                 "paste_sent"
             )
         }
@@ -551,6 +559,7 @@ switch ($RequireProofProfile) {
         $RequireCloudConfig = $true
         $RequireRealCloudBackend = $true
         $RequireDictation = $true
+        $RequireExpectedTranscriptText = $true
         $RequirePaste = $true
     }
     "local-whisper-dictation" {
@@ -568,6 +577,7 @@ switch ($RequireProofProfile) {
         $RequireWhisperConfig = $true
         $RequireRealWhisperBackend = $true
         $RequireDictation = $true
+        $RequireExpectedTranscriptText = $true
         $RequirePaste = $true
     }
     "local-whisper-notepad-paste" {

@@ -13,6 +13,8 @@ param(
     [string]$Language = "",
     [string]$Prompt = "",
     [string[]]$WordReplacement = @("just talk=roma-just-talk"),
+    [string]$CloudExpectedTranscriptText = "cloud pre roll proof",
+    [string]$LocalWhisperExpectedTranscriptText = "local whisper pre roll proof",
     [string]$StartupShortcutDir = "",
     [int]$HoldTimeoutSeconds = 15,
     [int]$RecordSeconds = 2,
@@ -60,12 +62,16 @@ function Invoke-Step {
 function Write-HoldDictationPrompt {
     param(
         [Parameter(Mandatory = $true)]
-        [string]$Name
+        [string]$Name,
+        [string]$ExpectedTranscriptText = ""
     )
 
     Write-Host ""
     Write-Host "ACTION_REQUIRED=$Name"
     Write-Host "focus_target=normal_text_field_or_notepad"
+    if (![string]::IsNullOrWhiteSpace($ExpectedTranscriptText)) {
+        Write-Host "say_expected_phrase_before_hotkey=$ExpectedTranscriptText"
+    }
     Write-Host "hold_hotkey=Ctrl+Shift+R"
     Write-Host "speak_before_pressing_hotkey=true"
     Write-Host "release_hotkey_to_finish=true"
@@ -210,6 +216,9 @@ if (![string]::IsNullOrWhiteSpace($ApiKeyName)) {
 if (![string]::IsNullOrWhiteSpace($SecretDir)) {
     $cloudArgs += @("-SecretDir", (Resolve-FullPath -Path $SecretDir))
 }
+if (![string]::IsNullOrWhiteSpace($CloudExpectedTranscriptText)) {
+    $cloudArgs += @("-ExpectedTranscriptText", $CloudExpectedTranscriptText)
+}
 $cloudArgs = Add-CommonProofArgs -ArgumentList $cloudArgs
 $cloudArgs += @("-RunDictation", "-PasteDictation")
 $cloudArgs = Add-ShortcutProofArgs `
@@ -235,6 +244,9 @@ $whisperArguments = @(
 if ($whisperArguments.Count -gt 0) {
     $localArgs += "-WhisperArgument"
     $localArgs += $whisperArguments
+}
+if (![string]::IsNullOrWhiteSpace($LocalWhisperExpectedTranscriptText)) {
+    $localArgs += @("-ExpectedTranscriptText", $LocalWhisperExpectedTranscriptText)
 }
 $localArgs = Add-CommonProofArgs -ArgumentList $localArgs
 $localArgs += @("-RunDictation", "-PasteDictation")
@@ -262,12 +274,12 @@ if ($whisperArguments.Count -gt 0) {
 $notepadArgs = Add-CommonProofArgs -ArgumentList $notepadArgs
 
 Invoke-Step "cloud dictation laptop proof" {
-    Write-HoldDictationPrompt -Name "cloud_dictation"
+    Write-HoldDictationPrompt -Name "cloud_dictation" -ExpectedTranscriptText $CloudExpectedTranscriptText
     & $proofScript @cloudArgs
 }
 
 Invoke-Step "local whisper dictation laptop proof" {
-    Write-HoldDictationPrompt -Name "local_whisper_dictation"
+    Write-HoldDictationPrompt -Name "local_whisper_dictation" -ExpectedTranscriptText $LocalWhisperExpectedTranscriptText
     & $proofScript @localArgs
 }
 

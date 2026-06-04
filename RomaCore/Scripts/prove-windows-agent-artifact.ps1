@@ -15,6 +15,7 @@ param(
     [string]$Language = "",
     [string]$Prompt = "",
     [string[]]$WordReplacement = @("just talk=roma-just-talk"),
+    [string]$ExpectedTranscriptText = "",
     [switch]$UseHoldHook,
     [switch]$UseToggle,
     [int]$HoldTimeoutSeconds = 15,
@@ -570,6 +571,13 @@ function Get-DictationRuntimeProof {
     $proof["reported_waiting_for_hold_key_down"] = $content.Contains("waiting_for_key_down=")
     $proof["reported_hold_key_down"] = $content.Contains("hold_key_down=true")
     $proof["reported_hold_key_up"] = $content.Contains("hold_key_up=true")
+    $expectedTranscriptTextFound = $false
+    if (![string]::IsNullOrWhiteSpace($ExpectedTranscriptText)) {
+        $expectedTranscriptTextFound = Test-ContainsText -Text $content -Needle $ExpectedTranscriptText
+    }
+    $proof["expected_transcript_text"] = $ExpectedTranscriptText
+    $proof["expected_transcript_text_required"] = ![string]::IsNullOrWhiteSpace($ExpectedTranscriptText)
+    $proof["expected_transcript_text_found"] = $expectedTranscriptTextFound
 
     return $proof
 }
@@ -737,6 +745,7 @@ function Write-ProofReport {
         doctor_only = $IsDoctorOnly
         run_dictation = $RunDictation.IsPresent
         paste_dictation = $PasteDictation.IsPresent
+        expected_transcript_text = $ExpectedTranscriptText
         create_shortcut = $CreateShortcut.IsPresent
         create_startup_shortcut = $CreateStartupShortcut.IsPresent
         restore_clipboard = $RestoreClipboard.IsPresent
