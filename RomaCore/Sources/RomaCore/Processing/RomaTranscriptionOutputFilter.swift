@@ -452,7 +452,7 @@ public struct RomaTranscriptionOutputFilter {
     private static let leadingLikeClauseStarterVerbs: Set<String> = [
         "am", "are", "can", "could", "did", "do", "does", "had", "has",
         "have", "is", "might", "must", "need", "needs", "should", "think",
-        "thinks", "was", "were", "will", "would"
+        "thinks", "was", "were", "will", "work", "works", "would"
     ]
     private static let leadingLikeClauseStarterPronouns: Set<String> = [
         "he", "i", "it", "she", "that", "they", "this", "we", "you"
@@ -1278,6 +1278,7 @@ public struct RomaTranscriptionOutputFilter {
 
         filteredText = removeStandaloneDiscourseFillers(from: filteredText)
         filteredText = removeLeadingDiscourseFillers(from: filteredText)
+        filteredText = removeLeadingUnpunctuatedDiscourseFiller(from: filteredText)
         filteredText = removeLeadingUnpunctuatedLikeFiller(from: filteredText)
         filteredText = removeLeadingBasicallyFiller(from: filteredText)
         filteredText = removeLeadingSoFiller(from: filteredText)
@@ -1417,6 +1418,23 @@ public struct RomaTranscriptionOutputFilter {
         }
 
         return filteredText
+    }
+
+    private static func removeLeadingUnpunctuatedDiscourseFiller(from text: String) -> String {
+        let trimmedText = text.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard let regex = try? NSRegularExpression(pattern: #"(?i)^(?:you[ \t]+know(?:[ \t]+what[ \t]+i[ \t]+mean)?|i[ \t]+mean)[ \t]+"#),
+              let match = regex.firstMatch(in: trimmedText, range: NSRange(trimmedText.startIndex..., in: trimmedText)),
+              let matchRange = Range(match.range, in: trimmedText) else {
+            return text
+        }
+
+        let suffix = String(trimmedText[matchRange.upperBound...])
+            .trimmingCharacters(in: .whitespacesAndNewlines)
+        guard isLeadingFillerFollowedByClauseStarter(suffix) else {
+            return text
+        }
+
+        return suffix
     }
 
     private static func removeLeadingUnpunctuatedLikeFiller(from text: String) -> String {

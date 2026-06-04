@@ -2,6 +2,7 @@
 
 ## v1.81 - Unreleased
 
+- Cleaned unpunctuated leading "I mean" and "you know" fillers before clear clause starters.
 - Cleaned leading "so" fillers before clear clause starters.
 - Cleaned leading "basically" fillers before clear clause starters.
 - Cleaned leading unpunctuated "like" fillers before clear clause starters.
