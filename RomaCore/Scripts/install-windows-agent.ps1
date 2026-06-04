@@ -103,6 +103,44 @@ function New-AgentShortcut {
     return $savedShortcut
 }
 
+function Get-ProcessExecutablePath {
+    param(
+        [Parameter(Mandatory = $true)]
+        [System.Diagnostics.Process]$Process
+    )
+
+    try {
+        return [string]$Process.MainModule.FileName
+    } catch {
+        return ""
+    }
+}
+
+function Assert-InstalledAgentNotRunning {
+    param(
+        [Parameter(Mandatory = $true)]
+        [string]$InstalledAgentPath
+    )
+
+    if ([System.Environment]::OSVersion.Platform -ne [System.PlatformID]::Win32NT) {
+        return
+    }
+    if (!(Test-Path -LiteralPath $InstalledAgentPath)) {
+        return
+    }
+
+    $resolvedAgentPath = Resolve-FullPath -Path $InstalledAgentPath
+    foreach ($process in @(Get-Process -Name "RomaWindowsAgent" -ErrorAction SilentlyContinue)) {
+        $processPath = Get-ProcessExecutablePath -Process $process
+        if (![string]::IsNullOrWhiteSpace($processPath) -and
+            $processPath.Equals($resolvedAgentPath, [System.StringComparison]::OrdinalIgnoreCase)) {
+            throw "Installed RomaWindowsAgent is running from $resolvedAgentPath pid=$($process.Id); close the listener before reinstalling or upgrading"
+        }
+    }
+
+    Write-Host "installed_agent_not_running=true"
+}
+
 if ([string]::IsNullOrWhiteSpace($PackageDir)) {
     $PackageDir = $PSScriptRoot
 }
@@ -160,6 +198,8 @@ $runSource = Join-Path $PackageDir "run-windows-agent.ps1"
 Require-File -Path $agentSource
 Require-File -Path $smokeSource
 Require-File -Path $runSource
+$installedAgent = Join-Path $InstallDir "RomaWindowsAgent.exe"
+Assert-InstalledAgentNotRunning -InstalledAgentPath $installedAgent
 
 Invoke-Step "copy package files" {
     New-Item -ItemType Directory -Force -Path $InstallDir | Out-Null
@@ -206,7 +246,6 @@ if ($hasExplicitWhisperCLI -and
     $WhisperCLI = $installedWhisperMock
     Write-Host "installed_whisper_cli_mock=$WhisperCLI"
 }
-$installedAgent = Join-Path $InstallDir "RomaWindowsAgent.exe"
 if ($hasExplicitWhisperModel -and
     (Resolve-FullPath -Path $WhisperModel) -eq (Resolve-FullPath -Path $agentSource) -and
     (Test-Path -LiteralPath $installedAgent)) {
