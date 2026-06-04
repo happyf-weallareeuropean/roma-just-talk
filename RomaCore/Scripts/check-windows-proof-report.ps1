@@ -296,6 +296,24 @@ function Assert-NumberGreaterThan {
     Write-Host "proof_number=$Name value=$actual minimum=$Minimum"
 }
 
+function Assert-NumberEquals {
+    param(
+        [Parameter(Mandatory = $true)]
+        [object]$Object,
+        [Parameter(Mandatory = $true)]
+        [string]$Name,
+        [Parameter(Mandatory = $true)]
+        [double]$Expected
+    )
+
+    $actual = [double](Require-Property -Object $Object -Name $Name)
+    if ($actual -ne $Expected) {
+        throw "Expected $Name to equal $Expected, got $actual"
+    }
+
+    Write-Host "proof_number=$Name value=$actual expected=$Expected"
+}
+
 function Assert-DictationRuntimeProof {
     param(
         [Parameter(Mandatory = $true)]
@@ -312,6 +330,9 @@ function Assert-DictationRuntimeProof {
     Assert-Boolean -Object $runtime -Name "reported_pre_roll" -Expected $true
     Assert-Boolean -Object $runtime -Name "reported_positive_pre_roll" -Expected $true
     Assert-NumberGreaterThan -Object $runtime -Name "included_pre_roll_seconds" -Minimum 0
+    Assert-Boolean -Object $runtime -Name "reported_speech_pcm_contract" -Expected $true
+    Assert-NumberEquals -Object $runtime -Name "sample_rate" -Expected 16000
+    Assert-NumberEquals -Object $runtime -Name "channels" -Expected 1
     Assert-Boolean -Object $runtime -Name "reported_processed_text" -Expected $true
     Assert-Boolean -Object $runtime -Name "reported_positive_raw_transcript" -Expected $true
     Assert-Boolean -Object $runtime -Name "reported_positive_processed_transcript" -Expected $true

@@ -5982,8 +5982,20 @@ struct RomaCoreChecks {
             "Windows artifact proof reports should record ordered hold-to-talk runtime evidence"
         )
         try require(
+            proveScript.contains(#"$sampleRate = Get-OutputNumber -Content $content -Name "sample_rate""#) &&
+                proveScript.contains(#"$channelCount = Get-OutputNumber -Content $content -Name "channels""#) &&
+                proveScript.contains("reported_speech_pcm_contract"),
+            "Windows artifact proof reports should record the dictation audio speech PCM contract"
+        )
+        try require(
             checkReportScript.contains(#"Assert-Boolean -Object $Runtime -Name "reported_ordered_hold_sequence" -Expected $true"#),
             "Windows proof checker should require ordered hold-to-talk runtime evidence"
+        )
+        try require(
+            checkReportScript.contains(#"Assert-Boolean -Object $runtime -Name "reported_speech_pcm_contract" -Expected $true"#) &&
+                checkReportScript.contains(#"Assert-NumberEquals -Object $runtime -Name "sample_rate" -Expected 16000"#) &&
+                checkReportScript.contains(#"Assert-NumberEquals -Object $runtime -Name "channels" -Expected 1"#),
+            "Windows proof checker should require the dictation audio speech PCM contract"
         )
         try require(
             foregroundSource.contains("AttachThreadInput"),

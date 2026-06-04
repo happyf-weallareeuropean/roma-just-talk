@@ -549,6 +549,8 @@ function Get-DictationRuntimeProof {
     $wrotePath = Get-OutputValue -Content $content -Name "wrote"
     $durationSeconds = Get-OutputNumber -Content $content -Name "duration_seconds"
     $includedPreRollSeconds = Get-OutputNumber -Content $content -Name "included_pre_roll_seconds"
+    $sampleRate = Get-OutputNumber -Content $content -Name "sample_rate"
+    $channelCount = Get-OutputNumber -Content $content -Name "channels"
     $rawTranscriptLength = Get-OutputNumber -Content $content -Name "raw_transcript_length"
     $processedTranscriptLength = Get-OutputNumber -Content $content -Name "processed_transcript_length"
     $processedTranscriptText = Get-OutputValue -Content $content -Name "processed_transcript_text"
@@ -568,6 +570,14 @@ function Get-DictationRuntimeProof {
     $proof["included_pre_roll_seconds"] = $includedPreRollSeconds
     $proof["reported_positive_duration"] = ($null -ne $durationSeconds) -and ($durationSeconds -gt 0)
     $proof["reported_positive_pre_roll"] = ($null -ne $includedPreRollSeconds) -and ($includedPreRollSeconds -gt 0)
+    $proof["sample_rate"] = $sampleRate
+    $proof["channels"] = $channelCount
+    $proof["reported_speech_pcm_contract"] = (
+        ($null -ne $sampleRate) -and
+        ($null -ne $channelCount) -and
+        ($sampleRate -eq 16000) -and
+        ($channelCount -eq 1)
+    )
     $proof["raw_transcript_length"] = $rawTranscriptLength
     $proof["processed_transcript_length"] = $processedTranscriptLength
     $proof["reported_positive_raw_transcript"] = ($null -ne $rawTranscriptLength) -and ($rawTranscriptLength -gt 0)
