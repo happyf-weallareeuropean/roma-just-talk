@@ -887,6 +887,7 @@ public struct RomaTranscriptionOutputFilter {
         filteredText = applySpokenURLCommands(in: filteredText)
         filteredText = applySpokenValueFormattingCommands(in: filteredText)
         filteredText = applySpokenPunctuationCommands(in: filteredText)
+        filteredText = applySpokenNumberedOutlineCommands(in: filteredText)
         filteredText = replaceSpokenSequenceListMarkers(in: filteredText)
         filteredText = formatInlineNumberedLists(in: filteredText)
         filteredText = applySpokenSymbolCommands(in: filteredText)
@@ -3330,6 +3331,10 @@ public struct RomaTranscriptionOutputFilter {
                 continue
             }
 
+            if isAtMarkdownLineStart(in: text, markerStart: markerRange.lowerBound) {
+                continue
+            }
+
             let previousIndex = text.index(before: markerRange.lowerBound)
             if text[previousIndex].isNewline { continue }
 
@@ -3342,6 +3347,83 @@ public struct RomaTranscriptionOutputFilter {
         guard currentIndex > text.startIndex else { return text }
         formattedText += String(text[currentIndex...])
         return formattedText
+    }
+
+    private static func isAtMarkdownLineStart(in text: String, markerStart: String.Index) -> Bool {
+        let lineStart = text[..<markerStart].lastIndex(of: "\n")
+            .map { text.index(after: $0) } ?? text.startIndex
+
+        return text[lineStart..<markerStart].allSatisfy { $0 == " " || $0 == "\t" }
+    }
+
+    private static func applySpokenNumberedOutlineCommands(in text: String) -> String {
+        let lines = text.split(separator: "\n", omittingEmptySubsequences: false).map(String.init)
+        var didRewrite = false
+
+        let rewrittenLines = lines.map { line -> String in
+            guard let outline = spokenNumberedOutline(from: line) else {
+                return line
+            }
+
+            didRewrite = true
+            return outline
+        }
+
+        return didRewrite ? rewrittenLines.joined(separator: "\n") : text
+    }
+
+    private static func spokenNumberedOutline(from line: String) -> String? {
+        guard let regex = try? NSRegularExpression(pattern: spokenSequenceListMarkerPattern) else {
+            return nil
+        }
+
+        let matches = regex.matches(in: line, range: NSRange(line.startIndex..., in: line))
+        guard matches.count >= 2,
+              let firstMatch = matches.first,
+              let firstRange = Range(firstMatch.range(at: 0), in: line),
+              line[..<firstRange.lowerBound].trimmingCharacters(in: .whitespaces).isEmpty else {
+            return nil
+        }
+
+        var items: [(value: Int, content: String, levelDelta: Int?)] = []
+        var sawNestingCommand = false
+
+        for (index, match) in matches.enumerated() {
+            guard match.numberOfRanges >= 2,
+                  let fullRange = Range(match.range(at: 0), in: line),
+                  let markerRange = Range(match.range(at: 1), in: line),
+                  let value = spokenSequenceListMarkerValues[String(line[markerRange]).lowercased()] else {
+                return nil
+            }
+
+            let nextStart = index + 1 < matches.count
+                ? Range(matches[index + 1].range(at: 0), in: line)?.lowerBound
+                : line.endIndex
+            guard let contentEnd = nextStart else { return nil }
+
+            let rawContent = markdownLineContent(String(line[fullRange.upperBound..<contentEnd]))
+            let command = trailingNestedBulletCommand(in: rawContent)
+            let visibleContent = command?.content ?? rawContent
+            guard !visibleContent.isEmpty else { return nil }
+
+            if command != nil { sawNestingCommand = true }
+            items.append((value: value, content: visibleContent, levelDelta: command?.levelDelta))
+        }
+
+        guard sawNestingCommand,
+              items.first?.value == 1 else {
+            return nil
+        }
+
+        var nestingLevel = 0
+        return items.map { item in
+            let indentation = String(repeating: "  ", count: nestingLevel)
+            let line = "\(indentation)\(item.value). \(item.content)"
+            if let levelDelta = item.levelDelta {
+                nestingLevel = max(0, nestingLevel + levelDelta)
+            }
+            return line
+        }.joined(separator: "\n")
     }
 
     private static func replaceSpokenSequenceListMarkers(in text: String) -> String {

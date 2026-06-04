@@ -2019,6 +2019,21 @@ struct RomaCoreChecks {
                 "nested bullet dedent command"
             ),
             (
+                "Number one parent indent number one child outdent number two sibling.",
+                "1. parent\n  1. child\n2. sibling",
+                "nested numbered outline command"
+            ),
+            (
+                "One parent indent one child outdent two sibling.",
+                "1. parent\n  1. child\n2. sibling",
+                "bare nested numbered outline command"
+            ),
+            (
+                "Number one parent sub number one child number two sibling.",
+                "1. parent\n  1. child\n  2. sibling",
+                "sub nested numbered outline command"
+            ),
+            (
                 "Use api slash users.",
                 "Use api/users.",
                 "spoken slash command"
