@@ -2,6 +2,7 @@
 
 ## v1.81 - Unreleased
 
+- Cleaned stacked leading "okay/yeah/right" filler chains before clear clause starters.
 - Cleaned leading "okay/yeah/right, well" filler chains before clear clause starters.
 - Cleaned leading "well" fillers before clear clause starters.
 - Cleaned bounded "backtrack" and "back track" spoken corrections.

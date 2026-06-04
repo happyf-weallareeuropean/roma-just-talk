@@ -1279,6 +1279,7 @@ public struct RomaTranscriptionOutputFilter {
 
         filteredText = removeStandaloneDiscourseFillers(from: filteredText)
         filteredText = removeLeadingDiscourseFillers(from: filteredText)
+        filteredText = removeLeadingAcknowledgementFillerChain(from: filteredText)
         filteredText = removeLeadingWellFiller(from: filteredText)
         filteredText = removeLeadingUnpunctuatedDiscourseFiller(from: filteredText)
         filteredText = removeLeadingUnpunctuatedLikeFiller(from: filteredText)
@@ -1420,6 +1421,25 @@ public struct RomaTranscriptionOutputFilter {
         }
 
         return filteredText
+    }
+
+    private static func removeLeadingAcknowledgementFillerChain(from text: String) -> String {
+        let trimmedText = text.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard let regex = try? NSRegularExpression(
+            pattern: #"(?i)^(?:(?:ok(?:ay)?|all[ \t]+right|alright|right|yeah)(?:[ \t]*(?:[,;:…]+|\.\.\.))?[ \t]+){2,}"#
+        ),
+              let match = regex.firstMatch(in: trimmedText, range: NSRange(trimmedText.startIndex..., in: trimmedText)),
+              let matchRange = Range(match.range, in: trimmedText) else {
+            return text
+        }
+
+        let suffix = String(trimmedText[matchRange.upperBound...])
+            .trimmingCharacters(in: .whitespacesAndNewlines)
+        guard isLeadingFillerFollowedByClauseStarter(suffix) else {
+            return text
+        }
+
+        return suffix
     }
 
     private static func removeLeadingWellFiller(from text: String) -> String {
