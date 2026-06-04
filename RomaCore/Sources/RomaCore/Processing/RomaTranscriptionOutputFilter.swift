@@ -6393,6 +6393,7 @@ public struct RomaTranscriptionOutputFilter {
                 strippedText = withoutLeadingNoise
             }
         }
+        strippedText = unwrapNestedSquareBracketedBoundaryOutput(strippedText)
         guard isShortFragment(strippedText) else { return strippedText }
 
         if hasPreservedBalancedBoundary(strippedText) ||
@@ -6403,6 +6404,19 @@ public struct RomaTranscriptionOutputFilter {
         let boundaryCharacters = CharacterSet(charactersIn: #"[]{}()"“”‘’'"`【】《》〈〉（）｛｝［］「」『』〔〕"#)
         strippedText = strippedText.trimmingCharacters(in: boundaryCharacters.union(.whitespacesAndNewlines))
         return normalizeWhitespace(strippedText)
+    }
+
+    private static func unwrapNestedSquareBracketedBoundaryOutput(_ text: String) -> String {
+        guard let innerText = preservedBoundaryInnerText(in: text) else {
+            return text
+        }
+
+        let unwrappedInnerText = unwrapSquareBracketedWholeOutput(innerText)
+        guard unwrappedInnerText != innerText else {
+            return text
+        }
+
+        return unwrappedInnerText
     }
 
     private static func startsWithRemovableNonASCIIBoundaryWrapper(_ text: String) -> Bool {

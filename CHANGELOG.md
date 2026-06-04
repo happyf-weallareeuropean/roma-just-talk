@@ -2,6 +2,7 @@
 
 ## v1.81 - Unreleased
 
+- Cleaned nested quote/parenthesis wrappers around bracketed final-word artifacts.
 - Cleaned repeated trailing slash and pipe artifacts from short mid-sentence fragments.
 - Cleaned full-width punctuation and bracket wrappers from short mid-sentence fragments.
 - Cleaned leading-noise plus bracketed final-word artifacts such as "... [Model.]".

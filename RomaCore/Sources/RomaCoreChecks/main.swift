@@ -427,6 +427,14 @@ struct RomaCoreChecks {
             "shared insertion polish should unwrap pipe-prefixed bracketed fragments"
         )
         try require(
+            RomaTranscriptionOutputFilter.applyInsertionPolish("\"[Model.]\"", context: midSentenceContext) == "model",
+            "shared insertion polish should unwrap quoted square-bracketed fragments"
+        )
+        try require(
+            RomaTranscriptionOutputFilter.applyInsertionPolish("([Model.])", context: midSentenceContext) == "model",
+            "shared insertion polish should unwrap parenthesized square-bracketed fragments"
+        )
+        try require(
             RomaTranscriptionOutputFilter.applyInsertionPolish("【Model.】", context: midSentenceContext) == "model",
             "shared insertion polish should unwrap corner-bracketed fragments"
         )

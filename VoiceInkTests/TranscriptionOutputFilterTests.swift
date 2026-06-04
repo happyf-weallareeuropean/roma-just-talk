@@ -291,6 +291,8 @@ struct TranscriptionOutputFilterTests {
         #expect(TranscriptionOutputFilter.applyInsertionPolish("... [Model.]", context: midSentenceContext) == "model")
         #expect(TranscriptionOutputFilter.applyInsertionPolish("— [Model.]", context: midSentenceContext) == "model")
         #expect(TranscriptionOutputFilter.applyInsertionPolish("| [Model.]", context: midSentenceContext) == "model")
+        #expect(TranscriptionOutputFilter.applyInsertionPolish("\"[Model.]\"", context: midSentenceContext) == "model")
+        #expect(TranscriptionOutputFilter.applyInsertionPolish("([Model.])", context: midSentenceContext) == "model")
         #expect(TranscriptionOutputFilter.applyInsertionPolish("【Model.】", context: midSentenceContext) == "model")
         #expect(TranscriptionOutputFilter.applyInsertionPolish("《Model.》", context: midSentenceContext) == "model")
         #expect(TranscriptionOutputFilter.applyInsertionPolish("（Model.）", context: midSentenceContext) == "model")
