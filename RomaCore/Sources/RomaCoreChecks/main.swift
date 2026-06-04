@@ -5660,6 +5660,10 @@ struct RomaCoreChecks {
             contentsOf: scriptsRoot.appendingPathComponent("run-windows-laptop-proof.ps1"),
             encoding: .utf8
         )
+        let windowsAgentSource = try String(
+            contentsOf: packageRoot.appendingPathComponent("Sources/RomaWindowsAgent/main.swift"),
+            encoding: .utf8
+        )
         let proofAgentSource = try String(
             contentsOf: packageRoot.appendingPathComponent("Sources/RomaProofAgent/main.swift"),
             encoding: .utf8
@@ -5713,6 +5717,53 @@ struct RomaCoreChecks {
             proofAgentSource.contains(#"print("native_windows_adapters=true")"#),
             "Windows proof agent should print native adapter runtime availability on Windows"
         )
+        let doctorDefaultOutputLines = [
+            #"print("default_record_seconds=\(RomaWindowsAgentConfiguration.defaultRecordSeconds)")"#,
+            #"print("default_hold_timeout_seconds=\(RomaWindowsAgentConfiguration.defaultHoldTimeoutSeconds)")"#,
+            #"print("default_hold_timeout_milliseconds=\(RomaWindowsAgentConfiguration.defaultHoldTimeoutMilliseconds)")"#,
+            #"print("default_clipboard_restore_delay_seconds=\(WindowsClipboardRestoreConfiguration.defaultRestoreDelaySeconds)")"#,
+            #"print("maximum_clipboard_restore_delay_seconds=\(WindowsClipboardRestoreConfiguration.maximumRestoreDelaySeconds)")"#
+        ]
+        for outputLine in doctorDefaultOutputLines {
+            try require(
+                windowsAgentSource.contains(outputLine),
+                "Windows agent doctor should expose shared default line \(outputLine)"
+            )
+            try require(
+                proofAgentSource.contains(outputLine),
+                "Windows proof agent doctor should expose shared default line \(outputLine)"
+            )
+        }
+        try require(
+            proofAgentSource.contains(#"print("default_timeout_seconds=\(RomaWindowsAgentConfiguration.defaultHoldTimeoutSeconds)")"#) &&
+                proofAgentSource.contains(#"print("default_timeout_milliseconds=\(RomaWindowsAgentConfiguration.defaultHoldTimeoutMilliseconds)")"#),
+            "Windows keyboard hook doctor should expose shared hold timeout defaults"
+        )
+        try require(
+            proofAgentSource.contains(
+                #"print("default_clipboard_restore_delay_seconds=\(WindowsClipboardRestoreConfiguration.defaultRestoreDelaySeconds)")"#
+            ) &&
+                proofAgentSource.contains(
+                    #"print("maximum_clipboard_restore_delay_seconds=\(WindowsClipboardRestoreConfiguration.maximumRestoreDelaySeconds)")"#
+                ),
+            "Windows paste doctor should expose shared clipboard restore delay defaults"
+        )
+        let proofDefaultAssertions = [
+            "default_record_seconds=2.0",
+            "default_hold_timeout_seconds=15.0",
+            "default_hold_timeout_milliseconds=15000",
+            "default_clipboard_restore_delay_seconds=2.0",
+            "maximum_clipboard_restore_delay_seconds=4294967.295",
+            "default_timeout_seconds=15.0",
+            "default_timeout_milliseconds=15000"
+        ]
+        for expectedLine in proofDefaultAssertions {
+            try require(
+                windowsProofScript.contains(#"Assert-OutputContains -Output "#) &&
+                    windowsProofScript.contains(#"-Expected "\#(expectedLine)""#),
+                "Windows proof script should assert doctor default output \(expectedLine)"
+            )
+        }
         try require(
             pasteProofSource.contains(
                 "restoreDelaySeconds: TimeInterval = WindowsClipboardRestoreConfiguration.defaultRestoreDelaySeconds"
