@@ -5494,6 +5494,18 @@ struct RomaCoreChecks {
             contentsOf: scriptsRoot.appendingPathComponent("install-windows-agent.ps1"),
             encoding: .utf8
         )
+        let smokeScript = try String(
+            contentsOf: scriptsRoot.appendingPathComponent("smoke-windows-agent.ps1"),
+            encoding: .utf8
+        )
+        let runScript = try String(
+            contentsOf: scriptsRoot.appendingPathComponent("run-windows-agent.ps1"),
+            encoding: .utf8
+        )
+        let windowsProofScript = try String(
+            contentsOf: scriptsRoot.appendingPathComponent("windows-proof.ps1"),
+            encoding: .utf8
+        )
         let foregroundSource = try String(
             contentsOf: packageRoot.appendingPathComponent("Sources/CWindowsSupport/roma_windows_foreground.c"),
             encoding: .utf8
@@ -5646,6 +5658,20 @@ struct RomaCoreChecks {
             laptopProofScript.contains(#"if ($NoRestoreClipboard -and $hasExplicitClipboardRestoreDelay)"#),
             "Windows laptop proof runner should reject no-restore plus explicit restore delay before invoking nested scripts"
         )
+        let clipboardRestoreDelayConflictScripts = [
+            ("windows-proof.ps1", windowsProofScript),
+            ("run-windows-agent.ps1", runScript),
+            ("smoke-windows-agent.ps1", smokeScript),
+            ("install-windows-agent.ps1", installScript),
+            ("prove-windows-agent-artifact.ps1", proveScript)
+        ]
+        for (scriptName, scriptSource) in clipboardRestoreDelayConflictScripts {
+            try require(
+                scriptSource.contains(#"$hasExplicitClipboardRestoreDelay = $PSBoundParameters.ContainsKey("ClipboardRestoreDelaySeconds")"#) &&
+                    scriptSource.contains(#"if ($NoRestoreClipboard -and $hasExplicitClipboardRestoreDelay)"#),
+                "\(scriptName) should reject no-restore plus explicit restore delay before forwarding options"
+            )
+        }
         try require(
             installScript.contains("Assert-InstalledAgentNotRunning") &&
                 installScript.contains("close the listener before reinstalling or upgrading"),

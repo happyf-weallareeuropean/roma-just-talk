@@ -55,6 +55,7 @@
 - Rejected invalid direct Windows dictation runtime clipboard restore delays before paste.
 - Shared Windows hold-timeout defaults and millisecond conversion across the agent and proof tools.
 - Shared Windows record-duration defaults and nanosecond conversion across runtime and proof tools.
+- Rejected explicit Windows clipboard restore delays with no-restore mode across proof and install wrappers.
 - Hardened the Windows laptop proof runner to fail early outside Windows or with missing local whisper files.
 - Strengthened full Windows laptop proof-set validation to require the reports come from the same machine and packaged artifact.
 - Added a package identity fingerprint to Windows artifact proof reports and full laptop proof-set validation.

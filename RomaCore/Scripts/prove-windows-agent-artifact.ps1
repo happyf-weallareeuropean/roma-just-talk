@@ -869,8 +869,14 @@ if ($UseHoldHook -and $UseToggle) {
     throw "UseHoldHook and UseToggle are mutually exclusive"
 }
 
+$hasExplicitClipboardRestoreDelay = $PSBoundParameters.ContainsKey("ClipboardRestoreDelaySeconds")
+
 if ($RestoreClipboard -and $NoRestoreClipboard) {
     throw "RestoreClipboard and NoRestoreClipboard are mutually exclusive"
+}
+
+if ($NoRestoreClipboard -and $hasExplicitClipboardRestoreDelay) {
+    throw "NoRestoreClipboard and ClipboardRestoreDelaySeconds are mutually exclusive"
 }
 
 if ($ClipboardRestoreDelaySeconds -lt 0) {
@@ -1136,7 +1142,7 @@ if ($RestoreClipboard) {
 if ($NoRestoreClipboard) {
     $installArgs += "-NoRestoreClipboard"
 }
-if ($PSBoundParameters.ContainsKey("ClipboardRestoreDelaySeconds")) {
+if ($hasExplicitClipboardRestoreDelay) {
     $installArgs += @("-ClipboardRestoreDelaySeconds", "$ClipboardRestoreDelaySeconds")
 }
 if ($RunDictation) {

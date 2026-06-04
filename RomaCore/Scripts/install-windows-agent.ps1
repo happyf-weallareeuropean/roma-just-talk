@@ -161,6 +161,7 @@ $hasExplicitWhisperCLI = $PSBoundParameters.ContainsKey("WhisperCLI")
 $hasExplicitWhisperModel = $PSBoundParameters.ContainsKey("WhisperModel")
 $hasExplicitApiKeyEnv = $PSBoundParameters.ContainsKey("ApiKeyEnv") -and ![string]::IsNullOrWhiteSpace($ApiKeyEnv)
 $hasExplicitApiKeyName = ![string]::IsNullOrWhiteSpace($ApiKeyName)
+$hasExplicitClipboardRestoreDelay = $PSBoundParameters.ContainsKey("ClipboardRestoreDelaySeconds")
 $hasCloudShortcutConfig = $hasExplicitEndpoint -and $hasExplicitModel -and ($hasExplicitApiKeyEnv -or $hasExplicitApiKeyName)
 $hasWhisperShortcutConfig = $hasExplicitWhisperCLI -and $hasExplicitWhisperModel
 $hasExistingShortcutConfig = $SkipSmoke -and $hasExplicitConfigPath
@@ -178,6 +179,10 @@ $ConfigPath = Resolve-FullPath -Path $ConfigPath
 
 if ($RestoreClipboard -and $NoRestoreClipboard) {
     throw "RestoreClipboard and NoRestoreClipboard are mutually exclusive"
+}
+
+if ($NoRestoreClipboard -and $hasExplicitClipboardRestoreDelay) {
+    throw "NoRestoreClipboard and ClipboardRestoreDelaySeconds are mutually exclusive"
 }
 
 if ($ClipboardRestoreDelaySeconds -lt 0) {
@@ -327,7 +332,7 @@ if (!$SkipSmoke) {
         if ($NoRestoreClipboard) {
             $smokeArgs += "-NoRestoreClipboard"
         }
-        if ($PSBoundParameters.ContainsKey("ClipboardRestoreDelaySeconds")) {
+        if ($hasExplicitClipboardRestoreDelay) {
             $smokeArgs += @("-ClipboardRestoreDelaySeconds", "$ClipboardRestoreDelaySeconds")
         }
         if ($RunDictation) {

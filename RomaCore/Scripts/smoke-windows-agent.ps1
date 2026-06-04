@@ -29,6 +29,8 @@ param(
 $ErrorActionPreference = "Stop"
 Set-StrictMode -Version Latest
 
+$hasExplicitClipboardRestoreDelay = $PSBoundParameters.ContainsKey("ClipboardRestoreDelaySeconds")
+
 function Invoke-Step {
     param(
         [Parameter(Mandatory = $true)]
@@ -126,6 +128,10 @@ if ($UseHoldHook -and $UseToggle) {
 
 if ($RestoreClipboard -and $NoRestoreClipboard) {
     throw "RestoreClipboard and NoRestoreClipboard are mutually exclusive"
+}
+
+if ($NoRestoreClipboard -and $hasExplicitClipboardRestoreDelay) {
+    throw "NoRestoreClipboard and ClipboardRestoreDelaySeconds are mutually exclusive"
 }
 
 if ($ClipboardRestoreDelaySeconds -lt 0) {
@@ -284,7 +290,7 @@ Invoke-Step "agent config" {
     if ($NoRestoreClipboard) {
         $configArgs += "--no-restore-clipboard"
     }
-    if ($PSBoundParameters.ContainsKey("ClipboardRestoreDelaySeconds")) {
+    if ($hasExplicitClipboardRestoreDelay) {
         $configArgs += @("--clipboard-restore-delay", "$ClipboardRestoreDelaySeconds")
     }
 
@@ -319,7 +325,7 @@ Invoke-Step "agent config" {
     if ($NoRestoreClipboard) {
         Assert-JsonPropertyEquals -Object $configJson -Name "restoreClipboardAfterPaste" -Expected $false
     }
-    if ($PSBoundParameters.ContainsKey("ClipboardRestoreDelaySeconds")) {
+    if ($hasExplicitClipboardRestoreDelay) {
         Assert-JsonPropertyEquals `
             -Object $configJson `
             -Name "clipboardRestoreDelaySeconds" `

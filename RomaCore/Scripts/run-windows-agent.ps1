@@ -31,6 +31,8 @@ param(
 $ErrorActionPreference = "Stop"
 Set-StrictMode -Version Latest
 
+$hasExplicitClipboardRestoreDelay = $PSBoundParameters.ContainsKey("ClipboardRestoreDelaySeconds")
+
 function Resolve-FullPath {
     param(
         [Parameter(Mandatory = $true)]
@@ -61,6 +63,10 @@ if ($PasteDictation -and $NoPaste) {
 
 if ($RestoreClipboard -and $NoRestoreClipboard) {
     throw "RestoreClipboard and NoRestoreClipboard are mutually exclusive"
+}
+
+if ($NoRestoreClipboard -and $hasExplicitClipboardRestoreDelay) {
+    throw "NoRestoreClipboard and ClipboardRestoreDelaySeconds are mutually exclusive"
 }
 
 if ($ClipboardRestoreDelaySeconds -lt 0) {
@@ -205,7 +211,7 @@ if ($hasEndpoint -or $hasModel -or $hasWhisperCLI -or $hasWhisperModel) {
     if ($NoRestoreClipboard) {
         $configArgs += "--no-restore-clipboard"
     }
-    if ($PSBoundParameters.ContainsKey("ClipboardRestoreDelaySeconds")) {
+    if ($hasExplicitClipboardRestoreDelay) {
         $configArgs += @("--clipboard-restore-delay", "$ClipboardRestoreDelaySeconds")
     }
 
