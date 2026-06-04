@@ -1618,6 +1618,21 @@ struct RomaCoreChecks {
                 "on second thought correction should preserve suffix"
             ),
             (
+                "Use model, let me rephrase module.",
+                "Use module.",
+                "let me rephrase correction"
+            ),
+            (
+                "Use model, uh let me rephrase module.",
+                "Use module.",
+                "pause filler before let me rephrase correction"
+            ),
+            (
+                "Let's meet at two, let me rephrase three tomorrow.",
+                "Let's meet at three tomorrow.",
+                "let me rephrase correction should preserve suffix"
+            ),
+            (
                 "Use model, wait actually module.",
                 "Use module.",
                 "wait actually correction"
@@ -2681,6 +2696,11 @@ struct RomaCoreChecks {
                 "On second thought, module loads.",
                 "On second thought, module loads.",
                 "on second thought prose guard"
+            ),
+            (
+                "Let me rephrase, module loads.",
+                "Let me rephrase, module loads.",
+                "let me rephrase prose guard"
             ),
             (
                 "The phrase actually wait no is useful.",
