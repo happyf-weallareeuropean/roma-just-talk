@@ -1333,6 +1333,7 @@ public struct RomaTranscriptionOutputFilter {
 
         filteredText = removeLeadingDiscourseFillers(from: filteredText)
         if hadLeadingPauseFillerNoise {
+            filteredText = removeStandaloneAcknowledgementAfterPauseFiller(from: filteredText)
             filteredText = removeLeadingSingleAcknowledgementFiller(from: filteredText)
         }
         if hadLeadingFillerNoise {
@@ -1429,6 +1430,22 @@ public struct RomaTranscriptionOutputFilter {
         guard regex.firstMatch(in: text, range: range) != nil else {
             return text
         }
+        return ""
+    }
+
+    private static func removeStandaloneAcknowledgementAfterPauseFiller(from text: String) -> String {
+        let trimmedText = text.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard let regex = try? NSRegularExpression(
+            pattern: #"(?i)^(?:ok(?:ay)?|all[ \t]+right|alright|right|yeah)[ \t]*(?:(?:[,.;:!?…]+|\.\.\.)[ \t]*)?$"#
+        ) else {
+            return text
+        }
+
+        let range = NSRange(trimmedText.startIndex..., in: trimmedText)
+        guard regex.firstMatch(in: trimmedText, range: range) != nil else {
+            return text
+        }
+
         return ""
     }
 

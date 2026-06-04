@@ -2,6 +2,7 @@
 
 ## v1.81 - Unreleased
 
+- Dropped filler-only pause plus acknowledgement fragments such as "um yeah.".
 - Lowercased generated short tech nouns after acronyms in mid-sentence fragments.
 - Cleaned quoted or angle-wrapped bracket artifacts around short mid-sentence fragments.
 - Cleaned single "yeah/okay/right" acknowledgements after leading pause fillers.
@@ -40,6 +41,7 @@
 - Required full Windows laptop proof reports to share one proof session id.
 - Kept cloud and local Windows laptop startup shortcut proofs in separate proof-owned directories.
 - Made the Windows installer fail early when the installed listener executable is still running.
+- Made the Windows installer preserve the packaged proof agent and proof-set scripts.
 - Hardened the Windows laptop proof runner to fail early outside Windows or with missing local whisper files.
 - Strengthened full Windows laptop proof-set validation to require the reports come from the same machine and packaged artifact.
 - Added a package identity fingerprint to Windows artifact proof reports and full laptop proof-set validation.

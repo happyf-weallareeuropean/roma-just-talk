@@ -686,6 +686,21 @@ struct RomaCoreChecks {
                 "leading pause plus yeah acknowledgement filler"
             ),
             (
+                "um yeah.",
+                "",
+                "standalone pause plus yeah acknowledgement filler"
+            ),
+            (
+                "hmm okay.",
+                "",
+                "standalone pause plus okay acknowledgement filler"
+            ),
+            (
+                "uh all right.",
+                "",
+                "standalone pause plus all right acknowledgement filler"
+            ),
+            (
                 "uh okay I think this works.",
                 "I think this works.",
                 "leading pause plus okay acknowledgement filler"
@@ -5300,6 +5315,12 @@ struct RomaCoreChecks {
             installScript.contains("Assert-InstalledAgentNotRunning") &&
                 installScript.contains("close the listener before reinstalling or upgrading"),
             "Windows installer should fail early when the installed listener is running"
+        )
+        try require(
+            installScript.contains(#""RomaProofAgent.exe""#) &&
+                installScript.contains(#""run-windows-laptop-proof.ps1""#) &&
+                installScript.contains(#""check-windows-proof-set.ps1""#),
+            "Windows installer should preserve the packaged proof surface"
         )
         try require(
             checkSetScript.contains("proof_session_id"),
