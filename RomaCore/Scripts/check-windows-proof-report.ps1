@@ -146,6 +146,10 @@ function Assert-DictationRuntimeProof {
     Assert-Boolean -Object $runtime -Name "reported_positive_pre_roll" -Expected $true
     Assert-NumberGreaterThan -Object $runtime -Name "included_pre_roll_seconds" -Minimum 0
     Assert-Boolean -Object $runtime -Name "reported_processed_text" -Expected $true
+    Assert-Boolean -Object $runtime -Name "reported_positive_raw_transcript" -Expected $true
+    Assert-Boolean -Object $runtime -Name "reported_positive_processed_transcript" -Expected $true
+    Assert-NumberGreaterThan -Object $runtime -Name "raw_transcript_length" -Minimum 0
+    Assert-NumberGreaterThan -Object $runtime -Name "processed_transcript_length" -Minimum 0
 
     return $runtime
 }

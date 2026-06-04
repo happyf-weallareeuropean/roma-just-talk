@@ -402,11 +402,17 @@ function Get-DictationRuntimeProof {
     $content = Get-Content -LiteralPath $logPath -Raw
     $durationSeconds = Get-OutputNumber -Content $content -Name "duration_seconds"
     $includedPreRollSeconds = Get-OutputNumber -Content $content -Name "included_pre_roll_seconds"
+    $rawTranscriptLength = Get-OutputNumber -Content $content -Name "raw_transcript_length"
+    $processedTranscriptLength = Get-OutputNumber -Content $content -Name "processed_transcript_length"
     $proof["reported_wrote"] = $content.Contains("wrote=")
     $proof["reported_pre_roll"] = $content.Contains("included_pre_roll_seconds=")
     $proof["duration_seconds"] = $durationSeconds
     $proof["included_pre_roll_seconds"] = $includedPreRollSeconds
     $proof["reported_positive_pre_roll"] = ($null -ne $includedPreRollSeconds) -and ($includedPreRollSeconds -gt 0)
+    $proof["raw_transcript_length"] = $rawTranscriptLength
+    $proof["processed_transcript_length"] = $processedTranscriptLength
+    $proof["reported_positive_raw_transcript"] = ($null -ne $rawTranscriptLength) -and ($rawTranscriptLength -gt 0)
+    $proof["reported_positive_processed_transcript"] = ($null -ne $processedTranscriptLength) -and ($processedTranscriptLength -gt 0)
     $proof["reported_processed_text"] = $content.Contains("processed_transcript_text=")
     $proof["reported_paste_sent"] = $content.Contains("paste_sent=true")
     $proof["reported_paste_not_sent"] = $content.Contains("paste_sent=false")
