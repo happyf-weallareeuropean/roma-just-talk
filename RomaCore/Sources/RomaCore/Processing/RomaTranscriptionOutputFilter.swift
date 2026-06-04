@@ -248,7 +248,8 @@ public struct RomaTranscriptionOutputFilter {
     private static let removableTrailingSentenceFragmentPunctuation = CharacterSet(charactersIn: "!?")
     private static let removableTrailingSpacedFragmentSymbols = "/\\|"
     private static let nonSpeechBracketContents: Set<String> = [
-        "applause", "background music", "background noise", "beep", "beeping",
+        "ambient noise", "applause", "background music", "background noise",
+        "background sound", "background sounds", "beep", "beeping",
         "blank audio", "breath", "breathing", "clapping", "cough", "coughing",
         "crosstalk", "foreign language", "inaudible", "indistinct", "keyboard typing",
         "empty audio", "hum", "humming", "laughter", "laughing", "laughs",
@@ -263,7 +264,8 @@ public struct RomaTranscriptionOutputFilter {
         (?:^|(?<=[.!?]\s))
         \s*
         (?:
-            applause | background\s+(?:chatter|conversation|music|noise|speech|voices) |
+            ambient\s+noise |
+            applause | background\s+(?:chatter|conversation|music|noise|sounds?|speech|voices) |
             beep(?:ing)? | breath(?:ing|es)? | clapping |
             clears?\s+(?:his\s+|her\s+|their\s+)?throat | clearing\s+throat |
             coughs? | coughing | crowd\s+(?:applause|chatter|noise|talking) |

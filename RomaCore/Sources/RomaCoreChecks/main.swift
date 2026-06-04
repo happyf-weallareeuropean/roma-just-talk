@@ -843,6 +843,16 @@ struct RomaCoreChecks {
                 "leading unbracketed background noise artifact"
             ),
             (
+                "ambient noise. Continue now.",
+                "Continue now.",
+                "leading unbracketed ambient noise artifact"
+            ),
+            (
+                "background sounds. Continue now.",
+                "Continue now.",
+                "leading unbracketed background sounds artifact"
+            ),
+            (
                 "inaudible. please continue.",
                 "please continue.",
                 "leading unbracketed inaudible artifact"
@@ -886,6 +896,16 @@ struct RomaCoreChecks {
                 "The background noise matters.",
                 "The background noise matters.",
                 "unbracketed background noise prose guard"
+            ),
+            (
+                "Ambient noise levels matter.",
+                "Ambient noise levels matter.",
+                "unbracketed ambient noise prose guard"
+            ),
+            (
+                "Background sounds can help focus.",
+                "Background sounds can help focus.",
+                "unbracketed background sounds prose guard"
             ),
             (
                 "Clears throat exercises help.",
