@@ -378,6 +378,27 @@ function Assert-LaptopPreflightReport {
     Assert-ReportBoolean -Report $preflights -Name "microphone" -Expected $true -ReportName $reportName
     Assert-ReportBoolean -Report $preflights -Name "local_whisper" -Expected $true -ReportName $reportName
 
+    $preflightOutputs = Require-ReportProperty -Report $report -Name "preflight_outputs" -ReportName $reportName
+    $hotkeyOutput = Require-ReportProperty -Report $preflightOutputs -Name "hotkey_delivery" -ReportName $reportName
+    Assert-ReportBoolean -Report $hotkeyOutput -Name "output_present" -Expected $true -ReportName $reportName
+    Assert-ReportBoolean -Report $hotkeyOutput -Name "waiting_for_hold" -Expected $true -ReportName $reportName
+    Assert-ReportBoolean -Report $hotkeyOutput -Name "key_down" -Expected $true -ReportName $reportName
+    Assert-ReportBoolean -Report $hotkeyOutput -Name "key_up" -Expected $true -ReportName $reportName
+    Assert-ReportBoolean -Report $hotkeyOutput -Name "observed_events_present" -Expected $true -ReportName $reportName
+
+    $microphoneOutput = Require-ReportProperty -Report $preflightOutputs -Name "microphone" -ReportName $reportName
+    Assert-ReportBoolean -Report $microphoneOutput -Name "output_present" -Expected $true -ReportName $reportName
+    Assert-ReportBoolean -Report $microphoneOutput -Name "wrote_present" -Expected $true -ReportName $reportName
+    Assert-ReportBoolean -Report $microphoneOutput -Name "sample_rate_16000" -Expected $true -ReportName $reportName
+    Assert-ReportBoolean -Report $microphoneOutput -Name "channels_mono" -Expected $true -ReportName $reportName
+
+    $localWhisperOutput = Require-ReportProperty -Report $preflightOutputs -Name "local_whisper" -ReportName $reportName
+    Assert-ReportBoolean -Report $localWhisperOutput -Name "output_present" -Expected $true -ReportName $reportName
+    Assert-ReportBoolean -Report $localWhisperOutput -Name "transcription_client_whisper" -Expected $true -ReportName $reportName
+    Assert-ReportBoolean -Report $localWhisperOutput -Name "network_required_false" -Expected $true -ReportName $reportName
+    Assert-ReportBoolean -Report $localWhisperOutput -Name "executable_present" -Expected $true -ReportName $reportName
+    Assert-ReportBoolean -Report $localWhisperOutput -Name "model_file_present" -Expected $true -ReportName $reportName
+
     $files = Require-ReportProperty -Report $report -Name "files" -ReportName $reportName
     Assert-ReportFileProof -Proof (Require-ReportProperty -Report $files -Name "proof_agent" -ReportName $reportName) -Name "laptop_preflight.proof_agent"
     Assert-ReportFileProof -Proof (Require-ReportProperty -Report $files -Name "mic_preflight_wav" -ReportName $reportName) -Name "laptop_preflight.mic_preflight_wav" -MinimumBytes 45

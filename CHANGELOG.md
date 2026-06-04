@@ -65,6 +65,7 @@
 - Added a Windows laptop preflight-only JSON report so native setup proof can be archived before cloud/full-proof runs.
 - Required the Windows proof-set checker to validate laptop preflight-only JSON reports before marking setup proof OK.
 - Added a Windows package smoke for the laptop preflight JSON checker so CI verifies the checker path before laptop handoff.
+- Added hotkey, microphone, and local-whisper output marker evidence to Windows laptop preflight proof reports, including full-proof runs.
 - Added an artifact-local Windows laptop proof guide and hash-check it with the packaged proof surface.
 - Locked the Windows no-admin startup contract to the installed run script in listener mode.
 - Required the installed Windows launcher doctor to assert the permission/startup contract before running sessions.

@@ -262,6 +262,28 @@ function Write-LaptopPreflightCheckerSmokeReport {
             microphone = $true
             local_whisper = $true
         }
+        preflight_outputs = [ordered]@{
+            hotkey_delivery = [ordered]@{
+                output_present = $true
+                waiting_for_hold = $true
+                key_down = $true
+                key_up = $true
+                observed_events_present = $true
+            }
+            microphone = [ordered]@{
+                output_present = $true
+                wrote_present = $true
+                sample_rate_16000 = $true
+                channels_mono = $true
+            }
+            local_whisper = [ordered]@{
+                output_present = $true
+                transcription_client_whisper = $true
+                network_required_false = $true
+                executable_present = $true
+                model_file_present = $true
+            }
+        }
         files = [ordered]@{
             proof_agent = New-FileProof -Path $ProofAgentPath
             mic_preflight_wav = New-FileProof -Path $micPreflightPath
