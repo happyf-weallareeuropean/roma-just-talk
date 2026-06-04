@@ -139,6 +139,8 @@ struct TranscriptionOutputFilterTests {
         #expect(TranscriptionOutputFilter.filter("Use [typing-speed] now.") == "Use [typing-speed] now.")
         #expect(TranscriptionOutputFilter.filter("Use [speaker notes] now.") == "Use [speaker notes] now.")
         #expect(TranscriptionOutputFilter.filter("hmm.... eh... I I think think this this works.") == "I think this works.")
+        #expect(TranscriptionOutputFilter.filter("I think this works. I think this works") == "I think this works.")
+        #expect(TranscriptionOutputFilter.filter("New York. New York") == "New York. New York")
         #expect(TranscriptionOutputFilter.filter("I-I think this works.") == "I think this works.")
         #expect(TranscriptionOutputFilter.filter("This-this works.") == "This works.")
         #expect(TranscriptionOutputFilter.filter("x-x is zero.") == "x-x is zero.")

@@ -1008,6 +1008,7 @@ public struct RomaTranscriptionOutputFilter {
             filteredText = collapseRepeatedShortClauses(in: filteredText)
             filteredText = collapseRepeatedShortSentences(in: filteredText)
             filteredText = collapseMismatchedRepeatedShortSentences(in: filteredText)
+            filteredText = collapseTrailingUnpunctuatedRepeatedShortSentences(in: filteredText)
             filteredText = collapseGeneratedSeparatorBeforeShortFragment(in: filteredText)
         }
 
@@ -6712,6 +6713,53 @@ public struct RomaTranscriptionOutputFilter {
                 collapsedText.replaceSubrange(
                     fullRange,
                     with: String(collapsedText[prefixRange]) + sentenceBody + punctuation
+                )
+                didRewrite = true
+            }
+
+            guard didRewrite else { break }
+            rewriteCount += 1
+        }
+
+        return collapsedText
+    }
+
+    private static func collapseTrailingUnpunctuatedRepeatedShortSentences(in text: String) -> String {
+        guard let regex = try? NSRegularExpression(
+            pattern: #"(?i)(^|(?<=[.!?])\s+)([^.!?\n]{3,120})([.!?])\s+\2(?=\s|$)"#
+        ) else {
+            return text
+        }
+
+        var collapsedText = text
+        var rewriteCount = 0
+
+        while rewriteCount < 4 {
+            let range = NSRange(collapsedText.startIndex..., in: collapsedText)
+            let matches = regex.matches(in: collapsedText, range: range).reversed()
+            var didRewrite = false
+
+            for match in matches {
+                guard match.numberOfRanges >= 4,
+                      let fullRange = Range(match.range, in: collapsedText),
+                      let prefixRange = Range(match.range(at: 1), in: collapsedText),
+                      let sentenceBodyRange = Range(match.range(at: 2), in: collapsedText),
+                      let punctuationRange = Range(match.range(at: 3), in: collapsedText) else {
+                    continue
+                }
+
+                let sentenceBody = String(collapsedText[sentenceBodyRange])
+                let sentenceWordCount = wordCount(in: sentenceBody)
+                guard sentenceWordCount >= 2 && sentenceWordCount <= 12,
+                      !preservedRepeatedClauses.contains(normalizedRepeatedClause(sentenceBody)) else {
+                    continue
+                }
+
+                collapsedText.replaceSubrange(
+                    fullRange,
+                    with: String(collapsedText[prefixRange]) +
+                        sentenceBody +
+                        String(collapsedText[punctuationRange])
                 )
                 didRewrite = true
             }

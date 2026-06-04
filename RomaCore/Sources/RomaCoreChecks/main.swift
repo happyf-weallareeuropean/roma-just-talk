@@ -686,6 +686,11 @@ struct RomaCoreChecks {
                 "duplicate short sentence with trailing emphatic punctuation"
             ),
             (
+                "I think this works. I think this works",
+                "I think this works.",
+                "duplicate short sentence with missing trailing punctuation"
+            ),
+            (
                 "Hello world! Hello world.",
                 "Hello world.",
                 "duplicate short sentence with leading emphatic punctuation"
@@ -1789,6 +1794,16 @@ struct RomaCoreChecks {
                 "I think this works. I think this works.",
                 "I think this works.",
                 "duplicate short sentence"
+            ),
+            (
+                "I think this works. I think this works",
+                "I think this works.",
+                "duplicate short sentence missing trailing punctuation"
+            ),
+            (
+                "New York. New York",
+                "New York. New York",
+                "intentional repeated sentence guard"
             ),
             (
                 "We should ship we should ship this.",
