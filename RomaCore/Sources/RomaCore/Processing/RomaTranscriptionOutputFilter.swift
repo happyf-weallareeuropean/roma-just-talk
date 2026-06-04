@@ -263,12 +263,16 @@ public struct RomaTranscriptionOutputFilter {
         (?:^|(?<=[.!?]\s))
         \s*
         (?:
-            applause | beep(?:ing)? | breath(?:ing)? | clapping |
-            coughs? | coughing | hum(?:ming)? | laugh(?:s|ing)? | laughter |
-            mumbles? | mumbling | sighs? | sighing | sneezes? | sneezing |
-            static | typing
+            applause | background\s+(?:chatter|conversation|music|noise|speech|voices) |
+            beep(?:ing)? | breath(?:ing|es)? | clapping |
+            clears?\s+(?:his\s+|her\s+|their\s+)?throat | clearing\s+throat |
+            coughs? | coughing | crowd\s+(?:applause|chatter|noise|talking) |
+            hum(?:ming)? | inaudible | indistinct | laugh(?:s|ing)? | laughter |
+            mumbles? | mumbling | no\s+(?:audio|sound|speech) |
+            sighs? | sighing | silence | silent | sneezes? | sneezing |
+            static | typing | unclear | unintelligible
         )
-        (?:[ \t]+(?:continues?|indistinctly|loudly|quietly|softly|sounds?)){0,3}
+        (?:\s+(?:continues?|indistinctly|loudly|quietly|softly|sounds?)){0,3}
         \s*(?:[.!?,;:…]+|\.\.\.)(?=\s|$)
         """#
     private static let preservedRepeatedWords: Set<String> = [

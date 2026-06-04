@@ -833,6 +833,36 @@ struct RomaCoreChecks {
                 "terminal unbracketed cough artifact"
             ),
             (
+                "clears throat. I think this works.",
+                "I think this works.",
+                "leading unbracketed clears throat artifact"
+            ),
+            (
+                "background noise. This is ready.",
+                "This is ready.",
+                "leading unbracketed background noise artifact"
+            ),
+            (
+                "inaudible. please continue.",
+                "please continue.",
+                "leading unbracketed inaudible artifact"
+            ),
+            (
+                "no speech. Use this.",
+                "Use this.",
+                "leading unbracketed no speech artifact"
+            ),
+            (
+                "The background noise matters.",
+                "The background noise matters.",
+                "unbracketed background noise prose guard"
+            ),
+            (
+                "Clears throat exercises help.",
+                "Clears throat exercises help.",
+                "unbracketed clears throat prose guard"
+            ),
+            (
                 "The dog coughs.",
                 "The dog coughs.",
                 "unbracketed cough verb guard"

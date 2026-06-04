@@ -2,6 +2,7 @@
 
 ## v1.81 - Unreleased
 
+- Removed more unbracketed non-speech ASR phrase artifacts such as "clears throat.", "background noise.", and "inaudible.".
 - Lowercased ordinary title-cased words inside short mid-sentence fragments such as "The Model." while preserving acronyms like "API".
 - Removed unbracketed non-speech ASR descriptors such as "sighs...", "coughs,", and "laughs." when they appear as their own fragment.
 - Handled bare "sorry" self-corrections such as "blue sorry red" while preserving apology prose.
