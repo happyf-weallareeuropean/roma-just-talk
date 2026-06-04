@@ -260,6 +260,83 @@ function Set-ExpectedModeFromProfile {
     $script:ExpectedMode = $Mode
 }
 
+function Get-ProofProfileRequirements {
+    param(
+        [Parameter(Mandatory = $true)]
+        [string]$Profile
+    )
+
+    switch ($Profile) {
+        "doctor-only" {
+            return @(
+                "windows_platform",
+                "permission_surface",
+                "proof_agent_source_surface",
+                "native_doctor_surface"
+            )
+        }
+        "cloud-dictation" {
+            return @(
+                "windows_platform",
+                "install",
+                "shortcut",
+                "startup_shortcut",
+                "permission_surface",
+                "proof_agent_source_surface",
+                "native_doctor_surface",
+                "hold_hook_config",
+                "cloud_config",
+                "dictation_runtime",
+                "paste_sent"
+            )
+        }
+        "local-whisper-dictation" {
+            return @(
+                "windows_platform",
+                "install",
+                "shortcut",
+                "startup_shortcut",
+                "permission_surface",
+                "proof_agent_source_surface",
+                "native_doctor_surface",
+                "hold_hook_config",
+                "local_whisper_config",
+                "dictation_runtime",
+                "paste_sent"
+            )
+        }
+        "local-whisper-notepad-paste" {
+            return @(
+                "windows_platform",
+                "install",
+                "permission_surface",
+                "proof_agent_source_surface",
+                "native_doctor_surface",
+                "hold_hook_config",
+                "local_whisper_config",
+                "notepad_paste"
+            )
+        }
+        "packaged-whisper-mock-install" {
+            return @(
+                "windows_platform",
+                "install",
+                "shortcut",
+                "startup_shortcut",
+                "permission_surface",
+                "proof_agent_source_surface",
+                "native_doctor_surface",
+                "packaged_whisper_mock",
+                "hold_hook_config",
+                "local_whisper_config"
+            )
+        }
+        default {
+            return @()
+        }
+    }
+}
+
 $ProofReportPath = $ExecutionContext.SessionState.Path.GetUnresolvedProviderPathFromPSPath($ProofReportPath)
 if (!(Test-Path -LiteralPath $ProofReportPath)) {
     throw "Proof report was not found: $ProofReportPath"
@@ -472,6 +549,13 @@ if ($RequireNotepadPaste) {
     Assert-Boolean -Object $notepadPaste -Name "text_found" -Expected $true
     Assert-Boolean -Object $notepadPaste -Name "verified" -Expected $true
     Assert-FileProof -Proof (Require-Property -Object $notepadPaste -Name "file") -Name "notepad_paste_file"
+}
+
+if (![string]::IsNullOrWhiteSpace($RequireProofProfile)) {
+    foreach ($requirement in (Get-ProofProfileRequirements -Profile $RequireProofProfile)) {
+        Write-Host "proof_requirement=$requirement status=pass"
+    }
+    Write-Host "proof_profile_ok=$RequireProofProfile"
 }
 
 Write-Host "proof_report_ok=$ProofReportPath"

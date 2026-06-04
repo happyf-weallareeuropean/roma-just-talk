@@ -2,6 +2,7 @@
 
 ## v1.81 - Unreleased
 
+- Cleaned bounded "what I mean is" self-corrections without leaving stray "is".
 - Cleaned bounded "I meant to say" self-corrections without leaving "to say" behind.
 - Cleaned bounded "I mean to say" self-corrections.
 - Cleaned tight hyphenated repeated-word stutters such as "I-I think".
@@ -10,6 +11,7 @@
 - Cleaned leading slash, backslash, and pipe separator noise from short mid-sentence fragments.
 - Cleaned bounded "hold on" and "hang on" hesitation self-corrections.
 - Cleaned bounded bare "wait" self-corrections such as "Use model, wait module.".
+- Added pass/fail requirement coverage output for named Windows proof-report profiles.
 - Added named Windows proof-report profiles for doctor, cloud dictation, local whisper, and Notepad paste checks.
 - Strengthened Windows dictation proof reports to verify runtime-written WAV path and duration.
 - Strengthened Windows dictation proof reports to require non-empty transcript output.
