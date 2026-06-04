@@ -218,10 +218,11 @@ No-admin install proof:
 
 ```powershell
 powershell -ExecutionPolicy Bypass -File C:\tmp\roma-windows-agent\install-windows-agent.ps1 -PackageDir C:\tmp\roma-windows-agent
+powershell -ExecutionPolicy Bypass -File C:\tmp\roma-windows-agent\install-windows-agent.ps1 -PackageDir C:\tmp\roma-windows-agent -WhisperCLI C:\path\whisper-cli.exe -WhisperModel C:\path\ggml-base.en.bin
 powershell -ExecutionPolicy Bypass -File C:\tmp\roma-windows-agent\install-windows-agent.ps1 -PackageDir C:\tmp\roma-windows-agent -Endpoint https://api.groq.com/openai/v1/audio/transcriptions -Model whisper-large-v3-turbo -ApiKeyEnv GROQ_API_KEY -ApiKeyName groq -RunDictation -PasteDictation
 ```
 
-By default this installs into `%LOCALAPPDATA%\roma-just-talk\agent` and smokes the installed copy with an install-local smoke config. When you pass real endpoint/model/key options or `-RunDictation`, the installer stores config at `%APPDATA%\roma-just-talk\windows-agent.json`. Pass `-InstallDir` and `-ConfigPath` to prove a temp install path in CI.
+By default this installs into `%LOCALAPPDATA%\roma-just-talk\agent` and smokes the installed copy with an install-local smoke config. Passing `-WhisperCLI` and `-WhisperModel` proves the same installed config path for local whisper.cpp without API-key storage. When you pass real endpoint/model/key options or `-RunDictation`, the installer stores config at `%APPDATA%\roma-just-talk\windows-agent.json`. Pass `-InstallDir` and `-ConfigPath` to prove a temp install path in CI.
 
 The installer also copies `run-windows-agent.ps1`. Use it to start the installed agent from the saved config, or pass endpoint/model/key options once to write config and immediately run dictation:
 
@@ -250,7 +251,7 @@ CI proof:
 - `.github/workflows/romacore.yml` builds `RomaCore` on macOS and Windows.
 - The Windows job verifies Visual Studio C++ tools, installs the official Swift toolchain with `winget install --id Swift.Toolchain`, then runs `windows-proof.ps1 -SkipMic`.
 - CI is noninteractive, so it proves Windows compilation, PowerShell parse validity, pre-roll/WAV output, shared cleanup/replacement/paste text processing, DPAPI secret round-trip, stored-key transcription against a local mock STT endpoint, local `whisper-cli` argument shaping plus mock process execution, reusable `RomaWindowsAgent` config writing, and hotkey/paste doctor paths. It does not prove real microphone permission, real hotkey delivery, local whisper inference, or paste into Notepad.
-- CI also runs `package-windows-agent.ps1`, requires Swift runtime DLLs in the artifact, verifies the packaged `RomaWindowsAgent.exe` through `smoke-windows-agent.ps1`, asserts generated JSON config for both cloud endpoint/model and local whisper-cli modes, proves no-admin install into a temp directory, verifies the installed launcher with `-DoctorOnly`, creates a user shortcut in a temp folder, and uploads a `roma-windows-agent` artifact for laptop smoke tests.
+- CI also runs `package-windows-agent.ps1`, requires Swift runtime DLLs in the artifact, verifies the packaged `RomaWindowsAgent.exe` through `smoke-windows-agent.ps1`, asserts generated JSON config for both cloud endpoint/model and local whisper-cli modes, proves no-admin installs for both cloud/default and local whisper-cli config into temp directories, verifies the installed launcher with `-DoctorOnly`, creates a user shortcut in a temp folder, and uploads a `roma-windows-agent` artifact for laptop smoke tests.
 
 Raw command sequence:
 

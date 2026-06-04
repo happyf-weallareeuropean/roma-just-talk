@@ -218,6 +218,17 @@ try {
             -ShortcutDir (Join-Path $OutputDir "shortcuts")
     }
 
+    Invoke-Step "packaged local whisper install smoke" {
+        & $installScriptOutput `
+            -PackageDir $OutputDir `
+            -InstallDir (Join-Path $OutputDir "install-proof-local-whisper") `
+            -ConfigPath (Join-Path $OutputDir "install-proof-local-whisper\windows-agent.json") `
+            -WhisperCLI $mockWhisperSource.FullName `
+            -WhisperModel $agentOutput `
+            -RestoreClipboard `
+            -ClipboardRestoreDelaySeconds 0
+    }
+
     $manifestPath = Join-Path $OutputDir "manifest.txt"
     $agentFile = Get-Item -LiteralPath $agentOutput
     @(
