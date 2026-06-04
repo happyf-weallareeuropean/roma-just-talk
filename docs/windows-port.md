@@ -232,7 +232,7 @@ powershell -ExecutionPolicy Bypass -File "$env:LOCALAPPDATA\roma-just-talk\agent
 powershell -ExecutionPolicy Bypass -File "$env:LOCALAPPDATA\roma-just-talk\agent\run-windows-agent.ps1" -WhisperCLI C:\path\whisper-cli.exe -WhisperModel C:\path\ggml-base.en.bin -PasteDictation
 ```
 
-Add `-CreateShortcut` to `install-windows-agent.ps1` to create a user Start Menu shortcut that runs `run-windows-agent.ps1` without administrator rights. CI package smoke creates the shortcut in a temporary folder and verifies the launcher with `-DoctorOnly`.
+Add `-CreateShortcut` to `install-windows-agent.ps1` to create a user Start Menu shortcut that runs `run-windows-agent.ps1` without administrator rights. The shortcut points at the same config path the installer just smoked. CI package smoke creates the shortcut in a temporary folder, verifies its arguments include that config, and verifies the launcher with `-DoctorOnly`.
 
 Windows agent config:
 
@@ -251,7 +251,7 @@ CI proof:
 - `.github/workflows/romacore.yml` builds `RomaCore` on macOS and Windows.
 - The Windows job verifies Visual Studio C++ tools, installs the official Swift toolchain with `winget install --id Swift.Toolchain`, then runs `windows-proof.ps1 -SkipMic`.
 - CI is noninteractive, so it proves Windows compilation, PowerShell parse validity, pre-roll/WAV output, shared cleanup/replacement/paste text processing, DPAPI secret round-trip, stored-key transcription against a local mock STT endpoint, local `whisper-cli` argument shaping plus mock process execution, reusable `RomaWindowsAgent` config writing, and hotkey/paste doctor paths. It does not prove real microphone permission, real hotkey delivery, local whisper inference, or paste into Notepad.
-- CI also runs `package-windows-agent.ps1`, requires Swift runtime DLLs in the artifact, verifies the packaged `RomaWindowsAgent.exe` through `smoke-windows-agent.ps1`, asserts generated JSON config for both cloud endpoint/model and local whisper-cli modes, proves no-admin installs for both cloud/default and local whisper-cli config into temp directories, verifies the installed launcher with `-DoctorOnly`, creates a user shortcut in a temp folder, and uploads a `roma-windows-agent` artifact for laptop smoke tests.
+- CI also runs `package-windows-agent.ps1`, requires Swift runtime DLLs in the artifact, verifies the packaged `RomaWindowsAgent.exe` through `smoke-windows-agent.ps1`, asserts generated JSON config for both cloud endpoint/model and local whisper-cli modes, proves no-admin installs for both cloud/default and local whisper-cli config into temp directories, verifies the installed launcher with `-DoctorOnly`, creates a user shortcut in a temp folder, verifies the shortcut points at the smoked config, and uploads a `roma-windows-agent` artifact for laptop smoke tests.
 
 Raw command sequence:
 

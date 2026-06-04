@@ -258,13 +258,19 @@ if ($CreateShortcut) {
         $shell = New-Object -ComObject WScript.Shell
         $shortcut = $shell.CreateShortcut($shortcutPath)
         $shortcut.TargetPath = "powershell.exe"
-        $shortcut.Arguments = "-NoProfile -ExecutionPolicy Bypass -File `"$runScript`""
+        $shortcut.Arguments = "-NoProfile -ExecutionPolicy Bypass -File `"$runScript`" -ConfigPath `"$ConfigPath`""
         $shortcut.WorkingDirectory = $InstallDir
         $shortcut.Description = "Start roma-just-talk Windows dictation agent"
         $shortcut.Save()
 
         Require-File -Path $shortcutPath
+        $savedShortcut = $shell.CreateShortcut($shortcutPath)
+        if (!$savedShortcut.Arguments.Contains("-ConfigPath") -or
+            !$savedShortcut.Arguments.Contains($ConfigPath)) {
+            throw "Shortcut does not reference config path: $ConfigPath"
+        }
         Write-Host "shortcut=$shortcutPath"
+        Write-Host "shortcut_args=$($savedShortcut.Arguments)"
     }
 }
 
