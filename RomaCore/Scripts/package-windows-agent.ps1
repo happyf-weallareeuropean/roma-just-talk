@@ -276,6 +276,19 @@ try {
         Assert-OutputContains -Output $proofAgentOutputText -Expected "windows_dictation_proof_source=true"
     }
 
+    Invoke-Step "packaged listener smoke" {
+        $listenerOutputText = & $agentOutput listen `
+            --config $configPath `
+            --max-sessions 0 2>&1 | Out-String
+        if ($LASTEXITCODE -ne 0) {
+            Write-Host $listenerOutputText
+            throw "RomaWindowsAgent listen smoke failed"
+        }
+        Write-Host $listenerOutputText
+        Assert-OutputContains -Output $listenerOutputText -Expected "mode=listen"
+        Assert-OutputContains -Output $listenerOutputText -Expected "listen_completed_sessions=0"
+    }
+
     Invoke-Step "packaged local whisper config smoke" {
         & $smokeScriptOutput `
             -AgentPath $agentOutput `
