@@ -1,7 +1,7 @@
 <div align="center">
   <img src="docs/assets/roma-just-talk-logo.png" alt="roma-just-talk split keyboard logo" width="180" height="180" />
   <h1>roma-just-talk</h1>
-  <p>speak before you press the hotkey.</p>
+  <p>a dictation app: speak before you press the hotkey.</p>
   <p>rethink UX: pre-roll voice capture, -87% bin size & -83% ram usage (780mb → 132mb), local & cloud stt solution both available.</p>
   <p>did u know speak is 3~4x faster than type? now u know</p>
 
@@ -28,7 +28,7 @@ Most dictation apps wait for the hotkey, then open the mic. That means you pause
 
 VoiceInk made dictation feel instant after recording starts. roma-just-talk is interested in the moment before that: speech that begins naturally, then gets committed when you press the shortcut.
 
-![VoiceInk Mac App](https://github.com/user-attachments/assets/12367379-83e7-48a6-b52c-4488a6a04bba)
+![roma just talk Mac App](https://github.com/user-attachments/assets/a6631a6d-1f56-43e1-be6c-88b21750c82f)
 
 ## What Makes This Different
 
