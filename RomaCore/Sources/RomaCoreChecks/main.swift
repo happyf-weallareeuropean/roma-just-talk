@@ -5060,6 +5060,10 @@ struct RomaCoreChecks {
             contentsOf: scriptsRoot.appendingPathComponent("package-windows-agent.ps1"),
             encoding: .utf8
         )
+        let proveScript = try String(
+            contentsOf: scriptsRoot.appendingPathComponent("prove-windows-agent-artifact.ps1"),
+            encoding: .utf8
+        )
         let checkReportScript = try String(
             contentsOf: scriptsRoot.appendingPathComponent("check-windows-proof-report.ps1"),
             encoding: .utf8
@@ -5144,6 +5148,14 @@ struct RomaCoreChecks {
         try require(
             checkReportScript.contains(#""agent_runtime_wiring""#),
             "Windows proof profiles should print agent runtime wiring coverage"
+        )
+        try require(
+            proveScript.contains("reported_ordered_hold_sequence"),
+            "Windows artifact proof reports should record ordered hold-to-talk runtime evidence"
+        )
+        try require(
+            checkReportScript.contains(#"Assert-Boolean -Object $Runtime -Name "reported_ordered_hold_sequence" -Expected $true"#),
+            "Windows proof checker should require ordered hold-to-talk runtime evidence"
         )
         try require(
             checkSetScript.contains("manifest.source_commit"),

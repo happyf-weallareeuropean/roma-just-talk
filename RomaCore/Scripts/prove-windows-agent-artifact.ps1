@@ -551,6 +551,12 @@ function Get-DictationRuntimeProof {
     $rawTranscriptLength = Get-OutputNumber -Content $content -Name "raw_transcript_length"
     $processedTranscriptLength = Get-OutputNumber -Content $content -Name "processed_transcript_length"
     $processedTranscriptText = Get-OutputValue -Content $content -Name "processed_transcript_text"
+    $preRollBufferingLine = Get-OutputLineNumber -Content $content -Needle "pre_roll_buffering=true"
+    $waitingForHoldLine = Get-OutputLineNumber -Content $content -Needle "waiting_for_key_down="
+    $holdKeyDownLine = Get-OutputLineNumber -Content $content -Needle "hold_key_down=true"
+    $holdKeyUpLine = Get-OutputLineNumber -Content $content -Needle "hold_key_up=true"
+    $wroteLine = Get-OutputLineNumber -Content $content -Needle "wrote="
+    $processedTextLine = Get-OutputLineNumber -Content $content -Needle "processed_transcript_text="
     $proof["reported_wrote"] = $content.Contains("wrote=")
     $proof["wrote_path"] = $wrotePath
     if (![string]::IsNullOrWhiteSpace($wrotePath)) {
@@ -573,6 +579,20 @@ function Get-DictationRuntimeProof {
     $proof["reported_waiting_for_hold_key_down"] = $content.Contains("waiting_for_key_down=")
     $proof["reported_hold_key_down"] = $content.Contains("hold_key_down=true")
     $proof["reported_hold_key_up"] = $content.Contains("hold_key_up=true")
+    $proof["pre_roll_buffering_line"] = $preRollBufferingLine
+    $proof["waiting_for_hold_key_down_line"] = $waitingForHoldLine
+    $proof["hold_key_down_line"] = $holdKeyDownLine
+    $proof["hold_key_up_line"] = $holdKeyUpLine
+    $proof["wrote_line"] = $wroteLine
+    $proof["processed_transcript_text_line"] = $processedTextLine
+    $proof["reported_ordered_hold_sequence"] = (
+        $preRollBufferingLine -gt 0 -and
+        $waitingForHoldLine -gt $preRollBufferingLine -and
+        $holdKeyDownLine -gt $waitingForHoldLine -and
+        $holdKeyUpLine -gt $holdKeyDownLine -and
+        $wroteLine -gt $holdKeyUpLine -and
+        $processedTextLine -gt $wroteLine
+    )
     $expectedTranscriptTextFound = $false
     if (![string]::IsNullOrWhiteSpace($ExpectedTranscriptText)) {
         $expectedTranscriptTextFound = Test-ContainsText -Text $processedTranscriptText -Needle $ExpectedTranscriptText
@@ -620,6 +640,24 @@ function Get-OutputNumber {
         $match.Groups[1].Value,
         [System.Globalization.CultureInfo]::InvariantCulture
     )
+}
+
+function Get-OutputLineNumber {
+    param(
+        [Parameter(Mandatory = $true)]
+        [string]$Content,
+        [Parameter(Mandatory = $true)]
+        [string]$Needle
+    )
+
+    $lines = $Content -split "\r?\n"
+    for ($index = 0; $index -lt $lines.Count; $index += 1) {
+        if ($lines[$index].Contains($Needle)) {
+            return $index + 1
+        }
+    }
+
+    return 0
 }
 
 function Get-DoctorOutputProof {

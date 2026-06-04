@@ -341,6 +341,13 @@ function Assert-HoldHookRuntimeProof {
     Assert-Boolean -Object $Runtime -Name "reported_waiting_for_hold_key_down" -Expected $true
     Assert-Boolean -Object $Runtime -Name "reported_hold_key_down" -Expected $true
     Assert-Boolean -Object $Runtime -Name "reported_hold_key_up" -Expected $true
+    Assert-NumberGreaterThan -Object $Runtime -Name "pre_roll_buffering_line" -Minimum 0
+    Assert-NumberGreaterThan -Object $Runtime -Name "waiting_for_hold_key_down_line" -Minimum 0
+    Assert-NumberGreaterThan -Object $Runtime -Name "hold_key_down_line" -Minimum 0
+    Assert-NumberGreaterThan -Object $Runtime -Name "hold_key_up_line" -Minimum 0
+    Assert-NumberGreaterThan -Object $Runtime -Name "wrote_line" -Minimum 0
+    Assert-NumberGreaterThan -Object $Runtime -Name "processed_transcript_text_line" -Minimum 0
+    Assert-Boolean -Object $Runtime -Name "reported_ordered_hold_sequence" -Expected $true
 }
 
 function Assert-DoctorOutputProof {
