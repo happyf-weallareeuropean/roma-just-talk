@@ -13,6 +13,8 @@ struct RomaProofAgent {
             try writePreRollProof(arguments: Array(arguments.dropFirst()))
         case "windows-hotkey-doctor":
             printWindowsHotKeyDoctor()
+        case "windows-hotkey-availability-proof":
+            try runWindowsHotKeyAvailabilityProof()
         case "windows-hotkey-proof":
             try runWindowsHotKeyProof()
         case "windows-keyboard-hook-doctor":
@@ -97,6 +99,22 @@ struct RomaProofAgent {
         print("windows_hotkey_runtime=true")
         #else
         print("windows_hotkey_runtime=false")
+        #endif
+    }
+
+    private static func runWindowsHotKeyAvailabilityProof() throws {
+        let hotKey = WindowsHotKey.proofToggle
+
+        #if os(Windows)
+        try WindowsRegisterHotKeyProof.assertRegistrationAvailable(hotKey: hotKey)
+        print("platform=\(platformName)")
+        print("hotkey=\(hotKey.displayName)")
+        print("hotkey_id=\(hotKey.id)")
+        print("api=RegisterHotKey")
+        print("check=register_unregister")
+        print("hotkey_registration_available=true")
+        #else
+        throw AgentError.unsupportedPlatform("windows-hotkey-availability-proof requires Windows")
         #endif
     }
 
@@ -747,6 +765,7 @@ struct RomaProofAgent {
         print("  RomaProofAgent doctor")
         print("  RomaProofAgent pre-roll-proof --out proof.wav")
         print("  RomaProofAgent windows-hotkey-doctor")
+        print("  RomaProofAgent windows-hotkey-availability-proof")
         print("  RomaProofAgent windows-hotkey-proof")
         print("  RomaProofAgent windows-keyboard-hook-doctor")
         print("  RomaProofAgent windows-keyboard-hook-proof --timeout 15")

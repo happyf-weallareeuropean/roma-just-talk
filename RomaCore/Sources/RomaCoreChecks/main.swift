@@ -4943,6 +4943,22 @@ struct RomaCoreChecks {
         try require(hotKey.modifiers.rawValue == 0x4006, "proof hotkey should map to Ctrl+Shift+MOD_NOREPEAT")
         try require(hotKey.virtualKeyCode == 0x52, "proof hotkey should use virtual-key R")
         try require(hotKey.displayName == "Ctrl+Shift+R", "proof hotkey display name should be readable")
+
+        #if !os(Windows)
+        let proofSource = try String(
+            contentsOf: URL(fileURLWithPath: #filePath)
+                .deletingLastPathComponent()
+                .deletingLastPathComponent()
+                .appendingPathComponent("RomaCore/Windows/WindowsRegisterHotKeyProof.swift"),
+            encoding: .utf8
+        )
+        try require(
+            proofSource.contains("assertRegistrationAvailable") &&
+                proofSource.contains("RegisterHotKey(nil, hotKey.id") &&
+                proofSource.contains("UnregisterHotKey(nil, hotKey.id)"),
+            "Windows hotkey proof should expose a register/unregister availability check"
+        )
+        #endif
     }
 
     private static func checkWindowsLowLevelKeyboardHookProofDescriptor() throws {
@@ -5814,6 +5830,11 @@ struct RomaCoreChecks {
             "Windows proof agent should print native adapter runtime availability on Windows"
         )
         try require(
+            proofAgentSource.contains(#"case "windows-hotkey-availability-proof":"#) &&
+                proofAgentSource.contains(#"print("hotkey_registration_available=true")"#),
+            "Windows proof agent should expose a noninteractive RegisterHotKey availability proof"
+        )
+        try require(
             windowsDictationRuntimeSource.contains("let pipeline = DictationPipeline(") &&
                 windowsDictationRuntimeSource.contains("WindowsClipboardTextInsertion("),
             "Windows dictation runtime should compose the shared DictationPipeline with the Windows paste adapter"
@@ -5853,6 +5874,18 @@ struct RomaCoreChecks {
             try require(
                 scriptSource.contains(#"-Expected "windows_dictation_runtime_uses_pipeline_source=true""#),
                 "\(scriptName) should assert that the Windows runtime uses the shared DictationPipeline"
+            )
+        }
+        let hotKeyAvailabilityProofAssertions = [
+            ("windows-proof.ps1", windowsProofScript, "windows-hotkey-availability-proof", "hotkey_registration_available=true"),
+            ("prove-windows-agent-artifact.ps1", proveScript, "windows-hotkey-availability-proof", "hotkey_registration_available=true"),
+            ("check-windows-proof-report.ps1", checkReportScript, "register_hotkey_available", #"Assert-Boolean -Object $Proof -Name "register_hotkey_available" -Expected $true"#)
+        ]
+        for (scriptName, scriptSource, commandMarker, proofMarker) in hotKeyAvailabilityProofAssertions {
+            try require(
+                scriptSource.contains(commandMarker) &&
+                    scriptSource.contains(proofMarker),
+                "\(scriptName) should assert default RegisterHotKey availability"
             )
         }
         try require(

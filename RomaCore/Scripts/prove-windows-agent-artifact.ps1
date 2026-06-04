@@ -736,6 +736,7 @@ function Get-NativeDoctorOutputProof {
         platform_windows = $Output.Contains("platform=windows")
         expected_marker = $ExpectedMarker
         expected_marker_present = $Output.Contains($ExpectedMarker)
+        register_hotkey_available = $Output.Contains("hotkey_registration_available=true")
         default_hold_timeout_seconds = $Output.Contains("default_timeout_seconds=15.0")
         default_hold_timeout_milliseconds = $Output.Contains("default_timeout_milliseconds=15000")
         default_clipboard_restore_delay_seconds = $Output.Contains("default_clipboard_restore_delay_seconds=2.0")
@@ -839,6 +840,7 @@ function Write-ProofReport {
             packaged_proof_agent = (Get-ProofAgentDoctorOutputProof -Output $script:packagedProofAgentDoctorOutput)
             packaged_native_doctors = [ordered]@{
                 register_hotkey = (Get-NativeDoctorOutputProof -Output ($script:packagedNativeDoctorOutputs["register_hotkey"]) -ExpectedMarker "windows_hotkey_runtime=true")
+                register_hotkey_available = (Get-NativeDoctorOutputProof -Output ($script:packagedNativeDoctorOutputs["register_hotkey_available"]) -ExpectedMarker "hotkey_registration_available=true")
                 keyboard_hook = (Get-NativeDoctorOutputProof -Output ($script:packagedNativeDoctorOutputs["keyboard_hook"]) -ExpectedMarker "runtime=true")
                 paste = (Get-NativeDoctorOutputProof -Output ($script:packagedNativeDoctorOutputs["paste"]) -ExpectedMarker "windows_paste_runtime=true")
                 dpapi_secret = (Get-NativeDoctorOutputProof -Output ($script:packagedNativeDoctorOutputs["dpapi_secret"]) -ExpectedMarker "dpapi_runtime=true")
@@ -950,6 +952,7 @@ $script:packagedListenerOutput = ""
 $script:installedListenerOutput = ""
 $script:packagedNativeDoctorOutputs = [ordered]@{
     register_hotkey = ""
+    register_hotkey_available = ""
     keyboard_hook = ""
     paste = ""
     dpapi_secret = ""
@@ -1057,6 +1060,9 @@ Invoke-Step "packaged listener smoke" {
 Invoke-Step "packaged native proof doctors" {
     $script:packagedNativeDoctorOutputs["register_hotkey"] = Invoke-ProofAgentDoctorCommand -Name "register hotkey" -Command "windows-hotkey-doctor"
     Assert-OutputContains -Output ($script:packagedNativeDoctorOutputs["register_hotkey"]) -Expected "windows_hotkey_runtime=true"
+
+    $script:packagedNativeDoctorOutputs["register_hotkey_available"] = Invoke-ProofAgentDoctorCommand -Name "register hotkey availability" -Command "windows-hotkey-availability-proof"
+    Assert-OutputContains -Output ($script:packagedNativeDoctorOutputs["register_hotkey_available"]) -Expected "hotkey_registration_available=true"
 
     $script:packagedNativeDoctorOutputs["keyboard_hook"] = Invoke-ProofAgentDoctorCommand -Name "keyboard hook" -Command "windows-keyboard-hook-doctor"
     Assert-OutputContains -Output ($script:packagedNativeDoctorOutputs["keyboard_hook"]) -Expected "runtime=true"

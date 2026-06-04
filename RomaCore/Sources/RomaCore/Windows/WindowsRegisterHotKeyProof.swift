@@ -20,6 +20,18 @@ public enum WindowsRegisterHotKeyError: Error, Equatable, CustomStringConvertibl
 }
 
 public enum WindowsRegisterHotKeyProof {
+    public static func assertRegistrationAvailable(
+        hotKey: WindowsHotKey = .proofToggle
+    ) throws {
+        guard RegisterHotKey(nil, hotKey.id, hotKey.modifiers.rawValue, hotKey.virtualKeyCode) else {
+            throw WindowsRegisterHotKeyError.registrationFailed(errorCode: GetLastError())
+        }
+
+        guard UnregisterHotKey(nil, hotKey.id) else {
+            throw WindowsRegisterHotKeyError.unregisterFailed(errorCode: GetLastError())
+        }
+    }
+
     @discardableResult
     public static func waitForSingleTrigger(
         hotKey: WindowsHotKey = .proofToggle

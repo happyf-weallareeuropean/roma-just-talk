@@ -455,6 +455,16 @@ try {
         swift run RomaProofAgent windows-hotkey-doctor
     }
 
+    Invoke-Step "windows hotkey availability proof" {
+        $hotkeyAvailabilityOutput = swift run RomaProofAgent windows-hotkey-availability-proof 2>&1 | Out-String
+        if ($LASTEXITCODE -ne 0) {
+            Write-Host $hotkeyAvailabilityOutput
+            throw "RomaProofAgent windows-hotkey-availability-proof failed"
+        }
+        Write-Host $hotkeyAvailabilityOutput
+        Assert-OutputContains -Output $hotkeyAvailabilityOutput -Expected "hotkey_registration_available=true"
+    }
+
     if ($RunInteractiveHotkey) {
         Invoke-Step "windows hotkey proof" {
             Write-Host "Press Ctrl+Shift+R in this session to complete the proof."

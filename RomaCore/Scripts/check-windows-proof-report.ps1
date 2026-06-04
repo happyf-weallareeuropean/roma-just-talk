@@ -444,6 +444,9 @@ function Assert-NativeDoctorOutputProof {
         Assert-Boolean -Object $Proof -Name "default_hold_timeout_seconds" -Expected $true
         Assert-Boolean -Object $Proof -Name "default_hold_timeout_milliseconds" -Expected $true
     }
+    if ($Name -eq "register_hotkey_available") {
+        Assert-Boolean -Object $Proof -Name "register_hotkey_available" -Expected $true
+    }
     if ($Name -eq "paste") {
         Assert-Boolean -Object $Proof -Name "default_clipboard_restore_delay_seconds" -Expected $true
         Assert-Boolean -Object $Proof -Name "maximum_clipboard_restore_delay_seconds" -Expected $true
@@ -827,6 +830,7 @@ if ($RequireNativeDoctorSurface) {
     $nativeDoctors = Require-Property -Object $doctor -Name "packaged_native_doctors"
     foreach ($name in @(
         "register_hotkey",
+        "register_hotkey_available",
         "keyboard_hook",
         "paste",
         "dpapi_secret",

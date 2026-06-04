@@ -248,6 +248,7 @@
 - Fixed cursor-context fallback around emoji and non-ASCII text so insertion cleanup still lowercases and spaces mid-sentence dictation correctly.
 - Added cursor-context options to the dictation pipeline proof command for exact mid-sentence paste checks.
 - Added a shared Windows permission doctor for microphone, hotkey, clipboard, paste-integrity, and screen-capture scope.
+- Added a noninteractive Windows `RegisterHotKey` availability proof so package reports fail fast when the default shortcut is already claimed.
 - Asserted the generated Windows agent JSON config during packaged smoke tests.
 - Made Windows text clipboard restore configurable through the agent config, launcher, and smoke scripts.
 - Restored the previous text clipboard after Windows paste proof sessions when the clipboard still contains the dictated text.
