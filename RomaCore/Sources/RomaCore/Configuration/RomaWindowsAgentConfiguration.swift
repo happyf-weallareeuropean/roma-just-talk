@@ -1,7 +1,9 @@
 import Foundation
 
 public struct RomaWindowsAgentConfiguration: Codable, Equatable, Sendable {
+    public static let minimumRecordSeconds = 1.0 / 1_000_000_000
     public static let maximumRecordSeconds = Double(UInt64.max / 1_000_000_000)
+    public static let minimumHoldTimeoutSeconds = 1.0 / 1_000
     public static let maximumHoldTimeoutSeconds = Double(UInt32.max) / 1_000
 
     public var endpoint: String?
@@ -338,11 +340,13 @@ public struct RomaWindowsAgentConfiguration: Codable, Equatable, Sendable {
         try validatePositiveFiniteDuration(
             recordSeconds,
             option: "--seconds",
+            minimum: Self.minimumRecordSeconds,
             maximum: Self.maximumRecordSeconds
         )
         try validatePositiveFiniteDuration(
             holdTimeoutSeconds,
             option: "--timeout",
+            minimum: Self.minimumHoldTimeoutSeconds,
             maximum: Self.maximumHoldTimeoutSeconds
         )
         if let clipboardRestoreDelaySeconds,
@@ -374,12 +378,13 @@ public struct RomaWindowsAgentConfiguration: Codable, Equatable, Sendable {
     private func validatePositiveFiniteDuration(
         _ value: Double?,
         option: String,
+        minimum: Double,
         maximum: Double
     ) throws {
         guard let value else {
             return
         }
-        guard value.isFinite, value > 0, value <= maximum else {
+        guard value.isFinite, value >= minimum, value <= maximum else {
             throw RomaCommandLineOptionsError.invalidOptionValue(option)
         }
     }

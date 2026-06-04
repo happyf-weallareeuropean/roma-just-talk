@@ -55,7 +55,7 @@ public enum WindowsDictationRuntimeError: Error, LocalizedError, Equatable {
         case .unsupported:
             return "Windows dictation runtime is only available on Windows."
         case .invalidRecordDuration(let seconds):
-            return "Windows toggle record duration must be finite, positive, and no greater than \(RomaWindowsAgentConfiguration.maximumRecordSeconds) seconds; got \(seconds)."
+            return "Windows toggle record duration must be finite and between \(RomaWindowsAgentConfiguration.minimumRecordSeconds) and \(RomaWindowsAgentConfiguration.maximumRecordSeconds) seconds; got \(seconds)."
         case .invalidHoldTimeoutMilliseconds(let milliseconds):
             return "Windows hold timeout must be positive; got \(milliseconds) milliseconds."
         }
@@ -142,7 +142,7 @@ public enum WindowsDictationRuntime {
         switch trigger {
         case .toggle(let recordSeconds):
             guard recordSeconds.isFinite,
-                  recordSeconds > 0,
+                  recordSeconds >= RomaWindowsAgentConfiguration.minimumRecordSeconds,
                   recordSeconds <= RomaWindowsAgentConfiguration.maximumRecordSeconds else {
                 throw WindowsDictationRuntimeError.invalidRecordDuration(recordSeconds)
             }

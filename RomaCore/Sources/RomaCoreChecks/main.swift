@@ -4532,8 +4532,24 @@ struct RomaCoreChecks {
         }
 
         do {
+            try RomaWindowsAgentConfiguration(
+                recordSeconds: RomaWindowsAgentConfiguration.minimumRecordSeconds / 2
+            ).validate()
+            throw CheckFailure("config should reject toggle durations below nanosecond resolution")
+        } catch RomaCommandLineOptionsError.invalidOptionValue {
+        }
+
+        do {
             try RomaWindowsAgentConfiguration(holdTimeoutSeconds: 0).validate()
             throw CheckFailure("config should reject zero hold timeout")
+        } catch RomaCommandLineOptionsError.invalidOptionValue {
+        }
+
+        do {
+            try RomaWindowsAgentConfiguration(
+                holdTimeoutSeconds: RomaWindowsAgentConfiguration.minimumHoldTimeoutSeconds / 2
+            ).validate()
+            throw CheckFailure("config should reject hold timeouts below millisecond resolution")
         } catch RomaCommandLineOptionsError.invalidOptionValue {
         }
 
@@ -4635,6 +4651,14 @@ struct RomaCoreChecks {
         do {
             try WindowsDictationRuntime.validateTrigger(.toggle(recordSeconds: 0))
             throw CheckFailure("Windows dictation runtime should reject zero toggle record duration")
+        } catch WindowsDictationRuntimeError.invalidRecordDuration(_) {
+        }
+
+        do {
+            try WindowsDictationRuntime.validateTrigger(
+                .toggle(recordSeconds: RomaWindowsAgentConfiguration.minimumRecordSeconds / 2)
+            )
+            throw CheckFailure("Windows dictation runtime should reject toggle durations below nanosecond resolution")
         } catch WindowsDictationRuntimeError.invalidRecordDuration(_) {
         }
 

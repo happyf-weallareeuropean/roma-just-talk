@@ -126,6 +126,7 @@ struct RomaProofAgent {
             after: "--timeout",
             in: arguments,
             default: 15,
+            minimum: RomaWindowsAgentConfiguration.minimumHoldTimeoutSeconds,
             maximum: RomaWindowsAgentConfiguration.maximumHoldTimeoutSeconds
         ) * 1_000)
         let chord = WindowsLowLevelKeyboardHookChord.proofHold
@@ -267,12 +268,14 @@ struct RomaProofAgent {
             after: "--seconds",
             in: arguments,
             default: 2,
+            minimum: RomaWindowsAgentConfiguration.minimumRecordSeconds,
             maximum: RomaWindowsAgentConfiguration.maximumRecordSeconds
         )
         let timeoutMilliseconds = UInt32(try positiveDoubleValue(
             after: "--timeout",
             in: arguments,
             default: 15,
+            minimum: RomaWindowsAgentConfiguration.minimumHoldTimeoutSeconds,
             maximum: RomaWindowsAgentConfiguration.maximumHoldTimeoutSeconds
         ) * 1_000)
         let endpointText = try value(after: "--endpoint", in: arguments)
@@ -493,6 +496,7 @@ struct RomaProofAgent {
             after: "--seconds",
             in: arguments,
             default: 2,
+            minimum: RomaWindowsAgentConfiguration.minimumRecordSeconds,
             maximum: RomaWindowsAgentConfiguration.maximumRecordSeconds
         )
         let recorder = MiniaudioCaptureRecorder()
@@ -685,10 +689,11 @@ struct RomaProofAgent {
         after option: String,
         in arguments: [String],
         default defaultValue: Double,
+        minimum: Double,
         maximum: Double
     ) throws -> Double {
         let value = try doubleValue(after: option, in: arguments, default: defaultValue)
-        guard value.isFinite, value > 0, value <= maximum else {
+        guard value.isFinite, value >= minimum, value <= maximum else {
             throw AgentError.invalidOptionValue(option)
         }
 
