@@ -704,6 +704,7 @@ function Get-ProofAgentDoctorOutputProof {
         windows_paste_adapter_source = $Output.Contains("windows_paste_adapter_source=true")
         windows_permission_surface_source = $Output.Contains("windows_permission_surface_source=true")
         windows_dictation_runtime_source = $Output.Contains("windows_dictation_runtime_source=true")
+        windows_dictation_runtime_uses_pipeline_source = $Output.Contains("windows_dictation_runtime_uses_pipeline_source=true")
         windows_dictation_proof_source = $Output.Contains("windows_dictation_proof_source=true")
         miniaudio_capture_adapter_source = $Output.Contains("miniaudio_capture_adapter_source=true")
         openai_compatible_transcription_source = $Output.Contains("openai_compatible_transcription_source=true")
@@ -1035,6 +1036,7 @@ Invoke-Step "packaged proof agent doctor" {
     Assert-OutputContains -Output $script:packagedProofAgentDoctorOutput -Expected "default_clipboard_restore_delay_seconds=2.0"
     Assert-OutputContains -Output $script:packagedProofAgentDoctorOutput -Expected "maximum_clipboard_restore_delay_seconds=4294967.295"
     Assert-OutputContains -Output $script:packagedProofAgentDoctorOutput -Expected "windows_paste_adapter_source=true"
+    Assert-OutputContains -Output $script:packagedProofAgentDoctorOutput -Expected "windows_dictation_runtime_uses_pipeline_source=true"
     Assert-OutputContains -Output $script:packagedProofAgentDoctorOutput -Expected "windows_dictation_proof_source=true"
 }
 

@@ -79,6 +79,7 @@ struct RomaProofAgent {
         print("transcription_output_filter_source=true")
         print("word_replacement_processor_source=true")
         print("windows_dictation_runtime_source=true")
+        print("windows_dictation_runtime_uses_pipeline_source=true")
         print("windows_dictation_proof_source=true")
     }
 

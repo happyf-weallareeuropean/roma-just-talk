@@ -307,6 +307,7 @@ try {
         Assert-OutputContains -Output $proofAgentDoctorOutput -Expected "default_hold_timeout_milliseconds=15000"
         Assert-OutputContains -Output $proofAgentDoctorOutput -Expected "default_clipboard_restore_delay_seconds=2.0"
         Assert-OutputContains -Output $proofAgentDoctorOutput -Expected "maximum_clipboard_restore_delay_seconds=4294967.295"
+        Assert-OutputContains -Output $proofAgentDoctorOutput -Expected "windows_dictation_runtime_uses_pipeline_source=true"
     }
 
     Invoke-Step "windows agent doctor" {

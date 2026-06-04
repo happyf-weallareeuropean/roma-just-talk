@@ -5707,6 +5707,12 @@ struct RomaCoreChecks {
             ),
             encoding: .utf8
         )
+        let windowsDictationRuntimeSource = try String(
+            contentsOf: packageRoot.appendingPathComponent(
+                "Sources/RomaCore/Windows/WindowsDictationRuntime.swift"
+            ),
+            encoding: .utf8
+        )
         let proveScript = try String(
             contentsOf: scriptsRoot.appendingPathComponent("prove-windows-agent-artifact.ps1"),
             encoding: .utf8
@@ -5780,6 +5786,15 @@ struct RomaCoreChecks {
             proofAgentSource.contains(#"print("native_windows_adapters=true")"#),
             "Windows proof agent should print native adapter runtime availability on Windows"
         )
+        try require(
+            windowsDictationRuntimeSource.contains("let pipeline = DictationPipeline(") &&
+                windowsDictationRuntimeSource.contains("WindowsClipboardTextInsertion("),
+            "Windows dictation runtime should compose the shared DictationPipeline with the Windows paste adapter"
+        )
+        try require(
+            proofAgentSource.contains(#"print("windows_dictation_runtime_uses_pipeline_source=true")"#),
+            "Windows proof agent should expose that Windows runtime uses the shared DictationPipeline"
+        )
         let doctorDefaultOutputLines = [
             #"print("default_record_seconds=\(RomaWindowsAgentConfiguration.defaultRecordSeconds)")"#,
             #"print("default_hold_timeout_seconds=\(RomaWindowsAgentConfiguration.defaultHoldTimeoutSeconds)")"#,
@@ -5801,6 +5816,29 @@ struct RomaCoreChecks {
             proofAgentSource.contains(#"print("default_timeout_seconds=\(RomaWindowsAgentConfiguration.defaultHoldTimeoutSeconds)")"#) &&
                 proofAgentSource.contains(#"print("default_timeout_milliseconds=\(RomaWindowsAgentConfiguration.defaultHoldTimeoutMilliseconds)")"#),
             "Windows keyboard hook doctor should expose shared hold timeout defaults"
+        )
+        let pipelineSourceAssertions = [
+            ("windows-proof.ps1", windowsProofScript),
+            ("package-windows-agent.ps1", packageScript),
+            ("prove-windows-agent-artifact.ps1", proveScript)
+        ]
+        for (scriptName, scriptSource) in pipelineSourceAssertions {
+            try require(
+                scriptSource.contains(#"-Expected "windows_dictation_runtime_uses_pipeline_source=true""#),
+                "\(scriptName) should assert that the Windows runtime uses the shared DictationPipeline"
+            )
+        }
+        try require(
+            proveScript.contains(
+                #"windows_dictation_runtime_uses_pipeline_source = $Output.Contains("windows_dictation_runtime_uses_pipeline_source=true")"#
+            ),
+            "Windows artifact proof reports should record that the Windows runtime uses the shared DictationPipeline"
+        )
+        try require(
+            checkReportScript.contains(
+                #"Assert-Boolean -Object $Proof -Name "windows_dictation_runtime_uses_pipeline_source" -Expected $true"#
+            ),
+            "Windows proof checker should require that the Windows runtime uses the shared DictationPipeline"
         )
         try require(
             proofAgentSource.contains(

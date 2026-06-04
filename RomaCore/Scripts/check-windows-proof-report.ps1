@@ -397,6 +397,7 @@ function Assert-ProofAgentDoctorOutputProof {
     Assert-Boolean -Object $Proof -Name "windows_paste_adapter_source" -Expected $true
     Assert-Boolean -Object $Proof -Name "windows_permission_surface_source" -Expected $true
     Assert-Boolean -Object $Proof -Name "windows_dictation_runtime_source" -Expected $true
+    Assert-Boolean -Object $Proof -Name "windows_dictation_runtime_uses_pipeline_source" -Expected $true
     Assert-Boolean -Object $Proof -Name "windows_dictation_proof_source" -Expected $true
     Assert-Boolean -Object $Proof -Name "miniaudio_capture_adapter_source" -Expected $true
     Assert-Boolean -Object $Proof -Name "openai_compatible_transcription_source" -Expected $true
