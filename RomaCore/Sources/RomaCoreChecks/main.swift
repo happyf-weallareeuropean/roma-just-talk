@@ -6255,6 +6255,19 @@ struct RomaCoreChecks {
             "Windows run script should validate config before launching sessions"
         )
         try require(
+            proveScript.contains("function Get-ConfigDoctorOutputProof") &&
+                proveScript.contains(#"config_doctor = (Get-ConfigDoctorOutputProof"#) &&
+                proveScript.contains(#"Invoke-Step "installed config doctor""#),
+            "Windows artifact proof reports should record installed config doctor evidence"
+        )
+        try require(
+            checkReportScript.contains("function Assert-ConfigDoctorProof") &&
+                checkReportScript.contains(#"$RequireConfigDoctor = $true"#) &&
+                checkReportScript.contains(#"Assert-Boolean -Object $configDoctor -Name "api_key_resolved" -Expected $true"#) &&
+                checkReportScript.contains(#"Assert-Boolean -Object $configDoctor -Name "whisper_cli_exists" -Expected $true"#),
+            "Windows proof checker should require config doctor evidence for installed proofs"
+        )
+        try require(
             smokeScript.contains(#"Invoke-Step "agent config doctor""#) &&
                 smokeScript.contains(#"Assert-OutputContains -Output $configDoctorOutput -Expected "config_valid=true""#) &&
                 smokeScript.contains(#"Assert-OutputContains -Output $configDoctorOutput -Expected "api_key_resolved=true""#) &&

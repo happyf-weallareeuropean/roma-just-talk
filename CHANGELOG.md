@@ -69,6 +69,7 @@
 - Locked the Windows no-admin startup contract to the installed run script in listener mode.
 - Required the installed Windows launcher doctor to assert the permission/startup contract before running sessions.
 - Added a Windows agent config doctor and run it before installed sessions wait for the hotkey.
+- Added installed config-doctor evidence to Windows artifact proof reports and profile checks.
 - Exposed shared Windows record, hold, and clipboard defaults in doctor and artifact proof output.
 - Required Windows package smoke to assert shared proof-agent defaults.
 - Required Windows agent smoke to assert shared user-facing agent defaults.

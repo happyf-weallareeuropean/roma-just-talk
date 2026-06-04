@@ -201,6 +201,28 @@ function Invoke-InstalledListenerSmoke {
     return $output
 }
 
+function Invoke-ConfigDoctor {
+    param(
+        [Parameter(Mandatory = $true)]
+        [string]$AgentPath,
+        [Parameter(Mandatory = $true)]
+        [string]$ConfigPath
+    )
+
+    Require-File -Path $AgentPath
+    Require-File -Path $ConfigPath
+    $output = & $AgentPath config-doctor --config $ConfigPath 2>&1 | Out-String
+    if ($LASTEXITCODE -ne 0) {
+        Write-Host $output
+        throw "RomaWindowsAgent config-doctor failed"
+    }
+
+    Write-Host $output
+    Assert-OutputContains -Output $output -Expected "config_valid=true"
+    Assert-OutputContains -Output $output -Expected "transcription_client="
+    return $output
+}
+
 function Get-FileProof {
     param(
         [Parameter(Mandatory = $true)]
@@ -766,6 +788,28 @@ function Get-ListenerSmokeProof {
     }
 }
 
+function Get-ConfigDoctorOutputProof {
+    param(
+        [string]$Output = ""
+    )
+
+    $configPath = Get-OutputValue -Content $Output -Name "config"
+    $transcriptionClient = Get-OutputValue -Content $Output -Name "transcription_client"
+    return [ordered]@{
+        output_present = ![string]::IsNullOrWhiteSpace($Output)
+        config_path = $configPath
+        config_path_present = ![string]::IsNullOrWhiteSpace($configPath)
+        config_valid = $Output.Contains("config_valid=true")
+        transcription_client = $transcriptionClient
+        transcription_client_present = ![string]::IsNullOrWhiteSpace($transcriptionClient)
+        uses_cloud = $Output.Contains("transcription_client=openai-compatible")
+        api_key_resolved = $Output.Contains("api_key_resolved=true")
+        uses_whisper_cli = $Output.Contains("transcription_client=whisper.cpp-cli")
+        whisper_cli_exists = $Output.Contains("whisper_cli_exists=true")
+        whisper_model_exists = $Output.Contains("whisper_model_exists=true")
+    }
+}
+
 function Get-CurrentWindowsUserSid {
     if ([System.Environment]::OSVersion.Platform -ne [System.PlatformID]::Win32NT) {
         return ""
@@ -853,6 +897,7 @@ function Write-ProofReport {
         }
         packaged_listener = (Get-ListenerSmokeProof -Output $script:packagedListenerOutput)
         installed_listener = (Get-ListenerSmokeProof -Output $script:installedListenerOutput)
+        config_doctor = (Get-ConfigDoctorOutputProof -Output $script:installedConfigDoctorOutput)
         files = [ordered]@{
             packaged_agent = (Get-FileHashProof -Path $agentPath)
             packaged_proof_agent = (Get-FileHashProof -Path $script:proofAgentPath)
@@ -954,6 +999,7 @@ $script:packagedAgentDoctorOutput = ""
 $script:packagedProofAgentDoctorOutput = ""
 $script:packagedListenerOutput = ""
 $script:installedListenerOutput = ""
+$script:installedConfigDoctorOutput = ""
 $script:packagedNativeDoctorOutputs = [ordered]@{
     register_hotkey = ""
     register_hotkey_available = ""
@@ -1129,6 +1175,16 @@ $proofMode = if ($UsePackagedWhisperMock) {
     "cloud"
 }
 
+if ([string]::IsNullOrWhiteSpace($ConfigPath)) {
+    if (($usesCloud -or $usesWhisper -or $RunDictation) -and
+        ![string]::IsNullOrWhiteSpace($env:APPDATA)) {
+        $ConfigPath = Join-Path $env:APPDATA "roma-just-talk\windows-agent.json"
+    } else {
+        $ConfigPath = Join-Path $InstallDir "smoke\windows-agent-smoke.json"
+    }
+    $ConfigPath = Resolve-FullPath -Path $ConfigPath
+}
+
 $installArgs = @(
     "-PackageDir", $PackageDir,
     "-InstallDir", $InstallDir
@@ -1231,6 +1287,13 @@ Invoke-Step "installed launcher doctor" {
         throw "Installed launcher doctor failed"
     }
     Write-Host $script:installedLauncherDoctorOutput
+}
+
+Invoke-Step "installed config doctor" {
+    $installedAgent = Join-Path $InstallDir "RomaWindowsAgent.exe"
+    $script:installedConfigDoctorOutput = Invoke-ConfigDoctor `
+        -AgentPath $installedAgent `
+        -ConfigPath $ConfigPath
 }
 
 Invoke-Step "installed listener smoke" {
