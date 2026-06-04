@@ -248,6 +248,7 @@ public struct RomaTranscriptionOutputFilter {
     private static let removableTrailingSentenceFragmentPunctuation = CharacterSet(charactersIn: "!?！？")
     private static let removableLeadingSpacedFragmentSymbols = "/\\|"
     private static let removableTrailingSpacedFragmentSymbols = "/\\|"
+    private static let removableOpeningNonASCIIBoundaryWrappers = CharacterSet(charactersIn: "【《〈（｛［「『〔")
     private static let nonSpeechBracketContents: Set<String> = [
         "ambient noise", "applause", "background music", "background noise",
         "background sound", "background sounds", "beep", "beeping",
@@ -6387,6 +6388,9 @@ public struct RomaTranscriptionOutputFilter {
             let unwrappedLeadingFragment = unwrapSquareBracketedWholeOutput(withoutLeadingNoise)
             if unwrappedLeadingFragment != withoutLeadingNoise {
                 strippedText = unwrappedLeadingFragment
+            } else if withoutLeadingNoise != text,
+                      startsWithRemovableNonASCIIBoundaryWrapper(withoutLeadingNoise) {
+                strippedText = withoutLeadingNoise
             }
         }
         guard isShortFragment(strippedText) else { return strippedText }
@@ -6396,9 +6400,17 @@ public struct RomaTranscriptionOutputFilter {
             return normalizeWhitespace(strippedText)
         }
 
-        let boundaryCharacters = CharacterSet(charactersIn: #"[]{}()"“”‘’'"`【】《》〈〉（）｛｝"#)
+        let boundaryCharacters = CharacterSet(charactersIn: #"[]{}()"“”‘’'"`【】《》〈〉（）｛｝［］「」『』〔〕"#)
         strippedText = strippedText.trimmingCharacters(in: boundaryCharacters.union(.whitespacesAndNewlines))
         return normalizeWhitespace(strippedText)
+    }
+
+    private static func startsWithRemovableNonASCIIBoundaryWrapper(_ text: String) -> Bool {
+        guard let firstScalar = text.trimmingCharacters(in: .whitespacesAndNewlines).unicodeScalars.first else {
+            return false
+        }
+
+        return removableOpeningNonASCIIBoundaryWrappers.contains(firstScalar)
     }
 
     private static func hasPreservedBalancedBoundary(_ text: String) -> Bool {
