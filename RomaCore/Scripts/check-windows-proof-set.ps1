@@ -116,6 +116,41 @@ function Get-ReportPackageFingerprint {
     return [string](Require-ReportProperty -Report $packageIdentity -Name "fingerprint" -ReportName $ReportName)
 }
 
+function Get-ReportSourceProvenance {
+    param(
+        [Parameter(Mandatory = $true)]
+        [object]$Report,
+        [Parameter(Mandatory = $true)]
+        [string]$ReportName
+    )
+
+    $manifest = Require-ReportProperty -Report $Report -Name "manifest" -ReportName $ReportName
+    $repository = [string](Require-ReportProperty -Report $manifest -Name "source_repository" -ReportName $ReportName)
+    $branch = [string](Require-ReportProperty -Report $manifest -Name "source_branch" -ReportName $ReportName)
+    $commit = [string](Require-ReportProperty -Report $manifest -Name "source_commit" -ReportName $ReportName)
+    $dirty = [string](Require-ReportProperty -Report $manifest -Name "source_dirty" -ReportName $ReportName)
+
+    if ([string]::IsNullOrWhiteSpace($repository) -or $repository -eq "unknown") {
+        throw "Proof set report $ReportName is missing source repository provenance"
+    }
+    if ([string]::IsNullOrWhiteSpace($branch)) {
+        throw "Proof set report $ReportName is missing source branch provenance"
+    }
+    if ($commit -notmatch "^[0-9a-fA-F]{40}$") {
+        throw "Proof set report $ReportName has invalid source commit provenance: $commit"
+    }
+    if ($dirty -ne "true" -and $dirty -ne "false") {
+        throw "Proof set report $ReportName has invalid source dirty provenance: $dirty"
+    }
+
+    return [ordered]@{
+        Repository = $repository
+        Branch = $branch
+        Commit = $commit
+        Dirty = $dirty
+    }
+}
+
 function Assert-SameLaptopProofSet {
     param(
         [Parameter(Mandatory = $true)]
@@ -152,6 +187,7 @@ function Assert-SameLaptopProofSet {
     $expectedUserSid = [string](Require-ReportProperty -Report $firstOS -Name "user_sid" -ReportName $firstName)
     $expectedPackageDir = [string](Require-ReportProperty -Report $firstReport -Name "package_dir" -ReportName $firstName)
     $expectedPackageFingerprint = Get-ReportPackageFingerprint -Report $firstReport -ReportName $firstName
+    $expectedSource = Get-ReportSourceProvenance -Report $firstReport -ReportName $firstName
 
     if ($expectedPlatform -ne "Win32NT") {
         throw "Full laptop proof must run on Windows, got platform $expectedPlatform"
@@ -211,6 +247,27 @@ function Assert-SameLaptopProofSet {
             -Expected $expectedPackageFingerprint `
             -Actual (Get-ReportPackageFingerprint -Report $report -ReportName $reportName) `
             -ReportName $reportName
+        $source = Get-ReportSourceProvenance -Report $report -ReportName $reportName
+        Assert-SameReportValue `
+            -Name "manifest.source_repository" `
+            -Expected ([string]$expectedSource['Repository']) `
+            -Actual ([string]$source['Repository']) `
+            -ReportName $reportName
+        Assert-SameReportValue `
+            -Name "manifest.source_branch" `
+            -Expected ([string]$expectedSource['Branch']) `
+            -Actual ([string]$source['Branch']) `
+            -ReportName $reportName
+        Assert-SameReportValue `
+            -Name "manifest.source_commit" `
+            -Expected ([string]$expectedSource['Commit']) `
+            -Actual ([string]$source['Commit']) `
+            -ReportName $reportName
+        Assert-SameReportValue `
+            -Name "manifest.source_dirty" `
+            -Expected ([string]$expectedSource['Dirty']) `
+            -Actual ([string]$source['Dirty']) `
+            -ReportName $reportName
     }
 
     Write-Host "proof_set_machine=$expectedMachine"
@@ -218,6 +275,10 @@ function Assert-SameLaptopProofSet {
     Write-Host "proof_set_user_sid=$expectedUserSid"
     Write-Host "proof_set_package_dir=$expectedPackageDir"
     Write-Host "proof_set_package_fingerprint=$expectedPackageFingerprint"
+    Write-Host "proof_set_source_repository=$($expectedSource['Repository'])"
+    Write-Host "proof_set_source_branch=$($expectedSource['Branch'])"
+    Write-Host "proof_set_source_commit=$($expectedSource['Commit'])"
+    Write-Host "proof_set_source_dirty=$($expectedSource['Dirty'])"
 }
 
 $script:checkReportScript = Join-Path $PSScriptRoot "check-windows-proof-report.ps1"

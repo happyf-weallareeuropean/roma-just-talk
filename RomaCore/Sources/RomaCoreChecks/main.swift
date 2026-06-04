@@ -1801,6 +1801,21 @@ struct RomaCoreChecks {
                 "let me rephrase correction should preserve suffix"
             ),
             (
+                "Use model, backtrack module.",
+                "Use module.",
+                "backtrack correction"
+            ),
+            (
+                "Use model, back track module.",
+                "Use module.",
+                "spaced back track correction"
+            ),
+            (
+                "Let's meet at two... backtrack three.",
+                "Let's meet at three.",
+                "backtrack correction should preserve suffix"
+            ),
+            (
                 "Use model, to clarify module.",
                 "Use module.",
                 "to clarify correction"
@@ -4813,6 +4828,10 @@ struct RomaCoreChecks {
             contentsOf: scriptsRoot.appendingPathComponent("check-windows-proof-report.ps1"),
             encoding: .utf8
         )
+        let checkSetScript = try String(
+            contentsOf: scriptsRoot.appendingPathComponent("check-windows-proof-set.ps1"),
+            encoding: .utf8
+        )
 
         try require(
             packageScript.contains(#""source_commit=$($gitMetadata.Commit)""#),
@@ -4833,6 +4852,14 @@ struct RomaCoreChecks {
         try require(
             checkReportScript.contains("source_commit to be a 40-character git SHA"),
             "Windows proof checker should reject missing or malformed source commits"
+        )
+        try require(
+            checkSetScript.contains("manifest.source_commit"),
+            "Windows proof-set checker should compare source commits across laptop reports"
+        )
+        try require(
+            checkSetScript.contains("proof_set_source_commit="),
+            "Windows proof-set checker should print matched source commit evidence"
         )
     }
 
