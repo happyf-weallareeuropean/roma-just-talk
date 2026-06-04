@@ -5357,6 +5357,14 @@ struct RomaCoreChecks {
             surface.startupMechanism == "user_startup_folder_shortcut",
             "Windows startup should stay a no-admin per-user shortcut"
         )
+        try require(
+            surface.startupLauncher == "run-windows-agent.ps1",
+            "Windows startup should launch through the installed run script"
+        )
+        try require(
+            surface.startupLaunchMode == "listen",
+            "Windows startup should launch the persistent listener"
+        )
         try require(!surface.startupPermissionPrompt, "Startup folder shortcut should not be documented as a prompt flow")
         try require(!surface.screenCaptureRequired, "Windows MVP should not require screen capture")
     }

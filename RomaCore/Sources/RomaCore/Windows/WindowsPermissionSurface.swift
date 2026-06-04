@@ -11,6 +11,8 @@ public struct WindowsPermissionSurface: Equatable, Hashable, Sendable {
     public var pasteIntegrityLimit: String
     public var adminRequired: Bool
     public var startupMechanism: String
+    public var startupLauncher: String
+    public var startupLaunchMode: String
     public var startupPermissionPrompt: Bool
     public var screenCaptureRequired: Bool
 
@@ -25,6 +27,8 @@ public struct WindowsPermissionSurface: Equatable, Hashable, Sendable {
         pasteIntegrityLimit: String,
         adminRequired: Bool,
         startupMechanism: String,
+        startupLauncher: String,
+        startupLaunchMode: String,
         startupPermissionPrompt: Bool,
         screenCaptureRequired: Bool
     ) {
@@ -38,6 +42,8 @@ public struct WindowsPermissionSurface: Equatable, Hashable, Sendable {
         self.pasteIntegrityLimit = pasteIntegrityLimit
         self.adminRequired = adminRequired
         self.startupMechanism = startupMechanism
+        self.startupLauncher = startupLauncher
+        self.startupLaunchMode = startupLaunchMode
         self.startupPermissionPrompt = startupPermissionPrompt
         self.screenCaptureRequired = screenCaptureRequired
     }
@@ -60,6 +66,8 @@ public struct WindowsPermissionSurface: Equatable, Hashable, Sendable {
         pasteIntegrityLimit: "equal_or_lower",
         adminRequired: false,
         startupMechanism: "user_startup_folder_shortcut",
+        startupLauncher: "run-windows-agent.ps1",
+        startupLaunchMode: "listen",
         startupPermissionPrompt: false,
         screenCaptureRequired: false
     )

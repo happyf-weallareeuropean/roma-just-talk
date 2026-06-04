@@ -62,6 +62,8 @@ struct RomaWindowsAgent {
         print("paste_integrity_limit=\(permissionSurface.pasteIntegrityLimit)")
         print("admin_required=\(permissionSurface.adminRequired)")
         print("startup_mechanism=\(permissionSurface.startupMechanism)")
+        print("startup_launcher=\(permissionSurface.startupLauncher)")
+        print("startup_launch_mode=\(permissionSurface.startupLaunchMode)")
         print("startup_permission_prompt=\(permissionSurface.startupPermissionPrompt)")
         print("screen_capture_required=\(permissionSurface.screenCaptureRequired)")
     }

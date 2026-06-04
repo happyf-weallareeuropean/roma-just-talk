@@ -692,6 +692,8 @@ function Get-DoctorOutputProof {
         default_clipboard_restore_delay_seconds = $Output.Contains("default_clipboard_restore_delay_seconds=2.0")
         maximum_clipboard_restore_delay_seconds = $Output.Contains("maximum_clipboard_restore_delay_seconds=4294967.295")
         no_admin_required = $Output.Contains("admin_required=false")
+        startup_launcher_run_script = $Output.Contains("startup_launcher=run-windows-agent.ps1")
+        startup_launch_mode_listen = $Output.Contains("startup_launch_mode=listen")
         no_startup_permission_prompt = $Output.Contains("startup_permission_prompt=false")
         no_screen_capture_required = $Output.Contains("screen_capture_required=false")
     }

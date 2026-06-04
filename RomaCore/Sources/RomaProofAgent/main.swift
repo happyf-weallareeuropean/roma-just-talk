@@ -204,6 +204,8 @@ struct RomaProofAgent {
         print("paste_integrity_limit=\(surface.pasteIntegrityLimit)")
         print("admin_required=\(surface.adminRequired)")
         print("startup_mechanism=\(surface.startupMechanism)")
+        print("startup_launcher=\(surface.startupLauncher)")
+        print("startup_launch_mode=\(surface.startupLaunchMode)")
         print("startup_permission_prompt=\(surface.startupPermissionPrompt)")
         print("screen_capture_required=\(surface.screenCaptureRequired)")
     }
