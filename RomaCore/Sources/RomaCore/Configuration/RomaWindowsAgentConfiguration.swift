@@ -1,6 +1,8 @@
 import Foundation
 
 public struct RomaWindowsAgentConfiguration: Codable, Equatable, Sendable {
+    public static let defaultRecordSeconds = 2.0
+    public static let defaultHoldTimeoutSeconds = 15.0
     public static let minimumRecordSeconds = 1.0 / 1_000_000_000
     public static let maximumRecordSeconds = Double(UInt64.max / 1_000_000_000)
     public static let minimumHoldTimeoutSeconds = 1.0 / 1_000
@@ -297,6 +299,24 @@ public struct RomaWindowsAgentConfiguration: Codable, Equatable, Sendable {
         )
     }
 
+    public var resolvedRecordSeconds: Double {
+        recordSeconds ?? Self.defaultRecordSeconds
+    }
+
+    public func resolvedHoldTimeoutMilliseconds() throws -> UInt32 {
+        try Self.holdTimeoutMilliseconds(fromSeconds: holdTimeoutSeconds ?? Self.defaultHoldTimeoutSeconds)
+    }
+
+    public static func holdTimeoutMilliseconds(fromSeconds seconds: Double) throws -> UInt32 {
+        try validatePositiveFiniteDuration(
+            seconds,
+            option: "--timeout",
+            minimum: minimumHoldTimeoutSeconds,
+            maximum: maximumHoldTimeoutSeconds
+        )
+        return UInt32(seconds * 1_000)
+    }
+
     public func requireEndpoint() throws -> String {
         try required(endpoint, option: "--endpoint")
     }
@@ -386,6 +406,20 @@ public struct RomaWindowsAgentConfiguration: Codable, Equatable, Sendable {
         guard let value else {
             return
         }
+        try Self.validatePositiveFiniteDuration(
+            value,
+            option: option,
+            minimum: minimum,
+            maximum: maximum
+        )
+    }
+
+    private static func validatePositiveFiniteDuration(
+        _ value: Double,
+        option: String,
+        minimum: Double,
+        maximum: Double
+    ) throws {
         guard value.isFinite, value >= minimum, value <= maximum else {
             throw RomaCommandLineOptionsError.invalidOptionValue(option)
         }

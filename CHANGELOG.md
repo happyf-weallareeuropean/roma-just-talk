@@ -53,6 +53,7 @@
 - Rejected Windows proof windows that collapse below the runtime timer granularity.
 - Stopped Windows laptop proof runs from forwarding a default clipboard restore delay as an explicit option.
 - Rejected invalid direct Windows dictation runtime clipboard restore delays before paste.
+- Shared Windows hold-timeout defaults and millisecond conversion across the agent and proof tools.
 - Hardened the Windows laptop proof runner to fail early outside Windows or with missing local whisper files.
 - Strengthened full Windows laptop proof-set validation to require the reports come from the same machine and packaged artifact.
 - Added a package identity fingerprint to Windows artifact proof reports and full laptop proof-set validation.

@@ -4498,6 +4498,14 @@ struct RomaCoreChecks {
         try require(merged.restoreClipboardAfterPaste == true, "CLI restore flag should enable clipboard restore")
         try require(merged.clipboardRestoreDelaySeconds == 0.75, "CLI restore delay should override config")
         try require(
+            RomaWindowsAgentConfiguration.defaultRecordSeconds == 2,
+            "Windows agent default record duration should stay shared"
+        )
+        try require(
+            RomaWindowsAgentConfiguration.defaultHoldTimeoutSeconds == 15,
+            "Windows agent default hold timeout should stay shared"
+        )
+        try require(
             merged.clipboardRestoreConfiguration() == WindowsClipboardRestoreConfiguration(
                 restoreClipboard: true,
                 restoreDelaySeconds: 0.75
@@ -4506,6 +4514,14 @@ struct RomaCoreChecks {
         )
         try require(merged.usesHoldHook == true, "CLI hold flag should enable hold mode")
         try require(merged.holdTimeoutSeconds == 22, "CLI timeout should override hold timeout")
+        try require(
+            try merged.resolvedHoldTimeoutMilliseconds() == 22_000,
+            "Windows hold timeout conversion should be shared"
+        )
+        try require(
+            try RomaWindowsAgentConfiguration(holdTimeoutSeconds: 0.001).resolvedHoldTimeoutMilliseconds() == 1,
+            "Windows hold timeout conversion should preserve the minimum millisecond"
+        )
         try require(
             merged.wordReplacements == [
                 RomaWordReplacementRule(originalText: "just talk", replacementText: "roma-just-talk")

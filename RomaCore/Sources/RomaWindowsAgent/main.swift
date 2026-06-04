@@ -70,8 +70,8 @@ struct RomaWindowsAgent {
         let shouldPaste = configuration.shouldPaste ?? false
         let clipboardRestoreConfiguration = configuration.clipboardRestoreConfiguration()
         let shouldUseHoldHook = configuration.usesHoldHook ?? false
-        let seconds = configuration.recordSeconds ?? 2
-        let timeoutMilliseconds = UInt32((configuration.holdTimeoutSeconds ?? 15) * 1_000)
+        let seconds = configuration.resolvedRecordSeconds
+        let timeoutMilliseconds = try configuration.resolvedHoldTimeoutMilliseconds()
         let wordReplacements = configuration.wordReplacements
         let trigger: WindowsDictationTrigger = shouldUseHoldHook
             ? .hold(timeoutMilliseconds: timeoutMilliseconds)

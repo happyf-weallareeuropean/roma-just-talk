@@ -122,13 +122,16 @@ struct RomaProofAgent {
     }
 
     private static func runWindowsKeyboardHookProof(arguments: [String]) throws {
-        let timeoutMilliseconds = UInt32(try positiveDoubleValue(
+        let timeoutSeconds = try positiveDoubleValue(
             after: "--timeout",
             in: arguments,
-            default: 15,
+            default: RomaWindowsAgentConfiguration.defaultHoldTimeoutSeconds,
             minimum: RomaWindowsAgentConfiguration.minimumHoldTimeoutSeconds,
             maximum: RomaWindowsAgentConfiguration.maximumHoldTimeoutSeconds
-        ) * 1_000)
+        )
+        let timeoutMilliseconds = try RomaWindowsAgentConfiguration.holdTimeoutMilliseconds(
+            fromSeconds: timeoutSeconds
+        )
         let chord = WindowsLowLevelKeyboardHookChord.proofHold
 
         print("waiting_for_hold=\(chord.displayName)")
@@ -267,17 +270,20 @@ struct RomaProofAgent {
         let seconds = try positiveDoubleValue(
             after: "--seconds",
             in: arguments,
-            default: 2,
+            default: RomaWindowsAgentConfiguration.defaultRecordSeconds,
             minimum: RomaWindowsAgentConfiguration.minimumRecordSeconds,
             maximum: RomaWindowsAgentConfiguration.maximumRecordSeconds
         )
-        let timeoutMilliseconds = UInt32(try positiveDoubleValue(
+        let timeoutSeconds = try positiveDoubleValue(
             after: "--timeout",
             in: arguments,
-            default: 15,
+            default: RomaWindowsAgentConfiguration.defaultHoldTimeoutSeconds,
             minimum: RomaWindowsAgentConfiguration.minimumHoldTimeoutSeconds,
             maximum: RomaWindowsAgentConfiguration.maximumHoldTimeoutSeconds
-        ) * 1_000)
+        )
+        let timeoutMilliseconds = try RomaWindowsAgentConfiguration.holdTimeoutMilliseconds(
+            fromSeconds: timeoutSeconds
+        )
         let endpointText = try value(after: "--endpoint", in: arguments)
         let modelName = try value(after: "--model", in: arguments)
         let apiKeySource = try makeAPIKeySource(arguments: arguments)
@@ -495,7 +501,7 @@ struct RomaProofAgent {
         let seconds = try positiveDoubleValue(
             after: "--seconds",
             in: arguments,
-            default: 2,
+            default: RomaWindowsAgentConfiguration.defaultRecordSeconds,
             minimum: RomaWindowsAgentConfiguration.minimumRecordSeconds,
             maximum: RomaWindowsAgentConfiguration.maximumRecordSeconds
         )
