@@ -707,6 +707,16 @@ struct RomaCoreChecks {
                 "duplicate short sentence with missing trailing punctuation"
             ),
             (
+                "I think this works. I think this",
+                "I think this works.",
+                "trailing repeated sentence prefix"
+            ),
+            (
+                "We should ship today. We should",
+                "We should ship today.",
+                "trailing repeated sentence prefix with two words"
+            ),
+            (
                 "Hello world! Hello world.",
                 "Hello world.",
                 "duplicate short sentence with leading emphatic punctuation"
@@ -810,6 +820,16 @@ struct RomaCoreChecks {
                 "It works. Model",
                 "It works. Model",
                 "complete sentence before unpunctuated generated fragment guard"
+            ),
+            (
+                "This is ready. This",
+                "This is ready. This",
+                "one-word trailing repeated prefix guard"
+            ),
+            (
+                "New York is busy. New York",
+                "New York is busy. New York",
+                "intentional trailing repeated prefix guard"
             ),
             (
                 "mm-hmm... uh-huh, I think so.",
@@ -1817,9 +1837,19 @@ struct RomaCoreChecks {
                 "duplicate short sentence missing trailing punctuation"
             ),
             (
+                "I think this works. I think this",
+                "I think this works.",
+                "trailing repeated sentence prefix"
+            ),
+            (
                 "New York. New York",
                 "New York. New York",
                 "intentional repeated sentence guard"
+            ),
+            (
+                "New York is busy. New York",
+                "New York is busy. New York",
+                "intentional trailing repeated prefix guard"
             ),
             (
                 "We should ship we should ship this.",

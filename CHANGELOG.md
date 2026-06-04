@@ -2,6 +2,7 @@
 
 ## v1.81 - Unreleased
 
+- Collapsed trailing partial repeats of the preceding short sentence start.
 - Prevented punctuation spacing cleanup from inserting spaces before non-ASCII closing boundaries.
 - Unwrapped noisy balanced non-ASCII boundary fragments without dropping only the closing mark.
 - Required Windows dictation proof reports to assert the recorded audio stays 16 kHz mono PCM.

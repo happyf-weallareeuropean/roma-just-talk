@@ -1010,6 +1010,7 @@ public struct RomaTranscriptionOutputFilter {
             filteredText = collapseRepeatedShortSentences(in: filteredText)
             filteredText = collapseMismatchedRepeatedShortSentences(in: filteredText)
             filteredText = collapseTrailingUnpunctuatedRepeatedShortSentences(in: filteredText)
+            filteredText = collapseTrailingRepeatedSentencePrefixes(in: filteredText)
             filteredText = collapseGeneratedSeparatorBeforeShortFragment(in: filteredText)
         }
 
@@ -6772,6 +6773,59 @@ public struct RomaTranscriptionOutputFilter {
         return collapsedText
     }
 
+    private static func collapseTrailingRepeatedSentencePrefixes(in text: String) -> String {
+        guard let regex = try? NSRegularExpression(
+            pattern: #"(?i)(^|(?<=[.!?])\s+)([^.!?\n]{5,160})([.!?])\s+((?:[^\s,;:.!?\n]+[ \t]+){1,4}[^\s,;:.!?\n]+)\s*$"#
+        ) else {
+            return text
+        }
+
+        var collapsedText = text
+        var rewriteCount = 0
+
+        while rewriteCount < 4 {
+            let range = NSRange(collapsedText.startIndex..., in: collapsedText)
+            let matches = regex.matches(in: collapsedText, range: range).reversed()
+            var didRewrite = false
+
+            for match in matches {
+                guard match.numberOfRanges >= 5,
+                      let fullRange = Range(match.range, in: collapsedText),
+                      let prefixRange = Range(match.range(at: 1), in: collapsedText),
+                      let sentenceBodyRange = Range(match.range(at: 2), in: collapsedText),
+                      let punctuationRange = Range(match.range(at: 3), in: collapsedText),
+                      let repeatedPrefixRange = Range(match.range(at: 4), in: collapsedText) else {
+                    continue
+                }
+
+                let sentenceBody = String(collapsedText[sentenceBodyRange])
+                let repeatedPrefix = String(collapsedText[repeatedPrefixRange])
+                let sentenceWords = normalizedRepeatedWords(in: sentenceBody)
+                let repeatedWords = normalizedRepeatedWords(in: repeatedPrefix)
+                guard sentenceWords.count >= 3 && sentenceWords.count <= 12,
+                      repeatedWords.count >= 2 && repeatedWords.count <= 5,
+                      repeatedWords.count < sentenceWords.count,
+                      Array(sentenceWords.prefix(repeatedWords.count)) == repeatedWords,
+                      !preservedRepeatedClauses.contains(normalizedRepeatedClause(repeatedPrefix)) else {
+                    continue
+                }
+
+                collapsedText.replaceSubrange(
+                    fullRange,
+                    with: String(collapsedText[prefixRange]) +
+                        sentenceBody +
+                        String(collapsedText[punctuationRange])
+                )
+                didRewrite = true
+            }
+
+            guard didRewrite else { break }
+            rewriteCount += 1
+        }
+
+        return collapsedText
+    }
+
     private static func repeatedSentencePunctuation(_ first: String, _ second: String) -> String {
         if first == "." || second == "." { return "." }
         return second
@@ -7142,6 +7196,12 @@ public struct RomaTranscriptionOutputFilter {
             .lowercased()
             .trimmingCharacters(in: CharacterSet.punctuationCharacters.union(.whitespacesAndNewlines))
             .replacingOccurrences(of: #"\s+"#, with: " ", options: .regularExpression)
+    }
+
+    private static func normalizedRepeatedWords(in text: String) -> [String] {
+        normalizedRepeatedClause(text)
+            .split(separator: " ")
+            .map(String.init)
     }
 
     private static func stripBoundaryNoise(from text: String) -> String {
