@@ -520,6 +520,7 @@ public struct RomaTranscriptionOutputFilter {
             (?:[,;:…]|\.\.\.)\s*let\s+me\s+rephrase\s*[,;:]? |
             (?:[,;:…]|\.\.\.)\s*sorry\s*[,;:]?\s+i\s+mean\s*[,;:]? |
             (?:[,;:…]|\.\.\.)\s*sorry\s*[,;:]?\s+i\s+meant\s*[,;:]? |
+            (?:[,;:…]|\.\.\.)\s*what\s+i\s+mean\s+is\s*[,;:]? |
             (?:[,;:…]|\.\.\.)\s*i\s+mean\s+to\s+say\s*[,;:]? |
             (?:[,;:…]|\.\.\.)\s*i\s+meant\s+to\s+say\s*[,;:]? |
             sorry\s*[,;:]?\s+i\s+mean\s*[,;:]? |
@@ -1306,7 +1307,7 @@ public struct RomaTranscriptionOutputFilter {
 
     private static func preserveBacktrackingMarkersAfterPauseFillers(in text: String) -> String {
         guard let regex = try? NSRegularExpression(
-            pattern: #"(?i)([,;:…]|\.\.\.)[ \t]+(?:u+h+|u+m+|h+m+|m+h+|m{2,}|(?-i:[aA]h+[eE][mM]+|[eE]h+[mM]+|[eE][hH]+m+)|e+h+|e+r+|a+h+|h+uh+)(?:[.,;:!?…]+)?[ \t]+(actually(?:[ \t]+no|[ \t]+make[ \t]+it)?|better[ \t]+make[ \t]+it|sorry[ \t]+i[ \t]+mean|sorry[ \t]+i[ \t]+meant|i[ \t]+mean[ \t]+to[ \t]+say|i[ \t]+meant[ \t]+to[ \t]+say|i[ \t]+mean|i[ \t]+meant|i[ \t]+should[ \t]+say|make[ \t]+that|make[ \t]+it|call[ \t]+it|wait[ \t]+no|no[ \t]+wait|no[ \t]+actually|on[ \t]+second[ \t]+thought|let[ \t]+me[ \t]+rephrase|rather|instead|oops|whoops|woops|my[ \t]+bad|correction)(?=\s)"#
+            pattern: #"(?i)([,;:…]|\.\.\.)[ \t]+(?:u+h+|u+m+|h+m+|m+h+|m{2,}|(?-i:[aA]h+[eE][mM]+|[eE]h+[mM]+|[eE][hH]+m+)|e+h+|e+r+|a+h+|h+uh+)(?:[.,;:!?…]+)?[ \t]+(actually(?:[ \t]+no|[ \t]+make[ \t]+it)?|better[ \t]+make[ \t]+it|sorry[ \t]+i[ \t]+mean|sorry[ \t]+i[ \t]+meant|what[ \t]+i[ \t]+mean[ \t]+is|i[ \t]+mean[ \t]+to[ \t]+say|i[ \t]+meant[ \t]+to[ \t]+say|i[ \t]+mean|i[ \t]+meant|i[ \t]+should[ \t]+say|make[ \t]+that|make[ \t]+it|call[ \t]+it|wait[ \t]+no|no[ \t]+wait|no[ \t]+actually|on[ \t]+second[ \t]+thought|let[ \t]+me[ \t]+rephrase|rather|instead|oops|whoops|woops|my[ \t]+bad|correction)(?=\s)"#
         ) else {
             return text
         }
@@ -5448,6 +5449,11 @@ public struct RomaTranscriptionOutputFilter {
             return false
         }
 
+        if isPlainIMeanBacktrackingMarker(markerText),
+           previousWord(in: beforeMarker) == "what" {
+            return false
+        }
+
         if isOrAlternativeBacktrackingMarker(markerText),
            wordCount(in: correctionText) != 1 {
             return false
@@ -5512,6 +5518,7 @@ public struct RomaTranscriptionOutputFilter {
             "no i mean",
             "no i meant",
             "no actually",
+            "what i mean is",
             "i mean to say",
             "i meant to say",
             "on second thought",
@@ -5568,6 +5575,7 @@ public struct RomaTranscriptionOutputFilter {
             "nevermind",
             "no actually",
             "no wait",
+            "what i mean is",
             "i mean to say",
             "i meant to say",
             "on second thought",
