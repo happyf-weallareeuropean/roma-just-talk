@@ -701,9 +701,34 @@ struct RomaCoreChecks {
                 "standalone pause plus all right acknowledgement filler"
             ),
             (
+                "uh okay yeah.",
+                "",
+                "standalone pause plus acknowledgement chain filler"
+            ),
+            (
+                "hmm all right yeah.",
+                "",
+                "standalone pause plus multi-word acknowledgement chain filler"
+            ),
+            (
+                "um right okay.",
+                "",
+                "standalone pause plus reversed acknowledgement chain filler"
+            ),
+            (
+                "um yeah right.",
+                "yeah right.",
+                "standalone pause plus literal yeah-right guard"
+            ),
+            (
                 "uh okay I think this works.",
                 "I think this works.",
                 "leading pause plus okay acknowledgement filler"
+            ),
+            (
+                "uh okay yeah this works.",
+                "this works.",
+                "leading pause plus acknowledgement chain before content"
             ),
             (
                 "hmm all right this works.",
