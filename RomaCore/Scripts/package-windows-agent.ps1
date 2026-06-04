@@ -334,9 +334,14 @@ Expected proof markers:
 
 proof_set_ok=laptop-preflight
 windows_laptop_preflight_ok=true
+windows_laptop_preflight_report=C:\tmp\roma-windows-laptop-proof\preflight-proof.json
+proof_set_laptop_preflight_package_fingerprint=
+proof_set_laptop_preflight_matches_full=true
+proof_set_source_dirty=false
 proof_set_ok=full-laptop
 windows_laptop_proof_ok=true
 
+Full proof validates four JSON reports: preflight, cloud dictation, local whisper dictation, and local whisper Notepad paste.
 Do not claim Windows support until the full laptop proof passes on the target Windows machine.
 '@ | Set-Content -LiteralPath $OutputPath -Encoding UTF8
     Write-Host "laptop_proof_guide=$OutputPath"
