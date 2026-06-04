@@ -258,6 +258,19 @@ public struct RomaTranscriptionOutputFilter {
         "sneeze", "sneezing", "sound", "speaking foreign language", "static",
         "typing", "unclear", "unintelligible"
     ]
+    private static let unbracketedNonSpeechDescriptorPattern = #"""
+        (?ix)
+        (?:^|(?<=[.!?]\s))
+        \s*
+        (?:
+            applause | beep(?:ing)? | breath(?:ing)? | clapping |
+            coughs? | coughing | hum(?:ming)? | laugh(?:s|ing)? | laughter |
+            mumbles? | mumbling | sighs? | sighing | sneezes? | sneezing |
+            static | typing
+        )
+        (?:[ \t]+(?:continues?|indistinctly|loudly|quietly|softly|sounds?)){0,3}
+        \s*(?:[.!?,;:…]+|\.\.\.)(?=\s|$)
+        """#
     private static let preservedRepeatedWords: Set<String> = [
         "dash", "ha", "haha", "hyphen", "no", "ok", "okay", "really", "so", "very", "yes"
     ]
@@ -905,6 +918,7 @@ public struct RomaTranscriptionOutputFilter {
         filteredText = removeASRSpecialTokens(from: filteredText)
 
         filteredText = removeNonSpeechBracketedContent(from: filteredText)
+        filteredText = removeUnbracketedNonSpeechDescriptors(from: filteredText)
 
         filteredText = removeASRBoilerplate(from: filteredText)
 
@@ -953,6 +967,28 @@ public struct RomaTranscriptionOutputFilter {
         filteredText = normalizeWhitespace(filteredText)
         filteredText = applyNestedBulletCommands(in: filteredText)
         filteredText = restoreLeadingNewlines(leadingFormattingNewlineCount, to: filteredText)
+
+        return filteredText
+    }
+
+    private static func removeUnbracketedNonSpeechDescriptors(from text: String) -> String {
+        guard let regex = try? NSRegularExpression(pattern: unbracketedNonSpeechDescriptorPattern) else {
+            return text
+        }
+
+        var filteredText = text
+        var rewriteCount = 0
+
+        while rewriteCount < 8 {
+            let range = NSRange(filteredText.startIndex..., in: filteredText)
+            guard let match = regex.firstMatch(in: filteredText, range: range),
+                  let matchRange = Range(match.range, in: filteredText) else {
+                break
+            }
+
+            filteredText.replaceSubrange(matchRange, with: "")
+            rewriteCount += 1
+        }
 
         return filteredText
     }

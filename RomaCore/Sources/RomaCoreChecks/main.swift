@@ -804,6 +804,36 @@ struct RomaCoreChecks {
                 "bracketed transcript timestamp label"
             ),
             (
+                "sighs... I think this works.",
+                "I think this works.",
+                "leading unbracketed sigh artifact"
+            ),
+            (
+                "coughs, this works.",
+                "this works.",
+                "leading unbracketed cough artifact"
+            ),
+            (
+                "Laughs. this should stay.",
+                "this should stay.",
+                "leading unbracketed laugh artifact"
+            ),
+            (
+                "This works. coughs.",
+                "This works.",
+                "terminal unbracketed cough artifact"
+            ),
+            (
+                "The dog coughs.",
+                "The dog coughs.",
+                "unbracketed cough verb guard"
+            ),
+            (
+                "Laughs are contagious.",
+                "Laughs are contagious.",
+                "unbracketed laugh noun guard"
+            ),
+            (
                 "Use [breath control] now.",
                 "Use [breath control] now.",
                 "bracketed literal breath phrase guard"
