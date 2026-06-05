@@ -25,7 +25,8 @@ const instrumentSerif = Instrument_Serif({
   weight: "400",
 });
 
-const logoUrl = "/roma-logo.png";
+const logoUrl =
+  "https://raw.githubusercontent.com/happyf-weallareeuropean/roma-just-talk/main/docs/assets/roma-just-talk-logo.png";
 
 export const metadata: Metadata = {
   title: "roma-just-talk",

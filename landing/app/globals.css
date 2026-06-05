@@ -111,7 +111,7 @@ a {
   content: "";
   background:
     var(--hero-overlay),
-    url("/roma-logo.png");
+    url("https://raw.githubusercontent.com/happyf-weallareeuropean/roma-just-talk/main/docs/assets/roma-just-talk-logo.png");
   background-position: center, right 8vw center;
   background-repeat: no-repeat;
   background-size: auto, min(54vw, 620px);
@@ -508,7 +508,7 @@ h1 .before-word {
   .hero::before {
     background:
       var(--hero-overlay-mobile),
-      url("/roma-logo.png");
+      url("https://raw.githubusercontent.com/happyf-weallareeuropean/roma-just-talk/main/docs/assets/roma-just-talk-logo.png");
     background-position: center, center 76px;
     background-repeat: no-repeat;
     background-size: auto, 360px;
