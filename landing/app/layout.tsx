@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import { Fraunces, IBM_Plex_Mono, Sacramento, Space_Grotesk } from "next/font/google";
+import { Fraunces, IBM_Plex_Mono, Instrument_Serif, Space_Grotesk } from "next/font/google";
 import "./globals.css";
 
 const spaceGrotesk = Space_Grotesk({
@@ -19,8 +19,8 @@ const ibmPlexMono = IBM_Plex_Mono({
   weight: ["400", "500", "600"],
 });
 
-const sacramento = Sacramento({
-  variable: "--font-sacramento",
+const instrumentSerif = Instrument_Serif({
+  variable: "--font-instrument-serif",
   subsets: ["latin"],
   weight: "400",
 });
@@ -52,7 +52,7 @@ export default function RootLayout({
   return (
     <html lang="en">
       <body
-        className={`${spaceGrotesk.variable} ${fraunces.variable} ${ibmPlexMono.variable} ${sacramento.variable}`}
+        className={`${spaceGrotesk.variable} ${fraunces.variable} ${ibmPlexMono.variable} ${instrumentSerif.variable}`}
       >
         {children}
       </body>

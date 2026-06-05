@@ -163,25 +163,18 @@ h1 .before-word {
     "opsz" 72;
 }
 
-.handwritten-line {
+.idea-line {
   display: block;
-  width: fit-content;
-  max-width: 100%;
-  margin-top: 0.12em;
-  border: 2px solid rgba(255, 248, 231, 0.18);
-  border-radius: 8px;
-  background:
-    linear-gradient(90deg, rgba(255, 255, 255, 0.04) 1px, transparent 1px),
-    linear-gradient(180deg, #132333, #1d2b38);
-  background-size: 18px 100%, auto;
-  color: #fff8e7;
-  padding: 0.1em 0.24em 0.18em;
-  font-family: var(--font-sacramento), cursive;
-  font-size: clamp(2.7rem, 6vw, 5.8rem);
+  max-width: 13.5ch;
+  margin-top: 0.1em;
+  color: #78301f;
+  font-family: var(--font-instrument-serif), Georgia, serif;
+  font-size: clamp(3rem, 6vw, 5.25rem);
+  font-style: normal;
   font-weight: 400;
   letter-spacing: 0;
-  line-height: 1;
-  text-shadow: 0 1px 8px rgba(255, 248, 231, 0.38);
+  line-height: 0.92;
+  text-wrap: balance;
 }
 
 .body-copy {
@@ -478,9 +471,10 @@ h1 .before-word {
     font-size: 2.65rem;
   }
 
-  .handwritten-line {
-    font-size: clamp(2.3rem, 11vw, 4.2rem);
-    line-height: 1.08;
+  .idea-line {
+    max-width: 100%;
+    font-size: clamp(2.25rem, 11vw, 3.45rem);
+    line-height: 0.96;
   }
 
   .cta-row,
@@ -520,9 +514,9 @@ h1 .before-word {
     font-size: 2.25rem;
   }
 
-  .handwritten-line {
-    font-size: clamp(2.05rem, 12vw, 3.3rem);
-    line-height: 1.12;
+  .idea-line {
+    font-size: clamp(2rem, 10.5vw, 2.8rem);
+    line-height: 1;
   }
 
   .body-copy {

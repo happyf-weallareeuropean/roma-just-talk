@@ -391,7 +391,7 @@ export default function LandingPage({ readme }: { readme: string }) {
             <p className="kicker">pre-roll dictation for macOS</p>
             <h1>
               dictation that speak <span className="before-word">before</span> press hotkey,
-              <span className="handwritten-line">
+              <span className="idea-line">
                 instead of losing half your idea or ends up typing anyways
               </span>
             </h1>
