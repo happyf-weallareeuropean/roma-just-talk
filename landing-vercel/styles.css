@@ -1,0 +1,473 @@
+@import url("https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght,SOFT,WONK@9..144,700..900,100,1&family=IBM+Plex+Mono:wght@500;600;700&family=Space+Grotesk:wght@400;500;600;700&display=swap");
+
+:root {
+  --ink: #171412;
+  --paper: #f4efe5;
+  --paper-deep: #e6d7bd;
+  --acid: #b8ff3d;
+  --coral: #ff6b4a;
+  --cyan: #46d9ff;
+  --line: rgba(23, 20, 18, 0.16);
+  --shadow: rgba(23, 20, 18, 0.28);
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html {
+  background: var(--paper);
+  color: var(--ink);
+  scroll-behavior: smooth;
+}
+
+body {
+  margin: 0;
+  min-width: 320px;
+  background:
+    radial-gradient(circle at 24px 24px, rgba(23, 20, 18, 0.12) 1px, transparent 1px),
+    linear-gradient(135deg, rgba(255, 107, 74, 0.16), transparent 38%),
+    linear-gradient(210deg, rgba(70, 217, 255, 0.18), transparent 42%),
+    var(--paper);
+  background-size: 48px 48px, auto, auto, auto;
+  color: var(--ink);
+  font-family: "Space Grotesk", sans-serif;
+}
+
+button,
+input {
+  font: inherit;
+}
+
+a {
+  color: inherit;
+}
+
+.hidden {
+  display: none !important;
+}
+
+.hero {
+  position: relative;
+  min-height: 76svh;
+  overflow: hidden;
+  border-bottom: 1px solid var(--line);
+}
+
+.hero::before {
+  position: absolute;
+  inset: 0;
+  content: "";
+  background:
+    linear-gradient(90deg, rgba(244, 239, 229, 0.98), rgba(244, 239, 229, 0.7) 60%, rgba(244, 239, 229, 0.22)),
+    url("https://raw.githubusercontent.com/happyf-weallareeuropean/roma-just-talk/main/docs/assets/roma-just-talk-logo.png");
+  background-position: center, right 8vw center;
+  background-repeat: no-repeat;
+  background-size: auto, min(54vw, 620px);
+}
+
+.hero-inner {
+  position: relative;
+  z-index: 1;
+  display: flex;
+  min-height: 76svh;
+  width: min(1180px, calc(100% - 40px));
+  margin: 0 auto;
+  flex-direction: column;
+  justify-content: space-between;
+  padding: 24px 0 30px;
+}
+
+.topline {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 20px;
+}
+
+.brand-lockup {
+  display: inline-flex;
+  align-items: center;
+  gap: 12px;
+  text-decoration: none;
+  font-weight: 700;
+}
+
+.brand-lockup img {
+  width: 42px;
+  height: 42px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: var(--paper);
+  box-shadow: 0 8px 18px rgba(23, 20, 18, 0.12);
+}
+
+.top-actions {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: 14px;
+  font-size: 0.95rem;
+  font-weight: 600;
+}
+
+.top-actions a {
+  text-decoration-thickness: 2px;
+  text-underline-offset: 4px;
+}
+
+.hero-copy {
+  max-width: 900px;
+  padding-top: 48px;
+}
+
+.kicker {
+  width: fit-content;
+  margin: 0 0 18px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: rgba(184, 255, 61, 0.52);
+  padding: 8px 12px;
+  font-family: "IBM Plex Mono", monospace;
+  font-size: 0.85rem;
+  font-weight: 600;
+}
+
+h1 {
+  max-width: 900px;
+  margin: 0;
+  font-size: 4rem;
+  line-height: 1;
+  font-weight: 800;
+}
+
+h1 span {
+  display: inline-block;
+  color: #fff8e7;
+  background: var(--ink);
+  border: 2px solid var(--ink);
+  border-radius: 8px;
+  padding: 0 0.16em 0.08em;
+  font-family: "Fraunces", serif;
+  font-style: italic;
+  font-variation-settings:
+    "SOFT" 100,
+    "WONK" 1,
+    "opsz" 72;
+}
+
+.body-copy {
+  max-width: 520px;
+  margin: 16px 0 0;
+  font-size: 1.22rem;
+  line-height: 1.5;
+  color: rgba(23, 20, 18, 0.78);
+}
+
+.cta-row,
+.waitlist-cta {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: stretch;
+  gap: 12px;
+  margin-top: 24px;
+}
+
+.button,
+.social-button {
+  min-height: 52px;
+  border: 2px solid var(--ink);
+  border-radius: 8px;
+  color: var(--ink);
+  cursor: pointer;
+  text-decoration: none;
+  transition:
+    transform 160ms ease,
+    box-shadow 160ms ease,
+    background-color 160ms ease;
+}
+
+.button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  padding: 0 16px;
+  font-weight: 800;
+  box-shadow: 5px 5px 0 var(--ink);
+}
+
+.button:hover,
+.social-button:hover {
+  transform: translate(-2px, -2px);
+  box-shadow: 7px 7px 0 var(--ink);
+}
+
+.primary {
+  background: var(--acid);
+}
+
+.secondary {
+  background: var(--cyan);
+}
+
+.talk {
+  margin-top: 12px;
+  background: var(--coral);
+}
+
+.icon {
+  width: 22px;
+  height: 22px;
+  display: inline-block;
+  flex: 0 0 auto;
+  background: currentColor;
+}
+
+.apple {
+  clip-path: path("M16.8 12.8c0-2 1.6-3 1.7-3.1-1-.1-2.5-.9-3.4-.9-1.4 0-2.2.8-3.1.8-.9 0-1.7-.8-3-.8-1.5 0-3 .9-3.8 2.3-1.6 2.9-.4 7.2 1.2 9.5.8 1.1 1.7 2.4 3 2.3 1.2 0 1.7-.8 3.1-.8s1.8.8 3.1.8c1.3 0 2.1-1.1 2.9-2.2.9-1.3 1.2-2.5 1.2-2.6 0 0-2.5-1-2.5-4.1ZM14.2 7.3c.7-.8 1.1-1.9 1-3-1 .1-2.1.7-2.8 1.5-.6.7-1.1 1.8-1 2.8 1.1.1 2.2-.5 2.8-1.3Z");
+}
+
+.github {
+  clip-path: path("M12 2C6.5 2 2 6.6 2 12.3c0 4.5 2.9 8.4 6.8 9.7.5.1.7-.2.7-.5v-1.9c-2.8.6-3.4-1.2-3.4-1.2-.5-1.2-1.1-1.5-1.1-1.5-.9-.6.1-.6.1-.6 1 0 1.6 1.1 1.6 1.1.9 1.6 2.4 1.1 3 .9.1-.7.4-1.1.7-1.4-2.2-.3-4.5-1.1-4.5-5 0-1.1.4-2 1-2.8-.1-.3-.4-1.3.1-2.7 0 0 .8-.3 2.8 1.1.8-.2 1.7-.3 2.5-.3.9 0 1.7.1 2.5.3 1.9-1.4 2.8-1.1 2.8-1.1.6 1.4.2 2.4.1 2.7.7.8 1 1.7 1 2.8 0 3.9-2.3 4.7-4.5 5 .4.3.7 1 .7 2v2.9c0 .3.2.6.7.5 4-1.3 6.8-5.2 6.8-9.7C22 6.6 17.5 2 12 2Z");
+}
+
+.windows {
+  clip-path: path("M3 4.4 10.2 3v8.2H3V4.4Zm8.4-1.7L21 1.3v9.9h-9.6V2.7ZM3 12.8h7.2V21L3 19.7v-6.9Zm8.4 0H21v9.9l-9.6-1.4v-8.5Z");
+}
+
+.keygroup {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+}
+
+.keycap {
+  display: inline-flex;
+  min-height: 24px;
+  align-items: center;
+  justify-content: center;
+  border: 1.5px solid currentColor;
+  border-radius: 6px;
+  background: rgba(255, 255, 255, 0.44);
+  padding: 2px 6px;
+  font-family: "IBM Plex Mono", monospace;
+  font-size: 0.74rem;
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+.waitlist-cta {
+  flex: 1 1 460px;
+}
+
+.waitlist-field {
+  position: relative;
+  display: flex;
+  min-height: 52px;
+  min-width: min(100%, 320px);
+  flex: 1 1 320px;
+  align-items: center;
+  gap: 12px;
+  overflow: hidden;
+  border: 2px solid var(--ink);
+  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.72);
+  padding: 0 14px;
+  box-shadow: 5px 5px 0 var(--ink);
+}
+
+.waitlist-field input {
+  position: relative;
+  z-index: 1;
+  width: 100%;
+  min-width: 0;
+  border: 0;
+  outline: 0;
+  background: transparent;
+  font-family: "IBM Plex Mono", monospace;
+  font-weight: 600;
+}
+
+.fill-bar {
+  position: absolute;
+  inset: auto auto 0 0;
+  width: 42%;
+  height: 100%;
+  background: rgba(70, 217, 255, 0.48);
+  transform-origin: left center;
+  animation: fillPulse 1.6s ease-in-out infinite;
+}
+
+.form-state,
+.contact-panel p {
+  flex: 1 1 100%;
+  margin: 0;
+  font-family: "IBM Plex Mono", monospace;
+  font-size: 0.82rem;
+  font-weight: 600;
+}
+
+.contact-panel {
+  display: flex;
+  max-width: 620px;
+  flex-wrap: wrap;
+  gap: 12px;
+  margin-top: 14px;
+}
+
+.social-button {
+  display: inline-flex;
+  min-width: 142px;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  background: rgba(255, 255, 255, 0.76);
+  padding: 0 14px;
+  font-weight: 800;
+  box-shadow: 5px 5px 0 var(--ink);
+}
+
+.social-glyph {
+  font-family: "IBM Plex Mono", monospace;
+  font-size: 0.96rem;
+  font-weight: 800;
+}
+
+.readme-section {
+  padding: 34px 0 70px;
+}
+
+.readme-shell {
+  width: min(1040px, calc(100% - 40px));
+  margin: 0 auto;
+}
+
+.section-label {
+  margin-bottom: 14px;
+  font-family: "IBM Plex Mono", monospace;
+  font-size: 0.82rem;
+  font-weight: 700;
+  text-transform: uppercase;
+}
+
+.readme-card {
+  border: 2px solid var(--ink);
+  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.72);
+  box-shadow: 6px 6px 0 var(--ink);
+  padding: clamp(18px, 4vw, 34px);
+}
+
+.readme-card h2,
+.readme-card h3,
+.readme-card h4,
+.readme-card h5 {
+  margin: 1.4em 0 0.5em;
+  line-height: 1.12;
+}
+
+.readme-card h2:first-child,
+.readme-card h3:first-child {
+  margin-top: 0;
+}
+
+.readme-card p,
+.readme-card li {
+  line-height: 1.62;
+}
+
+.readme-card img {
+  max-width: 100%;
+  border-radius: 8px;
+}
+
+.readme-card code {
+  border-radius: 5px;
+  background: rgba(23, 20, 18, 0.08);
+  padding: 0.12em 0.34em;
+  font-family: "IBM Plex Mono", monospace;
+  font-size: 0.9em;
+}
+
+.readme-card pre {
+  overflow: auto;
+  border-radius: 8px;
+  background: #211d1a;
+  color: #fff8e7;
+  padding: 16px;
+}
+
+.thanks-page {
+  display: grid;
+  min-height: 100svh;
+  place-items: center;
+  padding: 24px;
+}
+
+.thanks-card {
+  width: min(520px, 100%);
+  border: 2px solid var(--ink);
+  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.78);
+  box-shadow: 6px 6px 0 var(--ink);
+  padding: 28px;
+}
+
+.thanks-card h1 {
+  margin-top: 18px;
+  font-size: 2.6rem;
+}
+
+@keyframes fillPulse {
+  0%,
+  100% {
+    transform: scaleX(0.55);
+  }
+  48% {
+    transform: scaleX(1.8);
+  }
+}
+
+@media (max-width: 760px) {
+  .hero::before {
+    background:
+      linear-gradient(180deg, rgba(244, 239, 229, 0.98), rgba(244, 239, 229, 0.78)),
+      url("https://raw.githubusercontent.com/happyf-weallareeuropean/roma-just-talk/main/docs/assets/roma-just-talk-logo.png");
+    background-position: center, center bottom 4rem;
+    background-repeat: no-repeat;
+    background-size: auto, min(82vw, 360px);
+  }
+
+  .hero-inner {
+    min-height: 82svh;
+    width: min(100% - 28px, 1180px);
+    padding-top: 18px;
+  }
+
+  .topline {
+    align-items: flex-start;
+  }
+
+  .top-actions {
+    font-size: 0.85rem;
+  }
+
+  .hero-copy {
+    padding-top: 40px;
+  }
+
+  h1 {
+    font-size: clamp(2.45rem, 12vw, 3.8rem);
+  }
+
+  .body-copy {
+    font-size: 1rem;
+  }
+
+  .button,
+  .social-button,
+  .waitlist-field {
+    width: 100%;
+  }
+}

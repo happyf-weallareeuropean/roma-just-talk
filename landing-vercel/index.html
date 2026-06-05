@@ -1,0 +1,115 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta
+      name="description"
+      content="Roma Just Talk dictation that speaks before you press the hotkey."
+    />
+    <title>Roma Just Talk</title>
+    <link rel="stylesheet" href="./styles.css" />
+  </head>
+  <body>
+    <main>
+      <section class="hero" aria-label="Roma Just Talk">
+        <div class="hero-inner">
+          <nav class="topline" aria-label="Primary">
+            <a class="brand-lockup" href="https://github.com/happyf-weallareeuropean/roma-just-talk">
+              <img
+                src="https://raw.githubusercontent.com/happyf-weallareeuropean/roma-just-talk/main/docs/assets/roma-just-talk-logo.png"
+                alt=""
+                width="42"
+                height="42"
+              />
+              <span>roma just talk</span>
+            </a>
+            <div class="top-actions">
+              <a href="#readme">readme</a>
+              <a href="https://github.com/happyf-weallareeuropean/roma-just-talk">github</a>
+            </div>
+          </nav>
+
+          <div class="hero-copy">
+            <p class="kicker">always-listening pre-roll dictation</p>
+            <h1>
+              dictation that speak <span>before</span> press hotkey, instead of
+              losing half your idea or ends up typing anyways
+            </h1>
+            <p class="body-copy">we aim to make dictation actually replace typing</p>
+
+            <div class="cta-row" id="mac-actions">
+              <a class="button primary" id="download-button" href="https://github.com/happyf-weallareeuropean/roma-just-talk/releases/latest/download/VoiceInk.dmg">
+                <span class="icon apple" aria-hidden="true"></span>
+                <span>download macos</span>
+                <span class="keycap">enter</span>
+              </a>
+              <a class="button secondary" id="github-button" href="https://github.com/happyf-weallareeuropean/roma-just-talk">
+                <span class="icon github" aria-hidden="true"></span>
+                <span>github</span>
+                <span class="keygroup"><span class="keycap">shift</span><span class="keycap">enter</span></span>
+              </a>
+            </div>
+
+            <form
+              class="waitlist-cta hidden"
+              id="waitlist-form"
+              name="windows-waitlist"
+              method="GET"
+            >
+              <label class="waitlist-field">
+                <span class="icon windows" aria-hidden="true"></span>
+                <span class="fill-bar" aria-hidden="true"></span>
+                <input
+                  id="waitlist-email"
+                  name="email"
+                  type="email"
+                  inputmode="email"
+                  autocomplete="email"
+                  placeholder="eg entropy@example.com"
+                  required
+                />
+              </label>
+              <button class="button primary" type="submit">
+                <span>waitlist sign up</span>
+                <span class="keycap">enter</span>
+              </button>
+              <p class="form-state" id="waitlist-state">windows build not ready yet</p>
+            </form>
+
+            <button class="button talk" id="talk-button" type="button">
+              <span>talk to me</span>
+              <span class="keygroup"><span class="keycap">cmd</span><span class="keycap">enter</span></span>
+            </button>
+
+            <div class="contact-panel hidden" id="contact-panel" aria-live="polite">
+              <a class="social-button" id="x-button" href="https://x.com/Hft_freedom">
+                <span class="social-glyph">X</span>
+                <span class="keycap">a</span>
+              </a>
+              <button class="social-button" id="discord-button" type="button">
+                <span class="social-glyph">discord</span>
+                <span class="keycap">s</span>
+              </button>
+              <a class="social-button" id="telegram-button" href="https://t.me/felixorder">
+                <span class="social-glyph">telegram</span>
+                <span class="keycap">d</span>
+              </a>
+              <p id="contact-state">choose a channel</p>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <section class="readme-section" id="readme">
+        <div class="readme-shell">
+          <div class="section-label">repo readme</div>
+          <article class="readme-card" id="readme-content">
+            <p>loading readme...</p>
+          </article>
+        </div>
+      </section>
+    </main>
+    <script src="./app.js" defer></script>
+  </body>
+</html>
