@@ -1,4 +1,4 @@
-@import url("https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght,SOFT,WONK@9..144,700..900,100,1&family=IBM+Plex+Mono:wght@500;600;700&family=Space+Grotesk:wght@400;500;600;700&display=swap");
+@import url("https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght,SOFT,WONK@9..144,700..900,100,1&family=IBM+Plex+Mono:wght@500;600;700&family=Sacramento&family=Space+Grotesk:wght@400;500;600;700&display=swap");
 
 :root {
   --ink: #171412;
@@ -141,7 +141,7 @@ h1 {
   font-weight: 800;
 }
 
-h1 span {
+h1 .before-word {
   display: inline-block;
   color: #fff8e7;
   background: var(--ink);
@@ -154,6 +154,27 @@ h1 span {
     "SOFT" 100,
     "WONK" 1,
     "opsz" 72;
+}
+
+.handwritten-line {
+  display: block;
+  width: fit-content;
+  max-width: 100%;
+  margin-top: 0.12em;
+  border: 2px solid rgba(255, 248, 231, 0.18);
+  border-radius: 8px;
+  background:
+    linear-gradient(90deg, rgba(255, 255, 255, 0.04) 1px, transparent 1px),
+    linear-gradient(180deg, #132333, #1d2b38);
+  background-size: 18px 100%, auto;
+  color: #fff8e7;
+  padding: 0.1em 0.24em 0.18em;
+  font-family: "Sacramento", cursive;
+  font-size: clamp(2.7rem, 6vw, 5.8rem);
+  font-weight: 400;
+  letter-spacing: 0;
+  line-height: 1;
+  text-shadow: 0 1px 8px rgba(255, 248, 231, 0.38);
 }
 
 .body-copy {
@@ -459,6 +480,11 @@ h1 span {
 
   h1 {
     font-size: clamp(2.45rem, 12vw, 3.8rem);
+  }
+
+  .handwritten-line {
+    font-size: clamp(2.3rem, 11vw, 4.2rem);
+    line-height: 1.08;
   }
 
   .body-copy {
