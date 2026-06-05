@@ -1,14 +1,65 @@
 @import url("https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght,SOFT,WONK@9..144,700..900,100,1&family=IBM+Plex+Mono:wght@500;600;700&family=Instrument+Serif:ital@0;1&family=Space+Grotesk:wght@400;500;600;700&display=swap");
 
 :root {
+  color-scheme: light dark;
   --ink: #171412;
   --paper: #f4efe5;
   --paper-deep: #e6d7bd;
   --acid: #b8ff3d;
   --coral: #ff6b4a;
   --cyan: #46d9ff;
+  --body-dot: rgba(23, 20, 18, 0.12);
+  --body-warm: rgba(255, 107, 74, 0.16);
+  --body-cool: rgba(70, 217, 255, 0.18);
+  --surface: rgba(255, 255, 255, 0.72);
+  --surface-strong: rgba(255, 255, 255, 0.78);
+  --field-surface: rgba(255, 255, 255, 0.72);
+  --key-surface: rgba(255, 255, 255, 0.44);
+  --muted: rgba(23, 20, 18, 0.78);
+  --muted-strong: rgba(23, 20, 18, 0.72);
+  --placeholder: rgba(23, 20, 18, 0.45);
+  --idea: #78301f;
+  --mark-bg: #171412;
+  --mark-fg: #fff8e7;
+  --hero-overlay: linear-gradient(90deg, rgba(244, 239, 229, 0.98), rgba(244, 239, 229, 0.7) 60%, rgba(244, 239, 229, 0.22));
+  --hero-overlay-mobile: linear-gradient(180deg, rgba(244, 239, 229, 0.98), rgba(244, 239, 229, 0.78));
+  --button-ink: #171412;
+  --inline-code: rgba(23, 20, 18, 0.08);
+  --pre-bg: #211d1a;
+  --pre-fg: #fff8e7;
   --line: rgba(23, 20, 18, 0.16);
   --shadow: rgba(23, 20, 18, 0.28);
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --ink: #f7efdf;
+    --paper: #11100e;
+    --paper-deep: #1d1916;
+    --acid: #bbff35;
+    --coral: #ff785e;
+    --cyan: #42d9ff;
+    --body-dot: rgba(255, 248, 231, 0.09);
+    --body-warm: rgba(255, 107, 74, 0.11);
+    --body-cool: rgba(70, 217, 255, 0.12);
+    --surface: rgba(30, 27, 24, 0.78);
+    --surface-strong: rgba(30, 27, 24, 0.86);
+    --field-surface: rgba(30, 27, 24, 0.82);
+    --key-surface: rgba(255, 248, 231, 0.12);
+    --muted: rgba(247, 239, 223, 0.74);
+    --muted-strong: rgba(247, 239, 223, 0.7);
+    --placeholder: rgba(247, 239, 223, 0.44);
+    --idea: #ff9a78;
+    --mark-bg: #f7efdf;
+    --mark-fg: #171412;
+    --hero-overlay: linear-gradient(90deg, rgba(17, 16, 14, 0.98), rgba(17, 16, 14, 0.76) 60%, rgba(17, 16, 14, 0.2));
+    --hero-overlay-mobile: linear-gradient(180deg, rgba(17, 16, 14, 0.97), rgba(17, 16, 14, 0.82));
+    --inline-code: rgba(255, 248, 231, 0.12);
+    --pre-bg: #050505;
+    --pre-fg: #fff8e7;
+    --line: rgba(255, 248, 231, 0.2);
+    --shadow: rgba(0, 0, 0, 0.6);
+  }
 }
 
 * {
@@ -25,9 +76,9 @@ body {
   margin: 0;
   min-width: 320px;
   background:
-    radial-gradient(circle at 24px 24px, rgba(23, 20, 18, 0.12) 1px, transparent 1px),
-    linear-gradient(135deg, rgba(255, 107, 74, 0.16), transparent 38%),
-    linear-gradient(210deg, rgba(70, 217, 255, 0.18), transparent 42%),
+    radial-gradient(circle at 24px 24px, var(--body-dot) 1px, transparent 1px),
+    linear-gradient(135deg, var(--body-warm), transparent 38%),
+    linear-gradient(210deg, var(--body-cool), transparent 42%),
     var(--paper);
   background-size: 48px 48px, auto, auto, auto;
   color: var(--ink);
@@ -59,8 +110,8 @@ a {
   inset: 0;
   content: "";
   background:
-    linear-gradient(90deg, rgba(244, 239, 229, 0.98), rgba(244, 239, 229, 0.7) 60%, rgba(244, 239, 229, 0.22)),
-    url("https://raw.githubusercontent.com/happyf-weallareeuropean/roma-just-talk/main/docs/assets/roma-just-talk-logo.png");
+    var(--hero-overlay),
+    url("./roma-logo.png");
   background-position: center, right 8vw center;
   background-repeat: no-repeat;
   background-size: auto, min(54vw, 620px);
@@ -99,7 +150,7 @@ a {
   border: 1px solid var(--line);
   border-radius: 8px;
   background: var(--paper);
-  box-shadow: 0 8px 18px rgba(23, 20, 18, 0.12);
+  box-shadow: 0 8px 18px var(--shadow);
 }
 
 .top-actions {
@@ -143,9 +194,9 @@ h1 {
 
 h1 .before-word {
   display: inline-block;
-  color: #fff8e7;
-  background: var(--ink);
-  border: 2px solid var(--ink);
+  color: var(--mark-fg);
+  background: var(--mark-bg);
+  border: 2px solid var(--mark-bg);
   border-radius: 8px;
   padding: 0 0.16em 0.08em;
   font-family: "Fraunces", serif;
@@ -160,7 +211,7 @@ h1 .before-word {
   display: block;
   max-width: 13.5ch;
   margin-top: 0.1em;
-  color: #78301f;
+  color: var(--idea);
   font-family: "Instrument Serif", Georgia, serif;
   font-size: clamp(3rem, 6vw, 5.25rem);
   font-style: normal;
@@ -175,7 +226,7 @@ h1 .before-word {
   margin: 16px 0 0;
   font-size: 1.22rem;
   line-height: 1.5;
-  color: rgba(23, 20, 18, 0.78);
+  color: var(--muted);
 }
 
 .cta-row,
@@ -206,12 +257,18 @@ h1 .before-word {
   align-items: center;
   justify-content: center;
   gap: 12px;
+  border-color: var(--button-ink);
+  color: var(--button-ink);
   padding: 0 16px;
   font-weight: 800;
-  box-shadow: 5px 5px 0 var(--ink);
+  box-shadow: 5px 5px 0 var(--button-ink);
 }
 
-.button:hover,
+.button:hover {
+  transform: translate(-2px, -2px);
+  box-shadow: 7px 7px 0 var(--button-ink);
+}
+
 .social-button:hover {
   transform: translate(-2px, -2px);
   box-shadow: 7px 7px 0 var(--ink);
@@ -263,7 +320,7 @@ h1 .before-word {
   justify-content: center;
   border: 1.5px solid currentColor;
   border-radius: 6px;
-  background: rgba(255, 255, 255, 0.44);
+  background: var(--key-surface);
   padding: 2px 6px;
   font-family: "IBM Plex Mono", monospace;
   font-size: 0.74rem;
@@ -286,7 +343,7 @@ h1 .before-word {
   overflow: hidden;
   border: 2px solid var(--ink);
   border-radius: 8px;
-  background: rgba(255, 255, 255, 0.72);
+  background: var(--field-surface);
   padding: 0 14px;
   box-shadow: 5px 5px 0 var(--ink);
 }
@@ -299,8 +356,13 @@ h1 .before-word {
   border: 0;
   outline: 0;
   background: transparent;
+  color: var(--ink);
   font-family: "IBM Plex Mono", monospace;
   font-weight: 600;
+}
+
+.waitlist-field input::placeholder {
+  color: var(--placeholder);
 }
 
 .fill-bar {
@@ -336,7 +398,7 @@ h1 .before-word {
   align-items: center;
   justify-content: center;
   gap: 10px;
-  background: rgba(255, 255, 255, 0.76);
+  background: var(--surface);
   padding: 0 14px;
   font-weight: 800;
   box-shadow: 5px 5px 0 var(--ink);
@@ -368,7 +430,7 @@ h1 .before-word {
 .readme-card {
   border: 2px solid var(--ink);
   border-radius: 8px;
-  background: rgba(255, 255, 255, 0.72);
+  background: var(--surface);
   box-shadow: 6px 6px 0 var(--ink);
   padding: clamp(18px, 4vw, 34px);
 }
@@ -398,7 +460,7 @@ h1 .before-word {
 
 .readme-card code {
   border-radius: 5px;
-  background: rgba(23, 20, 18, 0.08);
+  background: var(--inline-code);
   padding: 0.12em 0.34em;
   font-family: "IBM Plex Mono", monospace;
   font-size: 0.9em;
@@ -407,8 +469,8 @@ h1 .before-word {
 .readme-card pre {
   overflow: auto;
   border-radius: 8px;
-  background: #211d1a;
-  color: #fff8e7;
+  background: var(--pre-bg);
+  color: var(--pre-fg);
   padding: 16px;
 }
 
@@ -423,7 +485,7 @@ h1 .before-word {
   width: min(520px, 100%);
   border: 2px solid var(--ink);
   border-radius: 8px;
-  background: rgba(255, 255, 255, 0.78);
+  background: var(--surface-strong);
   box-shadow: 6px 6px 0 var(--ink);
   padding: 28px;
 }
@@ -446,8 +508,8 @@ h1 .before-word {
 @media (max-width: 760px) {
   .hero::before {
     background:
-      linear-gradient(180deg, rgba(244, 239, 229, 0.98), rgba(244, 239, 229, 0.78)),
-      url("https://raw.githubusercontent.com/happyf-weallareeuropean/roma-just-talk/main/docs/assets/roma-just-talk-logo.png");
+      var(--hero-overlay-mobile),
+      url("./roma-logo.png");
     background-position: center, center bottom 4rem;
     background-repeat: no-repeat;
     background-size: auto, min(82vw, 360px);

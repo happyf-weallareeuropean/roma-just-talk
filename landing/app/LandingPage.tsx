@@ -13,8 +13,7 @@ import {
 const REPO_URL = "https://github.com/happyf-weallareeuropean/roma-just-talk";
 const MAC_DOWNLOAD_URL =
   "https://github.com/happyf-weallareeuropean/roma-just-talk/releases/latest/download/VoiceInk.dmg";
-const LOGO_URL =
-  "https://raw.githubusercontent.com/happyf-weallareeuropean/roma-just-talk/main/docs/assets/roma-just-talk-logo.png";
+const LOGO_URL = "/roma-logo.png";
 const X_URL = "https://x.com/Hft_freedom";
 const TELEGRAM_URL = "https://t.me/felixorder";
 const DISCORD_URL = "https://discord.com/channels/@me/";
