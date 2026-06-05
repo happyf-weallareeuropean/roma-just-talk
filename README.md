@@ -2,8 +2,9 @@
   <img src="docs/assets/roma-just-talk-logo.png" alt="roma-just-talk split keyboard logo" width="180" height="180" />
   <h1>roma-just-talk</h1>
   <p>speak before press hotkey dictation app.</p>
-  <p>rethink UX: pre-roll voice capture, -87% bin size & -83% ram usage (780mb → 132mb), local & cloud stt solution both available.</p>
-  <p>speak is 3~4x faster than type btw </p>
+  <p>rethinked: pre-roll voice capture, -87% bin size -83% ram (780mb → 132mb), local & cloud stt solution, 4x typing throughput.</p>
+  
+  ![roma just talk Mac App](https://github.com/user-attachments/assets/6fd92e7c-dafc-409c-b8c0-a2027b446124)
 
   [![License](https://img.shields.io/badge/License-GPL%20v3-blue.svg)](https://www.gnu.org/licenses/gpl-3.0)
   ![Platform](https://img.shields.io/badge/platform-macOS%2014.0%2B-brightgreen)
@@ -22,11 +23,10 @@
 
 ---
 
-Most dictation apps wait for the hotkey, then open the mic. That means you pause, prepare, press, then speak. This [fork](https://github.com/Beingpax/VoiceInk) explores the other direction: keep a short rolling voice buffer, so the app can catch what you already started saying.
+
+Most dictation apps wait for the hotkey, then open the mic. That break the flow waste the time, then speak. This [fork](https://github.com/Beingpax/VoiceInk) explores the other direction: keep a short rolling voice buffer, so the app can catch what you already started saying.
 
 VoiceInk made dictation feel instant after recording starts. roma-just-talk is interested in the moment before that: speech that begins naturally, then gets committed when you press the shortcut.
-
-![roma just talk Mac App](https://github.com/user-attachments/assets/a6631a6d-1f56-43e1-be6c-88b21750c82f)
 
 ## What Makes This Different
 
