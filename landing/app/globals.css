@@ -330,8 +330,12 @@ h1 .before-word {
 .command-symbol {
   display: inline-flex;
   min-height: 24px;
+  min-width: 24px;
   align-items: center;
   justify-content: center;
+  border: 1.5px solid currentColor;
+  border-radius: 6px;
+  background: var(--key-surface);
   font-family: var(--font-ibm-plex-mono), monospace;
   font-size: 1.18rem;
   font-weight: 700;
