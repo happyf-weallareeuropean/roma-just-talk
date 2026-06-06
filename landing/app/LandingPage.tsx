@@ -392,7 +392,7 @@ export default function LandingPage({ readme }: { readme: string }) {
           <div className="hero-copy">
             <p className="kicker">pre-roll dictation for macOS</p>
             <h1>
-              Dictation: Say first, press hotkey later.
+              Dictation: Say <span className="before-word">first</span>, press hotkey later.
               <span className="idea-line">
                 Stop losing ideas and typing anyway.
               </span>
