@@ -31,7 +31,7 @@ const logoUrl =
 export const metadata: Metadata = {
   title: "roma-just-talk",
   description:
-    "Dictation that catches the words before the hotkey, then turns speech into text fast enough to replace typing.",
+    "Dictation: Say first, press hotkey later. Stop losing ideas and typing anyway.",
   icons: {
     icon: logoUrl,
     shortcut: logoUrl,
@@ -39,7 +39,7 @@ export const metadata: Metadata = {
   openGraph: {
     title: "roma-just-talk",
     description:
-      "Speak before press hotkey. Pre-roll dictation built from VoiceInk.",
+      "Dictation: Say first, press hotkey later. Stop losing ideas and typing anyway.",
     images: [logoUrl],
   },
   other: {

@@ -392,9 +392,9 @@ export default function LandingPage({ readme }: { readme: string }) {
           <div className="hero-copy">
             <p className="kicker">pre-roll dictation for macOS</p>
             <h1>
-              dictation that speak <span className="before-word">before</span> press hotkey,
+              Dictation: Say first, press hotkey later.
               <span className="idea-line">
-                instead of losing half your idea or ends up typing anyways
+                Stop losing ideas and typing anyway.
               </span>
             </h1>
             <p className="body-copy">we aim to make dictation actually replace typing</p>
