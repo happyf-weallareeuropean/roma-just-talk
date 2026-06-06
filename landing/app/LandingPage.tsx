@@ -397,7 +397,7 @@ export default function LandingPage({ readme }: { readme: string }) {
                 Stop losing ideas and typing anyway.
               </span>
             </h1>
-            <p className="body-copy">we aim to make dictation actually replace typing</p>
+            <p className="body-copy">we&apos;re making dictation good enough to replace typing</p>
 
             <div className="cta-row" aria-label="main actions">
               {os === "windows" ? (
@@ -445,7 +445,7 @@ export default function LandingPage({ readme }: { readme: string }) {
               aria-expanded={contactOpen}
               onClick={() => setContactOpen((value) => !value)}
             >
-              <span>talk to me</span>
+              <span>contact me</span>
               <Keycap>Cmd Enter</Keycap>
             </button>
 
