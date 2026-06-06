@@ -15,6 +15,8 @@ const MAC_DOWNLOAD_URL =
   "https://github.com/happyf-weallareeuropean/roma-just-talk/releases/latest/download/VoiceInk.dmg";
 const LOGO_URL =
   "https://raw.githubusercontent.com/happyf-weallareeuropean/roma-just-talk/main/docs/assets/roma-just-talk-logo.png";
+const HOWTO_IMAGE_URL =
+  "https://github.com/user-attachments/assets/6fd92e7c-dafc-409c-b8c0-a2027b446124";
 const X_URL = "https://x.com/Hft_freedom";
 const TELEGRAM_URL = "https://t.me/felixorder";
 const DISCORD_URL = "https://discord.com/channels/@me/";
@@ -469,6 +471,10 @@ export default function LandingPage({ readme }: { readme: string }) {
             ) : null}
           </div>
         </div>
+      </section>
+
+      <section className="howto-image-section" aria-label="How to use">
+        <img src={HOWTO_IMAGE_URL} alt="How to use Roma Just Talk" loading="lazy" />
       </section>
 
       <section className="readme-section" id="readme" aria-labelledby="readme-title">

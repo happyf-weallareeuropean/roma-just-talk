@@ -414,6 +414,18 @@ h1 .before-word {
   font-weight: 900;
 }
 
+.howto-image-section {
+  width: min(1080px, calc(100% - 40px));
+  margin: 34px auto 0;
+}
+
+.howto-image-section img {
+  display: block;
+  width: 100%;
+  height: auto;
+  border-radius: 8px;
+}
+
 .readme-section {
   width: min(1080px, calc(100% - 40px));
   margin: 0 auto;
