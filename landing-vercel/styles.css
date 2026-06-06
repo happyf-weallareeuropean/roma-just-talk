@@ -109,17 +109,28 @@ a {
   position: absolute;
   inset: 0;
   content: "";
-  background:
-    var(--hero-overlay),
-    url("https://raw.githubusercontent.com/happyf-weallareeuropean/roma-just-talk/main/docs/assets/roma-just-talk-logo.png");
-  background-position: center, right 8vw center;
-  background-repeat: no-repeat;
-  background-size: auto, min(54vw, 620px);
+  z-index: 1;
+  background: var(--hero-overlay);
+  pointer-events: none;
+}
+
+.hero-bg-logo {
+  position: absolute;
+  z-index: 0;
+  top: 50%;
+  right: max(18px, 6vw);
+  width: min(54vw, 620px);
+  height: auto;
+  border-radius: clamp(22px, 3vw, 46px);
+  clip-path: inset(7% round clamp(22px, 3vw, 46px));
+  object-fit: cover;
+  pointer-events: none;
+  transform: translateY(-50%);
 }
 
 .hero-inner {
   position: relative;
-  z-index: 1;
+  z-index: 2;
   display: flex;
   min-height: 76svh;
   width: min(1180px, calc(100% - 40px));
@@ -150,6 +161,8 @@ a {
   border: 1px solid var(--line);
   border-radius: 8px;
   background: var(--paper);
+  clip-path: inset(7% round 8px);
+  object-fit: cover;
   box-shadow: 0 8px 18px var(--shadow);
 }
 
@@ -519,12 +532,15 @@ h1 .before-word {
 
 @media (max-width: 760px) {
   .hero::before {
-    background:
-      var(--hero-overlay-mobile),
-      url("https://raw.githubusercontent.com/happyf-weallareeuropean/roma-just-talk/main/docs/assets/roma-just-talk-logo.png");
-    background-position: center, center bottom 4rem;
-    background-repeat: no-repeat;
-    background-size: auto, min(82vw, 360px);
+    background: var(--hero-overlay-mobile);
+  }
+
+  .hero-bg-logo {
+    top: auto;
+    right: 50%;
+    bottom: 4rem;
+    width: min(82vw, 360px);
+    transform: translateX(50%);
   }
 
   .hero-inner {

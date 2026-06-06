@@ -42,6 +42,9 @@ export const metadata: Metadata = {
       "Speak before press hotkey. Pre-roll dictation built from VoiceInk.",
     images: [logoUrl],
   },
+  other: {
+    "darkreader-lock": "",
+  },
 };
 
 export default function RootLayout({

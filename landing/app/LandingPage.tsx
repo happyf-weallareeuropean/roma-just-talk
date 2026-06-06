@@ -16,7 +16,7 @@ const MAC_DOWNLOAD_URL =
 const LOGO_URL =
   "https://raw.githubusercontent.com/happyf-weallareeuropean/roma-just-talk/main/docs/assets/roma-just-talk-logo.png";
 const HOWTO_IMAGE_URL =
-  "https://github.com/user-attachments/assets/6fd92e7c-dafc-409c-b8c0-a2027b446124";
+  "https://raw.githubusercontent.com/happyf-weallareeuropean/roma-just-talk/main/docs/assets/roma-just-talk-how-to-use.png";
 const X_URL = "https://x.com/Hft_freedom";
 const TELEGRAM_URL = "https://t.me/felixorder";
 const DISCORD_URL = "https://discord.com/channels/@me/";
