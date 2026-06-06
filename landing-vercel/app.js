@@ -160,7 +160,7 @@ async function copyDiscord() {
   const state = document.getElementById("contact-state");
   try {
     await navigator.clipboard.writeText(discordId);
-    state.textContent = "saved my discord id in clipboard. cmd v to paste.";
+    state.textContent = "saved my discord id in clipboard. ⌘V to paste.";
   } catch (_error) {
     state.textContent = `copy this discord id: ${discordId}`;
   }

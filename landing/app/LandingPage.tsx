@@ -284,7 +284,7 @@ export default function LandingPage({ readme }: { readme: string }) {
   }, [email, os]);
 
   const copyDiscordAndOpen = useCallback(async () => {
-    setContactState("saved discord id to clipboard. cmd-v to paste.");
+    setContactState("saved discord id to clipboard. ⌘V to paste.");
     openExternal(DISCORD_URL);
 
     try {
@@ -446,7 +446,10 @@ export default function LandingPage({ readme }: { readme: string }) {
               onClick={() => setContactOpen((value) => !value)}
             >
               <span>contact me</span>
-              <Keycap>Cmd Enter</Keycap>
+              <span className="keygroup">
+                <Keycap>⌘</Keycap>
+                <Keycap>Enter</Keycap>
+              </span>
             </button>
 
             {contactOpen ? (
