@@ -327,6 +327,17 @@ h1 .before-word {
   white-space: nowrap;
 }
 
+.command-symbol {
+  display: inline-flex;
+  min-height: 24px;
+  align-items: center;
+  justify-content: center;
+  font-family: var(--font-ibm-plex-mono), monospace;
+  font-size: 1.18rem;
+  font-weight: 700;
+  line-height: 1;
+}
+
 .waitlist-cta {
   display: flex;
   flex: 1 1 460px;

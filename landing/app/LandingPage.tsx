@@ -447,7 +447,9 @@ export default function LandingPage({ readme }: { readme: string }) {
             >
               <span>contact me</span>
               <span className="keygroup">
-                <Keycap>⌘</Keycap>
+                <span className="command-symbol" aria-label="command">
+                  ⌘
+                </span>
                 <Keycap>Enter</Keycap>
               </span>
             </button>

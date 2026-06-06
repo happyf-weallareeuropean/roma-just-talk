@@ -341,6 +341,17 @@ h1 .before-word {
   white-space: nowrap;
 }
 
+.command-symbol {
+  display: inline-flex;
+  min-height: 24px;
+  align-items: center;
+  justify-content: center;
+  font-family: "IBM Plex Mono", monospace;
+  font-size: 1.18rem;
+  font-weight: 700;
+  line-height: 1;
+}
+
 .waitlist-cta {
   flex: 1 1 460px;
 }
