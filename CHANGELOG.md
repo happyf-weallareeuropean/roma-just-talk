@@ -2,7 +2,7 @@
 
 ## v1.84 - Unreleased
 
-- Next patch release notes go here.
+- Hid the menu bar icon by default for fresh installs while keeping Dock-icon hiding as a separate setting.
 
 ## v1.83 - 2026-06-08
 

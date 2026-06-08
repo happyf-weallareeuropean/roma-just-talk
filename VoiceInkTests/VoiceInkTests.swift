@@ -13,6 +13,11 @@ import os
 
 struct VoiceInkTests {
 
+    @Test func freshDefaultsHideMenuBarIcon() async throws {
+        #expect(AppDefaults.registeredDefaults[AppDefaults.Keys.showMenuBarIcon] as? Bool == false)
+        #expect(AppDefaults.registeredDefaults["IsMenuBarOnly"] as? Bool == true)
+    }
+
     @Test func resolvesAPIKeyEnvironmentReference() async throws {
         let environment = ["ELEVENLABS_API_KEY": "test-key"]
 

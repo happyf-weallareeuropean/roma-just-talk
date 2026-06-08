@@ -2,12 +2,14 @@ import Foundation
 import LaunchAtLogin
 
 enum AppDefaults {
-    static func registerDefaults() {
-        let defaults = UserDefaults.standard
-        let shouldEnableLaunchAtLoginByDefault = defaults.object(forKey: "hasCompletedOnboarding") == nil
-            && defaults.object(forKey: "DidApplyLaunchAtLoginDefault") == nil
+    enum Keys {
+        static let showMenuBarIcon = "ShowMenuBarIcon"
+    }
 
-        defaults.register(defaults: [
+    static let showMenuBarIconDefault = false
+
+    static var registeredDefaults: [String: Any] {
+        [
             // Onboarding & General
             "hasCompletedOnboarding": false,
             "enableAnnouncements": true,
@@ -46,8 +48,10 @@ enum AppDefaults {
 
             // UI & Behavior
             "IsMenuBarOnly": true,
+            Keys.showMenuBarIcon: showMenuBarIconDefault,
             "DidApplyLaunchAtLoginDefault": false,
             "powerModePersistConfig": false,
+
             // Shortcuts
             "isMiddleClickToggleEnabled": false,
             "middleClickActivationDelay": 200,
@@ -60,8 +64,15 @@ enum AppDefaults {
 
             // Model
             "PrewarmModelOnWake": true,
+        ]
+    }
 
-        ])
+    static func registerDefaults() {
+        let defaults = UserDefaults.standard
+        let shouldEnableLaunchAtLoginByDefault = defaults.object(forKey: "hasCompletedOnboarding") == nil
+            && defaults.object(forKey: "DidApplyLaunchAtLoginDefault") == nil
+
+        defaults.register(defaults: registeredDefaults)
 
         if shouldEnableLaunchAtLoginByDefault {
             LaunchAtLogin.isEnabled = true

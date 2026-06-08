@@ -10,10 +10,9 @@ class AppDelegate: NSObject, NSApplicationDelegate {
     }
 
     func applicationShouldHandleReopen(_ sender: NSApplication, hasVisibleWindows flag: Bool) -> Bool {
-        if !flag, let menuBarManager = menuBarManager, !menuBarManager.isMenuBarOnly {
-            if WindowManager.shared.showMainWindow() != nil {
-                return false
-            }
+        if !flag, let menuBarManager = menuBarManager {
+            menuBarManager.focusMainWindow()
+            return false
         }
         return true
     }
