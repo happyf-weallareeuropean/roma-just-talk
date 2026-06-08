@@ -2,10 +2,11 @@
 
 ## Unreleased
 
-- Switched release packaging to a simple Airpods-style ad-hoc signed `.app.zip` build.
+- Next patch release notes go here.
 
 ## v1.83 - 2026-06-08
 
+- Switched release packaging to a simple Airpods-style ad-hoc signed `.app.zip` build.
 - Removed dashes from the generated app wrapper and bundle name so macOS shows roma just talk.
 
 ## v1.82 - 2026-06-08
