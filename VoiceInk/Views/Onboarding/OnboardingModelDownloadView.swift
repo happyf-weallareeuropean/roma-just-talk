@@ -2,7 +2,7 @@ import SwiftUI
 
 struct OnboardingModelDownloadView: View {
     @Binding var hasCompletedOnboarding: Bool
-    @EnvironmentObject private var whisperModelManager: WhisperModelManager
+    @EnvironmentObject private var fluidAudioModelManager: FluidAudioModelManager
     @EnvironmentObject private var transcriptionModelManager: TranscriptionModelManager
     @State private var scale: CGFloat = 0.8
     @State private var opacity: CGFloat = 0
@@ -10,7 +10,7 @@ struct OnboardingModelDownloadView: View {
     @State private var isModelSet = false
     @State private var showTutorial = false
     
-    private let turboModel = TranscriptionModelRegistry.models.first { $0.name == "ggml-large-v3-turbo-q5_0" } as! WhisperModel
+    private let defaultModel = TranscriptionModelRegistry.models.first { $0.name == "parakeet-tdt-0.6b-v2" } as! FluidAudioModel
     
     var body: some View {
         ZStack {
@@ -66,10 +66,10 @@ struct OnboardingModelDownloadView: View {
                         VStack(alignment: .leading, spacing: 16) {
                             // Model name and details
                             VStack(alignment: .center, spacing: 8) {
-                                Text(turboModel.displayName)
+                                Text(defaultModel.displayName)
                                     .font(.headline)
                                     .foregroundColor(.white)
-                                Text("\(turboModel.size) • \(turboModel.language)")
+                                Text("\(defaultModel.size) • \(defaultModel.language)")
                                     .font(.caption)
                                     .foregroundColor(.white.opacity(0.7))
                             }
@@ -80,18 +80,28 @@ struct OnboardingModelDownloadView: View {
                             
                             // Performance indicators in a more compact layout
                             HStack(spacing: 20) {
-                                performanceIndicator(label: "Speed", value: turboModel.speed)
-                                performanceIndicator(label: "Accuracy", value: turboModel.accuracy)
-                                ramUsageLabel(gb: turboModel.ramUsage)
+                                performanceIndicator(label: "Speed", value: defaultModel.speed)
+                                performanceIndicator(label: "Accuracy", value: defaultModel.accuracy)
+                                ramUsageLabel(gb: defaultModel.ramUsage)
                             }
                             .frame(maxWidth: .infinity, alignment: .center)
                             
                             // Download progress
-                            if isDownloading {
-                                DownloadProgressView(
-                                    modelName: turboModel.name,
-                                    downloadProgress: whisperModelManager.downloadProgress
-                                )
+                            if let status = fluidAudioModelManager.downloadStatus(for: defaultModel) {
+                                VStack(alignment: .leading, spacing: 8) {
+                                    HStack {
+                                        Text(status.message)
+                                            .font(.caption)
+                                            .foregroundColor(.white.opacity(0.7))
+                                        Spacer()
+                                        Text("\(Int(status.fractionCompleted * 100))%")
+                                            .font(.caption.monospacedDigit())
+                                            .foregroundColor(.white.opacity(0.7))
+                                    }
+
+                                    ProgressView(value: status.fractionCompleted)
+                                        .progressViewStyle(.linear)
+                                }
                                 .transition(.opacity)
                             }
                         }
@@ -151,8 +161,8 @@ struct OnboardingModelDownloadView: View {
     }
     
     private func checkModelStatus() {
-        if whisperModelManager.availableModels.contains(where: { $0.name == turboModel.name }) {
-            isModelSet = transcriptionModelManager.currentTranscriptionModel?.name == turboModel.name
+        if fluidAudioModelManager.isFluidAudioModelDownloaded(defaultModel) {
+            isModelSet = transcriptionModelManager.currentTranscriptionModel?.name == defaultModel.name
         }
     }
 
@@ -161,13 +171,11 @@ struct OnboardingModelDownloadView: View {
             withAnimation {
                 showTutorial = true
             }
-        } else if whisperModelManager.availableModels.contains(where: { $0.name == turboModel.name }) {
-            if let modelToSet = transcriptionModelManager.allAvailableModels.first(where: { $0.name == turboModel.name }) {
-                Task {
-                    transcriptionModelManager.setDefaultTranscriptionModel(modelToSet)
-                    withAnimation {
-                        isModelSet = true
-                    }
+        } else if fluidAudioModelManager.isFluidAudioModelDownloaded(defaultModel) {
+            Task {
+                transcriptionModelManager.setDefaultTranscriptionModel(defaultModel)
+                withAnimation {
+                    isModelSet = true
                 }
             }
         } else {
@@ -175,13 +183,14 @@ struct OnboardingModelDownloadView: View {
                 isDownloading = true
             }
             Task {
-                await whisperModelManager.downloadModel(turboModel)
-                if let modelToSet = transcriptionModelManager.allAvailableModels.first(where: { $0.name == turboModel.name }) {
-                    transcriptionModelManager.setDefaultTranscriptionModel(modelToSet)
-                    withAnimation {
-                        isModelSet = true
-                        isDownloading = false
-                    }
+                await fluidAudioModelManager.downloadFluidAudioModel(defaultModel)
+                let isDownloaded = fluidAudioModelManager.isFluidAudioModelDownloaded(defaultModel)
+                if isDownloaded {
+                    transcriptionModelManager.setDefaultTranscriptionModel(defaultModel)
+                }
+                withAnimation {
+                    isModelSet = isDownloaded
+                    isDownloading = false
                 }
             }
         }
@@ -192,7 +201,7 @@ struct OnboardingModelDownloadView: View {
             return "Continue"
         } else if isDownloading {
             return "Downloading..."
-        } else if whisperModelManager.availableModels.contains(where: { $0.name == turboModel.name }) {
+        } else if fluidAudioModelManager.isFluidAudioModelDownloaded(defaultModel) {
             return "Set as Default"
         } else {
             return "Download Model"

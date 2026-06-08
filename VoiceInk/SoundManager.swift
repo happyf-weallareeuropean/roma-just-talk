@@ -6,7 +6,7 @@ class SoundManager: ObservableObject {
     static let shared = SoundManager()
 
     private let playbackEngine = SoundPlaybackEngine()
-    @AppStorage("isSoundFeedbackEnabled") private var isSoundFeedbackEnabled = true
+    @AppStorage("isSoundFeedbackEnabled") private var isSoundFeedbackEnabled = false
 
     private init() {
         setupSounds()

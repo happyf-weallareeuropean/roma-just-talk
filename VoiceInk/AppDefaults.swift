@@ -1,8 +1,13 @@
 import Foundation
+import LaunchAtLogin
 
 enum AppDefaults {
     static func registerDefaults() {
-        UserDefaults.standard.register(defaults: [
+        let defaults = UserDefaults.standard
+        let shouldEnableLaunchAtLoginByDefault = defaults.object(forKey: "hasCompletedOnboarding") == nil
+            && defaults.object(forKey: "DidApplyLaunchAtLoginDefault") == nil
+
+        defaults.register(defaults: [
             // Onboarding & General
             "hasCompletedOnboarding": false,
             "enableAnnouncements": true,
@@ -17,7 +22,7 @@ enum AppDefaults {
             "isSystemMuteEnabled": true,
             "audioResumptionDelay": 0.0,
             "isPauseMediaEnabled": false,
-            "isSoundFeedbackEnabled": true,
+            "isSoundFeedbackEnabled": false,
             CustomSoundManager.SoundType.start.builtInSoundKey: CustomSoundManager.SoundType.start.defaultBuiltInSound.rawValue,
             CustomSoundManager.SoundType.stop.builtInSoundKey: CustomSoundManager.SoundType.stop.defaultBuiltInSound.rawValue,
 
@@ -31,6 +36,7 @@ enum AppDefaults {
             "AppendTrailingSpace": true,
             "showLiveTextPreview": false,
             "RecorderType": "none",
+            "CurrentTranscriptionModel": "parakeet-tdt-0.6b-v2",
 
             // Cleanup
             "IsTranscriptionCleanupEnabled": false,
@@ -39,7 +45,8 @@ enum AppDefaults {
             "AudioRetentionPeriod": 7,
 
             // UI & Behavior
-            "IsMenuBarOnly": false,
+            "IsMenuBarOnly": true,
+            "DidApplyLaunchAtLoginDefault": false,
             "powerModePersistConfig": false,
             // Shortcuts
             "isMiddleClickToggleEnabled": false,
@@ -55,6 +62,11 @@ enum AppDefaults {
             "PrewarmModelOnWake": true,
 
         ])
+
+        if shouldEnableLaunchAtLoginByDefault {
+            LaunchAtLogin.isEnabled = true
+            defaults.set(true, forKey: "DidApplyLaunchAtLoginDefault")
+        }
 
         PunctuationCleanupMode.migrateLegacyUserDefaultIfNeeded()
         PasteMethod.migrateLegacyUserDefaultIfNeeded()

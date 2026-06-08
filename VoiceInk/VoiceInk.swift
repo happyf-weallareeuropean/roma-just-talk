@@ -138,6 +138,11 @@ struct VoiceInkApp: App {
         whisperModelManager.loadAvailableModels()
         transcriptionModelManager.refreshAllAvailableModels()
         transcriptionModelManager.loadCurrentTranscriptionModel()
+        if let fluidAudioModel = transcriptionModelManager.currentTranscriptionModel as? FluidAudioModel {
+            Task {
+                await fluidAudioModelManager.downloadFluidAudioModel(fluidAudioModel)
+            }
+        }
 
         _whisperModelManager = StateObject(wrappedValue: whisperModelManager)
         _fluidAudioModelManager = StateObject(wrappedValue: fluidAudioModelManager)
