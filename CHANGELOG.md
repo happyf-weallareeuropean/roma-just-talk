@@ -2,7 +2,7 @@
 
 ## Unreleased
 
-- Next patch release notes go here.
+- Changed the release workflow to build Developer ID signed, notarized, and stapled DMGs instead of uploading ad-hoc local builds.
 
 ## v1.83 - 2026-06-08
 
