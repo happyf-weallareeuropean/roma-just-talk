@@ -1,6 +1,6 @@
 # Changelog
 
-## Unreleased
+## v1.82 - Unreleased
 
 - Next patch release notes go here.
 
