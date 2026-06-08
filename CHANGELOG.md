@@ -1,6 +1,10 @@
 # Changelog
 
-## v1.81 - Unreleased
+## Unreleased
+
+- Next patch release notes go here.
+
+## v1.81 - 2026-06-08
 
 - Replaced the README, source app icon, and menu bar logo with the roma-just-talk split-keyboard mark.
 - Changed fresh defaults to Parakeet V2, menu-bar-only mode, muted sound feedback, and launch-at-login, with Parakeet auto-downloaded for the selected default.
