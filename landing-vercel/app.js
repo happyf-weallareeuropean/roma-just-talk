@@ -1,4 +1,6 @@
 const repoUrl = "https://github.com/happyf-weallareeuropean/roma-just-talk";
+const latestReleaseUrl = `${repoUrl}/releases/latest`;
+const latestReleaseApi = "https://api.github.com/repos/happyf-weallareeuropean/roma-just-talk/releases/latest";
 const rawBase = "https://raw.githubusercontent.com/happyf-weallareeuropean/roma-just-talk/main/";
 const discordId = "freedom_uuuuuuuuuuuuuuunion.p.f";
 const waitlistEmail = "happyfumd@icloud.com";
@@ -23,6 +25,27 @@ function readmeUrl(url, mode) {
   if (/^(https?:|mailto:|#)/.test(url)) return url;
   const cleanUrl = url.replace(/^.\//, "");
   return mode === "raw" ? `${rawBase}${cleanUrl}` : `${repoUrl}/blob/main/${cleanUrl}`;
+}
+
+async function resolveMacDownloadUrl() {
+  try {
+    const response = await fetch(latestReleaseApi, {
+      headers: { Accept: "application/vnd.github+json" },
+    });
+    if (!response.ok) throw new Error(`release fetch failed: ${response.status}`);
+    const release = await response.json();
+    const appAsset = release.assets?.find((asset) => {
+      return asset.name?.endsWith(".app.zip") && asset.browser_download_url;
+    });
+    return appAsset?.browser_download_url || latestReleaseUrl;
+  } catch (_error) {
+    return latestReleaseUrl;
+  }
+}
+
+async function downloadMac(event) {
+  event?.preventDefault();
+  window.location.href = await resolveMacDownloadUrl();
 }
 
 function inlineMarkdown(value) {
@@ -183,6 +206,7 @@ document.addEventListener("DOMContentLoaded", () => {
   document.getElementById("waitlist-form")?.addEventListener("submit", submitWaitlist);
   document.getElementById("talk-button")?.addEventListener("click", toggleContact);
   document.getElementById("discord-button")?.addEventListener("click", copyDiscord);
+  document.getElementById("download-button")?.addEventListener("click", downloadMac);
   loadReadme();
 });
 
@@ -202,7 +226,7 @@ document.addEventListener("keydown", (event) => {
     const waitlist = document.getElementById("waitlist-form");
     if (!waitlist.classList.contains("hidden")) return;
     event.preventDefault();
-    window.location.href = "https://github.com/happyf-weallareeuropean/roma-just-talk/releases/latest/download/VoiceInk.dmg";
+    void downloadMac();
     return;
   }
   if (key === "a") window.open("https://x.com/Hft_freedom", "_blank", "noopener,noreferrer");

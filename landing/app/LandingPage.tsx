@@ -11,8 +11,9 @@ import {
 } from "react";
 
 const REPO_URL = "https://github.com/happyf-weallareeuropean/roma-just-talk";
-const MAC_DOWNLOAD_URL =
-  "https://github.com/happyf-weallareeuropean/roma-just-talk/releases/latest/download/VoiceInk.dmg";
+const LATEST_RELEASE_URL = `${REPO_URL}/releases/latest`;
+const LATEST_RELEASE_API =
+  "https://api.github.com/repos/happyf-weallareeuropean/roma-just-talk/releases/latest";
 const LOGO_URL =
   "https://raw.githubusercontent.com/happyf-weallareeuropean/roma-just-talk/main/docs/assets/roma-just-talk-logo.png";
 const HOWTO_IMAGE_URL =
@@ -23,6 +24,31 @@ const DISCORD_URL = "https://discord.com/channels/@me/";
 const DISCORD_ID = "freedom_uuuuuuuuuuuuuuunion.p.f";
 
 type OsKind = "mac" | "windows" | "other";
+type GitHubReleaseAsset = {
+  name?: string;
+  browser_download_url?: string;
+};
+
+async function resolveMacDownloadUrl() {
+  try {
+    const response = await fetch(LATEST_RELEASE_API, {
+      headers: { Accept: "application/vnd.github+json" },
+    });
+
+    if (!response.ok) {
+      throw new Error(`release fetch failed: ${response.status}`);
+    }
+
+    const release = (await response.json()) as { assets?: GitHubReleaseAsset[] };
+    const appAsset = release.assets?.find(
+      (asset) => asset.name?.endsWith(".app.zip") && asset.browser_download_url
+    );
+
+    return appAsset?.browser_download_url ?? LATEST_RELEASE_URL;
+  } catch {
+    return LATEST_RELEASE_URL;
+  }
+}
 
 function escapeHtml(value: string) {
   return value
@@ -294,6 +320,10 @@ export default function LandingPage({ readme }: { readme: string }) {
     }
   }, [openExternal]);
 
+  const downloadMac = useCallback(async () => {
+    openExternal(await resolveMacDownloadUrl());
+  }, [openExternal]);
+
   useEffect(() => {
     const onKeyDown = (event: globalThis.KeyboardEvent) => {
       const active = document.activeElement;
@@ -339,14 +369,14 @@ export default function LandingPage({ readme }: { readme: string }) {
         if (os === "windows") {
           void submitWaitlist();
         } else {
-          openExternal(MAC_DOWNLOAD_URL);
+          void downloadMac();
         }
       }
     };
 
     window.addEventListener("keydown", onKeyDown);
     return () => window.removeEventListener("keydown", onKeyDown);
-  }, [contactOpen, copyDiscordAndOpen, openExternal, os, submitWaitlist]);
+  }, [contactOpen, copyDiscordAndOpen, downloadMac, openExternal, os, submitWaitlist]);
 
   function handlePrimaryClick() {
     if (os === "windows") {
@@ -354,7 +384,7 @@ export default function LandingPage({ readme }: { readme: string }) {
       return;
     }
 
-    openExternal(MAC_DOWNLOAD_URL);
+    void downloadMac();
   }
 
   function handleWaitlistSubmit(event: FormEvent<HTMLFormElement>) {
