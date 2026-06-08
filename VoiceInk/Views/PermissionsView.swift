@@ -274,7 +274,7 @@ struct PermissionCard: View {
             
             if !isGranted {
                 if relaunchRequired {
-                    Text("If you already turned this on in System Settings, relaunch VoiceInk to activate it.")
+                    Text("If you already turned this on in System Settings, relaunch roma-just-talk to activate it.")
                         .font(.caption)
                         .foregroundColor(.secondary)
                 }
@@ -328,7 +328,7 @@ struct PermissionsView: View {
                     PermissionCard(
                         icon: "keyboard",
                         title: "Keyboard Shortcut",
-                        description: "Set up a keyboard shortcut to use VoiceInk anywhere",
+                        description: "Set up a keyboard shortcut to use roma-just-talk anywhere",
                         isGranted: recordingShortcutManager.isShortcutConfigured,
                         buttonTitle: "Configure Shortcut",
                         buttonAction: {
@@ -345,7 +345,7 @@ struct PermissionsView: View {
                     PermissionCard(
                         icon: "keyboard.badge.eye",
                         title: "Input Monitoring Access",
-                        description: "Allow VoiceInk to listen for your recording hotkey globally",
+                        description: "Allow roma-just-talk to listen for your recording hotkey globally",
                         isGranted: permissionManager.isInputMonitoringEnabled,
                         buttonTitle: permissionManager.inputMonitoringNeedsRelaunch ? "Relaunch to Apply" : "Grant",
                         buttonAction: {
@@ -357,14 +357,14 @@ struct PermissionsView: View {
                         },
                         checkPermission: { permissionManager.checkInputMonitoringPermission() },
                         relaunchRequired: permissionManager.inputMonitoringNeedsRelaunch,
-                        infoTipMessage: "VoiceInk uses Input Monitoring only to detect your configured recording shortcut while other apps are active."
+                        infoTipMessage: "roma-just-talk uses Input Monitoring only to detect your configured recording shortcut while other apps are active."
                     )
                     
                     // Audio Permission
                     PermissionCard(
                         icon: "mic",
                         title: "Microphone Access",
-                        description: "Allow VoiceInk to record your voice for transcription",
+                        description: "Allow roma-just-talk to record your voice for transcription",
                         isGranted: permissionManager.audioPermissionStatus == .authorized,
                         buttonTitle: "Grant",
                         buttonAction: {
@@ -377,14 +377,14 @@ struct PermissionsView: View {
                     PermissionCard(
                         icon: "hand.raised",
                         title: "Accessibility Access",
-                        description: "Add VoiceInk to Accessibility, then turn its switch on",
+                        description: "Add roma-just-talk to Accessibility, then turn its switch on",
                         isGranted: permissionManager.isAccessibilityEnabled,
                         buttonTitle: "Grant",
                         buttonAction: {
                             permissionManager.requestAccessibilityPermission()
                         },
                         checkPermission: { permissionManager.checkAccessibilityPermissions() },
-                        infoTipMessage: "macOS requires you to enable the VoiceInk switch yourself. Dragging the app into the list only adds it when it is missing."
+                        infoTipMessage: "macOS requires you to enable the roma-just-talk switch yourself. Dragging the app into the list only adds it when it is missing."
                     )
                     
                     // Screen Recording Permission
@@ -403,7 +403,7 @@ struct PermissionsView: View {
                         },
                         checkPermission: { permissionManager.checkScreenRecordingPermission() },
                         relaunchRequired: permissionManager.screenRecordingNeedsRelaunch,
-                        infoTipMessage: "VoiceInk captures on-screen text to understand the context of your voice input, which significantly improves transcription accuracy. Your privacy is important: this data is processed locally and is not stored.",
+                        infoTipMessage: "roma-just-talk captures on-screen text to understand the context of your voice input, which significantly improves transcription accuracy. Your privacy is important: this data is processed locally and is not stored.",
                         infoTipLink: "https://tryvoiceink.com/docs/contextual-awareness"
                     )
                 }

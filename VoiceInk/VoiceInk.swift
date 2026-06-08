@@ -279,7 +279,7 @@ struct VoiceInkApp: App {
     }
 
     var body: some Scene {
-        WindowGroup("VoiceInk", id: "main") {
+        WindowGroup("roma-just-talk", id: "main") {
             if hasCompletedOnboarding {
                 ContentView()
                     .environmentObject(engine)
@@ -298,7 +298,7 @@ struct VoiceInkApp: App {
                         if containerInitializationFailed {
                             let alert = NSAlert()
                             alert.messageText = "Critical Storage Error"
-                            alert.informativeText = "VoiceInk cannot initialize its storage system. The app cannot continue.\n\nPlease try reinstalling the app or contact support if the issue persists."
+                            alert.informativeText = "roma-just-talk cannot initialize its storage system. The app cannot continue.\n\nPlease try reinstalling the app or contact support if the issue persists."
                             alert.alertStyle = .critical
                             alert.addButton(withTitle: "Quit")
                             alert.runModal()

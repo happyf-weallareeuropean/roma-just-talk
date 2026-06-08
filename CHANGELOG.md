@@ -4,6 +4,7 @@
 
 - Replaced the README, source app icon, and menu bar logo with the roma-just-talk split-keyboard mark.
 - Changed fresh defaults to Parakeet V2, menu-bar-only mode, muted sound feedback, and launch-at-login, with Parakeet auto-downloaded for the selected default.
+- Renamed the visible app shell to roma-just-talk while leaving bundle identifiers and update infrastructure unchanged.
 
 ## v1.80 - 2026-06-01
 

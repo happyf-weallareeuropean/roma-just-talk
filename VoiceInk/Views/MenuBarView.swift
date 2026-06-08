@@ -244,7 +244,7 @@ struct MenuBarView: View {
             
             Divider()
 
-            Button("Quit VoiceInk") {
+            Button("Quit roma-just-talk") {
                 NSApplication.shared.terminate(nil)
             }
         }

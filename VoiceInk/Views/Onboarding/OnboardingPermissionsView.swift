@@ -53,31 +53,31 @@ struct OnboardingPermissionsView: View {
         ),
         OnboardingPermission(
             title: "Microphone Selection",
-            description: "Select the audio input device you want to use with VoiceInk.",
+            description: "Select the audio input device you want to use with roma-just-talk.",
             icon: "headphones",
             type: .audioDeviceSelection
         ),
         OnboardingPermission(
             title: "Accessibility Access",
-            description: "Add VoiceInk to Accessibility, then turn its switch on.",
+            description: "Add roma-just-talk to Accessibility, then turn its switch on.",
             icon: "accessibility",
             type: .accessibility
         ),
         OnboardingPermission(
             title: "Input Monitoring",
-            description: "Allow VoiceInk to detect your recording shortcut while other apps are active.",
+            description: "Allow roma-just-talk to detect your recording shortcut while other apps are active.",
             icon: "keyboard.badge.eye",
             type: .inputMonitoring
         ),
         OnboardingPermission(
             title: "Screen Context (Optional)",
-            description: "Enable screen context only if you want VoiceInk to use visible text for transcript enhancement.",
+            description: "Enable screen context only if you want roma-just-talk to use visible text for transcript enhancement.",
             icon: "rectangle.inset.filled.and.person.filled",
             type: .screenRecording
         ),
         OnboardingPermission(
             title: "Keyboard Shortcut",
-            description: "Set up a keyboard shortcut to quickly access VoiceInk from anywhere.",
+            description: "Set up a keyboard shortcut to quickly access roma-just-talk from anywhere.",
             icon: "keyboard",
             type: .keyboardShortcut
         )
@@ -135,7 +135,7 @@ struct OnboardingPermissionsView: View {
                                     
                                     if permissions[currentPermissionIndex].type == .screenRecording {
                                         InfoTip(
-                                            "VoiceInk captures on-screen text to understand the context of your voice input, which significantly improves transcription accuracy. Your privacy is important: this data is processed locally and is not stored.",
+                                            "roma-just-talk captures on-screen text to understand the context of your voice input, which significantly improves transcription accuracy. Your privacy is important: this data is processed locally and is not stored.",
                                             learnMoreURL: "https://tryvoiceink.com/docs/contextual-awareness"
                                         )
                                     }
@@ -235,7 +235,7 @@ struct OnboardingPermissionsView: View {
                             .buttonStyle(ScaleButtonStyle())
 
                             if relaunchRequiredStates[currentPermissionIndex] {
-                                Text("If you already turned this on in System Settings, relaunch VoiceInk to activate it.")
+                                Text("If you already turned this on in System Settings, relaunch roma-just-talk to activate it.")
                                     .font(.caption)
                                     .foregroundColor(.white.opacity(0.65))
                                     .multilineTextAlignment(.center)

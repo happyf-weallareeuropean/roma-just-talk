@@ -36,7 +36,7 @@ VoiceInk made dictation feel instant after recording starts. roma-just-talk is i
 - **Less ceremony**: talk first, decide what to do with it second
 - **Built on VoiceInk**: keeps the strong macOS base, shortcuts, dictionary, app-aware modes, and transcription pipeline
 
-Current status: app bundle name and many internal labels still come from VoiceInk. The logo and source app icon now use the roma-just-talk mark while the fork direction keeps moving first.
+Current status: visible app branding uses roma-just-talk, while many internal labels still come from VoiceInk. The logo and source app icon use the roma-just-talk mark while the fork direction keeps moving first.
 
 ## Features
 
@@ -122,4 +122,3 @@ roma-just-talk is built top on: [VoiceInk](https://github.com/Beingpax/VoiceInk)
 ---
 
 Built from VoiceInk, then pointed at speak-before-hotkey dictation.
-
