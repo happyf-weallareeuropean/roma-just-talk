@@ -1,8 +1,12 @@
 # Changelog
 
-## v1.82 - Unreleased
+## Unreleased
 
 - Next patch release notes go here.
+
+## v1.82 - 2026-06-08
+
+- Set the generated bundle name to roma-just-talk so macOS system dialogs use the fork name.
 
 ## v1.81 - 2026-06-08
 
