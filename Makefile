@@ -3,7 +3,7 @@ DEPS_DIR := $(HOME)/VoiceInk-Dependencies
 WHISPER_CPP_DIR := $(DEPS_DIR)/whisper.cpp
 FRAMEWORK_PATH := $(WHISPER_CPP_DIR)/build-apple/whisper.xcframework
 LOCAL_DERIVED_DATA := $(CURDIR)/.local-build
-LOCAL_APP_DEST := $(HOME)/Applications/VoiceInk.app
+LOCAL_APP_DEST := $(HOME)/Applications/roma-just-talk.app
 
 .PHONY: all clean whisper setup build local check healthcheck help dev run
 
@@ -47,7 +47,7 @@ build: setup
 
 # Build for local use without Apple Developer certificate
 local: check setup
-	@echo "Building VoiceInk for local use (no Apple Developer certificate required)..."
+	@echo "Building roma-just-talk for local use (no Apple Developer certificate required)..."
 	@rm -rf "$(LOCAL_DERIVED_DATA)"
 	xcodebuild -project VoiceInk.xcodeproj -scheme VoiceInk -configuration Debug \
 		-derivedDataPath "$(LOCAL_DERIVED_DATA)" \
@@ -59,9 +59,9 @@ local: check setup
 		CODE_SIGN_ENTITLEMENTS="$(CURDIR)/VoiceInk/VoiceInk.local.entitlements" \
 		SWIFT_ACTIVE_COMPILATION_CONDITIONS='$$(inherited) LOCAL_BUILD' \
 		build
-	@APP_PATH="$(LOCAL_DERIVED_DATA)/Build/Products/Debug/VoiceInk.app" && \
+	@APP_PATH="$(LOCAL_DERIVED_DATA)/Build/Products/Debug/roma-just-talk.app" && \
 	if [ -d "$$APP_PATH" ]; then \
-		echo "Copying VoiceInk.app to $(LOCAL_APP_DEST)..."; \
+		echo "Copying roma-just-talk.app to $(LOCAL_APP_DEST)..."; \
 		mkdir -p "$$(dirname "$(LOCAL_APP_DEST)")"; \
 		rm -rf "$(LOCAL_APP_DEST)"; \
 		ditto "$$APP_PATH" "$(LOCAL_APP_DEST)"; \
@@ -75,7 +75,7 @@ local: check setup
 		echo "  - No iCloud dictionary sync"; \
 		echo "  - No automatic updates (pull new code and rebuild to update)"; \
 	else \
-		echo "Error: Could not find built VoiceInk.app at $$APP_PATH"; \
+		echo "Error: Could not find built roma-just-talk.app at $$APP_PATH"; \
 		exit 1; \
 	fi
 
@@ -85,13 +85,13 @@ run:
 		echo "Opening $(LOCAL_APP_DEST)..."; \
 		open "$(LOCAL_APP_DEST)"; \
 	else \
-		echo "Looking for VoiceInk.app in DerivedData..."; \
-		APP_PATH=$$(find "$$HOME/Library/Developer/Xcode/DerivedData" -name "VoiceInk.app" -type d | head -1) && \
+		echo "Looking for roma-just-talk.app in DerivedData..."; \
+		APP_PATH=$$(find "$$HOME/Library/Developer/Xcode/DerivedData" -name "roma-just-talk.app" -type d | head -1) && \
 		if [ -n "$$APP_PATH" ]; then \
 			echo "Found app at: $$APP_PATH"; \
 			open "$$APP_PATH"; \
 		else \
-			echo "VoiceInk.app not found. Please run 'make build' or 'make local' first."; \
+			echo "roma-just-talk.app not found. Please run 'make build' or 'make local' first."; \
 			exit 1; \
 		fi; \
 	fi
