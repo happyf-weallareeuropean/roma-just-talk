@@ -1,8 +1,12 @@
 # Changelog
 
-## v1.83 - Unreleased
+## Unreleased
 
 - Next patch release notes go here.
+
+## v1.83 - 2026-06-08
+
+- Removed dashes from the generated app wrapper and bundle name so macOS shows roma just talk.
 
 ## v1.82 - 2026-06-08
 
