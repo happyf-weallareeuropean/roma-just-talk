@@ -1,4 +1,4 @@
-name: Build notarized macOS app
+name: Build app zip
 
 on:
   workflow_dispatch:
@@ -8,20 +8,9 @@ on:
 
 jobs:
   build:
-    name: Build Developer ID notarized DMG
+    name: Build ad-hoc signed app zip
     runs-on: macos-26
-    timeout-minutes: 90
-
-    env:
-      APP_NAME: "roma just talk"
-      DEVELOPER_ID_APPLICATION_IDENTITY: "Developer ID Application"
-      APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
-      MACOS_DEVELOPER_ID_APPLICATION_CERTIFICATE_BASE64: ${{ secrets.MACOS_DEVELOPER_ID_APPLICATION_CERTIFICATE_BASE64 }}
-      MACOS_DEVELOPER_ID_APPLICATION_CERTIFICATE_PASSWORD: ${{ secrets.MACOS_DEVELOPER_ID_APPLICATION_CERTIFICATE_PASSWORD }}
-      MACOS_DEVELOPER_ID_PROVISIONING_PROFILE_BASE64: ${{ secrets.MACOS_DEVELOPER_ID_PROVISIONING_PROFILE_BASE64 }}
-      APP_STORE_CONNECT_API_KEY_ID: ${{ secrets.APP_STORE_CONNECT_API_KEY_ID }}
-      APP_STORE_CONNECT_API_ISSUER_ID: ${{ secrets.APP_STORE_CONNECT_API_ISSUER_ID }}
-      APP_STORE_CONNECT_API_KEY_BASE64: ${{ secrets.APP_STORE_CONNECT_API_KEY_BASE64 }}
+    timeout-minutes: 60
 
     steps:
       - name: Checkout
@@ -33,17 +22,14 @@ jobs:
           xcodebuild -version
           swift --version
 
-      - name: Import Developer ID certificate
-        run: bash scripts/ci/import-developer-id-certificate.sh
+      - name: Build app bundle
+        run: bash scripts/build-app.sh
 
-      - name: Build, notarize, and package
-        run: bash scripts/ci/build-notarized-dmg.sh
-
-      - name: Upload notarized DMG
+      - name: Upload app zip
         uses: actions/upload-artifact@v4
         with:
-          name: roma-just-talk-notarized-dmg
-          path: dist/*.dmg
+          name: roma-just-talk-app
+          path: dist/*.app.zip
           if-no-files-found: error
 
       - name: Upload signing proof

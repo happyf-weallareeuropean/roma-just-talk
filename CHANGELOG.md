@@ -2,7 +2,7 @@
 
 ## Unreleased
 
-- Changed the release workflow to build Developer ID signed, notarized, and stapled DMGs instead of uploading ad-hoc local builds.
+- Switched release packaging to a simple Airpods-style ad-hoc signed `.app.zip` build.
 
 ## v1.83 - 2026-06-08
 
