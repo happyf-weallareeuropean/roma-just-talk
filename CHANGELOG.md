@@ -1,5 +1,7 @@
 # Changelog
 
+## v1.88 - Unreleased
+
 ## v1.87 - 2026-06-09
 
 - Fixed a post-keyup latency regression by finalizing the recording file without restarting the pre-roll AudioUnit on every stop.
