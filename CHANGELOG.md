@@ -1,7 +1,8 @@
 # Changelog
 
-## v1.84 - 2026-06-09
+## v1.85 - 2026-06-09
 
+- Reissued the release as v1.85 after the v1.84 tag failed before publishing an app asset.
 - Hid the menu bar icon by default for fresh installs while keeping Dock-icon hiding as a separate setting.
 - Added Special shortcut mode as the fresh default with Left Shift: start recording on keydown, decide on keyup, and cancel typing cases where another key was released during the hold.
 - Fixed app zip packaging so the release harness preserves and verifies local macOS entitlements instead of stripping them during final signing.
