@@ -107,6 +107,10 @@ enum ShortcutMigration {
             return mode
         }
 
+        if action == .primaryRecording {
+            return .special
+        }
+
         return .hybrid
     }
 
@@ -213,7 +217,7 @@ enum ShortcutMigration {
         guard
             action == .primaryRecording,
             ShortcutStore.shortcut(for: action) == nil,
-            let shortcut = legacyPresetShortcut(for: "rightCommand")
+            let shortcut = legacyPresetShortcut(for: "leftShift")
         else {
             return
         }
@@ -237,6 +241,8 @@ enum ShortcutMigration {
             return .modifierOnly(keyCode: UInt16(kVK_RightCommand), modifierFlags: [.command])
         case "rightShift":
             return .modifierOnly(keyCode: UInt16(kVK_RightShift), modifierFlags: [.shift])
+        case "leftShift":
+            return .modifierOnly(keyCode: UInt16(kVK_Shift), modifierFlags: [.shift])
         default:
             return nil
         }

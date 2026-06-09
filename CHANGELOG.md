@@ -3,6 +3,7 @@
 ## v1.84 - Unreleased
 
 - Hid the menu bar icon by default for fresh installs while keeping Dock-icon hiding as a separate setting.
+- Added Special shortcut mode as the fresh default with Left Shift: start recording on keydown, decide on keyup, and cancel typing cases where another key was released during the hold.
 
 ## v1.83 - 2026-06-08
 

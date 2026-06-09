@@ -110,6 +110,22 @@ struct Shortcut: Codable, Equatable {
         return keyCode == eventKeyCode && !normalizedFlags.isSuperset(of: modifierFlags)
     }
 
+    func representsReleaseEvent(kind eventKind: ShortcutMonitor.EventKind, keyCode eventKeyCode: UInt16, modifierFlags eventModifierFlags: NSEvent.ModifierFlags) -> Bool {
+        switch eventKind {
+        case .keyUp:
+            return kind == .key && keyCode == eventKeyCode
+        case .flagsChanged:
+            if kind == .modifierOnly {
+                return shouldReleaseModifierEvent(keyCode: eventKeyCode, modifierFlags: eventModifierFlags)
+            }
+
+            let currentFlags = Self.normalizedModifierFlags(eventModifierFlags, forKeyCode: keyCode)
+            return !currentFlags.isSuperset(of: modifierFlags)
+        case .keyDown:
+            return false
+        }
+    }
+
     func isInterruptedByAdditionalKeyDown(keyCode eventKeyCode: UInt16) -> Bool {
         switch kind {
         case .modifierOnly:
@@ -121,6 +137,14 @@ struct Shortcut: Codable, Equatable {
 
     static func isModifierKeyCode(_ keyCode: UInt16) -> Bool {
         modifierKeyCodes.contains(keyCode)
+    }
+
+    static func isModifierReleaseEvent(keyCode: UInt16, modifierFlags: NSEvent.ModifierFlags) -> Bool {
+        guard let modifierFlag = modifierFlag(forKeyCode: keyCode) else {
+            return false
+        }
+
+        return !normalizedModifierFlags(modifierFlags, forKeyCode: keyCode).contains(modifierFlag)
     }
 
     static func modifierKeyCodeForSingleModifierEvent(keyCode: UInt16, modifiers: NSEvent.ModifierFlags) -> UInt16? {
@@ -156,6 +180,23 @@ struct Shortcut: Codable, Equatable {
         UInt16(kVK_RightCommand),
         UInt16(kVK_Function)
     ]
+
+    private static func modifierFlag(forKeyCode keyCode: UInt16) -> NSEvent.ModifierFlags? {
+        switch keyCode {
+        case UInt16(kVK_Shift), UInt16(kVK_RightShift):
+            return .shift
+        case UInt16(kVK_Control), UInt16(kVK_RightControl):
+            return .control
+        case UInt16(kVK_Option), UInt16(kVK_RightOption):
+            return .option
+        case UInt16(kVK_Command), UInt16(kVK_RightCommand):
+            return .command
+        case UInt16(kVK_Function):
+            return .function
+        default:
+            return nil
+        }
+    }
 
     private static let functionKeyCodes: Set<UInt16> = [
         UInt16(kVK_F1),

@@ -49,8 +49,12 @@ enum AccessibilityPermission {
     }
 }
 
+struct ShortcutPressContext: Equatable {
+    var didReleaseOtherKeyDuringPress = false
+}
+
 final class ShortcutMonitor {
-    fileprivate enum EventKind {
+    enum EventKind {
         case keyDown
         case keyUp
         case flagsChanged
@@ -78,12 +82,13 @@ final class ShortcutMonitor {
         var isDown = false
         var pressedAt: TimeInterval?
         var isInterrupted = false
+        var pressContext = ShortcutPressContext()
     }
 
     private var shortcuts: [ShortcutAction: ShortcutState] = [:]
     private var interruptibleActions: Set<ShortcutAction> = []
     private var onKeyDown: ((ShortcutAction, TimeInterval) -> Void)?
-    private var onKeyUp: ((ShortcutAction, TimeInterval) -> Void)?
+    private var onKeyUp: ((ShortcutAction, TimeInterval, ShortcutPressContext) -> Void)?
     private var onShortcutInterrupted: ((ShortcutAction, TimeInterval) -> Void)?
     private var eventTap: CFMachPort?
     private var eventTapRunLoopSource: CFRunLoopSource?
@@ -103,8 +108,9 @@ final class ShortcutMonitor {
     func start(
         shortcuts: [ShortcutAction: Shortcut],
         interruptibleActions: Set<ShortcutAction> = [],
+        tracksKeyUpEvidence: Bool = false,
         onKeyDown: @escaping (ShortcutAction, TimeInterval) -> Void,
-        onKeyUp: @escaping (ShortcutAction, TimeInterval) -> Void,
+        onKeyUp: @escaping (ShortcutAction, TimeInterval, ShortcutPressContext) -> Void,
         onShortcutInterrupted: ((ShortcutAction, TimeInterval) -> Void)? = nil
     ) -> Bool {
         stop()
@@ -124,7 +130,7 @@ final class ShortcutMonitor {
         self.onShortcutInterrupted = onShortcutInterrupted
         logger.notice("start: installing event tap for \(self.shortcuts.count, privacy: .public) shortcut(s)")
 
-        return installEventTap()
+        return installEventTap(tracksKeyUpEvidence: tracksKeyUpEvidence)
     }
 
     func stop() {
@@ -155,7 +161,7 @@ final class ShortcutMonitor {
         onShortcutInterrupted = nil
     }
 
-    private func installEventTap() -> Bool {
+    private func installEventTap(tracksKeyUpEvidence: Bool) -> Bool {
         let needsModifierOnlyMonitor = shortcuts.values.contains { $0.shortcut.isModifierOnly }
         let needsEventTap = shortcuts.values.contains { !$0.shortcut.isModifierOnly }
 
@@ -168,7 +174,7 @@ final class ShortcutMonitor {
             installModifierOnlyEventMonitors()
         }
 
-        guard needsEventTap else {
+        guard needsEventTap || tracksKeyUpEvidence else {
             logger.notice("installEventTap: skipped; modifier-only shortcuts use NSEvent monitors")
             return true
         }
@@ -331,9 +337,10 @@ final class ShortcutMonitor {
                 state.isDown = false
                 state.pressedAt = nil
                 state.isInterrupted = false
+                state.pressContext = ShortcutPressContext()
                 shortcuts[action] = state
             }
-            dispatchKeyUp(for: action, eventTime: eventTime)
+            dispatchKeyUp(for: action, eventTime: eventTime, context: ShortcutPressContext())
         }
     }
 
@@ -348,6 +355,12 @@ final class ShortcutMonitor {
 
         if kind == .keyDown {
             handleShortcutInterruptions(keyCode: keyCode, eventTime: eventTime)
+        } else {
+            recordReleaseEvidenceDuringActiveShortcuts(
+                kind: kind,
+                keyCode: keyCode,
+                modifierFlags: modifierFlags
+            )
         }
 
         for action in Array(shortcuts.keys) {
@@ -388,20 +401,60 @@ final class ShortcutMonitor {
                 state.isDown = true
                 state.pressedAt = eventTime
                 state.isInterrupted = false
+                state.pressContext = ShortcutPressContext()
                 shortcuts[action] = state
                 shouldSuppress = true
                 dispatchKeyDown(for: action, eventTime: eventTime)
             case .keyUp:
+                let context = state.pressContext
                 state.isDown = false
                 state.pressedAt = nil
                 state.isInterrupted = false
+                state.pressContext = ShortcutPressContext()
                 shortcuts[action] = state
                 shouldSuppress = true
-                dispatchKeyUp(for: action, eventTime: eventTime)
+                dispatchKeyUp(for: action, eventTime: eventTime, context: context)
             }
         }
 
         return shouldSuppress
+    }
+
+    private func recordReleaseEvidenceDuringActiveShortcuts(
+        kind: EventKind,
+        keyCode: UInt16,
+        modifierFlags: NSEvent.ModifierFlags
+    ) {
+        guard isKeyReleaseEvidence(kind: kind, keyCode: keyCode, modifierFlags: modifierFlags) else {
+            return
+        }
+
+        for action in Array(shortcuts.keys) {
+            guard var state = shortcuts[action],
+                  state.isDown,
+                  !state.shortcut.representsReleaseEvent(kind: kind, keyCode: keyCode, modifierFlags: modifierFlags)
+            else {
+                continue
+            }
+
+            state.pressContext.didReleaseOtherKeyDuringPress = true
+            shortcuts[action] = state
+        }
+    }
+
+    private func isKeyReleaseEvidence(
+        kind: EventKind,
+        keyCode: UInt16,
+        modifierFlags: NSEvent.ModifierFlags
+    ) -> Bool {
+        switch kind {
+        case .keyUp:
+            return true
+        case .flagsChanged:
+            return Shortcut.isModifierReleaseEvent(keyCode: keyCode, modifierFlags: modifierFlags)
+        case .keyDown:
+            return false
+        }
     }
 
     private enum ShortcutTransition {
@@ -456,11 +509,13 @@ final class ShortcutMonitor {
 
         if state.isDown {
             if state.shortcut.shouldReleaseModifierEvent(keyCode: keyCode, modifierFlags: modifierFlags) {
+                let context = state.pressContext
                 state.isDown = false
                 state.pressedAt = nil
                 state.isInterrupted = false
+                state.pressContext = ShortcutPressContext()
                 shortcuts[action] = state
-                dispatchKeyUp(for: action, eventTime: eventTime)
+                dispatchKeyUp(for: action, eventTime: eventTime, context: context)
             }
 
             return
@@ -470,6 +525,7 @@ final class ShortcutMonitor {
             state.isDown = true
             state.pressedAt = eventTime
             state.isInterrupted = false
+            state.pressContext = ShortcutPressContext()
             shortcuts[action] = state
             dispatchKeyDown(for: action, eventTime: eventTime)
         }
@@ -504,10 +560,10 @@ final class ShortcutMonitor {
         }
     }
 
-    private func dispatchKeyUp(for action: ShortcutAction, eventTime: TimeInterval) {
+    private func dispatchKeyUp(for action: ShortcutAction, eventTime: TimeInterval, context: ShortcutPressContext) {
         logger.notice("dispatchKeyUp: action=\(action.storageName, privacy: .public)")
         DispatchQueue.main.async { [onKeyUp] in
-            onKeyUp?(action, eventTime)
+            onKeyUp?(action, eventTime, context)
         }
     }
 
@@ -561,7 +617,7 @@ extension ShortcutMonitor {
         shortcuts: [ShortcutAction: Shortcut],
         interruptibleActions: Set<ShortcutAction> = [],
         onKeyDown: @escaping (ShortcutAction, TimeInterval) -> Void,
-        onKeyUp: @escaping (ShortcutAction, TimeInterval) -> Void,
+        onKeyUp: @escaping (ShortcutAction, TimeInterval, ShortcutPressContext) -> Void,
         onShortcutInterrupted: ((ShortcutAction, TimeInterval) -> Void)? = nil
     ) {
         stop()
@@ -574,6 +630,34 @@ extension ShortcutMonitor {
         self.onKeyDown = onKeyDown
         self.onKeyUp = onKeyUp
         self.onShortcutInterrupted = onShortcutInterrupted
+    }
+
+    @discardableResult
+    func handleKeyDownForTesting(
+        keyCode: UInt16,
+        modifierFlags: NSEvent.ModifierFlags,
+        eventTime: TimeInterval
+    ) -> Bool {
+        handleEvent(
+            kind: .keyDown,
+            keyCode: keyCode,
+            modifierFlags: modifierFlags,
+            eventTime: eventTime
+        )
+    }
+
+    @discardableResult
+    func handleKeyUpForTesting(
+        keyCode: UInt16,
+        modifierFlags: NSEvent.ModifierFlags,
+        eventTime: TimeInterval
+    ) -> Bool {
+        handleEvent(
+            kind: .keyUp,
+            keyCode: keyCode,
+            modifierFlags: modifierFlags,
+            eventTime: eventTime
+        )
     }
 
     @discardableResult

@@ -101,7 +101,7 @@ class MiniRecorderShortcutManager: ObservableObject {
                     await self?.handleMiniRecorderShortcut(action)
                 }
             },
-            onKeyUp: { _, _ in }
+            onKeyUp: { _, _, _ in }
         )
     }
 

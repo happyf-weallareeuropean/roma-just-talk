@@ -23,11 +23,14 @@ class RecordingShortcutManager: ObservableObject {
         didSet {
             UserDefaults.standard.set(primaryRecordingShortcutMode.rawValue, forKey: "primaryRecordingShortcutMode")
             primaryRecordingShortcutModeSource.primaryMode = primaryRecordingShortcutMode
+            refreshShortcutMonitoring()
+            NotificationCenter.default.post(name: .powerModeShortcutAvailabilityDidChange, object: nil)
         }
     }
     @Published var secondaryRecordingShortcutMode: Mode {
         didSet {
             UserDefaults.standard.set(secondaryRecordingShortcutMode.rawValue, forKey: "secondaryRecordingShortcutMode")
+            refreshShortcutMonitoring()
         }
     }
     @Published var isMiddleClickToggleEnabled: Bool {
@@ -65,12 +68,14 @@ class RecordingShortcutManager: ObservableObject {
     private var middleClickTask: Task<Void, Never>?
 
     enum Mode: String, CaseIterable {
+        case special = "special"
         case toggle = "toggle"
         case pushToTalk = "pushToTalk"
         case hybrid = "hybrid"
 
         var displayName: String {
             switch self {
+            case .special: return "Special"
             case .toggle: return "Toggle"
             case .pushToTalk: return "Push to Talk"
             case .hybrid: return "Hybrid"
@@ -244,17 +249,24 @@ class RecordingShortcutManager: ObservableObject {
 
         if let primaryShortcut {
             shortcuts[.primaryRecording] = primaryShortcut
-            interruptibleRecordingActions.insert(.primaryRecording)
+            if primaryRecordingShortcutMode != .special {
+                interruptibleRecordingActions.insert(.primaryRecording)
+            }
         }
 
         if let secondaryShortcut {
             shortcuts[.secondaryRecording] = secondaryShortcut
-            interruptibleRecordingActions.insert(.secondaryRecording)
+            if secondaryRecordingShortcutMode != .special {
+                interruptibleRecordingActions.insert(.secondaryRecording)
+            }
         }
+
+        let tracksKeyUpEvidence = shortcuts.keys.contains { recordingMode(for: $0) == .special }
 
         let isMonitoring = shortcutMonitor.start(
             shortcuts: shortcuts,
             interruptibleActions: interruptibleRecordingActions,
+            tracksKeyUpEvidence: tracksKeyUpEvidence,
             onKeyDown: { [weak self] action, eventTime in
                 Task { @MainActor in
                     guard let self else { return }
@@ -266,14 +278,15 @@ class RecordingShortcutManager: ObservableObject {
                     )
                 }
             },
-            onKeyUp: { [weak self] action, eventTime in
+            onKeyUp: { [weak self] action, eventTime, context in
                 Task { @MainActor in
                     guard let self else { return }
                     if let mode = self.recordingMode(for: action) {
                         await self.shortcutModeHandler.handleKeyUp(
                             action: action,
                             eventTime: eventTime,
-                            mode: mode
+                            mode: mode,
+                            context: context
                         )
                     } else {
                         await self.handleGlobalShortcut(action)
@@ -488,6 +501,13 @@ final class RecordingShortcutModeHandler {
         shortcutPressStartTime = eventTime
 
         switch mode {
+        case .special, .pushToTalk:
+            if !isRecorderVisible() {
+                guard canHandleShortcutAction() else { return }
+                logger.notice("handleShortcutKeyDown: starting recording (\(mode.rawValue, privacy: .public) key down)")
+                await toggleMiniRecorder(powerModeId)
+            }
+
         case .toggle, .hybrid:
             if isHandsFreeRecording {
                 isHandsFreeRecording = false
@@ -502,13 +522,6 @@ final class RecordingShortcutModeHandler {
                 logger.notice("handleShortcutKeyDown: toggling mini recorder (key down while not visible)")
                 await toggleMiniRecorder(powerModeId)
             }
-
-        case .pushToTalk:
-            if !isRecorderVisible() {
-                guard canHandleShortcutAction() else { return }
-                logger.notice("handleShortcutKeyDown: starting recording (push-to-talk key down)")
-                await toggleMiniRecorder(powerModeId)
-            }
         }
     }
 
@@ -516,6 +529,7 @@ final class RecordingShortcutModeHandler {
         action: ShortcutAction,
         eventTime: TimeInterval,
         mode: RecordingShortcutManager.Mode,
+        context: ShortcutPressContext = ShortcutPressContext(),
         powerModeId: UUID? = nil
     ) async {
         guard isShortcutPressed, activeRecordingShortcutAction == action else { return }
@@ -524,6 +538,21 @@ final class RecordingShortcutModeHandler {
         activeShortcutCanCancelAccidentalStart = false
 
         switch mode {
+        case .special:
+            let pressDuration = shortcutPressStartTime.map { eventTime - $0 } ?? 0
+
+            if context.didReleaseOtherKeyDuringPress {
+                logger.notice("handleShortcutKeyUp: cancelling special shortcut; another key was released during hold")
+                await cancelRecording()
+            } else if isRecorderVisible() {
+                guard canHandleShortcutAction() else { return }
+                if SpecialShortcutEmptyTranscriptionFallback.shouldFallback(pressDuration: pressDuration) {
+                    SpecialShortcutEmptyTranscriptionFallback.scheduleFallback()
+                }
+                logger.notice("handleShortcutKeyUp: stopping recording (special shortcut, duration=\(pressDuration, privacy: .public)s)")
+                await toggleMiniRecorder(powerModeId)
+            }
+
         case .toggle:
             isHandsFreeRecording = true
 

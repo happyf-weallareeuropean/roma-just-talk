@@ -104,6 +104,82 @@ struct VoiceInkTests {
         #expect(!sessionActive)
     }
 
+    @Test @MainActor func specialModeStopsWhenNoOtherKeyWasReleased() async throws {
+        var sessionActive = false
+        var toggleCount = 0
+        var cancelCount = 0
+
+        let handler = RecordingShortcutModeHandler(
+            logger: Logger(subsystem: "VoiceInkTests", category: "RecordingShortcutModeHandler"),
+            canHandleShortcutAction: { true },
+            isRecorderVisible: { sessionActive },
+            recordingState: { sessionActive ? .recording : .idle },
+            toggleMiniRecorder: { _ in
+                toggleCount += 1
+                sessionActive.toggle()
+            },
+            cancelRecording: {
+                cancelCount += 1
+                sessionActive = false
+            }
+        )
+
+        await handler.handleKeyDown(
+            action: .primaryRecording,
+            eventTime: 1,
+            mode: .special
+        )
+
+        await handler.handleKeyUp(
+            action: .primaryRecording,
+            eventTime: 2,
+            mode: .special,
+            context: ShortcutPressContext(didReleaseOtherKeyDuringPress: false)
+        )
+
+        #expect(toggleCount == 2)
+        #expect(cancelCount == 0)
+        #expect(!sessionActive)
+    }
+
+    @Test @MainActor func specialModeCancelsWhenAnotherKeyWasReleased() async throws {
+        var sessionActive = false
+        var toggleCount = 0
+        var cancelCount = 0
+
+        let handler = RecordingShortcutModeHandler(
+            logger: Logger(subsystem: "VoiceInkTests", category: "RecordingShortcutModeHandler"),
+            canHandleShortcutAction: { true },
+            isRecorderVisible: { sessionActive },
+            recordingState: { sessionActive ? .recording : .idle },
+            toggleMiniRecorder: { _ in
+                toggleCount += 1
+                sessionActive.toggle()
+            },
+            cancelRecording: {
+                cancelCount += 1
+                sessionActive = false
+            }
+        )
+
+        await handler.handleKeyDown(
+            action: .primaryRecording,
+            eventTime: 1,
+            mode: .special
+        )
+
+        await handler.handleKeyUp(
+            action: .primaryRecording,
+            eventTime: 2,
+            mode: .special,
+            context: ShortcutPressContext(didReleaseOtherKeyDuringPress: true)
+        )
+
+        #expect(toggleCount == 1)
+        #expect(cancelCount == 1)
+        #expect(!sessionActive)
+    }
+
     @Test func inputMonitoringPermissionUsesInjectedSystemClient() async throws {
         var didRequestAccess = false
         let client = InputMonitoringPermission.Client(
@@ -147,7 +223,7 @@ struct VoiceInkTests {
                 )
             ],
             onKeyDown: { _, _ in keyDownCount += 1 },
-            onKeyUp: { _, _ in keyUpCount += 1 }
+            onKeyUp: { _, _, _ in keyUpCount += 1 }
         )
 
         monitor.handleEventTapFlagsChangedForTesting(
@@ -182,6 +258,81 @@ struct VoiceInkTests {
         )
         try await Task.sleep(nanoseconds: 10_000_000)
         #expect(keyUpCount == 1)
+    }
+
+    @Test func modifierOnlyShortcutDoesNotMarkOtherKeyDownAsTyping() async throws {
+        let monitor = ShortcutMonitor()
+        var contexts: [ShortcutPressContext] = []
+
+        monitor.configureForTesting(
+            shortcuts: [
+                .primaryRecording: .modifierOnly(
+                    keyCode: UInt16(kVK_Shift),
+                    modifierFlags: [.shift]
+                )
+            ],
+            onKeyDown: { _, _ in },
+            onKeyUp: { _, _, context in contexts.append(context) }
+        )
+
+        monitor.handleModifierOnlyFlagsChangedForTesting(
+            keyCode: UInt16(kVK_Shift),
+            modifierFlags: [.shift],
+            eventTime: 1
+        )
+        monitor.handleKeyDownForTesting(
+            keyCode: UInt16(kVK_ANSI_A),
+            modifierFlags: [.shift],
+            eventTime: 2
+        )
+        monitor.handleModifierOnlyFlagsChangedForTesting(
+            keyCode: UInt16(kVK_Shift),
+            modifierFlags: [],
+            eventTime: 3
+        )
+
+        try await Task.sleep(nanoseconds: 10_000_000)
+        #expect(contexts == [ShortcutPressContext(didReleaseOtherKeyDuringPress: false)])
+    }
+
+    @Test func modifierOnlyShortcutMarksOtherKeyUpAsTyping() async throws {
+        let monitor = ShortcutMonitor()
+        var contexts: [ShortcutPressContext] = []
+
+        monitor.configureForTesting(
+            shortcuts: [
+                .primaryRecording: .modifierOnly(
+                    keyCode: UInt16(kVK_Shift),
+                    modifierFlags: [.shift]
+                )
+            ],
+            onKeyDown: { _, _ in },
+            onKeyUp: { _, _, context in contexts.append(context) }
+        )
+
+        monitor.handleModifierOnlyFlagsChangedForTesting(
+            keyCode: UInt16(kVK_Shift),
+            modifierFlags: [.shift],
+            eventTime: 1
+        )
+        monitor.handleKeyDownForTesting(
+            keyCode: UInt16(kVK_ANSI_A),
+            modifierFlags: [.shift],
+            eventTime: 2
+        )
+        monitor.handleKeyUpForTesting(
+            keyCode: UInt16(kVK_ANSI_A),
+            modifierFlags: [.shift],
+            eventTime: 3
+        )
+        monitor.handleModifierOnlyFlagsChangedForTesting(
+            keyCode: UInt16(kVK_Shift),
+            modifierFlags: [],
+            eventTime: 4
+        )
+
+        try await Task.sleep(nanoseconds: 10_000_000)
+        #expect(contexts == [ShortcutPressContext(didReleaseOtherKeyDuringPress: true)])
     }
 
 }

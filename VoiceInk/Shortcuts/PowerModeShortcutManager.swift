@@ -72,7 +72,8 @@ class PowerModeShortcutManager {
 
         shortcutMonitor.start(
             shortcuts: shortcuts,
-            interruptibleActions: Set(shortcuts.keys),
+            interruptibleActions: modeProvider() == .special ? [] : Set(shortcuts.keys),
+            tracksKeyUpEvidence: modeProvider() == .special,
             onKeyDown: { [weak self] action, eventTime in
                 Task { @MainActor in
                     guard let self,
@@ -88,7 +89,7 @@ class PowerModeShortcutManager {
                     )
                 }
             },
-            onKeyUp: { [weak self] action, eventTime in
+            onKeyUp: { [weak self] action, eventTime, context in
                 Task { @MainActor in
                     guard let self,
                           case .powerMode(let powerModeId) = action else {
@@ -99,6 +100,7 @@ class PowerModeShortcutManager {
                         action: action,
                         eventTime: eventTime,
                         mode: self.modeProvider(),
+                        context: context,
                         powerModeId: powerModeId
                     )
                 }
