@@ -2,6 +2,8 @@
 
 ## v1.87 - Unreleased
 
+- Fixed a post-keyup latency regression by finalizing the recording file without restarting the pre-roll AudioUnit on every stop.
+
 ## v1.86 - 2026-06-09
 
 - Reissued the release as v1.86 after the v1.84 and v1.85 tags failed before publishing an app asset.

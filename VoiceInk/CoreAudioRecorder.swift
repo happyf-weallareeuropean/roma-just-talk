@@ -97,6 +97,7 @@ final class CoreAudioRecorder: @unchecked Sendable {
     private var audioUnit: AudioUnit?
     private var audioFile: ExtAudioFileRef?
 
+    private let fileAccessLock = NSLock()
     private var isCapturing = false
     private var isRecording = false
     private var currentDeviceID: AudioDeviceID = 0
@@ -224,28 +225,21 @@ final class CoreAudioRecorder: @unchecked Sendable {
     func finishRecording(keepCapturing: Bool = true) {
         guard isRecording || audioFile != nil else { return }
 
-        let shouldRestartCapture = keepCapturing && isCapturing
-        if shouldRestartCapture, let unit = audioUnit {
-            AudioOutputUnitStop(unit)
-        }
+        let start = Date()
 
+        fileAccessLock.lock()
         isRecording = false
+        let file = audioFile
+        audioFile = nil
+        fileAccessLock.unlock()
 
-        if let file = audioFile {
+        if let file {
             ExtAudioFileDispose(file)
-            audioFile = nil
         }
 
         recordingURL = nil
         preRollBuffer.clear()
-
-        if shouldRestartCapture, let unit = audioUnit {
-            let status = AudioOutputUnitStart(unit)
-            if status != noErr {
-                logger.error("🎙️ Failed to restart pre-roll capture after finishing recording: \(status, privacy: .public)")
-                stopRecording()
-            }
-        }
+        logger.notice("finishRecording completed keepCapturing=\(keepCapturing, privacy: .public) elapsed=\(Date().timeIntervalSince(start), format: .fixed(precision: 3), privacy: .public)s")
     }
 
     /// Stops the current recording
@@ -849,15 +843,18 @@ final class CoreAudioRecorder: @unchecked Sendable {
 
         preRollBuffer.append(outputBuffer, sampleCount: Int(outputFrameCount))
 
+        fileAccessLock.lock()
         if isRecording, let file = audioFile {
             let writeStatus = ExtAudioFileWrite(file, outputFrameCount, &outputBufferList)
             if writeStatus != noErr {
                 logger.error("🎙️ ExtAudioFileWrite failed with status: \(writeStatus, privacy: .public)")
             }
         }
+        let shouldSendAudioChunk = isRecording
+        fileAccessLock.unlock()
 
         // Send the same PCM data to the streaming callback if set
-        if isRecording, let onAudioChunk = onAudioChunk {
+        if shouldSendAudioChunk, let onAudioChunk = onAudioChunk {
             let byteCount = Int(outputFrameCount) * MemoryLayout<Int16>.size
             let data = Data(bytes: outputBuffer, count: byteCount)
             onAudioChunk(data)
