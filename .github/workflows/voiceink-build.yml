@@ -1,4 +1,4 @@
-name: Build app zip
+name: Build app packages
 
 on:
   workflow_dispatch:
@@ -8,7 +8,7 @@ on:
 
 jobs:
   build:
-    name: Build ad-hoc signed app zip
+    name: Build ad-hoc signed app packages
     runs-on: macos-26
     timeout-minutes: 60
 
@@ -30,6 +30,13 @@ jobs:
         with:
           name: roma-just-talk-app
           path: dist/*.app.zip
+          if-no-files-found: error
+
+      - name: Upload app dmg
+        uses: actions/upload-artifact@v4
+        with:
+          name: roma-just-talk-dmg
+          path: dist/*.dmg
           if-no-files-found: error
 
       - name: Upload signing proof
