@@ -2,9 +2,6 @@ name: Build notarized macOS DMG
 
 on:
   workflow_dispatch:
-  push:
-    tags:
-      - "v*"
 
 jobs:
   build:
