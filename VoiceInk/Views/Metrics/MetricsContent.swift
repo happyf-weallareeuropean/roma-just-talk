@@ -177,7 +177,7 @@ struct MetricsContent: View {
             description: "VoiceInk needs Accessibility permission to work reliably across your entire Mac",
             isGranted: isAccessibilityEnabled,
             buttonTitle: "Open System Settings",
-            buttonAction: openAccessibilitySettings,
+            buttonAction: grantAccessibilityPermission,
             checkPermission: refreshAccessibilityStatus,
             infoTipMessage: "VoiceInk uses Accessibility to work reliably across apps."
         )
@@ -187,10 +187,11 @@ struct MetricsContent: View {
         isAccessibilityEnabled = AXIsProcessTrusted()
     }
 
-    private func openAccessibilitySettings() {
-        if let url = URL(string: "x-apple.systempreferences:com.apple.preference.security?Privacy_Accessibility") {
-            NSWorkspace.shared.open(url)
+    private func grantAccessibilityPermission() {
+        PermissionGrantCoordinator.grantAccessibility { granted in
+            isAccessibilityEnabled = granted
         }
+        refreshAccessibilityStatus()
     }
     
     private func loadMetricsEfficiently() async {

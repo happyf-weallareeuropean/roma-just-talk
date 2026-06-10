@@ -2,6 +2,8 @@
 
 ## v1.91 - Unreleased
 
+- Reused the PermissionFlow grant path for shortcut warning banners and metrics permission actions instead of direct System Settings deep links.
+
 ## v1.90 - 2026-06-10
 
 - Released a branch that excludes the nine post-v1.82 ad-hoc packaging, entitlement-proof, notarized DMG, and PermissionFlow routing commits while preserving the later shortcut fixes.

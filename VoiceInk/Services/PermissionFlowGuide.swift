@@ -174,6 +174,21 @@ enum PermissionGrantCoordinator {
         }
     }
 
+    static func grantInputMonitoring(statusUpdate: ((Bool) -> Void)? = nil) {
+        PermissionRefreshCenter.shared.beginPolling()
+        let granted = ShortcutMonitor.requestListenEventAccess() || ShortcutMonitor.preflightListenEventAccess()
+        statusUpdate?(granted)
+        permissionFlowGuide.open(.inputMonitoring)
+    }
+
+    static func grantAccessibility(statusUpdate: ((Bool) -> Void)? = nil) {
+        PermissionRefreshCenter.shared.beginPolling()
+        let options = [kAXTrustedCheckOptionPrompt.takeUnretainedValue() as String: true] as CFDictionary
+        let granted = AXIsProcessTrustedWithOptions(options)
+        statusUpdate?(granted)
+        permissionFlowGuide.open(.accessibility)
+    }
+
     static func openPermissionsAndGrantMicrophone() {
         NSApplication.shared.setActivationPolicy(.regular)
         NotificationCenter.default.post(

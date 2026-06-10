@@ -107,33 +107,17 @@ class PermissionManager: ObservableObject {
 
     func requestInputMonitoringPermission() {
         inputMonitoringNeedsRelaunch = false
-        let granted = ShortcutMonitor.requestListenEventAccess()
-        isInputMonitoringEnabled = granted || ShortcutMonitor.preflightListenEventAccess()
-        permissionFlowGuide.open(.inputMonitoring)
+        PermissionGrantCoordinator.grantInputMonitoring { [weak self] granted in
+            self?.isInputMonitoringEnabled = granted
+        }
         startPermissionRefreshPolling()
         markRelaunchNeededIfPermissionStillInactive(.inputMonitoring)
     }
 
-    nonisolated static func openInputMonitoringSettings() {
-        Task { @MainActor in
-            if let url = URL(string: "x-apple.systempreferences:com.apple.preference.security?Privacy_ListenEvent") {
-                NSWorkspace.shared.open(url)
-            }
-        }
-    }
-
-    nonisolated static func openAccessibilitySettings() {
-        Task { @MainActor in
-            if let url = URL(string: "x-apple.systempreferences:com.apple.preference.security?Privacy_Accessibility") {
-                NSWorkspace.shared.open(url)
-            }
-        }
-    }
-
     func requestAccessibilityPermission() {
-        let options: NSDictionary = [kAXTrustedCheckOptionPrompt.takeUnretainedValue() as String: true]
-        _ = AXIsProcessTrustedWithOptions(options)
-        permissionFlowGuide.open(.accessibility)
+        PermissionGrantCoordinator.grantAccessibility { [weak self] granted in
+            self?.isAccessibilityEnabled = granted
+        }
         startPermissionRefreshPolling()
     }
     
