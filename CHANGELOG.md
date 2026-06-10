@@ -1,5 +1,7 @@
 # Changelog
 
+## v1.89 - Unreleased
+
 ## v1.88 - 2026-06-10
 
 - Added a DMG build artifact alongside the app zip so Gatekeeper behavior can be tested against both packaging formats.
