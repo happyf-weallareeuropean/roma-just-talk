@@ -2,6 +2,8 @@
 
 ## v1.88 - Unreleased
 
+- Added a DMG build artifact alongside the app zip so Gatekeeper behavior can be tested against both packaging formats.
+
 ## v1.87 - 2026-06-09
 
 - Fixed a post-keyup latency regression by finalizing the recording file without restarting the pre-roll AudioUnit on every stop.
