@@ -65,6 +65,14 @@ final class StreamingTranscriptionSession: TranscriptionSession {
         self.model = model
         logger.notice("Streaming session prepare model=\(model.displayName, privacy: .public)")
 
+        if let detector = await WhisperVADSpeechDetector.makeDefault() {
+            streamingService.setSpeechGate(AudioChunkSpeechGate(detector: detector))
+            logger.notice("Streaming session local VAD gate enabled")
+        } else {
+            streamingService.setSpeechGate(nil)
+            logger.notice("Streaming session local VAD gate disabled")
+        }
+
         // Return callback immediately; WebSocket connects in background
         let service = streamingService
         let callback: (Data) -> Void = { [weak service] data in

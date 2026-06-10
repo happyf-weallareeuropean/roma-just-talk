@@ -92,6 +92,7 @@ class StreamingTranscriptionService {
     private var stopStartedAt: Date?
     private var firstPartialLogged = false
     private var firstCommitLogged = false
+    private var speechGate: AudioChunkSpeechGate?
 
     init(modelContext: ModelContext, fluidAudioService: FluidAudioTranscriptionService? = nil, onPartialTranscript: ((String) -> Void)? = nil) {
         self.modelContext = modelContext
@@ -112,6 +113,10 @@ class StreamingTranscriptionService {
 
     /// Whether the streaming connection is fully established and actively sending.
     var isActive: Bool { state == .streaming || state == .committing }
+
+    func setSpeechGate(_ speechGate: AudioChunkSpeechGate?) {
+        self.speechGate = speechGate
+    }
 
     /// Start a streaming transcription session for the given model.
     func startStreaming(model: any TranscriptionModel) async throws {
@@ -238,16 +243,20 @@ class StreamingTranscriptionService {
         let source = chunkSource
         let provider = provider
         let metrics = metrics
+        let speechGate = speechGate
 
         sendTask = Task.detached { [weak self] in
             for await chunk in source.stream {
-                do {
-                    try await provider?.sendAudioChunk(chunk)
-                    metrics.recordSent(chunk.count)
-                } catch {
-                    let desc = error.localizedDescription
-                    await MainActor.run {
-                        self?.logger.error("Failed to send audio chunk: \(desc, privacy: .public)")
+                let chunksToSend = speechGate?.accept(chunk) ?? [chunk]
+                for chunkToSend in chunksToSend {
+                    do {
+                        try await provider?.sendAudioChunk(chunkToSend)
+                        metrics.recordSent(chunkToSend.count)
+                    } catch {
+                        let desc = error.localizedDescription
+                        await MainActor.run {
+                            self?.logger.error("Failed to send audio chunk: \(desc, privacy: .public)")
+                        }
                     }
                 }
             }

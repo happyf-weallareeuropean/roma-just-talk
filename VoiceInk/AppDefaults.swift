@@ -37,6 +37,10 @@ enum AppDefaults {
             "SelectedLanguage": "en",
             "AppendTrailingSpace": true,
             "showLiveTextPreview": false,
+            LiveTranscriptionSettings.modeKey: LiveTranscriptionSettings.defaultMode.rawValue,
+            LiveTranscriptionSettings.autoDisableCloudModelsKey: LiveTranscriptionSettings.defaultAutoDisablesCloudModels,
+            LiveTranscriptionSettings.autoDisableLowBatteryLocalModelsKey: LiveTranscriptionSettings.defaultAutoDisablesLowBatteryLocalModels,
+            LiveTranscriptionSettings.lowBatteryThresholdPercentKey: LiveTranscriptionSettings.defaultLowBatteryThresholdPercent,
             "RecorderType": "none",
             "CurrentTranscriptionModel": "parakeet-tdt-0.6b-v2",
 

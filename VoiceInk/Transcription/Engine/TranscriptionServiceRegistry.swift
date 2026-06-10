@@ -8,6 +8,7 @@ class TranscriptionServiceRegistry {
     private weak var modelProvider: (any WhisperModelProvider)?
     private let modelsDirectory: URL
     private let modelContext: ModelContext
+    private let powerStateProvider: any LiveTranscriptionPowerStateProviding
     private let logger = Logger(subsystem: "com.prakashjoshipax.voiceink", category: "TranscriptionServiceRegistry")
 
     private(set) lazy var localTranscriptionService = WhisperTranscriptionService(
@@ -18,10 +19,16 @@ class TranscriptionServiceRegistry {
     private(set) lazy var nativeAppleTranscriptionService = NativeAppleTranscriptionService()
     private(set) lazy var fluidAudioTranscriptionService = FluidAudioTranscriptionService()
 
-    init(modelProvider: any WhisperModelProvider, modelsDirectory: URL, modelContext: ModelContext) {
+    init(
+        modelProvider: any WhisperModelProvider,
+        modelsDirectory: URL,
+        modelContext: ModelContext,
+        powerStateProvider: any LiveTranscriptionPowerStateProviding = IOKitLiveTranscriptionPowerStateProvider()
+    ) {
         self.modelProvider = modelProvider
         self.modelsDirectory = modelsDirectory
         self.modelContext = modelContext
+        self.powerStateProvider = powerStateProvider
     }
 
     func service(for provider: ModelProvider) -> TranscriptionService {
@@ -60,12 +67,16 @@ class TranscriptionServiceRegistry {
 
     /// Whether the given model supports streaming transcription
     private func supportsStreaming(model: any TranscriptionModel) -> Bool {
-        guard model.supportsStreaming else { return false }
-        // Streaming-only providers (e.g. Cartesia) have no batch endpoint — always stream.
-        if let cloudProvider = CloudProviderRegistry.provider(for: model.provider), cloudProvider.isStreamingOnly {
-            return true
-        }
-        return UserDefaults.standard.object(forKey: "streaming-enabled-\(model.name)") as? Bool ?? true
+        let cloudProvider = CloudProviderRegistry.provider(for: model.provider)
+        let isStreamingOnly = cloudProvider?.isStreamingOnly ?? false
+        let perModelEnabled = LiveTranscriptionSettings.perModelStreamingEnabled(for: model)
+        let powerState = powerStateProvider.currentPowerState()
+
+        return LiveTranscriptionPolicy(defaults: .standard, powerState: powerState).allowsStreaming(
+            for: model,
+            isStreamingOnly: isStreamingOnly,
+            perModelEnabled: perModelEnabled
+        )
     }
 
     func cleanup() async {
