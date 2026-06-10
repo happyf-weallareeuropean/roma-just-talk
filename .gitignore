@@ -32,8 +32,6 @@ playground.xcworkspace
 .build/
 build/
 .local-build/
-.release-build/
-dist/
 .vercel/
 
 # CocoaPods
