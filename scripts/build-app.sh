@@ -10,7 +10,6 @@ PROOF_DIR="${DIST_DIR}/signing-proof"
 APP_BUNDLE="${DIST_DIR}/${APP_NAME}.app"
 ZIP_PATH="${DIST_DIR}/${APP_NAME}.app.zip"
 BUILT_APP="${DERIVED_DATA_PATH}/Build/Products/${CONFIGURATION}/${APP_NAME}.app"
-ENTITLEMENTS_FILE="${ROOT_DIR}/VoiceInk/VoiceInk.local.entitlements"
 
 cd "${ROOT_DIR}"
 
@@ -29,7 +28,7 @@ xcodebuild \
   CODE_SIGNING_REQUIRED=NO \
   CODE_SIGNING_ALLOWED=YES \
   DEVELOPMENT_TEAM="" \
-  CODE_SIGN_ENTITLEMENTS="${ENTITLEMENTS_FILE}" \
+  CODE_SIGN_ENTITLEMENTS="${ROOT_DIR}/VoiceInk/VoiceInk.local.entitlements" \
   SWIFT_ACTIVE_COMPILATION_CONDITIONS='$(inherited) LOCAL_BUILD' \
   ONLY_ACTIVE_ARCH=YES \
   ARCHS=arm64 \
@@ -44,12 +43,9 @@ ditto "${BUILT_APP}" "${APP_BUNDLE}"
 xattr -cr "${APP_BUNDLE}" || true
 
 if command -v codesign >/dev/null 2>&1; then
+  codesign --force --deep --sign - "${APP_BUNDLE}"
   codesign --verify --deep --strict --verbose=2 "${APP_BUNDLE}" 2>&1 | tee "${PROOF_DIR}/codesign-verify.txt"
   codesign -dvvv "${APP_BUNDLE}" 2>&1 | tee "${PROOF_DIR}/codesign-details.txt"
-  codesign -d --entitlements :- "${APP_BUNDLE}" > "${PROOF_DIR}/entitlements.plist" 2> "${PROOF_DIR}/entitlements.stderr"
-  plutil -extract com.apple.security.automation.apple-events raw "${PROOF_DIR}/entitlements.plist" >/dev/null
-  plutil -extract com.apple.security.device.audio-input raw "${PROOF_DIR}/entitlements.plist" >/dev/null
-  plutil -extract com.apple.security.screen-capture raw "${PROOF_DIR}/entitlements.plist" >/dev/null
 fi
 
 ditto -c -k --keepParent "${APP_BUNDLE}" "${ZIP_PATH}"
