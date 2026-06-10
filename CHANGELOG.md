@@ -1,6 +1,8 @@
 # Changelog
 
-## v1.90 - Unreleased
+## v1.90 - 2026-06-10
+
+- Released a branch that excludes the nine post-v1.82 ad-hoc packaging, entitlement-proof, notarized DMG, and PermissionFlow routing commits while preserving the later shortcut fixes.
 
 ## v1.89 - 2026-06-10
 
