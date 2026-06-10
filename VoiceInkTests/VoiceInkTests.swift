@@ -298,6 +298,49 @@ struct VoiceInkTests {
         #expect(contexts == [ShortcutPressContext(didPressOtherKeyDuringPress: true, didReleaseOtherKeyDuringPress: false)])
     }
 
+    @Test func modifierOnlySpecialShortcutDoesNotStartWithoutKeyEvidenceTap() async throws {
+        let monitor = ShortcutMonitor()
+        var keyDownCount = 0
+
+        ShortcutMonitor.configurePermissionClientsForTesting(
+            inputMonitoringClient: InputMonitoringPermission.Client(
+                preflight: { false },
+                request: { false }
+            ),
+            accessibilityClient: AccessibilityPermission.Client(
+                preflight: { true },
+                request: { true }
+            )
+        )
+        defer {
+            monitor.stop()
+            ShortcutMonitor.resetPermissionClientsForTesting()
+        }
+
+        let started = monitor.start(
+            shortcuts: [
+                .primaryRecording: .modifierOnly(
+                    keyCode: UInt16(kVK_Shift),
+                    modifierFlags: [.shift]
+                )
+            ],
+            tracksKeyUpEvidence: true,
+            onKeyDown: { _, _ in keyDownCount += 1 },
+            onKeyUp: { _, _, _ in }
+        )
+
+        #expect(!started)
+
+        monitor.handleModifierOnlyFlagsChangedForTesting(
+            keyCode: UInt16(kVK_Shift),
+            modifierFlags: [.shift],
+            eventTime: 1
+        )
+
+        try await Task.sleep(nanoseconds: 10_000_000)
+        #expect(keyDownCount == 0)
+    }
+
     @Test func modifierOnlyShortcutMarksOtherKeyUpAsTyping() async throws {
         let monitor = ShortcutMonitor()
         var contexts: [ShortcutPressContext] = []

@@ -99,6 +99,8 @@ final class ShortcutMonitor {
 
     private static var hasRequestedListenEventAccess = false
     private static var hasRequestedAccessibilityAccess = false
+    private static var inputMonitoringClient = InputMonitoringPermission.systemClient
+    private static var accessibilityClient = AccessibilityPermission.systemClient
     private static let shortcutInterruptionWindow: TimeInterval = 1.0
 
     deinit {
@@ -165,21 +167,34 @@ final class ShortcutMonitor {
     private func installEventTap(tracksKeyUpEvidence: Bool) -> Bool {
         let needsModifierOnlyMonitor = shortcuts.values.contains { $0.shortcut.isModifierOnly }
         let needsEventTap = shortcuts.values.contains { !$0.shortcut.isModifierOnly }
+        let shouldInstallEventTap = needsEventTap || tracksKeyUpEvidence
+
+        if shouldInstallEventTap {
+            guard installCGEventTap() else {
+                stop()
+                return false
+            }
+        }
 
         if needsModifierOnlyMonitor {
             guard Self.ensureAccessibilityAccessForMonitoring() else {
                 logger.error("installModifierOnlyMonitors: accessibility access is not granted")
+                stop()
                 return false
             }
 
             installModifierOnlyEventMonitors()
         }
 
-        guard needsEventTap || tracksKeyUpEvidence else {
+        guard shouldInstallEventTap else {
             logger.notice("installEventTap: skipped; modifier-only shortcuts use NSEvent monitors")
             return true
         }
 
+        return true
+    }
+
+    private func installCGEventTap() -> Bool {
         guard Self.ensureListenEventAccessForMonitoring() else {
             logger.error("installEventTap: listen-event access is not granted")
             return false
@@ -250,21 +265,21 @@ final class ShortcutMonitor {
     }
 
     static func preflightListenEventAccess() -> Bool {
-        InputMonitoringPermission.isGranted()
+        InputMonitoringPermission.isGranted(client: inputMonitoringClient)
     }
 
     @discardableResult
     static func requestListenEventAccess() -> Bool {
-        InputMonitoringPermission.requestAccess()
+        InputMonitoringPermission.requestAccess(client: inputMonitoringClient)
     }
 
     static func preflightAccessibilityAccess() -> Bool {
-        AccessibilityPermission.isGranted()
+        AccessibilityPermission.isGranted(client: accessibilityClient)
     }
 
     @discardableResult
     static func requestAccessibilityAccess() -> Bool {
-        AccessibilityPermission.requestAccess()
+        AccessibilityPermission.requestAccess(client: accessibilityClient)
     }
 
     private static func ensureListenEventAccessForMonitoring() -> Bool {
@@ -661,6 +676,20 @@ private extension ShortcutMonitor.EventKind {
 
 #if DEBUG
 extension ShortcutMonitor {
+    static func configurePermissionClientsForTesting(
+        inputMonitoringClient: InputMonitoringPermission.Client = InputMonitoringPermission.systemClient,
+        accessibilityClient: AccessibilityPermission.Client = AccessibilityPermission.systemClient
+    ) {
+        self.inputMonitoringClient = inputMonitoringClient
+        self.accessibilityClient = accessibilityClient
+        hasRequestedListenEventAccess = false
+        hasRequestedAccessibilityAccess = false
+    }
+
+    static func resetPermissionClientsForTesting() {
+        configurePermissionClientsForTesting()
+    }
+
     func configureForTesting(
         shortcuts: [ShortcutAction: Shortcut],
         interruptibleActions: Set<ShortcutAction> = [],

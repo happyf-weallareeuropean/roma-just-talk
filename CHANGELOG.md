@@ -2,6 +2,8 @@
 
 ## v1.89 - Unreleased
 
+- Fixed Special shortcut flex-off handling so modifier-only shortcuts fail closed when the key-evidence event tap is unavailable.
+
 ## v1.88 - 2026-06-10
 
 - Added a DMG build artifact alongside the app zip so Gatekeeper behavior can be tested against both packaging formats.
