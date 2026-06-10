@@ -213,38 +213,6 @@ struct VoiceInkTests {
         #expect(didRequestAccess)
     }
 
-    @Test @MainActor func inputMonitoringGrantUsesPermissionFlowGuide() async throws {
-        var didBeginPolling = false
-        var didRequestAccess = false
-        var didOpenGuide = false
-        var reportedGrant: Bool?
-
-        let client = PermissionGrantCoordinator.Client(
-            beginPolling: { didBeginPolling = true },
-            microphoneStatus: { .authorized },
-            requestMicrophone: { _ in },
-            openMicrophonePane: {},
-            requestInputMonitoring: {
-                didRequestAccess = true
-                return false
-            },
-            isInputMonitoringGranted: { false },
-            openInputMonitoringPane: { didOpenGuide = true },
-            requestAccessibility: { true },
-            openAccessibilityPane: {},
-            openScreenRecordingPane: {}
-        )
-
-        PermissionGrantCoordinator.grantInputMonitoring(client: client) { granted in
-            reportedGrant = granted
-        }
-
-        #expect(didBeginPolling)
-        #expect(didRequestAccess)
-        #expect(didOpenGuide)
-        #expect(reportedGrant == false)
-    }
-
     @Test func modifierOnlyShortcutsUseNSEventMonitorPath() async throws {
         let monitor = ShortcutMonitor()
         var keyDownCount = 0

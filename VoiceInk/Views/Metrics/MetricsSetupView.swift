@@ -168,8 +168,8 @@ struct MetricsSetupView: View {
             if !recordingShortcutManager.isShortcutConfigured {
                 openSettings()
             } else if !isAccessibilityEnabled {
-                PermissionGrantCoordinator.grantAccessibility { granted in
-                    isAccessibilityEnabled = granted
+                if let url = URL(string: "x-apple.systempreferences:com.apple.preference.security?Privacy_Accessibility") {
+                    NSWorkspace.shared.open(url)
                 }
             }
         }

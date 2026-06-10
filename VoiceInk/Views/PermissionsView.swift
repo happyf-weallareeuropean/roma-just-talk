@@ -2,6 +2,7 @@ import SwiftUI
 import AVFoundation
 import Cocoa
 import CoreGraphics
+import PermissionFlow
 
 @MainActor
 class PermissionManager: ObservableObject {
@@ -12,6 +13,7 @@ class PermissionManager: ObservableObject {
     @Published var isKeyboardShortcutSet = false
     @Published var inputMonitoringNeedsRelaunch = false
     @Published var screenRecordingNeedsRelaunch = false
+    private let permissionFlowGuide = PermissionFlowGuide()
     private var permissionRefreshTimer: Timer?
     private var permissionRefreshPollsRemaining = 0
     
@@ -76,7 +78,7 @@ class PermissionManager: ObservableObject {
     
     func requestScreenRecordingPermission() {
         screenRecordingNeedsRelaunch = false
-        PermissionGrantCoordinator.grantScreenRecording()
+        permissionFlowGuide.open(.screenRecording)
         startPermissionRefreshPolling()
         markRelaunchNeededIfPermissionStillInactive(.screenRecording)
     }
@@ -105,17 +107,33 @@ class PermissionManager: ObservableObject {
 
     func requestInputMonitoringPermission() {
         inputMonitoringNeedsRelaunch = false
-        PermissionGrantCoordinator.grantInputMonitoring { [weak self] granted in
-            self?.isInputMonitoringEnabled = granted
-        }
+        let granted = ShortcutMonitor.requestListenEventAccess()
+        isInputMonitoringEnabled = granted || ShortcutMonitor.preflightListenEventAccess()
+        permissionFlowGuide.open(.inputMonitoring)
         startPermissionRefreshPolling()
         markRelaunchNeededIfPermissionStillInactive(.inputMonitoring)
     }
 
-    func requestAccessibilityPermission() {
-        PermissionGrantCoordinator.grantAccessibility { [weak self] granted in
-            self?.isAccessibilityEnabled = granted
+    nonisolated static func openInputMonitoringSettings() {
+        Task { @MainActor in
+            if let url = URL(string: "x-apple.systempreferences:com.apple.preference.security?Privacy_ListenEvent") {
+                NSWorkspace.shared.open(url)
+            }
         }
+    }
+
+    nonisolated static func openAccessibilitySettings() {
+        Task { @MainActor in
+            if let url = URL(string: "x-apple.systempreferences:com.apple.preference.security?Privacy_Accessibility") {
+                NSWorkspace.shared.open(url)
+            }
+        }
+    }
+
+    func requestAccessibilityPermission() {
+        let options: NSDictionary = [kAXTrustedCheckOptionPrompt.takeUnretainedValue() as String: true]
+        _ = AXIsProcessTrustedWithOptions(options)
+        permissionFlowGuide.open(.accessibility)
         startPermissionRefreshPolling()
     }
     

@@ -2,8 +2,6 @@
 
 ## v1.90 - Unreleased
 
-- Routed all permission grant buttons through the PermissionFlow-backed grant coordinator instead of direct System Settings URLs.
-
 ## v1.89 - 2026-06-10
 
 - Fixed Special shortcut flex-off handling so modifier-only shortcuts fail closed when the key-evidence event tap is unavailable.

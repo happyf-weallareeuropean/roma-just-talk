@@ -147,104 +147,31 @@ enum AppRelauncher {
 enum PermissionGrantCoordinator {
     private static let permissionFlowGuide = PermissionFlowGuide()
 
-    struct Client {
-        var beginPolling: () -> Void
-        var microphoneStatus: () -> AVAuthorizationStatus
-        var requestMicrophone: (@escaping (Bool) -> Void) -> Void
-        var openMicrophonePane: () -> Void
-        var requestInputMonitoring: () -> Bool
-        var isInputMonitoringGranted: () -> Bool
-        var openInputMonitoringPane: () -> Void
-        var requestAccessibility: () -> Bool
-        var openAccessibilityPane: () -> Void
-        var openScreenRecordingPane: () -> Void
-    }
-
-    private static var liveClient: Client {
-        Client(
-            beginPolling: { PermissionRefreshCenter.shared.beginPolling() },
-            microphoneStatus: { AVCaptureDevice.authorizationStatus(for: .audio) },
-            requestMicrophone: { completion in
-                AVCaptureDevice.requestAccess(for: .audio, completionHandler: completion)
-            },
-            openMicrophonePane: {
-                permissionFlowGuide.open(.microphone)
-            },
-            requestInputMonitoring: {
-                ShortcutMonitor.requestListenEventAccess()
-            },
-            isInputMonitoringGranted: {
-                ShortcutMonitor.preflightListenEventAccess()
-            },
-            openInputMonitoringPane: {
-                permissionFlowGuide.open(.inputMonitoring)
-            },
-            requestAccessibility: {
-                let options: NSDictionary = [kAXTrustedCheckOptionPrompt.takeUnretainedValue() as String: true]
-                return AXIsProcessTrustedWithOptions(options)
-            },
-            openAccessibilityPane: {
-                permissionFlowGuide.open(.accessibility)
-            },
-            openScreenRecordingPane: {
-                permissionFlowGuide.open(.screenRecording)
-            }
-        )
-    }
-
-    static func grantMicrophone(
-        client: Client = liveClient,
-        statusUpdate: ((AVAuthorizationStatus) -> Void)? = nil
-    ) {
-        client.beginPolling()
-        let currentStatus = client.microphoneStatus()
+    static func grantMicrophone(statusUpdate: ((AVAuthorizationStatus) -> Void)? = nil) {
+        PermissionRefreshCenter.shared.beginPolling()
+        let currentStatus = AVCaptureDevice.authorizationStatus(for: .audio)
 
         switch currentStatus {
         case .authorized:
             statusUpdate?(.authorized)
         case .notDetermined:
-            client.requestMicrophone { granted in
+            AVCaptureDevice.requestAccess(for: .audio) { granted in
                 Task { @MainActor in
-                    let status = granted ? AVAuthorizationStatus.authorized : client.microphoneStatus()
+                    let status = granted ? AVAuthorizationStatus.authorized : AVCaptureDevice.authorizationStatus(for: .audio)
                     statusUpdate?(status)
-                    client.beginPolling()
+                    PermissionRefreshCenter.shared.beginPolling()
                     if !granted {
-                        client.openMicrophonePane()
+                        permissionFlowGuide.open(.microphone)
                     }
                 }
             }
         case .denied, .restricted:
             statusUpdate?(currentStatus)
-            client.openMicrophonePane()
+            permissionFlowGuide.open(.microphone)
         @unknown default:
             statusUpdate?(currentStatus)
-            client.openMicrophonePane()
+            permissionFlowGuide.open(.microphone)
         }
-    }
-
-    static func grantInputMonitoring(
-        client: Client = liveClient,
-        statusUpdate: ((Bool) -> Void)? = nil
-    ) {
-        client.beginPolling()
-        let granted = client.requestInputMonitoring() || client.isInputMonitoringGranted()
-        statusUpdate?(granted)
-        client.openInputMonitoringPane()
-    }
-
-    static func grantAccessibility(
-        client: Client = liveClient,
-        statusUpdate: ((Bool) -> Void)? = nil
-    ) {
-        client.beginPolling()
-        let granted = client.requestAccessibility()
-        statusUpdate?(granted)
-        client.openAccessibilityPane()
-    }
-
-    static func grantScreenRecording(client: Client = liveClient) {
-        client.beginPolling()
-        client.openScreenRecordingPane()
     }
 
     static func openPermissionsAndGrantMicrophone() {
