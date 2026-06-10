@@ -32,7 +32,7 @@ playground.xcworkspace
 .build/
 build/
 .local-build/
-.app-build/
+.release-build/
 dist/
 .vercel/
 
