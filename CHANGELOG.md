@@ -4,6 +4,7 @@
 
 - Restored the real Developer ID signed, notarized, and stapled DMG workflow and removed the fake ad-hoc DMG artifact from the app-zip build.
 - Fixed Special shortcut flex-off handling so modifier-only shortcuts fail closed when the key-evidence event tap is unavailable.
+- Updated the app bundle version metadata to 1.89 / 189 for the release artifact.
 
 ## v1.88 - 2026-06-10
 
