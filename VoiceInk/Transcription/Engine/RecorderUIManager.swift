@@ -162,10 +162,10 @@ class RecorderUIManager: ObservableObject {
         miniRecorderError = nil
     }
 
-    func cancelRecording() async {
+    func cancelRecording(saveCanceledTranscription: Bool = true) async {
         guard let engine = engine else { return }
         logger.notice("cancelRecording called")
-        await engine.cancelRecording()
+        await engine.cancelRecording(saveCanceledTranscription: saveCanceledTranscription)
         await dismissMiniRecorder()
     }
 

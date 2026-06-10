@@ -183,6 +183,108 @@ struct VoiceInkTests {
         #expect(!sessionActive)
     }
 
+    @Test @MainActor func specialModeEmptyTapPastesLastImmediatelyAndDiscardsRecording() async throws {
+        var sessionActive = false
+        var toggleCount = 0
+        var cancelCount = 0
+        var discardCount = 0
+        var pasteCount = 0
+
+        let handler = RecordingShortcutModeHandler(
+            logger: Logger(subsystem: "VoiceInkTests", category: "RecordingShortcutModeHandler"),
+            canHandleShortcutAction: { true },
+            isRecorderVisible: { sessionActive },
+            recordingState: { sessionActive ? .recording : .idle },
+            toggleMiniRecorder: { _ in
+                toggleCount += 1
+                sessionActive.toggle()
+            },
+            cancelRecording: {
+                cancelCount += 1
+                sessionActive = false
+            },
+            discardRecording: {
+                discardCount += 1
+                sessionActive = false
+            },
+            pasteLastTranscription: {
+                pasteCount += 1
+            }
+        )
+
+        let specialOptions = SpecialShortcutOptions(
+            keyDownBehavior: .startRecording,
+            allowsKeyDownOnlyTrigger: true,
+            pasteLastTranscriptOnEmptyTap: true
+        )
+
+        await handler.handleKeyDown(
+            action: .primaryRecording,
+            eventTime: 1,
+            mode: .special,
+            specialOptions: specialOptions
+        )
+
+        await handler.handleKeyUp(
+            action: .primaryRecording,
+            eventTime: 1.1,
+            mode: .special,
+            specialOptions: specialOptions
+        )
+
+        #expect(pasteCount == 1)
+        #expect(toggleCount == 1)
+        #expect(cancelCount == 0)
+        #expect(discardCount == 1)
+        #expect(!sessionActive)
+    }
+
+    @Test @MainActor func specialModePreloadOnlyEmptyTapPastesLastWithoutCommit() async throws {
+        var toggleCount = 0
+        var cancelCount = 0
+        var pasteCount = 0
+
+        let handler = RecordingShortcutModeHandler(
+            logger: Logger(subsystem: "VoiceInkTests", category: "RecordingShortcutModeHandler"),
+            canHandleShortcutAction: { true },
+            isRecorderVisible: { false },
+            recordingState: { .idle },
+            toggleMiniRecorder: { _ in
+                toggleCount += 1
+            },
+            cancelRecording: {
+                cancelCount += 1
+            },
+            pasteLastTranscription: {
+                pasteCount += 1
+            }
+        )
+
+        let specialOptions = SpecialShortcutOptions(
+            keyDownBehavior: .preloadOnly,
+            allowsKeyDownOnlyTrigger: true,
+            pasteLastTranscriptOnEmptyTap: true
+        )
+
+        await handler.handleKeyDown(
+            action: .primaryRecording,
+            eventTime: 1,
+            mode: .special,
+            specialOptions: specialOptions
+        )
+
+        await handler.handleKeyUp(
+            action: .primaryRecording,
+            eventTime: 1.1,
+            mode: .special,
+            specialOptions: specialOptions
+        )
+
+        #expect(pasteCount == 1)
+        #expect(toggleCount == 0)
+        #expect(cancelCount == 0)
+    }
+
     @Test func inputMonitoringPermissionUsesInjectedSystemClient() async throws {
         var didRequestAccess = false
         let client = InputMonitoringPermission.Client(

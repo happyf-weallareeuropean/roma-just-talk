@@ -2,6 +2,7 @@
 
 ## v1.91 - Unreleased
 
+- Made Special shortcut empty taps paste the last transcription immediately instead of waiting for an empty recording to transcribe.
 - Reused the PermissionFlow grant path for shortcut warning banners and metrics permission actions instead of direct System Settings deep links.
 
 ## v1.90 - 2026-06-10

@@ -213,10 +213,7 @@ class TranscriptionPipeline {
             return
         }
 
-        if SpecialShortcutEmptyTranscriptionFallback.consumeIfNeeded(for: transcription, modelContext: modelContext) {
-            SoundManager.shared.playStopSound()
-            await restorePromptDetectionSettingsAndDismiss()
-        } else if var textToPaste = finalPastedText,
+        if var textToPaste = finalPastedText,
            transcription.transcriptionStatus == TranscriptionStatus.completed.rawValue {
             if case .trialExpired = licenseViewModel.licenseState {
                 textToPaste = """
