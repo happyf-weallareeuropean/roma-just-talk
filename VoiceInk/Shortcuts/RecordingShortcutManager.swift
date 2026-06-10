@@ -167,10 +167,13 @@ class RecordingShortcutManager: ObservableObject {
         self.isMiddleClickToggleEnabled = UserDefaults.standard.bool(forKey: "isMiddleClickToggleEnabled")
         self.middleClickActivationDelay = UserDefaults.standard.integer(forKey: "middleClickActivationDelay")
         let specialKeyDownBehaviorRawValue = UserDefaults.standard.string(forKey: SpecialShortcutSettings.keyDownBehaviorKey)
-        self.specialShortcutKeyDownBehavior = specialKeyDownBehaviorRawValue
+        let specialKeyDownBehavior = specialKeyDownBehaviorRawValue
             .flatMap(SpecialShortcutKeyDownBehavior.init(rawValue:)) ?? .startRecording
-        self.specialShortcutAllowsKeyDownOnlyTrigger = UserDefaults.standard.bool(forKey: SpecialShortcutSettings.allowsKeyDownOnlyTriggerKey)
-        self.specialShortcutPasteLastTranscriptOnEmptyTap = UserDefaults.standard.bool(forKey: SpecialShortcutSettings.pasteLastTranscriptOnEmptyTapKey)
+        let specialAllowsKeyDownOnlyTrigger = UserDefaults.standard.bool(forKey: SpecialShortcutSettings.allowsKeyDownOnlyTriggerKey)
+        let specialPasteLastTranscriptOnEmptyTap = UserDefaults.standard.bool(forKey: SpecialShortcutSettings.pasteLastTranscriptOnEmptyTapKey)
+        self.specialShortcutKeyDownBehavior = specialKeyDownBehavior
+        self.specialShortcutAllowsKeyDownOnlyTrigger = specialAllowsKeyDownOnlyTrigger
+        self.specialShortcutPasteLastTranscriptOnEmptyTap = specialPasteLastTranscriptOnEmptyTap
 
         let logger = Logger(subsystem: "com.prakashjoshipax.voiceink", category: "RecordingShortcutManager")
         let shortcutModeHandler = RecordingShortcutModeHandler(
@@ -197,9 +200,9 @@ class RecordingShortcutManager: ObservableObject {
         )
         let specialOptionsSource = RecordingShortcutSpecialOptionsSource(
             options: SpecialShortcutOptions(
-                keyDownBehavior: specialShortcutKeyDownBehavior,
-                allowsKeyDownOnlyTrigger: specialShortcutAllowsKeyDownOnlyTrigger,
-                pasteLastTranscriptOnEmptyTap: specialShortcutPasteLastTranscriptOnEmptyTap
+                keyDownBehavior: specialKeyDownBehavior,
+                allowsKeyDownOnlyTrigger: specialAllowsKeyDownOnlyTrigger,
+                pasteLastTranscriptOnEmptyTap: specialPasteLastTranscriptOnEmptyTap
             )
         )
 
