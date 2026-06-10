@@ -2,7 +2,7 @@
 
 ## v1.91 - Unreleased
 
-- Fixed Special shortcut typing detection so held Shift chords such as `Shift` down, `S` down, `Shift` up cancel instead of pasting last text or committing an empty recording.
+- Fixed Special shortcut typing detection so fast held Shift chords such as `Shift` down, `S` down, `Shift` up reliably cancel instead of pasting last text or committing an empty recording.
 - Added an Auto/On/Off real-time transcription policy with cloud and low-battery rules, plus local Silero VAD gating before streaming audio chunks reach the transcription model.
 - Made Special shortcut empty taps paste the last transcription immediately instead of waiting for an empty recording to transcribe.
 - Reused the PermissionFlow grant path for shortcut warning banners and metrics permission actions instead of direct System Settings deep links.

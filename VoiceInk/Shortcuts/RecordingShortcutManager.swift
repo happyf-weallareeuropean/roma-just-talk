@@ -648,9 +648,9 @@ final class RecordingShortcutModeHandler {
         case .special:
             let pressDuration = shortcutPressStartTime.map { eventTime - $0 } ?? 0
             let options = activeSpecialOptions
-            let shouldCancelForKeyDownOnly = context.didPressOtherKeyDuringPress && !options.allowsKeyDownOnlyTrigger
+            let hasTypingEvidence = context.didPressOtherKeyDuringPress || context.didReleaseOtherKeyDuringPress
 
-            if context.didReleaseOtherKeyDuringPress || shouldCancelForKeyDownOnly {
+            if hasTypingEvidence {
                 logger.notice("handleShortcutKeyUp: cancelling special shortcut; typing evidence during hold")
                 if isRecorderVisible() {
                     await cancelRecording()

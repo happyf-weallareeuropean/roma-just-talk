@@ -95,6 +95,7 @@ final class ShortcutMonitor {
     private var eventTapRunLoopSource: CFRunLoopSource?
     private var modifierOnlyGlobalMonitor: Any?
     private var modifierOnlyLocalMonitor: Any?
+    private var handlesModifierOnlyShortcutsInEventTap = false
     private let logger = Logger(subsystem: "com.prakashjoshipax.voiceink", category: "ShortcutMonitor")
 
     private static var hasRequestedListenEventAccess = false
@@ -162,12 +163,16 @@ final class ShortcutMonitor {
         onKeyDown = nil
         onKeyUp = nil
         onShortcutInterrupted = nil
+        handlesModifierOnlyShortcutsInEventTap = false
     }
 
     private func installEventTap(tracksKeyUpEvidence: Bool) -> Bool {
-        let needsModifierOnlyMonitor = shortcuts.values.contains { $0.shortcut.isModifierOnly }
+        let hasModifierOnlyShortcut = shortcuts.values.contains { $0.shortcut.isModifierOnly }
+        let handlesModifierOnlyShortcutsInEventTap = tracksKeyUpEvidence && hasModifierOnlyShortcut
+        let needsModifierOnlyMonitor = hasModifierOnlyShortcut && !handlesModifierOnlyShortcutsInEventTap
         let needsEventTap = shortcuts.values.contains { !$0.shortcut.isModifierOnly }
         let shouldInstallEventTap = needsEventTap || tracksKeyUpEvidence
+        self.handlesModifierOnlyShortcutsInEventTap = handlesModifierOnlyShortcutsInEventTap
 
         if shouldInstallEventTap {
             guard installCGEventTap() else {
@@ -320,7 +325,7 @@ final class ShortcutMonitor {
             keyCode: keyCode,
             modifierFlags: modifierFlags,
             eventTime: ProcessInfo.processInfo.systemUptime,
-            scope: .nonModifierOnly
+            scope: handlesModifierOnlyShortcutsInEventTap ? .all : .nonModifierOnly
         )
     }
 
@@ -693,6 +698,7 @@ extension ShortcutMonitor {
     func configureForTesting(
         shortcuts: [ShortcutAction: Shortcut],
         interruptibleActions: Set<ShortcutAction> = [],
+        handlesModifierOnlyShortcutsInEventTap: Bool = false,
         onKeyDown: @escaping (ShortcutAction, TimeInterval) -> Void,
         onKeyUp: @escaping (ShortcutAction, TimeInterval, ShortcutPressContext) -> Void,
         onShortcutInterrupted: ((ShortcutAction, TimeInterval) -> Void)? = nil
@@ -704,6 +710,7 @@ extension ShortcutMonitor {
         }
 
         self.interruptibleActions = interruptibleActions
+        self.handlesModifierOnlyShortcutsInEventTap = handlesModifierOnlyShortcutsInEventTap
         self.onKeyDown = onKeyDown
         self.onKeyUp = onKeyUp
         self.onShortcutInterrupted = onShortcutInterrupted
@@ -763,7 +770,7 @@ extension ShortcutMonitor {
             keyCode: keyCode,
             modifierFlags: modifierFlags,
             eventTime: eventTime,
-            scope: .nonModifierOnly
+            scope: handlesModifierOnlyShortcutsInEventTap ? .all : .nonModifierOnly
         )
     }
 }
