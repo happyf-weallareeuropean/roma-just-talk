@@ -147,6 +147,29 @@ struct Shortcut: Codable, Equatable {
         return !normalizedModifierFlags(modifierFlags, forKeyCode: keyCode).contains(modifierFlag)
     }
 
+    static func isModifierPressEvent(keyCode: UInt16, modifierFlags: NSEvent.ModifierFlags) -> Bool {
+        guard let modifierFlag = modifierFlag(forKeyCode: keyCode) else {
+            return false
+        }
+
+        return normalizedModifierFlags(modifierFlags, forKeyCode: keyCode).contains(modifierFlag)
+    }
+
+    func representsPressEvent(kind eventKind: ShortcutMonitor.EventKind, keyCode eventKeyCode: UInt16, modifierFlags eventModifierFlags: NSEvent.ModifierFlags) -> Bool {
+        switch eventKind {
+        case .keyDown:
+            return kind == .key && keyCode == eventKeyCode
+        case .flagsChanged:
+            guard kind == .modifierOnly else {
+                return false
+            }
+
+            return matchesModifierEvent(keyCode: eventKeyCode, modifierFlags: eventModifierFlags)
+        case .keyUp:
+            return false
+        }
+    }
+
     static func modifierKeyCodeForSingleModifierEvent(keyCode: UInt16, modifiers: NSEvent.ModifierFlags) -> UInt16? {
         guard modifiers.shortcutSingleModifierCount == 1, isModifierKeyCode(keyCode) else {
             return nil

@@ -50,6 +50,7 @@ enum AccessibilityPermission {
 }
 
 struct ShortcutPressContext: Equatable {
+    var didPressOtherKeyDuringPress = false
     var didReleaseOtherKeyDuringPress = false
 }
 
@@ -354,8 +355,18 @@ final class ShortcutMonitor {
         var shouldSuppress = false
 
         if kind == .keyDown {
+            recordPressEvidenceDuringActiveShortcuts(
+                kind: kind,
+                keyCode: keyCode,
+                modifierFlags: modifierFlags
+            )
             handleShortcutInterruptions(keyCode: keyCode, eventTime: eventTime)
         } else {
+            recordPressEvidenceDuringActiveShortcuts(
+                kind: kind,
+                keyCode: keyCode,
+                modifierFlags: modifierFlags
+            )
             recordReleaseEvidenceDuringActiveShortcuts(
                 kind: kind,
                 keyCode: keyCode,
@@ -420,6 +431,28 @@ final class ShortcutMonitor {
         return shouldSuppress
     }
 
+    private func recordPressEvidenceDuringActiveShortcuts(
+        kind: EventKind,
+        keyCode: UInt16,
+        modifierFlags: NSEvent.ModifierFlags
+    ) {
+        guard isKeyPressEvidence(kind: kind, keyCode: keyCode, modifierFlags: modifierFlags) else {
+            return
+        }
+
+        for action in Array(shortcuts.keys) {
+            guard var state = shortcuts[action],
+                  state.isDown,
+                  !state.shortcut.representsPressEvent(kind: kind, keyCode: keyCode, modifierFlags: modifierFlags)
+            else {
+                continue
+            }
+
+            state.pressContext.didPressOtherKeyDuringPress = true
+            shortcuts[action] = state
+        }
+    }
+
     private func recordReleaseEvidenceDuringActiveShortcuts(
         kind: EventKind,
         keyCode: UInt16,
@@ -439,6 +472,21 @@ final class ShortcutMonitor {
 
             state.pressContext.didReleaseOtherKeyDuringPress = true
             shortcuts[action] = state
+        }
+    }
+
+    private func isKeyPressEvidence(
+        kind: EventKind,
+        keyCode: UInt16,
+        modifierFlags: NSEvent.ModifierFlags
+    ) -> Bool {
+        switch kind {
+        case .keyDown:
+            return true
+        case .flagsChanged:
+            return Shortcut.isModifierPressEvent(keyCode: keyCode, modifierFlags: modifierFlags)
+        case .keyUp:
+            return false
         }
     }
 

@@ -73,6 +73,22 @@ struct SettingsView: View {
                         withAnimation { recordingShortcutManager.secondaryRecordingShortcut = .custom }
                     }
                 }
+
+                if usesSpecialShortcutMode {
+                    LabeledContent("Special Key Down") {
+                        Picker("", selection: $recordingShortcutManager.specialShortcutKeyDownBehavior) {
+                            ForEach(SpecialShortcutKeyDownBehavior.allCases, id: \.self) { behavior in
+                                Text(behavior.displayName).tag(behavior)
+                            }
+                        }
+                        .labelsHidden()
+                        .fixedSize()
+                    }
+
+                    Toggle("Special Flex", isOn: $recordingShortcutManager.specialShortcutAllowsKeyDownOnlyTrigger)
+
+                    Toggle("Empty Tap Pastes Last", isOn: $recordingShortcutManager.specialShortcutPasteLastTranscriptOnEmptyTap)
+                }
             } header: {
                 Text("Shortcuts")
             }
@@ -338,6 +354,14 @@ struct SettingsView: View {
         keyCode: UInt16(kVK_Escape),
         modifierFlags: []
     )
+
+    private var usesSpecialShortcutMode: Bool {
+        recordingShortcutManager.primaryRecordingShortcutMode == .special ||
+        (
+            recordingShortcutManager.secondaryRecordingShortcut != .none &&
+            recordingShortcutManager.secondaryRecordingShortcutMode == .special
+        )
+    }
 
     @ViewBuilder
     private func shortcutModePicker(binding: Binding<RecordingShortcutManager.Mode>) -> some View {

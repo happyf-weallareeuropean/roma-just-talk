@@ -4,14 +4,17 @@ import Foundation
 class PowerModeShortcutManager {
     private let shortcutMonitor = ShortcutMonitor()
     private let modeProvider: @MainActor () -> RecordingShortcutManager.Mode
+    private let specialOptionsProvider: @MainActor () -> SpecialShortcutOptions
     private let shortcutModeHandler: RecordingShortcutModeHandler
     private var shortcutChangeObserver: NSObjectProtocol?
 
     init(
         modeProvider: @escaping @MainActor () -> RecordingShortcutManager.Mode,
+        specialOptionsProvider: @escaping @MainActor () -> SpecialShortcutOptions,
         shortcutModeHandler: RecordingShortcutModeHandler
     ) {
         self.modeProvider = modeProvider
+        self.specialOptionsProvider = specialOptionsProvider
         self.shortcutModeHandler = shortcutModeHandler
 
         refreshPowerModeShortcuts()
@@ -85,6 +88,7 @@ class PowerModeShortcutManager {
                         action: action,
                         eventTime: eventTime,
                         mode: self.modeProvider(),
+                        specialOptions: self.specialOptionsProvider(),
                         powerModeId: powerModeId
                     )
                 }
@@ -101,6 +105,7 @@ class PowerModeShortcutManager {
                         eventTime: eventTime,
                         mode: self.modeProvider(),
                         context: context,
+                        specialOptions: self.specialOptionsProvider(),
                         powerModeId: powerModeId
                     )
                 }

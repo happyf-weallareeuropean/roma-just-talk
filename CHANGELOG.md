@@ -3,6 +3,7 @@
 ## v1.88 - Unreleased
 
 - Added a DMG build artifact alongside the app zip so Gatekeeper behavior can be tested against both packaging formats.
+- Added Special shortcut sub-settings for keydown preload behavior, key-down-only flex, and empty-tap paste-last fallback.
 
 ## v1.87 - 2026-06-09
 
