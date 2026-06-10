@@ -379,7 +379,9 @@ class RecordingShortcutManager: ObservableObject {
                 actionButton: (
                     label: "Open Settings",
                     action: {
-                        PermissionManager.openInputMonitoringSettings()
+                        Task { @MainActor in
+                            PermissionGrantCoordinator.grantInputMonitoring()
+                        }
                     }
                 )
             )
@@ -396,7 +398,9 @@ class RecordingShortcutManager: ObservableObject {
                 actionButton: (
                     label: "Open Settings",
                     action: {
-                        PermissionManager.openAccessibilitySettings()
+                        Task { @MainActor in
+                            PermissionGrantCoordinator.grantAccessibility()
+                        }
                     }
                 )
             )

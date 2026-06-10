@@ -2,6 +2,8 @@
 
 ## v1.90 - Unreleased
 
+- Routed all permission grant buttons through the PermissionFlow-backed grant coordinator instead of direct System Settings URLs.
+
 ## v1.89 - 2026-06-10
 
 - Restored the real Developer ID signed, notarized, and stapled DMG workflow and removed the fake ad-hoc DMG artifact from the app-zip build.

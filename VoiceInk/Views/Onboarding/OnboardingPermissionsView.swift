@@ -1,7 +1,6 @@
 import SwiftUI
 import AVFoundation
 import AppKit
-import PermissionFlow
 
 struct OnboardingPermission: Identifiable {
     let id = UUID()
@@ -42,7 +41,6 @@ struct OnboardingPermissionsView: View {
     @State private var opacity: CGFloat = 0
     @State private var showModelDownload = false
     @State private var relaunchRequiredStates: [Bool] = [false, false, false, false, false, false]
-    @StateObject private var permissionFlowGuide = PermissionFlowGuide()
     
     private let permissions: [OnboardingPermission] = [
         OnboardingPermission(
@@ -356,15 +354,23 @@ struct OnboardingPermissionsView: View {
             moveToNext()
             
         case .accessibility:
-            let options: NSDictionary = [kAXTrustedCheckOptionPrompt.takeUnretainedValue() as String: true]
-            _ = AXIsProcessTrustedWithOptions(options)
-            permissionFlowGuide.open(.accessibility)
+            let permissionIndex = currentPermissionIndex
+            PermissionGrantCoordinator.grantAccessibility { granted in
+                permissionStates[permissionIndex] = granted
+                if granted {
+                    relaunchRequiredStates[permissionIndex] = false
+                    withAnimation {
+                        showAnimation = true
+                    }
+                }
+            }
             
             // Start checking for permission status
             Timer.scheduledTimer(withTimeInterval: 0.5, repeats: true) { timer in
                 if AXIsProcessTrusted() {
                     timer.invalidate()
-                    permissionStates[currentPermissionIndex] = true
+                    permissionStates[permissionIndex] = true
+                    relaunchRequiredStates[permissionIndex] = false
                     withAnimation {
                         showAnimation = true
                     }
@@ -373,11 +379,10 @@ struct OnboardingPermissionsView: View {
 
         case .inputMonitoring:
             relaunchRequiredStates[currentPermissionIndex] = false
-            let granted = ShortcutMonitor.requestListenEventAccess()
-            permissionStates[currentPermissionIndex] = granted || ShortcutMonitor.preflightListenEventAccess()
-            permissionFlowGuide.open(.inputMonitoring)
-
             let permissionIndex = currentPermissionIndex
+            PermissionGrantCoordinator.grantInputMonitoring { granted in
+                permissionStates[permissionIndex] = granted
+            }
             Timer.scheduledTimer(withTimeInterval: 0.5, repeats: true) { timer in
                 if ShortcutMonitor.preflightListenEventAccess() {
                     timer.invalidate()
@@ -395,7 +400,7 @@ struct OnboardingPermissionsView: View {
             
         case .screenRecording:
             relaunchRequiredStates[currentPermissionIndex] = false
-            permissionFlowGuide.open(.screenRecording)
+            PermissionGrantCoordinator.grantScreenRecording()
             
             let permissionIndex = currentPermissionIndex
             // Start checking for permission status
