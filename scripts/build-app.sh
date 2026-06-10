@@ -19,8 +19,7 @@ make setup
 require_entitlement() {
   local key="$1"
   local file="$2"
-  local key_path="${key//./\\.}"
-  plutil -extract "${key_path}" raw "${file}" >/dev/null
+  plutil -extract "${key}" raw "${file}" >/dev/null
 }
 
 plutil -lint "${ENTITLEMENTS_FILE}" >/dev/null
