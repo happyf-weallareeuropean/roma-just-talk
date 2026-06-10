@@ -9,8 +9,6 @@ DIST_DIR="${ROOT_DIR}/dist"
 PROOF_DIR="${DIST_DIR}/signing-proof"
 APP_BUNDLE="${DIST_DIR}/${APP_NAME}.app"
 ZIP_PATH="${DIST_DIR}/${APP_NAME}.app.zip"
-DMG_STAGING_DIR="${DIST_DIR}/dmg"
-DMG_PATH="${DIST_DIR}/${APP_NAME}.dmg"
 BUILT_APP="${DERIVED_DATA_PATH}/Build/Products/${CONFIGURATION}/${APP_NAME}.app"
 ENTITLEMENTS_FILE="${ROOT_DIR}/VoiceInk/VoiceInk.local.entitlements"
 
@@ -70,16 +68,8 @@ fi
 ditto -c -k --keepParent "${APP_BUNDLE}" "${ZIP_PATH}"
 shasum -a 256 "${ZIP_PATH}" | tee "${PROOF_DIR}/zip-sha256.txt"
 
-rm -rf "${DMG_STAGING_DIR}"
-mkdir -p "${DMG_STAGING_DIR}"
-ditto "${APP_BUNDLE}" "${DMG_STAGING_DIR}/${APP_NAME}.app"
-ln -s /Applications "${DMG_STAGING_DIR}/Applications"
-hdiutil create -volname "${APP_NAME}" -srcfolder "${DMG_STAGING_DIR}" -ov -format UDZO "${DMG_PATH}"
-shasum -a 256 "${DMG_PATH}" | tee "${PROOF_DIR}/dmg-sha256.txt"
-
 echo "Built ${APP_NAME} at:"
 echo "${APP_BUNDLE}"
 echo
 echo "Packaged:"
 echo "${ZIP_PATH}"
-echo "${DMG_PATH}"
