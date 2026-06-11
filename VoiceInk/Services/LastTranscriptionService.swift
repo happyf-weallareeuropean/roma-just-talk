@@ -78,7 +78,9 @@ class LastTranscriptionService: ObservableObject {
         
         let textToPaste = lastTranscription.text
 
-        CursorPaster.pasteAtCursor(textToPaste)
+        Task { @MainActor in
+            CursorPaster.pasteAtCursor(textForCursorPaste(textToPaste))
+        }
     }
     
     static func pasteLastEnhancement(from modelContext: ModelContext) {
@@ -101,7 +103,21 @@ class LastTranscriptionService: ObservableObject {
             }
         }()
 
-        CursorPaster.pasteAtCursor(textToPaste)
+        Task { @MainActor in
+            CursorPaster.pasteAtCursor(textForCursorPaste(textToPaste))
+        }
+    }
+
+    @MainActor
+    private static func textForCursorPaste(_ text: String) -> String {
+        guard !UserDefaults.standard.bool(forKey: "LowercaseTranscription") else {
+            return text
+        }
+
+        return ContextualCapitalizationFormatter.format(
+            text,
+            beforeCursor: CursorTextContextReader.textBeforeCursor()
+        )
     }
     
     static func retryLastTranscription(from modelContext: ModelContext, transcriptionModelManager: TranscriptionModelManager, serviceRegistry: TranscriptionServiceRegistry, enhancementService: AIEnhancementService?) {

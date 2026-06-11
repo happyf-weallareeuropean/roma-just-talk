@@ -215,6 +215,14 @@ class TranscriptionPipeline {
 
         if var textToPaste = finalPastedText,
            transcription.transcriptionStatus == TranscriptionStatus.completed.rawValue {
+            let shouldLowercase = UserDefaults.standard.bool(forKey: "LowercaseTranscription")
+            if !shouldLowercase {
+                textToPaste = ContextualCapitalizationFormatter.format(
+                    textToPaste,
+                    beforeCursor: CursorTextContextReader.textBeforeCursor()
+                )
+            }
+
             if case .trialExpired = licenseViewModel.licenseState {
                 textToPaste = """
                     Your trial has expired. Upgrade to VoiceInk Pro at tryvoiceink.com/buy

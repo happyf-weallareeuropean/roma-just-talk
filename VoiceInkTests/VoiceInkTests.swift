@@ -21,6 +21,42 @@ struct VoiceInkTests {
         #expect(AppDefaults.registeredDefaults[SpecialShortcutSettings.pasteLastTranscriptOnEmptyTapKey] as? Bool == true)
     }
 
+    @Test func contextualCapitalizationLowercasesTitlecaseTextAfterMidSentencePrefix() async throws {
+        let result = ContextualCapitalizationFormatter.format(
+            "Model output",
+            beforeCursor: "this is the "
+        )
+
+        #expect(result == "model output")
+    }
+
+    @Test func contextualCapitalizationKeepsTitlecaseTextAfterSentenceBoundary() async throws {
+        let result = ContextualCapitalizationFormatter.format(
+            "Model output",
+            beforeCursor: "this is done. "
+        )
+
+        #expect(result == "Model output")
+    }
+
+    @Test func contextualCapitalizationCapitalizesLowercaseTextAtDocumentStart() async throws {
+        let result = ContextualCapitalizationFormatter.format(
+            "model output",
+            beforeCursor: ""
+        )
+
+        #expect(result == "Model output")
+    }
+
+    @Test func contextualCapitalizationPreservesAcronymsAfterMidSentencePrefix() async throws {
+        let result = ContextualCapitalizationFormatter.format(
+            "API response",
+            beforeCursor: "call the "
+        )
+
+        #expect(result == "API response")
+    }
+
     @Test func resolvesAPIKeyEnvironmentReference() async throws {
         let environment = ["ELEVENLABS_API_KEY": "test-key"]
 
