@@ -424,32 +424,16 @@ struct MetricCardBackground: View {
     let color: Color
     
     var body: some View {
-        RoundedRectangle(cornerRadius: 12)
-            .fill(
-                LinearGradient(
-                    gradient: Gradient(stops: [
-                        .init(color: color.opacity(0.15), location: 0),
-                        .init(color: Color(NSColor.windowBackgroundColor).opacity(0.1), location: 0.6)
-                    ]),
-                    startPoint: .top,
-                    endPoint: .bottom
-                )
-            )
-            .overlay(
-                RoundedRectangle(cornerRadius: 12)
-                    .stroke(
-                        LinearGradient(
-                            gradient: Gradient(colors: [
-                                Color(NSColor.quaternaryLabelColor).opacity(0.3),
-                                Color(NSColor.quaternaryLabelColor).opacity(0.1)
-                            ]),
-                            startPoint: .top,
-                            endPoint: .bottom
-                        ),
-                        lineWidth: 1
-                    )
-            )
-            .shadow(color: Color.black.opacity(0.05), radius: 5, y: 3)
+        RoundedRectangle(cornerRadius: 12, style: .continuous)
+            .fill(.regularMaterial)
+            .overlay {
+                RoundedRectangle(cornerRadius: 12, style: .continuous)
+                    .fill(color.opacity(0.08))
+            }
+            .overlay {
+                RoundedRectangle(cornerRadius: 12, style: .continuous)
+                    .strokeBorder(Color(NSColor.separatorColor).opacity(0.35), lineWidth: 1)
+            }
     }
 }
 

@@ -79,32 +79,33 @@ struct ContentView: View {
         NavigationSplitView {
             List(selection: $selectedView) {
                 Section {
-                    // App Header
-                    HStack(spacing: 6) {
+                    HStack(spacing: 10) {
                         if let appIcon = NSImage(named: "AppIcon") {
                             Image(nsImage: appIcon)
                                 .resizable()
                                 .aspectRatio(contentMode: .fit)
-                                .frame(width: 28, height: 28)
-                                .cornerRadius(8)
+                                .frame(width: 30, height: 30)
+                                .clipShape(RoundedRectangle(cornerRadius: 8, style: .continuous))
                         }
 
-                        Text("roma-just-talk")
-                            .font(.system(size: 14, weight: .semibold))
+                        VStack(alignment: .leading, spacing: 1) {
+                            Text("roma-just-talk")
+                                .font(.system(size: 14, weight: .semibold))
+
+                            Text("speak before hotkey")
+                                .font(.system(size: 11, weight: .medium))
+                                .foregroundStyle(.secondary)
+                        }
 
                         if case .licensed = licenseViewModel.licenseState {
-                            Text("PRO")
-                                .font(.system(size: 9, weight: .heavy))
-                                .foregroundStyle(.white)
-                                .padding(.horizontal, 4)
-                                .padding(.vertical, 2)
-                                .background(Color.blue)
-                                .cornerRadius(4)
+                            ProBadge()
                         }
 
                         Spacer()
                     }
-                    .padding(.vertical, 4)
+                    .padding(.vertical, 8)
+                    .listRowInsets(EdgeInsets(top: 2, leading: 2, bottom: 8, trailing: 8))
+                    .listRowSeparator(.hidden)
                 }
 
                 ForEach(visibleViewTypes) { viewType in
@@ -118,6 +119,7 @@ struct ContentView: View {
                 }
             }
             .listStyle(.sidebar)
+            .scrollContentBackground(.hidden)
             .navigationTitle("roma-just-talk")
             .navigationSplitViewColumnWidth(210)
         } detail: {

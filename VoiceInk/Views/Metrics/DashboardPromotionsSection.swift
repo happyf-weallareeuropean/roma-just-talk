@@ -95,36 +95,27 @@ private struct DashboardPromotionCard: View {
     let actionIcon: String
     let action: () -> Void
     var onDismiss: (() -> Void)? = nil
-
-    private static let defaultGradient: LinearGradient = LinearGradient(
-        colors: [
-            Color(red: 0.08, green: 0.48, blue: 0.85),
-            Color(red: 0.05, green: 0.18, blue: 0.42)
-        ],
-        startPoint: .topLeading,
-        endPoint: .bottomTrailing
-    )
     
     var body: some View {
         ZStack(alignment: .topTrailing) {
-            VStack(alignment: .leading, spacing: 14) {
+            VStack(alignment: .leading, spacing: 13) {
                 Text(badge.uppercased())
-                    .font(.system(size: 11, weight: .heavy))
-                    .tracking(0.8)
-                    .padding(.horizontal, 12)
-                    .padding(.vertical, 6)
-                    .background(.white.opacity(0.2))
+                    .font(.system(size: 10, weight: .bold))
+                    .tracking(0.4)
+                    .padding(.horizontal, 10)
+                    .padding(.vertical, 5)
+                    .background(Color.accentColor.opacity(0.12))
                     .clipShape(Capsule())
-                    .foregroundColor(.white)
+                    .foregroundStyle(.secondary)
 
                 Text(title)
-                    .font(.system(size: 20, weight: .heavy, design: .rounded))
-                    .foregroundColor(.white)
+                    .font(.system(size: 18, weight: .semibold, design: .rounded))
+                    .foregroundColor(.primary)
                     .fixedSize(horizontal: false, vertical: true)
 
                 Text(message)
                     .font(.system(size: 13, weight: .medium))
-                    .foregroundColor(.white.opacity(0.85))
+                    .foregroundColor(.secondary)
                     .fixedSize(horizontal: false, vertical: true)
 
                 Button(action: action) {
@@ -133,11 +124,11 @@ private struct DashboardPromotionCard: View {
                         Image(systemName: actionIcon)
                     }
                     .font(.system(size: 13, weight: .semibold))
-                    .padding(.horizontal, 16)
-                    .padding(.vertical, 9)
-                    .background(.white.opacity(0.22))
+                    .padding(.horizontal, 14)
+                    .padding(.vertical, 8)
+                    .background(Color.accentColor.opacity(0.12))
                     .clipShape(Capsule())
-                    .foregroundColor(.white)
+                    .foregroundColor(.accentColor)
                 }
                 .buttonStyle(.plain)
             }
@@ -148,22 +139,13 @@ private struct DashboardPromotionCard: View {
                 Button(action: onDismiss) {
                     Image(systemName: "xmark.circle.fill")
                         .font(.system(size: 18, weight: .medium))
-                        .foregroundColor(.white.opacity(0.7))
+                        .foregroundStyle(.secondary)
                 }
                 .buttonStyle(.plain)
                 .padding(12)
                 .help("Dismiss this promotion")
             }
         }
-        .background(
-            RoundedRectangle(cornerRadius: 28, style: .continuous)
-                .fill(Self.defaultGradient)
-        )
-        .clipShape(RoundedRectangle(cornerRadius: 28, style: .continuous))
-        .overlay(
-            RoundedRectangle(cornerRadius: 28, style: .continuous)
-                .stroke(.white.opacity(0.08), lineWidth: 1)
-        )
-        .shadow(color: glowColor.opacity(0.15), radius: 12, x: 0, y: 8)
+        .background(CardBackground(isSelected: false, cornerRadius: 22))
     }
 }

@@ -274,21 +274,15 @@ struct PermissionCard: View {
                     .padding()
                     .frame(maxWidth: .infinity)
                     .background(
-                        LinearGradient(
-                            colors: [Color.accentColor, Color.accentColor.opacity(0.8)],
-                            startPoint: .leading,
-                            endPoint: .trailing
-                        )
+                        RoundedRectangle(cornerRadius: 10, style: .continuous)
+                            .fill(Color.accentColor)
                     )
-                    .cornerRadius(10)
                 }
                 .buttonStyle(.plain)
             }
         }
         .padding()
-        .background(CardBackground(isSelected: false))
-        .cornerRadius(16)
-        .shadow(color: Color.black.opacity(0.05), radius: 5, y: 2)
+        .background(CardBackground(isSelected: false, cornerRadius: 18))
     }
 }
 
@@ -394,7 +388,7 @@ struct PermissionsView: View {
             }
             .padding(24)
         }
-        .background(Color(NSColor.controlBackgroundColor))
+        .background(Color(NSColor.windowBackgroundColor))
         .onAppear {
             permissionManager.checkAllPermissions()
         }

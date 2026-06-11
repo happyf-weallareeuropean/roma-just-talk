@@ -10,12 +10,12 @@ struct CompactHeroSection: View {
         VStack(spacing: 16) {
             Image(systemName: icon)
                 .font(.system(size: 28))
-                .foregroundStyle(.blue)
+                .foregroundStyle(Color.accentColor)
                 .symbolRenderingMode(.hierarchical)
 
             VStack(spacing: 6) {
                 Text(title)
-                    .font(.system(size: 22, weight: .bold))
+                    .font(.system(size: 22, weight: .semibold))
                 Text(description)
                     .font(.system(size: 14))
                     .foregroundStyle(.secondary)

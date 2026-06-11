@@ -45,6 +45,6 @@ struct MetricsView: View {
                 licenseState: licenseViewModel.licenseState
             )
         }
-        .background(Color(.controlBackgroundColor))
+        .background(Color(.windowBackgroundColor))
     }
 }

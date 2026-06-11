@@ -4,8 +4,8 @@ struct HelpAndResourcesSection: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 14) {
             Text("Help & Resources")
-                .font(.system(size: 20, weight: .bold, design: .rounded))
-                .foregroundColor(.primary.opacity(0.8))
+                .font(.system(size: 18, weight: .semibold, design: .rounded))
+                .foregroundColor(.primary)
 
             VStack(alignment: .leading, spacing: 10) {
                 resourceLink(
@@ -36,14 +36,8 @@ struct HelpAndResourcesSection: View {
             }
         }
         .padding(18)
-        .background(
-            RoundedRectangle(cornerRadius: 28, style: .continuous)
-                .fill(Color(nsColor: .windowBackgroundColor))
-        )
-        .overlay(
-            RoundedRectangle(cornerRadius: 28, style: .continuous)
-                .stroke(Color.primary.opacity(0.1), lineWidth: 1)
-        )
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .background(CardBackground(isSelected: false, cornerRadius: 22))
     }
     
     private func resourceLink(icon: String, title: String, url: String? = nil, action: (() -> Void)? = nil) -> some View {
@@ -57,7 +51,7 @@ struct HelpAndResourcesSection: View {
             HStack {
                 Image(systemName: icon)
                     .font(.system(size: 15, weight: .medium))
-                    .foregroundColor(.accentColor)
+                    .foregroundStyle(Color.accentColor)
                     .frame(width: 20)
                 
                 Text(title)
@@ -67,10 +61,11 @@ struct HelpAndResourcesSection: View {
                 Spacer()
                 
                 Image(systemName: "arrow.up.right")
-                    .foregroundColor(.secondary)
+                    .font(.system(size: 11, weight: .semibold))
+                    .foregroundStyle(.tertiary)
             }
             .padding(12)
-            .background(Color.primary.opacity(0.05))
+            .background(.thinMaterial)
             .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
 
         }

@@ -2,6 +2,7 @@
 
 ## v1.91 - Unreleased
 
+- Polished the app shell and dashboard with cleaner native glass surfaces, quieter accent use, and a less marketing-heavy metrics layout.
 - Added cursor-context capitalization for dictation paste so mid-sentence inserts lower an auto-capitalized first word while sentence starts stay capitalized.
 - Fixed Special shortcut typing detection so fast held Shift chords such as `Shift` down, `S` down, `Shift` up reliably cancel instead of pasting last text or committing an empty recording.
 - Added an Auto/On/Off real-time transcription policy with cloud and low-battery rules, plus local Silero VAD gating before streaming audio chunks reach the transcription model.

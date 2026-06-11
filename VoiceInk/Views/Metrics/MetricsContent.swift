@@ -70,6 +70,7 @@ private enum DashboardMetricsLoader {
 
 struct MetricsContent: View {
     private let logger = Logger(subsystem: "com.prakashjoshipax.voiceink", category: "MetricsContent")
+    @Environment(\.colorScheme) private var colorScheme
     let modelContext: ModelContext
     let licenseState: LicenseViewModel.LicenseState
 
@@ -106,7 +107,7 @@ struct MetricsContent: View {
 
                             heroSection
                             metricsSection
-                            HStack(alignment: .top, spacing: 18) {
+                            HStack(alignment: .top, spacing: 16) {
                                 HelpAndResourcesSection()
                                 DashboardPromotionsSection(licenseState: licenseState)
                             }
@@ -122,7 +123,7 @@ struct MetricsContent: View {
                         .padding(.vertical, 28)
                         .padding(.horizontal, 32)
                     }
-                    .background(Color(.windowBackgroundColor))
+                    .background(dashboardBackground)
                 }
             }
         }
@@ -231,86 +232,102 @@ struct MetricsContent: View {
 
                     VStack(spacing: 20) {
                         Image(systemName: "waveform")
-                            .font(.system(size: 56, weight: .semibold))
-                            .foregroundColor(.secondary)
-                        Text("No Recorder Sessions Yet")
+                            .font(.system(size: 44, weight: .semibold))
+                            .foregroundStyle(.secondary)
+                        Text("No sessions yet")
                             .font(.title3.weight(.semibold))
-                        Text("Start your first recording to unlock value insights.")
+                        Text("Start a recording; your dictation rhythm will show here.")
                             .foregroundColor(.secondary)
                     }
+                    .padding(34)
+                    .frame(maxWidth: 420)
+                    .background(CardBackground(isSelected: false, cornerRadius: 22))
                     .frame(maxWidth: .infinity)
                     .frame(minHeight: geometry.size.height - 56)
                 }
                 .padding(.vertical, 28)
                 .padding(.horizontal, 32)
             }
-            .background(Color(.windowBackgroundColor))
+            .background(dashboardBackground)
         }
     }
     
     // MARK: - Sections
     
     private var heroSection: some View {
-        VStack(spacing: 10) {
-            HStack {
-                Spacer(minLength: 0)
-
-                if hasLoadedMetricsSnapshot {
-                    (Text("You have saved ")
-                        .fontWeight(.bold)
-                        .foregroundColor(.white.opacity(0.85))
-                     +
-                     Text(formattedTimeSaved)
-                        .fontWeight(.black)
-                        .font(.system(size: 36, design: .rounded))
-                        .foregroundStyle(.white)
-                     +
-                     Text(" with VoiceInk")
-                        .fontWeight(.bold)
-                        .foregroundColor(.white.opacity(0.85))
-                    )
-                    .font(.system(size: 30))
-                    .multilineTextAlignment(.center)
-                } else {
-                    Text("VoiceInk Insights")
-                        .font(.system(size: 32, weight: .black, design: .rounded))
-                        .foregroundStyle(.white)
-                        .multilineTextAlignment(.center)
-                }
-                
-                Spacer(minLength: 0)
+        ViewThatFits(in: .horizontal) {
+            HStack(alignment: .bottom, spacing: 24) {
+                heroCopy
+                Spacer(minLength: 16)
+                heroStatBlock
             }
-            .lineLimit(1)
-            .minimumScaleFactor(0.5)
-            
-            Text(heroSubtitle)
-                .font(.system(size: 15, weight: .medium))
-                .foregroundColor(.white.opacity(0.85))
-                .multilineTextAlignment(.center)
-                .frame(maxWidth: .infinity)
-            
+
+            VStack(alignment: .leading, spacing: 22) {
+                heroCopy
+                heroStatBlock
+            }
         }
-        .padding(28)
+        .padding(24)
         .frame(maxWidth: .infinity)
-        .background(
-            RoundedRectangle(cornerRadius: 24, style: .continuous)
-                .fill(heroGradient)
-        )
-        .overlay(
-            RoundedRectangle(cornerRadius: 24, style: .continuous)
-                .strokeBorder(Color.white.opacity(0.1), lineWidth: 1)
-        )
-        .shadow(color: Color.black.opacity(0.08), radius: 30, x: 0, y: 16)
+        .background(CardBackground(isSelected: true, cornerRadius: 24))
     }
-    
+
+    private var heroCopy: some View {
+        VStack(alignment: .leading, spacing: 8) {
+            Text("Dashboard")
+                .font(.system(size: 12, weight: .semibold))
+                .foregroundStyle(.secondary)
+                .textCase(.uppercase)
+                .tracking(0.4)
+
+            Text(hasLoadedMetricsSnapshot ? formattedTimeSaved : "Ready when you are")
+                .font(.system(size: 36, weight: .semibold, design: .rounded))
+                .foregroundStyle(.primary)
+                .lineLimit(1)
+                .minimumScaleFactor(0.6)
+
+            Text(heroSubtitle)
+                .font(.system(size: 14, weight: .medium))
+                .foregroundStyle(.secondary)
+                .lineLimit(2)
+                .fixedSize(horizontal: false, vertical: true)
+        }
+        .frame(maxWidth: 560, alignment: .leading)
+    }
+
+    private var heroStatBlock: some View {
+        HStack(spacing: 10) {
+            heroPill(title: "Sessions", value: hasLoadedMetricsSnapshot ? Formatters.formattedNumber(totalCount) : "–")
+            heroPill(title: "Words", value: hasLoadedMetricsSnapshot ? Formatters.formattedNumber(totalWords) : "–")
+        }
+        .frame(maxWidth: 280, alignment: .trailing)
+    }
+
+    private func heroPill(title: String, value: String) -> some View {
+        VStack(alignment: .leading, spacing: 4) {
+            Text(title)
+                .font(.system(size: 11, weight: .medium))
+                .foregroundStyle(.secondary)
+
+            Text(value)
+                .font(.system(size: 18, weight: .semibold, design: .rounded))
+                .lineLimit(1)
+                .minimumScaleFactor(0.65)
+        }
+        .padding(.horizontal, 14)
+        .padding(.vertical, 10)
+        .frame(minWidth: 112, alignment: .leading)
+        .background(CardBackground(isSelected: false, cornerRadius: 14))
+    }
+
     private var metricsSection: some View {
-        LazyVGrid(columns: [GridItem(.adaptive(minimum: 240), spacing: 16)], spacing: 16) {
+        LazyVGrid(columns: [GridItem(.adaptive(minimum: 210), spacing: 14)], spacing: 14) {
             MetricCard(
                 icon: "mic.fill",
                 title: "Sessions Recorded",
                 value: hasLoadedMetricsSnapshot ? "\(totalCount)" : "–",
-                detail: "VoiceInk sessions completed",
-                color: .purple
+                detail: "recordings completed",
+                color: metricAccent
             )
 
             MetricCard(
@@ -318,7 +335,7 @@ struct MetricsContent: View {
                 title: "Words Dictated",
                 value: hasLoadedMetricsSnapshot ? Formatters.formattedNumber(totalWords) : "–",
                 detail: "words generated",
-                color: Color(nsColor: .controlAccentColor)
+                color: metricAccent
             )
             
             MetricCard(
@@ -327,8 +344,8 @@ struct MetricsContent: View {
                 value: hasLoadedMetricsSnapshot && averageWordsPerMinute > 0
                     ? String(format: "%.1f", averageWordsPerMinute)
                     : "–",
-                detail: "VoiceInk vs. typing by hand",
-                color: .yellow
+                detail: "dictation pace",
+                color: metricAccent
             )
             
             MetricCard(
@@ -336,7 +353,7 @@ struct MetricsContent: View {
                 title: "Keystrokes Saved",
                 value: hasLoadedMetricsSnapshot ? Formatters.formattedNumber(totalKeystrokesSaved) : "–",
                 detail: "fewer keystrokes",
-                color: .orange
+                color: metricAccent
             )
         }
     }
@@ -353,7 +370,7 @@ struct MetricsContent: View {
                 .font(.system(size: 13, weight: .medium))
                 .padding(.horizontal, 12)
                 .padding(.vertical, 8)
-                .background(Capsule().fill(.thinMaterial))
+                .background(Capsule(style: .continuous).fill(.thinMaterial))
             }
             .buttonStyle(.plain)
             .help("View transcription and enhancement model performance")
@@ -372,7 +389,7 @@ struct MetricsContent: View {
         }
 
         guard totalCount > 0 else {
-            return "Your VoiceInk journey starts with your first recording."
+            return "Your first roma-just-talk recording starts the timeline."
         }
 
         let wordsText = Formatters.formattedNumber(totalWords)
@@ -380,17 +397,23 @@ struct MetricsContent: View {
 
         return "Dictated \(wordsText) words across \(totalCount) \(sessionText)."
     }
-    
-    private var heroGradient: LinearGradient {
-        LinearGradient(
-            gradient: Gradient(colors: [
-                Color(nsColor: .controlAccentColor),
-                Color(nsColor: .controlAccentColor).opacity(0.85),
-                Color(nsColor: .controlAccentColor).opacity(0.7)
-            ]),
-            startPoint: .topLeading,
-            endPoint: .bottomTrailing
-        )
+
+    private var metricAccent: Color {
+        Color(nsColor: .controlAccentColor)
+    }
+
+    private var dashboardBackground: some View {
+        ZStack {
+            Color(NSColor.windowBackgroundColor)
+            LinearGradient(
+                colors: [
+                    Color(nsColor: .controlAccentColor).opacity(colorScheme == .dark ? 0.08 : 0.05),
+                    Color.clear
+                ],
+                startPoint: .topLeading,
+                endPoint: .bottomTrailing
+            )
+        }
     }
     
     // MARK: - Computed Metrics
@@ -459,7 +482,7 @@ private struct CopySystemInfoButton: View {
             .font(.system(size: 13, weight: .medium))
             .padding(.horizontal, 12)
             .padding(.vertical, 8)
-            .background(Capsule().fill(.thinMaterial))
+            .background(Capsule(style: .continuous).fill(.thinMaterial))
         }
         .buttonStyle(.plain)
         .scaleEffect(isCopied ? 1.1 : 1.0)

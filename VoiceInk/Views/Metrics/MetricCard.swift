@@ -6,29 +6,35 @@ struct MetricCard: View {
     let value: String
     let detail: String?
     let color: Color
+
+    @Environment(\.colorScheme) private var colorScheme
     
     var body: some View {
-        VStack(alignment: .leading, spacing: 12) {
+        VStack(alignment: .leading, spacing: 14) {
             HStack(alignment: .center, spacing: 12) {
                 ZStack {
-                    RoundedRectangle(cornerRadius: 10, style: .continuous)
-                        .fill(color.opacity(0.15))
+                    RoundedRectangle(cornerRadius: 9, style: .continuous)
+                        .fill(color.opacity(colorScheme == .dark ? 0.18 : 0.10))
+                        .overlay(
+                            RoundedRectangle(cornerRadius: 9, style: .continuous)
+                                .strokeBorder(color.opacity(0.16), lineWidth: 1)
+                        )
                     Image(systemName: icon)
-                        .resizable()
-                        .scaledToFit()
-                        .frame(width: 18, height: 18)
-                        .foregroundColor(color)
+                        .font(.system(size: 16, weight: .semibold))
+                        .foregroundStyle(color)
+                        .symbolRenderingMode(.hierarchical)
                 }
                 .frame(width: 34, height: 34)
                 
                 Text(title)
                     .font(.system(size: 13, weight: .semibold))
+                    .foregroundStyle(.secondary)
                     .lineLimit(1)
                     .minimumScaleFactor(0.8)
             }
             
             Text(value)
-                .font(.system(size: 24, weight: .black, design: .rounded))
+                .font(.system(size: 28, weight: .semibold, design: .rounded))
                 .lineLimit(1)
                 .minimumScaleFactor(0.6)
             
@@ -42,10 +48,8 @@ struct MetricCard: View {
             }
         }
         .frame(maxWidth: .infinity, alignment: .topLeading)
+        .frame(minHeight: 132, alignment: .topLeading)
         .padding(16)
-        .background(
-            RoundedRectangle(cornerRadius: 16, style: .continuous)
-                .fill(.thinMaterial)
-        )
+        .background(CardBackground(isSelected: false))
     }
 }
