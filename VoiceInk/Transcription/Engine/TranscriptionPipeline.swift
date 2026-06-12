@@ -213,7 +213,10 @@ class TranscriptionPipeline {
             return
         }
 
-        if var textToPaste = finalPastedText,
+        if SpecialShortcutEmptyTranscriptionFallback.consumeIfNeeded(for: transcription, modelContext: modelContext) {
+            SoundManager.shared.playStopSound()
+            await restorePromptDetectionSettingsAndDismiss()
+        } else if var textToPaste = finalPastedText,
            transcription.transcriptionStatus == TranscriptionStatus.completed.rawValue {
             let shouldLowercase = UserDefaults.standard.bool(forKey: "LowercaseTranscription")
             if !shouldLowercase {

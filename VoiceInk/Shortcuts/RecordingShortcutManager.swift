@@ -192,12 +192,6 @@ class RecordingShortcutManager: ObservableObject {
             },
             cancelRecording: {
                 await recorderUIManager.cancelRecording()
-            },
-            discardRecording: {
-                await recorderUIManager.cancelRecording(saveCanceledTranscription: false)
-            },
-            pasteLastTranscription: {
-                LastTranscriptionService.pasteLastTranscription(from: engine.modelContext)
             }
         )
 
@@ -532,8 +526,6 @@ final class RecordingShortcutModeHandler {
     private let recordingState: @MainActor () -> RecordingState
     private let toggleMiniRecorder: @MainActor (UUID?) async -> Void
     private let cancelRecording: @MainActor () async -> Void
-    private let discardRecording: @MainActor () async -> Void
-    private let pasteLastTranscription: @MainActor () -> Void
 
     private var shortcutPressStartTime: TimeInterval?
     private var isHandsFreeRecording = false
@@ -546,7 +538,6 @@ final class RecordingShortcutModeHandler {
 
     private let shortcutPressCooldown: TimeInterval = 0.5
     private let hybridPressThreshold: TimeInterval = 0.5
-    private let emptyTapThreshold: TimeInterval = 0.32
 
     init(
         logger: Logger,
@@ -554,9 +545,7 @@ final class RecordingShortcutModeHandler {
         isRecorderVisible: @escaping @MainActor () -> Bool,
         recordingState: @escaping @MainActor () -> RecordingState,
         toggleMiniRecorder: @escaping @MainActor (UUID?) async -> Void,
-        cancelRecording: @escaping @MainActor () async -> Void,
-        discardRecording: @escaping @MainActor () async -> Void = {},
-        pasteLastTranscription: @escaping @MainActor () -> Void = {}
+        cancelRecording: @escaping @MainActor () async -> Void
     ) {
         self.logger = logger
         self.canHandleShortcutAction = canHandleShortcutAction
@@ -564,8 +553,6 @@ final class RecordingShortcutModeHandler {
         self.recordingState = recordingState
         self.toggleMiniRecorder = toggleMiniRecorder
         self.cancelRecording = cancelRecording
-        self.discardRecording = discardRecording
-        self.pasteLastTranscription = pasteLastTranscription
     }
 
     func reset() {
@@ -655,18 +642,19 @@ final class RecordingShortcutModeHandler {
                 if isRecorderVisible() {
                     await cancelRecording()
                 }
-            } else if options.pasteLastTranscriptOnEmptyTap,
-                      isEmptyTap(pressDuration: pressDuration) {
-                logger.notice("handleShortcutKeyUp: pasting last transcription for empty special tap")
-                pasteLastTranscription()
-                if isRecorderVisible() {
-                    await discardRecording()
-                }
             } else if isRecorderVisible() {
                 guard canHandleShortcutAction() else { return }
+                if options.pasteLastTranscriptOnEmptyTap,
+                   SpecialShortcutEmptyTranscriptionFallback.shouldFallback(pressDuration: pressDuration) {
+                    SpecialShortcutEmptyTranscriptionFallback.scheduleFallback()
+                }
                 logger.notice("handleShortcutKeyUp: stopping recording (special shortcut, duration=\(pressDuration, privacy: .public)s)")
                 await toggleMiniRecorder(powerModeId)
             } else if options.keyDownBehavior == .preloadOnly {
+                if options.pasteLastTranscriptOnEmptyTap,
+                   SpecialShortcutEmptyTranscriptionFallback.shouldFallback(pressDuration: pressDuration) {
+                    SpecialShortcutEmptyTranscriptionFallback.scheduleFallback()
+                }
                 logger.notice("handleShortcutKeyUp: committing preloaded special shortcut")
                 await commitPreloadedSpecialShortcut(powerModeId: powerModeId)
             }
@@ -713,10 +701,6 @@ final class RecordingShortcutModeHandler {
 
     private var canCurrentShortcutPressCancelAccidentalStart: Bool {
         !isRecorderVisible() && recordingState() == .idle
-    }
-
-    private func isEmptyTap(pressDuration: TimeInterval) -> Bool {
-        pressDuration < emptyTapThreshold
     }
 
     private func startRecordingIfNeeded(mode: RecordingShortcutManager.Mode, powerModeId: UUID?) async {

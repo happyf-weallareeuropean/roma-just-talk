@@ -219,12 +219,13 @@ struct VoiceInkTests {
         #expect(!sessionActive)
     }
 
-    @Test @MainActor func specialModeEmptyTapPastesLastImmediatelyAndDiscardsRecording() async throws {
+    @Test @MainActor func specialModeEmptyTapStopsRecordingBeforeFallbackInsteadOfImmediatePaste() async throws {
+        SpecialShortcutEmptyTranscriptionFallback.resetForTesting()
+        defer { SpecialShortcutEmptyTranscriptionFallback.resetForTesting() }
+
         var sessionActive = false
         var toggleCount = 0
         var cancelCount = 0
-        var discardCount = 0
-        var pasteCount = 0
 
         let handler = RecordingShortcutModeHandler(
             logger: Logger(subsystem: "VoiceInkTests", category: "RecordingShortcutModeHandler"),
@@ -238,13 +239,6 @@ struct VoiceInkTests {
             cancelRecording: {
                 cancelCount += 1
                 sessionActive = false
-            },
-            discardRecording: {
-                discardCount += 1
-                sessionActive = false
-            },
-            pasteLastTranscription: {
-                pasteCount += 1
             }
         )
 
@@ -268,31 +262,37 @@ struct VoiceInkTests {
             specialOptions: specialOptions
         )
 
-        #expect(pasteCount == 1)
-        #expect(toggleCount == 1)
+        #expect(toggleCount == 2)
         #expect(cancelCount == 0)
-        #expect(discardCount == 1)
         #expect(!sessionActive)
     }
 
-    @Test @MainActor func specialModePreloadOnlyEmptyTapPastesLastWithoutCommit() async throws {
+    @Test @MainActor func specialModePreloadOnlyEmptyTapCommitsBeforeFallback() async throws {
+        SpecialShortcutEmptyTranscriptionFallback.resetForTesting()
+        defer { SpecialShortcutEmptyTranscriptionFallback.resetForTesting() }
+
+        var recordingState = RecordingState.idle
+        var sessionActive = false
         var toggleCount = 0
-        var cancelCount = 0
-        var pasteCount = 0
 
         let handler = RecordingShortcutModeHandler(
             logger: Logger(subsystem: "VoiceInkTests", category: "RecordingShortcutModeHandler"),
             canHandleShortcutAction: { true },
-            isRecorderVisible: { false },
-            recordingState: { .idle },
+            isRecorderVisible: { sessionActive },
+            recordingState: { recordingState },
             toggleMiniRecorder: { _ in
                 toggleCount += 1
+                if recordingState == .idle {
+                    recordingState = .recording
+                    sessionActive = true
+                } else {
+                    recordingState = .transcribing
+                    sessionActive = true
+                }
             },
             cancelRecording: {
-                cancelCount += 1
-            },
-            pasteLastTranscription: {
-                pasteCount += 1
+                recordingState = .idle
+                sessionActive = false
             }
         )
 
@@ -316,9 +316,8 @@ struct VoiceInkTests {
             specialOptions: specialOptions
         )
 
-        #expect(pasteCount == 1)
-        #expect(toggleCount == 0)
-        #expect(cancelCount == 0)
+        #expect(toggleCount == 2)
+        #expect(recordingState == .transcribing)
     }
 
     @Test func inputMonitoringPermissionUsesInjectedSystemClient() async throws {
@@ -601,7 +600,6 @@ struct VoiceInkTests {
         var sessionActive = false
         var toggleCount = 0
         var cancelCount = 0
-        var pasteCount = 0
 
         let handler = RecordingShortcutModeHandler(
             logger: Logger(subsystem: "VoiceInkTests", category: "RecordingShortcutModeHandler"),
@@ -615,9 +613,6 @@ struct VoiceInkTests {
             cancelRecording: {
                 cancelCount += 1
                 sessionActive = false
-            },
-            pasteLastTranscription: {
-                pasteCount += 1
             }
         )
 
@@ -644,7 +639,6 @@ struct VoiceInkTests {
 
         #expect(toggleCount == 1)
         #expect(cancelCount == 1)
-        #expect(pasteCount == 0)
         #expect(!sessionActive)
     }
 

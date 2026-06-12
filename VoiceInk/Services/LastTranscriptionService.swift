@@ -3,7 +3,7 @@ import SwiftData
 
 class LastTranscriptionService: ObservableObject {
     
-    static func getLastTranscription(from modelContext: ModelContext) -> Transcription? {
+    static func getLastTranscription(from modelContext: ModelContext, excluding excludedID: UUID? = nil) -> Transcription? {
         var descriptor = FetchDescriptor<Transcription>(
             sortBy: [SortDescriptor(\.timestamp, order: .reverse)]
         )
@@ -12,7 +12,7 @@ class LastTranscriptionService: ObservableObject {
         do {
             let transcriptions = try modelContext.fetch(descriptor)
             return transcriptions.first { transcription in
-                isPasteable(transcription)
+                transcription.id != excludedID && isPasteable(transcription)
             }
         } catch {
             print("Error fetching last transcription: \(error)")
@@ -65,8 +65,8 @@ class LastTranscriptionService: ObservableObject {
         }
     }
 
-    static func pasteLastTranscription(from modelContext: ModelContext) {
-        guard let lastTranscription = getLastTranscription(from: modelContext) else {
+    static func pasteLastTranscription(from modelContext: ModelContext, excluding excludedID: UUID? = nil) {
+        guard let lastTranscription = getLastTranscription(from: modelContext, excluding: excludedID) else {
             Task { @MainActor in
                 NotificationManager.shared.showNotification(
                     title: "No transcription available",
@@ -163,5 +163,47 @@ class LastTranscriptionService: ObservableObject {
                 )
             }
         }
+    }
+}
+
+@MainActor
+enum SpecialShortcutEmptyTranscriptionFallback {
+    private struct PendingFallback {
+        let createdAt: Date
+    }
+
+    private static var pendingFallback: PendingFallback?
+    private static let emptyTapThreshold: TimeInterval = 0.32
+    private static let fallbackLifetime: TimeInterval = 30
+
+    static func shouldFallback(pressDuration: TimeInterval) -> Bool {
+        pressDuration < emptyTapThreshold
+    }
+
+    static func scheduleFallback() {
+        pendingFallback = PendingFallback(createdAt: Date())
+    }
+
+    static func resetForTesting() {
+        pendingFallback = nil
+    }
+
+    static func consumeIfNeeded(for transcription: Transcription, modelContext: ModelContext) -> Bool {
+        guard let pendingFallback else {
+            return false
+        }
+
+        self.pendingFallback = nil
+
+        guard Date().timeIntervalSince(pendingFallback.createdAt) <= fallbackLifetime,
+              transcription.transcriptionStatus == TranscriptionStatus.completed.rawValue,
+              transcription.text.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty,
+              transcription.enhancedText?.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty != false
+        else {
+            return false
+        }
+
+        LastTranscriptionService.pasteLastTranscription(from: modelContext, excluding: transcription.id)
+        return true
     }
 }

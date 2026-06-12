@@ -335,14 +335,14 @@ class VoiceInkEngine: NSObject, ObservableObject {
 
     // MARK: - Cancellation
 
-    func cancelRecording(saveCanceledTranscription: Bool = true) async {
+    func cancelRecording() async {
         logger.notice("cancelRecording called – state=\(String(describing: self.recordingState), privacy: .public)")
 
         let shouldFinishSessionImmediately: Bool
         switch recordingState {
         case .starting, .recording:
             requestRecordingCancellation()
-            await finishActiveRecorderCancellation(saveCanceledTranscription: saveCanceledTranscription)
+            await finishActiveRecorderCancellation()
             shouldFinishSessionImmediately = true
         case .transcribing, .enhancing:
             requestRecordingCancellation()
@@ -386,30 +386,14 @@ class VoiceInkEngine: NSObject, ObservableObject {
         cancelCurrentSession()
     }
 
-    private func finishActiveRecorderCancellation(saveCanceledTranscription: Bool = true) async {
+    private func finishActiveRecorderCancellation() async {
         activeRecordingStartID = nil
         await recorder.stopRecording()
-        if saveCanceledTranscription {
-            await saveCanceledRecording()
-        } else {
-            discardRecordedFile()
-        }
+        await saveCanceledRecording()
         recordedFile = nil
         partialTranscript = ""
         recordingState = .idle
         await cleanupResources()
-    }
-
-    private func discardRecordedFile() {
-        guard let recordedFile,
-              FileManager.default.fileExists(atPath: recordedFile.path)
-        else { return }
-
-        do {
-            try FileManager.default.removeItem(at: recordedFile)
-        } catch {
-            logger.error("Failed to discard canceled recording file: \(error.localizedDescription, privacy: .public)")
-        }
     }
 
     private func saveCanceledRecording() async {

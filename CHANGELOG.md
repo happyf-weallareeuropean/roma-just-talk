@@ -2,6 +2,8 @@
 
 ## v1.92 - Unreleased
 
+- Fixed Special shortcut empty taps so they only paste the previous transcription after the current tap transcribes empty, instead of treating every short tap as paste-only.
+
 ## v1.91 - 2026-06-12
 
 - Polished the app shell and dashboard with cleaner native glass surfaces, quieter accent use, and a less marketing-heavy metrics layout.
