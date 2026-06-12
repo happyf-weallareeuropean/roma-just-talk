@@ -1,6 +1,6 @@
 # Changelog
 
-## v1.91 - Unreleased
+## v1.91 - 2026-06-12
 
 - Polished the app shell and dashboard with cleaner native glass surfaces, quieter accent use, and a less marketing-heavy metrics layout.
 - Added cursor-context capitalization for dictation paste so mid-sentence inserts lower an auto-capitalized first word while sentence starts stay capitalized.
