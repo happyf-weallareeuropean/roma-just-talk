@@ -1,5 +1,7 @@
 # Changelog
 
+## v1.92 - Unreleased
+
 ## v1.91 - 2026-06-12
 
 - Polished the app shell and dashboard with cleaner native glass surfaces, quieter accent use, and a less marketing-heavy metrics layout.
