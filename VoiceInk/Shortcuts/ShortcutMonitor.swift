@@ -4,6 +4,8 @@ import CoreGraphics
 import Foundation
 import os
 
+private let systemDefinedCGEventTypeRawValue = UInt32(NSEvent.EventType.systemDefined.rawValue)
+
 enum InputMonitoringPermission {
     struct Client {
         var preflight: () -> Bool
@@ -654,17 +656,22 @@ final class ShortcutMonitor {
     }
 
     private static let eventMask: CGEventMask = [
-        CGEventType.keyDown,
-        CGEventType.keyUp,
-        CGEventType.flagsChanged,
-        CGEventType.systemDefined
-    ].reduce(CGEventMask(0)) { mask, type in
-        mask | (CGEventMask(1) << Int(type.rawValue))
+        CGEventType.keyDown.rawValue,
+        CGEventType.keyUp.rawValue,
+        CGEventType.flagsChanged.rawValue,
+        systemDefinedCGEventTypeRawValue
+    ].reduce(CGEventMask(0)) { mask, rawValue in
+        mask | (CGEventMask(1) << Int(rawValue))
     }
 }
 
 private extension ShortcutMonitor.EventKind {
     init?(_ type: CGEventType) {
+        if type.rawValue == systemDefinedCGEventTypeRawValue {
+            self = .systemDefined
+            return
+        }
+
         switch type {
         case .keyDown:
             self = .keyDown
@@ -672,8 +679,6 @@ private extension ShortcutMonitor.EventKind {
             self = .keyUp
         case .flagsChanged:
             self = .flagsChanged
-        case .systemDefined:
-            self = .systemDefined
         default:
             return nil
         }
