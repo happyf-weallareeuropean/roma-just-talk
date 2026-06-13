@@ -1,5 +1,7 @@
 # Changelog
 
+## v1.93 - Unreleased
+
 ## v1.92 - 2026-06-13
 
 - Fixed Special shortcut typing detection for Karabiner mappings that emit bare function keys, including `Left Shift` + `X` and `Left Shift` + `S/D/F`.
