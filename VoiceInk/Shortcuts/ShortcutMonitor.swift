@@ -59,6 +59,7 @@ final class ShortcutMonitor {
         case keyDown
         case keyUp
         case flagsChanged
+        case systemDefined
     }
 
     private enum ShortcutHandlingScope {
@@ -381,6 +382,12 @@ final class ShortcutMonitor {
                 modifierFlags: modifierFlags
             )
             handleShortcutInterruptions(keyCode: keyCode, eventTime: eventTime)
+        } else if kind == .systemDefined {
+            recordPressEvidenceDuringActiveShortcuts(
+                kind: kind,
+                keyCode: keyCode,
+                modifierFlags: modifierFlags
+            )
         } else {
             recordPressEvidenceDuringActiveShortcuts(
                 kind: kind,
@@ -503,6 +510,8 @@ final class ShortcutMonitor {
         switch kind {
         case .keyDown:
             return true
+        case .systemDefined:
+            return true
         case .flagsChanged:
             return Shortcut.isModifierPressEvent(keyCode: keyCode, modifierFlags: modifierFlags)
         case .keyUp:
@@ -520,7 +529,7 @@ final class ShortcutMonitor {
             return true
         case .flagsChanged:
             return Shortcut.isModifierReleaseEvent(keyCode: keyCode, modifierFlags: modifierFlags)
-        case .keyDown:
+        case .keyDown, .systemDefined:
             return false
         }
     }
@@ -558,6 +567,8 @@ final class ShortcutMonitor {
                 forKeyCode: shortcut.keyCode
             )
             return currentFlags.isSuperset(of: shortcut.modifierFlags) ? .suppress : .keyUp
+        case .systemDefined:
+            return .none
         }
     }
 
@@ -645,7 +656,8 @@ final class ShortcutMonitor {
     private static let eventMask: CGEventMask = [
         CGEventType.keyDown,
         CGEventType.keyUp,
-        CGEventType.flagsChanged
+        CGEventType.flagsChanged,
+        CGEventType.systemDefined
     ].reduce(CGEventMask(0)) { mask, type in
         mask | (CGEventMask(1) << Int(type.rawValue))
     }
@@ -660,6 +672,8 @@ private extension ShortcutMonitor.EventKind {
             self = .keyUp
         case .flagsChanged:
             self = .flagsChanged
+        case .systemDefined:
+            self = .systemDefined
         default:
             return nil
         }
@@ -673,6 +687,8 @@ private extension ShortcutMonitor.EventKind {
             self = .keyUp
         case .flagsChanged:
             self = .flagsChanged
+        case .systemDefined:
+            self = .systemDefined
         default:
             return nil
         }
@@ -771,6 +787,16 @@ extension ShortcutMonitor {
             modifierFlags: modifierFlags,
             eventTime: eventTime,
             scope: handlesModifierOnlyShortcutsInEventTap ? .all : .nonModifierOnly
+        )
+    }
+
+    @discardableResult
+    func handleSystemDefinedForTesting(eventTime: TimeInterval) -> Bool {
+        handleEvent(
+            kind: .systemDefined,
+            keyCode: 0,
+            modifierFlags: [],
+            eventTime: eventTime
         )
     }
 }

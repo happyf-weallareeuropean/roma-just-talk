@@ -121,7 +121,7 @@ struct Shortcut: Codable, Equatable {
 
             let currentFlags = Self.normalizedModifierFlags(eventModifierFlags, forKeyCode: keyCode)
             return !currentFlags.isSuperset(of: modifierFlags)
-        case .keyDown:
+        case .keyDown, .systemDefined:
             return false
         }
     }
@@ -165,7 +165,7 @@ struct Shortcut: Codable, Equatable {
             }
 
             return matchesModifierEvent(keyCode: eventKeyCode, modifierFlags: eventModifierFlags)
-        case .keyUp:
+        case .keyUp, .systemDefined:
             return false
         }
     }

@@ -473,6 +473,38 @@ struct VoiceInkTests {
         #expect(contexts == [ShortcutPressContext(didPressOtherKeyDuringPress: true, didReleaseOtherKeyDuringPress: false)])
     }
 
+    @Test func modifierOnlyShortcutTracksSystemDefinedEvidenceDuringPress() async throws {
+        let monitor = ShortcutMonitor()
+        var contexts: [ShortcutPressContext] = []
+
+        monitor.configureForTesting(
+            shortcuts: [
+                .primaryRecording: .modifierOnly(
+                    keyCode: UInt16(kVK_Shift),
+                    modifierFlags: [.shift]
+                )
+            ],
+            handlesModifierOnlyShortcutsInEventTap: true,
+            onKeyDown: { _, _ in },
+            onKeyUp: { _, _, context in contexts.append(context) }
+        )
+
+        monitor.handleEventTapFlagsChangedForTesting(
+            keyCode: UInt16(kVK_Shift),
+            modifierFlags: [.shift],
+            eventTime: 1
+        )
+        monitor.handleSystemDefinedForTesting(eventTime: 2)
+        monitor.handleEventTapFlagsChangedForTesting(
+            keyCode: UInt16(kVK_Shift),
+            modifierFlags: [],
+            eventTime: 3
+        )
+
+        try await Task.sleep(nanoseconds: 10_000_000)
+        #expect(contexts == [ShortcutPressContext(didPressOtherKeyDuringPress: true, didReleaseOtherKeyDuringPress: false)])
+    }
+
     @Test func modifierOnlySpecialShortcutDoesNotStartWithoutKeyEvidenceTap() async throws {
         let monitor = ShortcutMonitor()
         var keyDownCount = 0

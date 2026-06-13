@@ -2,6 +2,7 @@
 
 ## v1.92 - Unreleased
 
+- Fixed Special shortcut typing detection for Karabiner mappings that emit bare function keys, including `Left Shift` + `X` and `Left Shift` + `S/D/F`.
 - Fixed Special shortcut empty taps so they only paste the previous transcription after the current tap transcribes empty, instead of treating every short tap as paste-only.
 
 ## v1.91 - 2026-06-12
