@@ -225,192 +225,261 @@
       <section class="trust-section" id="trust" aria-labelledby="trust-title">
         <div class="trust-shell">
           <header class="trust-intro">
-            <h2 id="trust-title">Before you install Roma.</h2>
+            <h2 id="trust-title">My responsibility to you.</h2>
             <p>
-              I'm Felix. I build Roma and handle support myself. Here is what you should know
-              about the current download, what it can access on your Mac, and how to reach me
-              if something goes wrong.
+              Your laptop holds your work and private conversations. Asking you to put Roma on it
+              means taking care of more than dictation. It means caring about what the app can
+              access, whether you can depend on it, and what happens when something goes wrong.
+            </p>
+            <p>
+              I'm Felix. I build Roma and handle support myself. I want to earn your confidence
+              through the choices I make and the work you can check. These are my commitments
+              as I develop Roma, with the current release's limitations below.
             </p>
             <nav class="trust-links" aria-label="Trust topics">
-              <a href="#trust-release">Using your main Mac</a>
-              <a href="#trust-data">Your data</a>
+              <a href="#trust-commitments">My commitments</a>
+              <a href="#trust-release">Current download</a>
               <a href="#trust-support">Getting help</a>
               <a href="mailto:happyfumd@icloud.com?subject=Roma%20Just%20Talk%20support">Email Felix</a>
             </nav>
           </header>
 
-          <div class="trust-disclosures">
-            <article class="trust-disclosure trust-public" id="trust-release">
-              <h3>Current v1.95 recommendation</h3>
-              <p class="trust-verdict">I do not recommend v1.95 for your main Mac yet.</p>
+          <section class="trust-commitments" id="trust-commitments" aria-labelledby="trust-commitments-title">
+            <header>
+              <h3 id="trust-commitments-title">What I will do to earn your trust</h3>
               <p>
-                v1.95 is an early evaluation build. I have not published hands-on test results for
-                the exact download you receive. Apple has not notarized this download, so macOS
-                may block it when you first open it. If you need Roma for everyday work, I
-                recommend waiting.
+                Today, you can read the source and release notes and contact me directly.
+                The commitments below describe the standard for future releases. They are not
+                all delivered in v1.95.
               </p>
-              <div class="trust-public-columns">
-                <div>
-                  <h4>If you choose to try the Mac app</h4>
+            </header>
+            <article>
+              <h4>Make your privacy choices work as expected</h4>
+              <p>
+                Off should mean Off. I will make the context switches stop collection itself,
+                explain when audio leaves your Mac, and make local transcription and cloud text
+                processing clear as separate choices. I will explain what history Roma saves and
+                how to remove it.
+              </p>
+            </article>
+            <article>
+              <h4>Take care of the access you give Roma</h4>
+              <p>
+                My priorities for future public releases include an Apple-notarized download,
+                provider API keys stored in macOS Keychain, and clear permission explanations
+                before you grant access. I will say which protections each release has, so you
+                can distinguish a plan from something you can use.
+              </p>
+            </article>
+            <article>
+              <h4>Test the app you will actually download</h4>
+              <p>
+                Before I recommend a release for everyday use, I will test its published download
+                on a clean Mac, including installation, permissions, dictation, text insertion,
+                and quitting. I will also check what happens when context is off, which data
+                leaves the Mac, where keys are stored, and whether history deletion works.
+                I will publish the version, Mac and macOS tested, results, and remaining problems.
+                Testing is my responsibility.
+              </p>
+            </article>
+            <article>
+              <h4>Keep you informed when something goes wrong</h4>
+              <p>
+                You can email me directly. I will investigate, tell you what I can reproduce,
+                and explain what happens next. If I do not have a fix yet, I will say so. When a
+                fix ships, I will name it in the release notes. Helping with debugging or
+                retesting is your choice.
+              </p>
+            </article>
+            <nav class="trust-links" aria-label="Follow Roma's work">
+              <a href="/changelogs">Read release notes</a>
+              <a href="https://github.com/negentropi/roma-just-talk/tree/v1.95">Inspect the v1.95 source</a>
+              <a href="#trust-support">How I handle reports</a>
+            </nav>
+          </section>
+
+          <section class="trust-current" id="trust-release" aria-labelledby="trust-release-title">
+            <h3 id="trust-release-title">Current v1.95 recommendation</h3>
+            <p>
+              v1.95 is an early evaluation build. It is not Apple-notarized, and I have not
+              published hands-on test results for this exact download. I do not recommend it
+              for your main Mac yet.
+            </p>
+            <p>
+              In v1.95, cloud streaming can send audio before Shift. Context switches do not stop
+              clipboard or window collection, and API keys are stored outside macOS Keychain.
+              These are gaps the commitments above are meant to address.
+            </p>
+            <details class="trust-details">
+              <summary>Read v1.95 privacy, permissions, setup, and test details</summary>
+              <div class="trust-disclosures">
+                <article class="trust-disclosure trust-public">
+                  <h4>Trying the current download</h4>
+                  <p>Apple has not notarized this download, so macOS may block it when you first open it.</p>
+                  <div class="trust-public-columns">
+                    <div>
+                      <h4>If you choose to try the Mac app</h4>
+                      <p>
+                        Use a secondary Mac without sensitive data. Choose a local transcription model
+                        to keep audio on your Mac, and turn AI Enhancement off to avoid sending your
+                        transcript and other text for polishing. Set Settings &gt; Rolling Buffer &gt;
+                        Buffer Preload to Off to stop audio being sent before Shift if you use a cloud model.
+                      </p>
+                      <p>
+                        Leave Screen Recording permission off. Granting it lets v1.95 capture a visible
+                        window when recording starts, even with Screen Context off. Roma also reads
+                        your clipboard when recording starts, even with Clipboard Context off. Do not
+                        grant Automation unless you need it. Quitting Roma stops microphone capture.
+                      </p>
+                      <p>
+                        Do not disable Gatekeeper, the macOS security protection. If macOS blocks the
+                        app and you are not comfortable choosing Open Anyway, wait.
+                      </p>
+                    </div>
+                    <div class="trust-proof">
+                      <h4>What the available checks show</h4>
+                      <p>
+                        The automated build check created the app and its tests. It did not run those
+                        tests or try the published download on a clean Mac. A successful build does not
+                        establish that Roma works reliably on your laptop.
+                      </p>
+                      <p>
+                        The linked check ran on June 17, 2026, on macOS 26. The download is an ad hoc
+                        signed Debug build. Its checksum lets you check that the file matches the one
+                        published; it does not establish safety or stability.
+                      </p>
+                      <nav class="trust-links trust-proof-links" aria-label="v1.95 release evidence">
+                        <a href="https://github.com/negentropi/roma-just-talk/releases/tag/v1.95">v1.95 download and file checksum</a>
+                        <a href="https://github.com/negentropi/roma-just-talk/actions/runs/27668369598">v1.95 automated build check</a>
+                      </nav>
+                    </div>
+                  </div>
                   <p>
-                    Use a secondary Mac without sensitive data. Choose a local transcription model
-                    to keep audio on your Mac, and turn AI Enhancement off to avoid sending your
-                    transcript and other text for polishing. Set Settings &gt; Rolling Buffer &gt;
-                    Buffer Preload to Off to stop audio being sent before Shift if you use a cloud model.
+                    You can explore the dictation interaction in the browser demo without installing
+                    the Mac app. The demo starts speech recognition when opened and uses your microphone
+                    if permission is available. Your browser may send audio to its speech provider.
+                    Roma servers receive or store no demo audio or text. The demo does not establish
+                    the Mac app's safety or stability.
                   </p>
-                  <p>
-                    Leave Screen Recording permission off. Granting it lets v1.95 capture a visible
-                    window when recording starts, even with Screen Context off. Roma also reads
-                    your clipboard when recording starts, even with Clipboard Context off. Do not
-                    grant Automation unless you need it. Quitting Roma stops microphone capture.
-                  </p>
-                  <p>
-                    Do not disable Gatekeeper, the macOS security protection. If macOS blocks the
-                    app and you are not comfortable choosing Open Anyway, wait.
-                  </p>
-                </div>
-                <div class="trust-proof">
-                  <h4>What the available checks show</h4>
-                  <p>
-                    The automated build check created the app and its tests. It did not run those
-                    tests or try the published download on a clean Mac. A successful build does not
-                    establish that Roma works reliably on your laptop.
-                  </p>
-                  <p>
-                    The linked check ran on June 17, 2026, on macOS 26. The download is an ad hoc
-                    signed Debug build. Its checksum lets you check that the file matches the one
-                    published; it does not establish safety or stability.
-                  </p>
-                  <nav class="trust-links trust-proof-links" aria-label="v1.95 release evidence">
-                    <a href="https://github.com/negentropi/roma-just-talk/releases/tag/v1.95">v1.95 download and file checksum</a>
-                    <a href="https://github.com/negentropi/roma-just-talk/actions/runs/27668369598">v1.95 automated build check</a>
+                  <nav class="trust-links" aria-label="Project transparency">
+                    <a href="/demo">Browser demo, uses microphone</a>
+                    <a href="/changelogs">release notes</a>
+                    <a href="https://github.com/negentropi/roma-just-talk/tree/v1.95">v1.95 source code</a>
+                    <a href="https://github.com/negentropi/roma-just-talk/actions">public automated checks</a>
                   </nav>
-                </div>
-              </div>
-              <p>
-                You can explore the dictation interaction in the browser demo without installing
-                the Mac app. The demo starts speech recognition when opened and uses your microphone
-                if permission is available. Your browser may send audio to its speech provider.
-                Roma servers receive or store no demo audio or text. The demo does not establish
-                the Mac app's safety or stability.
-              </p>
-              <nav class="trust-links" aria-label="Project transparency">
-                <a href="/demo">Browser demo, uses microphone</a>
-                <a href="/changelogs">release notes</a>
-                <a href="https://github.com/negentropi/roma-just-talk/tree/v1.95">v1.95 source code</a>
-                <a href="https://github.com/negentropi/roma-just-talk/actions">public automated checks</a>
-              </nav>
-            </article>
+                </article>
 
-            <article class="trust-disclosure trust-data" id="trust-data">
-              <h3>What Roma reads and sends</h3>
-              <div class="trust-data-list">
-                <div class="trust-data-item">
-                  <h4>Audio can leave your Mac before you press Shift</h4>
-                  <p>
-                    With microphone permission, v1.95 listens while its rolling buffer is active.
-                    Its default buffer holds the latest three seconds of audio and replaces older
-                    audio as you speak.
-                  </p>
-                  <p class="trust-warning">
-                    With a cloud streaming model, v1.95 can start sending audio when its local
-                    speech detector fires, before you press Shift. The rolling buffer and audio that
-                    follows may reach that provider. Set Buffer Preload to Off before using a cloud
-                    model to stop this pre-Shift sending.
-                  </p>
-                </div>
-                <div class="trust-data-item">
-                  <h4>Local audio does not mean all text stays local</h4>
-                  <p>
-                    A local transcription model keeps audio on your Mac. AI Enhancement can still
-                    send text to its provider, even with local transcription. Turn AI Enhancement
-                    off to avoid those text transfers. Cloud transcription sends audio directly
-                    to the provider you choose.
-                  </p>
-                  <p>
-                    AI Enhancement sends your transcript, polishing instructions, custom vocabulary,
-                    and selected text Roma can read. With Clipboard Context on, it also sends
-                    clipboard text. With Screen Context on, it sends the app name, window title,
-                    and recognized window text. The provider's retention and training rules apply.
-                  </p>
-                </div>
-                <div class="trust-data-item trust-risk">
-                  <h4>Context switches do not stop collection in v1.95</h4>
-                  <p>
-                    Roma reads your clipboard whenever you start a recording, even if Clipboard
-                    Context is off. With Screen Recording permission, it also captures and reads a
-                    visible window, even if Screen Context is off. It tries the frontmost window
-                    first, but v1.95 can fall back to another visible non-Roma window. Those switches
-                    only control what AI Enhancement receives. Revoke Screen Recording to stop
-                    window capture.
-                  </p>
-                </div>
-                <div class="trust-data-item trust-risk">
-                  <h4>Saved history and API keys</h4>
-                  <p>
-                    Roma can save audio, transcripts, polished text, and the messages sent for
-                    polishing in local history on your Mac. Automatic cleanup is off by default.
-                    History cleanup can remove old
-                    records and their audio. Audio cleanup removes old audio but keeps the text
-                    record. Deleting local history cannot delete data a provider retained.
-                  </p>
-                  <p>
-                    The public v1.95 download stores provider API keys in Roma's local settings, not
-                    macOS Keychain. Use a separate key you can revoke and set a provider spending
-                    limit when available.
-                  </p>
-                </div>
-                <div class="trust-data-item">
-                  <h4>Automatic connections</h4>
-                  <p>
-                    This website measures visits with Vercel Web Analytics. v1.95 checks beingpax.github.io for
-                    updates and announcements. The Mac app does not automatically send usage or
-                    crash reports to me, so I may not know about a problem unless you contact me.
-                  </p>
-                </div>
-              </div>
-            </article>
+                <article class="trust-disclosure trust-data" id="trust-data">
+                  <h3>What Roma reads and sends</h3>
+                  <div class="trust-data-list">
+                    <div class="trust-data-item">
+                      <h4>Microphone and cloud audio</h4>
+                      <p>
+                        With microphone permission, v1.95 listens while its rolling buffer is active.
+                        Its default buffer holds the latest three seconds of audio and replaces older
+                        audio as you speak.
+                      </p>
+                      <p class="trust-warning">
+                        With a cloud streaming model, v1.95 can start sending audio when its local
+                        speech detector fires, before you press Shift. The rolling buffer and audio that
+                        follows may reach that provider. Set Buffer Preload to Off before using a cloud
+                        model to stop this pre-Shift sending.
+                      </p>
+                    </div>
+                    <div class="trust-data-item">
+                      <h4>Local transcription and cloud text processing</h4>
+                      <p>
+                        A local transcription model keeps audio on your Mac. AI Enhancement can still
+                        send text to its provider, even with local transcription. Turn AI Enhancement
+                        off to avoid those text transfers. Cloud transcription sends audio directly
+                        to the provider you choose.
+                      </p>
+                      <p>
+                        AI Enhancement sends your transcript, polishing instructions, custom vocabulary,
+                        and selected text Roma can read. With Clipboard Context on, it also sends
+                        clipboard text. With Screen Context on, it sends the app name, window title,
+                        and recognized window text. The provider's retention and training rules apply.
+                      </p>
+                    </div>
+                    <div class="trust-data-item trust-risk">
+                      <h4>Clipboard and window collection</h4>
+                      <p>
+                        Roma reads your clipboard whenever you start a recording, even if Clipboard
+                        Context is off. With Screen Recording permission, it also captures and reads a
+                        visible window, even if Screen Context is off. It tries the frontmost window
+                        first, but v1.95 can fall back to another visible non-Roma window. Those switches
+                        only control what AI Enhancement receives. Revoke Screen Recording to stop
+                        window capture.
+                      </p>
+                    </div>
+                    <div class="trust-data-item trust-risk">
+                      <h4>Saved history and API keys</h4>
+                      <p>
+                        Roma can save audio, transcripts, polished text, and the messages sent for
+                        polishing in local history on your Mac. Automatic cleanup is off by default.
+                        History cleanup can remove old
+                        records and their audio. Audio cleanup removes old audio but keeps the text
+                        record. Deleting local history cannot delete data a provider retained.
+                      </p>
+                      <p>
+                        The public v1.95 download stores provider API keys in Roma's local settings, not
+                        macOS Keychain. Use a separate key you can revoke and set a provider spending
+                        limit when available.
+                      </p>
+                    </div>
+                    <div class="trust-data-item">
+                      <h4>Automatic connections</h4>
+                      <p>
+                        This website measures visits with Vercel Web Analytics. v1.95 checks beingpax.github.io for
+                        updates and announcements. The Mac app does not automatically send usage or
+                        crash reports to me, so I may not know about a problem unless you contact me.
+                      </p>
+                    </div>
+                  </div>
+                </article>
 
-            <article class="trust-disclosure trust-permissions">
-              <h3>Why Roma asks for broad access</h3>
-              <p>Here is how v1.95 uses each permission.</p>
-              <dl class="trust-permission-list">
-                <div>
-                  <dt>Microphone</dt>
-                  <dd>Required for dictation. Buffers and records speech.</dd>
-                </div>
-                <div>
-                  <dt>Input Monitoring</dt>
-                  <dd>Required for the global shortcut. Detects the keys you chose.</dd>
-                </div>
-                <div>
-                  <dt>Accessibility</dt>
-                  <dd>
-                    Works with Input Monitoring for shortcuts, inserts text, and can read selected
-                    or nearby text.
-                  </dd>
-                </div>
-                <div>
-                  <dt>Screen Recording</dt>
-                  <dd>
-                    Optional. Captures a visible window for on-device text recognition. v1.95 can
-                    fall back from the frontmost window to another visible non-Roma window.
-                  </dd>
-                </div>
-                <div>
-                  <dt>Automation</dt>
-                  <dd>
-                    Optional. Lets Roma paste through AppleScript and control supported browsers
-                    for Power Modes.
-                  </dd>
-                </div>
-              </dl>
-              <p>
-                Revoke any permission in macOS System Settings. The related feature will stop
-                working.
-              </p>
-            </article>
-          </div>
+                <article class="trust-disclosure trust-permissions">
+                  <h3>Why Roma asks for broad access</h3>
+                  <p>Here is how v1.95 uses each permission.</p>
+                  <dl class="trust-permission-list">
+                    <div>
+                      <dt>Microphone</dt>
+                      <dd>Required for dictation. Buffers and records speech.</dd>
+                    </div>
+                    <div>
+                      <dt>Input Monitoring</dt>
+                      <dd>Required for the global shortcut. Detects the keys you chose.</dd>
+                    </div>
+                    <div>
+                      <dt>Accessibility</dt>
+                      <dd>
+                        Works with Input Monitoring for shortcuts, inserts text, and can read selected
+                        or nearby text.
+                      </dd>
+                    </div>
+                    <div>
+                      <dt>Screen Recording</dt>
+                      <dd>
+                        Optional. Captures a visible window for on-device text recognition. v1.95 can
+                        fall back from the frontmost window to another visible non-Roma window.
+                      </dd>
+                    </div>
+                    <div>
+                      <dt>Automation</dt>
+                      <dd>
+                        Optional. Lets Roma paste through AppleScript and control supported browsers
+                        for Power Modes.
+                      </dd>
+                    </div>
+                  </dl>
+                  <p>
+                    Revoke any permission in macOS System Settings. The related feature will stop
+                    working.
+                  </p>
+                </article>
+              </div>
+            </details>
+          </section>
 
           <div class="trust-promise" id="trust-support">
             <div>

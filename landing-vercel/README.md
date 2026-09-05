@@ -2,6 +2,10 @@
 
 Static landing pages plus the full-screen `/demo` browser experience.
 
+The Trust section distinguishes current release behavior from future commitments.
+Use the [Trust release checklist](../docs/TRUST_RELEASE_CHECKLIST.md) to verify those
+commitments on a public download before strengthening its recommendation.
+
 ```sh
 npm install
 npm run dev

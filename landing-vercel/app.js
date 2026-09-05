@@ -534,6 +534,8 @@ document.addEventListener("keydown", (event) => {
   const key = event.key.toLowerCase();
   const hasHeroShortcuts = document.getElementById("download-button") || document.getElementById("talk-button");
   if (!hasHeroShortcuts) return;
+  // Let focused controls handle Enter instead of triggering the page's download shortcut.
+  if (event.defaultPrevented || event.target?.closest?.("a, button, input, textarea, select, summary, [contenteditable]")) return;
 
   if (event.key === "Enter" && event.shiftKey) {
     event.preventDefault();

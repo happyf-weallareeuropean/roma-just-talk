@@ -927,7 +927,7 @@ h1 .before-word {
 }
 
 .trust-intro h2 {
-  max-width: 9ch;
+  max-width: 14ch;
   margin: 0;
   font-size: clamp(3.4rem, 9vw, 7rem);
   letter-spacing: -0.055em;
@@ -942,10 +942,72 @@ h1 .before-word {
   line-height: 1.5;
 }
 
+.trust-commitments {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 28px clamp(28px, 5vw, 60px);
+  margin-top: clamp(40px, 6vw, 64px);
+}
+
+.trust-commitments > header,
+.trust-commitments > nav {
+  grid-column: 1 / -1;
+}
+
+.trust-commitments h3,
+.trust-current h3 {
+  margin: 0;
+  font-family: "IBM Plex Mono", monospace;
+  font-size: 0.94rem;
+}
+
+.trust-commitments article {
+  border-top: 2px solid var(--ink);
+  padding-top: 22px;
+}
+
+.trust-commitments h4 {
+  margin: 0;
+  font-size: 1.35rem;
+  line-height: 1.25;
+}
+
+.trust-commitments p,
+.trust-current > p {
+  margin: 16px 0 0;
+  color: var(--muted);
+  font-size: 1.08rem;
+  line-height: 1.58;
+}
+
+.trust-commitments > nav {
+  margin-top: 0;
+}
+
+.trust-current {
+  margin-top: clamp(40px, 6vw, 64px);
+  border-top: 1px solid var(--line);
+  padding-top: 28px;
+}
+
+.trust-details {
+  margin-top: 24px;
+}
+
+.trust-details > summary {
+  min-height: 44px;
+  padding: 12px 16px;
+  border: 1px solid var(--ink);
+  background: var(--surface-strong);
+  cursor: pointer;
+  font-weight: 700;
+  line-height: 1.5;
+}
+
 .trust-disclosures {
   display: grid;
   grid-template-columns: minmax(0, 0.92fr) minmax(0, 1.08fr);
-  margin-top: clamp(48px, 7vw, 76px);
+  margin-top: 24px;
   border-top: 2px solid var(--ink);
   border-bottom: 2px solid var(--ink);
 }
@@ -1030,15 +1092,6 @@ h1 .before-word {
   grid-column: 1 / -1;
   border-bottom: 1px solid var(--line);
   background: color-mix(in srgb, var(--coral) 6%, transparent);
-}
-
-.trust-verdict {
-  max-width: 25ch;
-  color: var(--ink) !important;
-  font-size: clamp(1.7rem, 4vw, 2.8rem) !important;
-  font-weight: 750;
-  letter-spacing: -0.035em;
-  line-height: 1.05 !important;
 }
 
 .trust-public-columns {
@@ -1150,7 +1203,8 @@ h1 .before-word {
   font-weight: 800;
 }
 
-.trust-section a:focus-visible {
+.trust-section a:focus-visible,
+.trust-details > summary:focus-visible {
   outline: 3px solid var(--ink);
   outline-offset: 4px;
 }
@@ -1729,6 +1783,7 @@ h1 .before-word {
   .pricing-hero-layout,
   .pricing-layout,
   .pricing-access,
+  .trust-commitments,
   .trust-disclosures,
   .trust-promise {
     grid-template-columns: 1fr;
@@ -1739,7 +1794,7 @@ h1 .before-word {
   }
 
   .trust-intro h2 {
-    font-size: clamp(3rem, 18vw, 5rem);
+    font-size: clamp(2.4rem, 12vw, 4.5rem);
   }
 
   .trust-data {

@@ -2,6 +2,7 @@
 
 ## v1.96 - Unreleased
 
+- Reframed Trust around Felix's commitments to privacy controls, protected access, testing public downloads, and support, backed by a release checklist, with a visible current-release summary and keyboard-accessible expandable details.
 - Clarified Trust wording for first-time visitors with direct support links, plain-language release evidence, privacy exceptions beside setup advice, and an accurate microphone disclosure for the browser demo.
 - Reworked the landing Trust section to disclose the exact downloadable build, pre-trigger microphone behavior, cloud and context data paths, local history and credential storage, broad permission scope, non-notarized distribution, and Felix's support process, with every direct app-download link pinned to the reviewed v1.95 artifact.
 - Added a local-only Hardened Runtime exception for ad-hoc macOS builds that load bundled MediaRemoteAdapter and Sparkle frameworks, while keeping Library Validation enabled for certificate-signed releases.
