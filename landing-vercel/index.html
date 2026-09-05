@@ -225,72 +225,88 @@
       <section class="trust-section" id="trust" aria-labelledby="trust-title">
         <div class="trust-shell">
           <header class="trust-intro">
-            <h2 id="trust-title">Trust needs proof.</h2>
+            <h2 id="trust-title">Before you install Roma.</h2>
             <p>
-              I'm Felix. For transparency, I'm 20, and I build and support Roma myself. The current
-              public build asks for broad macOS access and is not notarized. Below are my
-              recommendation and the evidence for this build.
+              I'm Felix. I build Roma and handle support myself. Here is what you should know
+              about the current download, what it can access on your Mac, and how to reach me
+              if something goes wrong.
             </p>
+            <nav class="trust-links" aria-label="Trust topics">
+              <a href="#trust-release">Using your main Mac</a>
+              <a href="#trust-data">Your data</a>
+              <a href="#trust-support">Getting help</a>
+              <a href="mailto:happyfumd@icloud.com?subject=Roma%20Just%20Talk%20support">Email Felix</a>
+            </nav>
           </header>
 
           <div class="trust-disclosures">
-            <article class="trust-disclosure trust-public">
+            <article class="trust-disclosure trust-public" id="trust-release">
               <h3>Current v1.95 recommendation</h3>
               <p class="trust-verdict">I do not recommend v1.95 for your main Mac yet.</p>
               <p>
-                The download is an ad hoc signed Debug build. Apple has not notarized it, so macOS
-                may block its first launch. Do not disable Gatekeeper. If you are not comfortable
-                choosing Open Anyway, wait. Treat v1.95 as an early evaluation build, not a
-                production-ready release.
+                v1.95 is an early evaluation build. I have not published hands-on test results for
+                the exact download you receive. Apple has not notarized this download, so macOS
+                may block it when you first open it. If you need Roma for everyday work, I
+                recommend waiting.
               </p>
               <div class="trust-public-columns">
                 <div>
-                  <h4>Lower-risk ways to evaluate it</h4>
+                  <h4>If you choose to try the Mac app</h4>
                   <p>
-                    Start with the no-microphone browser preview. To evaluate the Mac app, use a
-                    secondary Mac without sensitive data. Choose a local transcription model, set
-                    Settings &gt; Rolling Buffer &gt; Buffer Preload to Off, and turn AI Enhancement off.
-                    Do not grant Screen Recording or Automation unless you need those features.
+                    Use a secondary Mac without sensitive data. Choose a local transcription model
+                    to keep audio on your Mac, and turn AI Enhancement off to avoid sending your
+                    transcript and other text for polishing. Set Settings &gt; Rolling Buffer &gt;
+                    Buffer Preload to Off to stop audio being sent before Shift if you use a cloud model.
                   </p>
                   <p>
-                    Roma still reads the clipboard locally when a recording starts. Quitting Roma
-                    stops microphone capture.
+                    Leave Screen Recording permission off. Granting it lets v1.95 capture a visible
+                    window when recording starts, even with Screen Context off. Roma also reads
+                    your clipboard when recording starts, even with Clipboard Context off. Do not
+                    grant Automation unless you need it. Quitting Roma stops microphone capture.
+                  </p>
+                  <p>
+                    Do not disable Gatekeeper, the macOS security protection. If macOS blocks the
+                    app and you are not comfortable choosing Open Anyway, wait.
                   </p>
                 </div>
                 <div class="trust-proof">
-                  <h4>What I have actually verified</h4>
+                  <h4>What the available checks show</h4>
                   <p>
-                    A June 17, 2026 CI run on macOS 26 compiled v1.95 and its test bundle. It did
-                    not run those tests or install and exercise the published ZIP on a clean Mac.
-                    The checksum only confirms that you downloaded the file I published. It does
-                    not show that the app is safe or stable. I have not published results from
-                    manually testing this exact file.
+                    The automated build check created the app and its tests. It did not run those
+                    tests or try the published download on a clean Mac. A successful build does not
+                    establish that Roma works reliably on your laptop.
                   </p>
                   <p>
-                    The browser demo included in this site build shows the hold-and-release
-                    interaction, not the Mac app. Its microphone mode may send audio to your
-                    browser's speech provider. Roma servers receive or store no demo audio or text.
-                    The no-microphone preview sends no audio.
+                    The linked check ran on June 17, 2026, on macOS 26. The download is an ad hoc
+                    signed Debug build. Its checksum lets you check that the file matches the one
+                    published; it does not establish safety or stability.
                   </p>
                   <nav class="trust-links trust-proof-links" aria-label="v1.95 release evidence">
-                    <a href="https://github.com/negentropi/roma-just-talk/releases/tag/v1.95">v1.95 download + checksum</a>
-                    <a href="https://github.com/negentropi/roma-just-talk/actions/runs/27668369598">exact v1.95 CI run</a>
+                    <a href="https://github.com/negentropi/roma-just-talk/releases/tag/v1.95">v1.95 download and file checksum</a>
+                    <a href="https://github.com/negentropi/roma-just-talk/actions/runs/27668369598">v1.95 automated build check</a>
                   </nav>
                 </div>
               </div>
+              <p>
+                You can explore the dictation interaction in the browser demo without installing
+                the Mac app. The demo starts speech recognition when opened and uses your microphone
+                if permission is available. Your browser may send audio to its speech provider.
+                Roma servers receive or store no demo audio or text. The demo does not establish
+                the Mac app's safety or stability.
+              </p>
               <nav class="trust-links" aria-label="Project transparency">
+                <a href="/demo">Browser demo, uses microphone</a>
                 <a href="/changelogs">release notes</a>
                 <a href="https://github.com/negentropi/roma-just-talk/tree/v1.95">v1.95 source code</a>
-                <a href="https://github.com/negentropi/roma-just-talk/actions">public CI runs</a>
-                <a href="/demo">browser demo</a>
+                <a href="https://github.com/negentropi/roma-just-talk/actions">public automated checks</a>
               </nav>
             </article>
 
-            <article class="trust-disclosure trust-data">
+            <article class="trust-disclosure trust-data" id="trust-data">
               <h3>What Roma reads and sends</h3>
               <div class="trust-data-list">
                 <div class="trust-data-item">
-                  <h4>Microphone before Shift</h4>
+                  <h4>Audio can leave your Mac before you press Shift</h4>
                   <p>
                     With microphone permission, v1.95 listens while its rolling buffer is active.
                     Its default buffer holds the latest three seconds of audio and replaces older
@@ -304,18 +320,22 @@
                   </p>
                 </div>
                 <div class="trust-data-item">
-                  <h4>Cloud providers</h4>
+                  <h4>Local audio does not mean all text stays local</h4>
                   <p>
-                    Local transcription keeps audio on your Mac. Cloud transcription sends audio
-                    directly to the provider you choose. AI Enhancement sends the provider your
-                    transcript, polishing instructions, custom vocabulary, and selected text Roma
-                    can read. With Clipboard Context on, it sends clipboard text. With Screen
-                    Context on, it sends the app name, window title, and recognized window text. The
-                    provider's retention and training rules apply.
+                    A local transcription model keeps audio on your Mac. AI Enhancement can still
+                    send text to its provider, even with local transcription. Turn AI Enhancement
+                    off to avoid those text transfers. Cloud transcription sends audio directly
+                    to the provider you choose.
+                  </p>
+                  <p>
+                    AI Enhancement sends your transcript, polishing instructions, custom vocabulary,
+                    and selected text Roma can read. With Clipboard Context on, it also sends
+                    clipboard text. With Screen Context on, it sends the app name, window title,
+                    and recognized window text. The provider's retention and training rules apply.
                   </p>
                 </div>
                 <div class="trust-data-item trust-risk">
-                  <h4>Clipboard and visible windows</h4>
+                  <h4>Context switches do not stop collection in v1.95</h4>
                   <p>
                     Roma reads your clipboard whenever you start a recording, even if Clipboard
                     Context is off. With Screen Recording permission, it also captures and reads a
@@ -326,10 +346,11 @@
                   </p>
                 </div>
                 <div class="trust-data-item trust-risk">
-                  <h4>History and provider keys</h4>
+                  <h4>Saved history and API keys</h4>
                   <p>
-                    Local history can retain audio, transcripts, polished text, and the messages
-                    sent for polishing. Cleanup is off by default. History cleanup can remove old
+                    Roma can save audio, transcripts, polished text, and the messages sent for
+                    polishing in local history on your Mac. Automatic cleanup is off by default.
+                    History cleanup can remove old
                     records and their audio. Audio cleanup removes old audio but keeps the text
                     record. Deleting local history cannot delete data a provider retained.
                   </p>
@@ -342,9 +363,9 @@
                 <div class="trust-data-item">
                   <h4>Automatic connections</h4>
                   <p>
-                    This website uses Vercel Web Analytics. v1.95 checks beingpax.github.io for
+                    This website measures visits with Vercel Web Analytics. v1.95 checks beingpax.github.io for
                     updates and announcements. The Mac app does not automatically send usage or
-                    crash reports to me. I learn about a failure only when someone reports it.
+                    crash reports to me, so I may not know about a problem unless you contact me.
                   </p>
                 </div>
               </div>
@@ -391,35 +412,36 @@
             </article>
           </div>
 
-          <div class="trust-promise">
+          <div class="trust-promise" id="trust-support">
             <div>
               <h3>If Roma causes a problem</h3>
               <p class="trust-promise-title">
-                You should not become Roma's QA team.
+                Contact me directly.
               </p>
             </div>
             <div class="trust-promise-body">
               <p>
-                Reports and retesting are optional. One message is enough to start. I own the work
-                of reproducing the problem.
+                You can report a problem in your own words. Investigating it is my responsibility.
+                Reporting, debugging, and retesting are optional for you.
               </p>
               <p>
-                Start with a description. Do not send a raw recording, transcript, API key, or
+                Start with a short description. Do not send a raw recording, transcript, API key, or
                 unredacted screenshot. If I need evidence, I will ask for the smallest useful piece
-                and explain how to redact it. I will tell you what I can reproduce. When a fix
-                ships, I will name it in the release notes.
+                and explain how to remove private details. I will tell you what I can reproduce.
+                When a fix ships, I will name it in the release notes.
               </p>
               <p>
                 For a privacy or security concern, email me before opening a public issue. I will
                 never publish your private message or personal data without permission. After the
-                risk is addressed, I may publish a redacted technical summary.
+                risk is addressed, I may publish a technical summary with no identifying information
+                or quotes from your private message.
               </p>
               <p class="trust-signoff">
                 <a href="https://github.com/negentropi">Felix C. Order</a>, builder and support
               </p>
               <nav class="trust-links" aria-label="Report a problem">
-                <a href="https://github.com/negentropi/roma-just-talk/issues/new">open a public issue</a>
-                <a href="mailto:happyfumd@icloud.com?subject=Roma%20Just%20Talk%20support">email Felix</a>
+                <a href="mailto:happyfumd@icloud.com?subject=Roma%20Just%20Talk%20support">Email Felix</a>
+                <a href="https://github.com/negentropi/roma-just-talk/issues/new">Public GitHub issue</a>
               </nav>
             </div>
           </div>
