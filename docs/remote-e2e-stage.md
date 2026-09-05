@@ -66,6 +66,21 @@ that Desktop file. After the scenario and hold finish, an always-running cleanup
 step removes the credential file and securely deletes the disposable account and
 home directory. The uploaded evidence records those deletion checks.
 
+Those account checks do not prove that Gatekeeper's administrator dialog can
+authenticate the account. On macOS 26.3.1 build 25D2128, run
+[33958787051](https://github.com/negentropi/roma-just-talk/actions/runs/33958787051)
+reached that dialog but Open Directory rejected its generated administrator with
+`ODErrorCredentialsMethodNotSupported`: the request supplied ACM data requiring
+a SEP credential, while the account lacked a SEP credential and Secure Token.
+The built-in `runner` had a Secure Token. The bootstrap-token status query was
+unavailable because the Mac was not supervised in MDM or DEP enrolled.
+This runner/account setup is not a valid framework-crash negative control.
+Before another attempt on this image, obtain a supported Secure Token-enabled
+administrator authentication path from the runner provider. Do not retry the
+same generated-account setup, substitute sudo for the GUI approval, or weaken
+Gatekeeper. Evidence files are `distribution-operator-auth-method-failure.txt`
+and `distribution-operator-secure-token-status.txt`.
+
 Runtime-only runner profiles may attach the persistent model cache. Runtime-only
 `nscloud-macos-*` image lanes require a previously absent cache path under that
 job's runner-temporary directory and record the pre-state before creating it.
@@ -164,6 +179,10 @@ bounded by the configured interaction window. Run
 exposed the old premature timeout: PID 27074 appeared in state `T` at 01:44:35 UTC,
 and the test failed at 01:45:06 while the administrator dialog was still open.
 This is a test-timing regression, not reproduction of the framework crash.
+Run 33958787051 exercised the corrected timer. The saved
+`authentication-window-timer-proof.txt` records PID 11117 still suspended at an
+elapsed 11:05, beyond the old cutoff. This process observation does not prove
+successful authentication, completed launch, or the historical DYLD failure.
 
 This is not the installed-app runtime test with quarantine added afterward. It
 starts on a fresh Apple Silicon runner and fails if Roma preferences, Roma TCC
