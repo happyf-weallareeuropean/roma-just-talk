@@ -1,0 +1,22 @@
+.setup-dialog {
+  width: min(900px, calc(100vw - 32px));
+  max-height: calc(100dvh - 40px);
+  box-sizing: border-box;
+  padding: clamp(20px, 4vw, 40px);
+  border: 1px solid var(--line, #d9d3c8);
+  border-radius: 20px;
+  background: var(--paper, #faf8f3);
+  color: var(--ink, #242321);
+  font: inherit;
+  line-height: 1.6;
+}
+.setup-dialog::backdrop { background: rgb(20 20 20 / 55%); }
+.setup-dialog h2 { font-size: clamp(24px, 4vw, 36px); line-height: 1.2; }
+.setup-close { float: right; padding: 8px 12px; cursor: pointer; }
+.setup-methods { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 24px; }
+.setup-methods pre { max-height: 220px; overflow: auto; padding: 16px; border: 1px solid var(--line, #d9d3c8); border-radius: 10px; white-space: pre-wrap; overflow-wrap: anywhere; font-size: 13px; background: var(--pre-bg, #fff); color: var(--pre-fg, #242321); }
+.setup-dialog .button { cursor: pointer; font: inherit; }
+.setup-gui { margin-block: 20px; padding-block: 14px; border-block: 1px solid var(--line, #d9d3c8); }
+.setup-gui summary { cursor: pointer; font-weight: 600; }
+#setup-copy-status { min-height: 1.6em; }
+@media (max-width: 640px) { .setup-methods { grid-template-columns: 1fr; } }

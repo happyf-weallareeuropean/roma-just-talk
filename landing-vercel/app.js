@@ -44,6 +44,7 @@ async function fetchWithTimeout(url, options = {}) {
 
 function downloadMac(event) {
   event?.preventDefault();
+  window.showMacSetup?.();
   window.location.href = pinnedMacDownloadUrl;
 }
 
@@ -212,7 +213,7 @@ function releaseNotesToHtml(release) {
 function releaseAssetLinks(release) {
   const links = [];
   if (release.tag_name === pinnedMacReleaseTag) {
-    links.unshift(`<a class="release-link release-download" href="${pinnedMacDownloadUrl}">download reviewed app</a>`);
+    links.unshift(`<a class="release-link release-download" href="${pinnedMacDownloadUrl}">download reviewed app (early beta)</a>`);
   }
   links.unshift(`<a class="release-link" href="${escapeHtml(release.html_url || releasesPageUrl)}">view release</a>`);
   return `<div class="release-actions">${links.join("")}</div>`;
@@ -534,6 +535,7 @@ document.addEventListener("keydown", (event) => {
   const key = event.key.toLowerCase();
   const hasHeroShortcuts = document.getElementById("download-button") || document.getElementById("talk-button");
   if (!hasHeroShortcuts) return;
+  if (document.querySelector('.setup-dialog[open]')) return;
   // Let focused controls handle Enter instead of triggering the page's download shortcut.
   if (event.defaultPrevented || event.target?.closest?.("a, button, input, textarea, select, summary, [contenteditable]")) return;
 

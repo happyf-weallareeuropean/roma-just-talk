@@ -6,6 +6,16 @@ The Trust section distinguishes current release behavior from future commitments
 Use the [Trust release checklist](../docs/TRUST_RELEASE_CHECKLIST.md) to verify those
 commitments on a public download before strengthening its recommendation.
 
+Mac download links open a setup dialog while the browser requests the archive.
+The dialog does not claim that downloading succeeded. It shows a Terminal command
+and an agent prompt, with the Open Anyway GUI alternative collapsed. Copy failures
+select the text for manual copying. The command assumes the extracted app is at
+`/Applications/roma just talk.app` and removes only its quarantine attribute; it
+does not sign/notarize the app or grant macOS privacy permissions.
+
+Keep `setup.js` and `setup.css` loaded on pages offering Mac downloads. Release
+links, Trust disclosures, and the release evidence record must advance together.
+
 ```sh
 npm install
 npm run dev
