@@ -10,6 +10,9 @@ struct VoiceInkCoreCheck {
 struct VoiceInkCoreCheckRunner {
     static func main() async {
         let checks: [VoiceInkCoreCheck] = [
+            VoiceInkCoreCheck(name: "NVIDIACloudModelTests.testProviderRepairNeverSilentlyRoutesAudioIntoOrOutOfNVIDIA", run: { NVIDIACloudModelTests().testProviderRepairNeverSilentlyRoutesAudioIntoOrOutOfNVIDIA() }),
+            VoiceInkCoreCheck(name: "NVIDIACloudModelTests.testCloudEntryPointRejectsMissingKeyAndMalformedAudioBeforeNetwork", run: { await NVIDIACloudModelTests().testCloudEntryPointRejectsMissingKeyAndMalformedAudioBeforeNetwork() }),
+            VoiceInkCoreCheck(name: "NVIDIACloudModelTests.testNVIDIAIsOptionalCloudAndRequiresBothKeyAndSupportedOS", run: { NVIDIACloudModelTests().testNVIDIAIsOptionalCloudAndRequiresBothKeyAndSupportedOS() }),
             VoiceInkCoreCheck(name: "SubscriptionPlanPolicyTests.testCatalogPreservesFreemiumItalyAndRomaOffer", run: { SubscriptionPlanPolicyTests().testCatalogPreservesFreemiumItalyAndRomaOffer() }),
             VoiceInkCoreCheck(name: "SubscriptionPlanPolicyTests.testWeeklyAllowanceClampsUsageAndBlocksOnlyAtFreemiumLimit", run: { SubscriptionPlanPolicyTests().testWeeklyAllowanceClampsUsageAndBlocksOnlyAtFreemiumLimit() }),
             VoiceInkCoreCheck(name: "SubscriptionPlanPolicyTests.testFreemiumLearnMoreExplains476Reference", run: { SubscriptionPlanPolicyTests().testFreemiumLearnMoreExplains476Reference() }),

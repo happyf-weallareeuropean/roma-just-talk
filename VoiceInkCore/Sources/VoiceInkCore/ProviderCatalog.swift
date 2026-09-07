@@ -29,6 +29,7 @@ public enum VoiceInkTranscriptionTransport: Sendable {
     case localWhisper
     case localFluidAudio
     case nativeApple
+    case nvidiaRiva
 }
 
 public enum VoiceInkTranscriptionServiceKind: Equatable, Sendable {
@@ -70,6 +71,7 @@ public enum VoiceInkAPIKeyVerificationTransport: Sendable, Equatable {
     case assemblyAITranscripts
     case xaiAPIKey
     case cartesiaVoices
+    case nvidiaRivaConfig
 }
 
 public enum VoiceInkProviderAccessRequirement: Sendable {
@@ -94,6 +96,7 @@ public enum VoiceInkProviderAPIKeyAccount {
     public static let assemblyAI = "assemblyAIAPIKey"
     public static let xAI = "xaiAPIKey"
     public static let cartesia = "cartesiaAPIKey"
+    public static let nvidia = "nvidiaAPIKey"
     public static let openAI = "openAIAPIKey"
     public static let anthropic = "anthropicAPIKey"
     public static let openRouter = "openRouterAPIKey"
@@ -124,6 +127,7 @@ public enum VoiceInkProviderAPIKeyAccount {
         "assemblyai": assemblyAI,
         "xai": xAI,
         "cartesia": cartesia,
+        "nvidia": nvidia,
         "openai": openAI,
         "anthropic": anthropic,
         "openrouter": openRouter,
@@ -131,7 +135,8 @@ public enum VoiceInkProviderAPIKeyAccount {
     ]
 
     private static let fallbackEnvironmentKeysByProviderName: [String: String] = [
-        "elevenlabs": "ELEVENLABS_API_KEY"
+        "elevenlabs": "ELEVENLABS_API_KEY",
+        "nvidia": "NVIDIA_API_KEY"
     ]
 
     private static func normalized(_ provider: String) -> String {
@@ -1117,6 +1122,7 @@ public enum VoiceInkProviderKind: String, CaseIterable, Codable, Identifiable, S
     case assemblyAI
     case xai
     case cartesia
+    case nvidia
     case anthropic
     case openRouter
     case customAI
@@ -1163,6 +1169,8 @@ public enum VoiceInkProviderKind: String, CaseIterable, Codable, Identifiable, S
             return "xAI"
         case .cartesia:
             return "Cartesia"
+        case .nvidia:
+            return "NVIDIA"
         case .anthropic:
             return "Anthropic"
         case .openRouter:
@@ -1233,6 +1241,8 @@ public enum VoiceInkProviderKind: String, CaseIterable, Codable, Identifiable, S
             return VoiceInkProviderEndpoint.xaiAPIBaseURL
         case .cartesia:
             return VoiceInkProviderEndpoint.cartesiaAPIBaseURL
+        case .nvidia:
+            return URL(string: "https://grpc.nvcf.nvidia.com")!
         case .anthropic:
             return VoiceInkProviderEndpoint.anthropicAPIBaseURL
         case .openRouter:
@@ -1262,7 +1272,7 @@ public enum VoiceInkProviderKind: String, CaseIterable, Codable, Identifiable, S
         switch self {
         case .gemini:
             return VoiceInkProviderEndpoint.geminiNativeAPIBaseURL
-        case .groq, .openAI, .deepgram, .cerebras, .mistral, .elevenLabs, .soniox, .speechmatics, .assemblyAI, .xai, .cartesia, .anthropic, .openRouter, .customAI, .ollama, .customCloud, .localWhisper, .localFluidAudio, .nativeApple, .voiceInk:
+        case .groq, .openAI, .deepgram, .cerebras, .mistral, .elevenLabs, .soniox, .speechmatics, .assemblyAI, .xai, .cartesia, .nvidia, .anthropic, .openRouter, .customAI, .ollama, .customCloud, .localWhisper, .localFluidAudio, .nativeApple, .voiceInk:
             return apiBaseURL
         }
     }
@@ -1293,6 +1303,8 @@ public enum VoiceInkProviderKind: String, CaseIterable, Codable, Identifiable, S
             return URL(string: "https://console.x.ai/")!
         case .cartesia:
             return URL(string: "https://play.cartesia.ai/keys")!
+        case .nvidia:
+            return URL(string: "https://build.nvidia.com/nvidia/parakeet-ctc-0_6b-zh-tw/api")!
         case .anthropic:
             return URL(string: "https://console.anthropic.com/settings/keys")!
         case .openRouter:
@@ -1332,6 +1344,8 @@ public enum VoiceInkProviderKind: String, CaseIterable, Codable, Identifiable, S
             return .assemblyAI
         case .xai:
             return .xai
+        case .nvidia:
+            return .nvidiaRiva
         case .cartesia, .customCloud, .anthropic, .openRouter, .customAI, .ollama:
             return .openAICompatible
         case .localWhisper:
@@ -1354,7 +1368,7 @@ public enum VoiceInkProviderKind: String, CaseIterable, Codable, Identifiable, S
         }
 
         switch transcriptionTransport {
-        case .openAICompatible, .deepgram, .geminiGenerateContent, .mistral, .elevenLabs, .soniox, .speechmatics, .assemblyAI, .xai:
+        case .openAICompatible, .deepgram, .geminiGenerateContent, .mistral, .elevenLabs, .soniox, .speechmatics, .assemblyAI, .xai, .nvidiaRiva:
             return .remote
         case .localWhisper:
             return .localWhisper
@@ -1369,7 +1383,7 @@ public enum VoiceInkProviderKind: String, CaseIterable, Codable, Identifiable, S
         switch self {
         case .groq, .deepgram, .gemini:
             return .rejectEmpty
-        case .soniox, .speechmatics, .assemblyAI, .localFluidAudio, .nativeApple:
+        case .soniox, .speechmatics, .assemblyAI, .nvidia, .localFluidAudio, .nativeApple:
             return .rejectWhitespace
         case .openAI, .cerebras, .mistral, .elevenLabs, .xai, .cartesia, .anthropic, .openRouter, .customAI, .ollama, .customCloud, .localWhisper, .voiceInk:
             return .allow
@@ -1443,6 +1457,12 @@ public enum VoiceInkProviderKind: String, CaseIterable, Codable, Identifiable, S
                 account: VoiceInkProviderAPIKeyAccount.xAI,
                 verificationStateKey: "xaiKeyVerified",
                 verificationTransport: .xaiAPIKey
+            )
+        case .nvidia:
+            return .userAPIKey(
+                account: VoiceInkProviderAPIKeyAccount.nvidia,
+                verificationStateKey: "nvidiaKeyVerified",
+                verificationTransport: .nvidiaRivaConfig
             )
         case .cartesia:
             return .userAPIKey(
@@ -1527,6 +1547,12 @@ public enum VoiceInkProviderKind: String, CaseIterable, Codable, Identifiable, S
         VoiceInkProviderCredential.nonBlank(runtimeAPIKey(userAPIKey: userAPIKey))
     }
 
+    public var isSupportedOnCurrentOS: Bool {
+        guard self == .nvidia else { return true }
+        if #available(macOS 15, iOS 18, *) { return true }
+        return false
+    }
+
     public func isReady(
         userAPIKey: String,
         userAPIKeyVerified: Bool,
@@ -1536,6 +1562,7 @@ public enum VoiceInkProviderKind: String, CaseIterable, Codable, Identifiable, S
         customCloudModelAvailable: Bool = false,
         localEnhancementServiceAvailable: Bool = false
     ) -> Bool {
+        guard isSupportedOnCurrentOS else { return false }
         switch accessRequirement {
         case .userAPIKey:
             return userAPIKeyVerified && VoiceInkProviderCredential.nonBlank(userAPIKey) != nil
@@ -1602,6 +1629,8 @@ public enum VoiceInkProviderKind: String, CaseIterable, Codable, Identifiable, S
             return .xai
         case .cartesia:
             return .cartesia
+        case .nvidia:
+            return .nvidia
         case .anthropic, .openRouter, .customAI, .ollama, .customCloud:
             return nil
         case .localWhisper:
@@ -1637,7 +1666,7 @@ public enum VoiceInkProviderKind: String, CaseIterable, Codable, Identifiable, S
             return nil
         case .ollama:
             return nil
-        case .deepgram, .elevenLabs, .soniox, .speechmatics, .assemblyAI, .xai, .cartesia, .customCloud, .localWhisper, .localFluidAudio, .nativeApple, .voiceInk:
+        case .deepgram, .elevenLabs, .soniox, .speechmatics, .assemblyAI, .xai, .cartesia, .nvidia, .customCloud, .localWhisper, .localFluidAudio, .nativeApple, .voiceInk:
             return nil
         }
     }

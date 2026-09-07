@@ -38,6 +38,7 @@ on:
       - "scripts/verify-static-whisper-xcframework.sh"
       - "VoiceInk/**"
       - "VoiceInkCore/**"
+      - "VoiceInkNVIDIA/**"
       - "VoiceInkTests/**"
       - "VoiceInk.xcodeproj/**"
   push:
@@ -72,6 +73,7 @@ on:
       - "scripts/verify-static-whisper-xcframework.sh"
       - "VoiceInk/**"
       - "VoiceInkCore/**"
+      - "VoiceInkNVIDIA/**"
       - "VoiceInkTests/**"
       - "VoiceInk.xcodeproj/**"
 

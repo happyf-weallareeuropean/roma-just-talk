@@ -2,6 +2,7 @@ import Foundation
 
 public enum VoiceInkTranscriptionModelAvailabilityRequirement: Equatable, Sendable {
     case configuredAPIKey
+    case configuredAPIKeyAndCurrentOSSupport
     case currentOSSupport
     case downloadedLocalFluidAudioModel
     case downloadedLocalWhisperModel
@@ -9,11 +10,11 @@ public enum VoiceInkTranscriptionModelAvailabilityRequirement: Equatable, Sendab
     case unavailable
 
     public var requiresConfiguredAPIKey: Bool {
-        self == .configuredAPIKey
+        self == .configuredAPIKey || self == .configuredAPIKeyAndCurrentOSSupport
     }
 
     public var requiresCurrentOSSupport: Bool {
-        self == .currentOSSupport
+        self == .currentOSSupport || self == .configuredAPIKeyAndCurrentOSSupport
     }
 }
 
@@ -40,6 +41,8 @@ public struct VoiceInkTranscriptionModelAvailabilityFacts: Equatable, Sendable {
 
     public var isUsable: Bool {
         switch requirement {
+        case .configuredAPIKeyAndCurrentOSSupport:
+            hasConfiguredAPIKey && isAvailableOnCurrentOS
         case .configuredAPIKey:
             hasConfiguredAPIKey
         case .currentOSSupport:
@@ -365,6 +368,7 @@ public enum VoiceInkTranscriptionModelProvider: String, CaseIterable, Sendable {
     case openAI
     case assemblyAI
     case cartesia
+    case nvidia
     case deepgram
     case elevenLabs
     case mistral
@@ -377,6 +381,8 @@ public enum VoiceInkTranscriptionModelProvider: String, CaseIterable, Sendable {
 
     public var providerKind: VoiceInkProviderKind? {
         switch self {
+        case .nvidia:
+            return .nvidia
         case .groq:
             return .groq
         case .openAI:
@@ -408,6 +414,8 @@ public enum VoiceInkTranscriptionModelProvider: String, CaseIterable, Sendable {
 
     public var languageCodes: [String]? {
         switch self {
+        case .nvidia:
+            return ["zh", "en"]
         case .assemblyAI:
             return ["en", "es", "de", "fr", "pt", "it"]
         case .cartesia:
@@ -480,7 +488,7 @@ public enum VoiceInkTranscriptionModelProvider: String, CaseIterable, Sendable {
         switch self {
         case .assemblyAI, .deepgram, .elevenLabs, .mistral, .soniox, .speechmatics, .xai:
             return true
-        case .cartesia, .groq, .openAI, .gemini, .local, .nativeApple:
+        case .cartesia, .nvidia, .groq, .openAI, .gemini, .local, .nativeApple:
             return false
         }
     }
@@ -489,7 +497,7 @@ public enum VoiceInkTranscriptionModelProvider: String, CaseIterable, Sendable {
         switch self {
         case .cartesia:
             return false
-        case .assemblyAI, .deepgram, .elevenLabs, .mistral, .soniox, .speechmatics, .xai, .groq, .openAI, .gemini, .local, .nativeApple:
+        case .assemblyAI, .deepgram, .elevenLabs, .mistral, .soniox, .speechmatics, .xai, .groq, .openAI, .gemini, .nvidia, .local, .nativeApple:
             return true
         }
     }
@@ -500,6 +508,8 @@ public enum VoiceInkTranscriptionModelProvider: String, CaseIterable, Sendable {
 
     public var apiErrorDomain: String? {
         switch self {
+        case .nvidia:
+            return "NVIDIAAPI"
         case .groq:
             return "GroqAPI"
         case .deepgram:
@@ -540,7 +550,7 @@ public enum VoiceInkTranscriptionModelProvider: String, CaseIterable, Sendable {
             return selectedModelName.contains("standard") ? "standard" : "enhanced"
         case .mistral:
             return "voxtral-mini-transcribe-realtime-2602"
-        case .assemblyAI, .cartesia, .deepgram, .gemini, .groq, .openAI, .xai, .local, .nativeApple:
+        case .assemblyAI, .cartesia, .deepgram, .gemini, .groq, .openAI, .xai, .nvidia, .local, .nativeApple:
             return selectedModelName
         }
     }
@@ -549,7 +559,7 @@ public enum VoiceInkTranscriptionModelProvider: String, CaseIterable, Sendable {
         switch self {
         case .assemblyAI:
             return true
-        case .cartesia, .deepgram, .elevenLabs, .gemini, .groq, .mistral, .openAI, .soniox, .speechmatics, .xai, .local, .nativeApple:
+        case .cartesia, .deepgram, .elevenLabs, .gemini, .groq, .mistral, .openAI, .soniox, .speechmatics, .xai, .nvidia, .local, .nativeApple:
             return false
         }
     }
@@ -754,6 +764,8 @@ public enum VoiceInkTranscriptionModelProviderRole: Equatable, Sendable {
             return .currentOSSupport
         case .customCloud:
             return .alwaysAvailable
+        case .cloud(.nvidia):
+            return .configuredAPIKeyAndCurrentOSSupport
         case .cloud(let provider):
             return provider == nil ? .unavailable : .configuredAPIKey
         }
@@ -966,6 +978,7 @@ public enum VoiceInkMacOSTranscriptionModelProvider: String, Codable, Hashable, 
     case assemblyAI = "AssemblyAI"
     case xai = "xAI"
     case cartesia = "Cartesia"
+    case nvidia = "NVIDIA"
     case custom = "Custom"
     case nativeApple = "Native Apple"
 
@@ -1009,6 +1022,8 @@ public enum VoiceInkMacOSTranscriptionModelProvider: String, Codable, Hashable, 
             return .cloud(.xai)
         case .cartesia:
             return .cloud(.cartesia)
+        case .nvidia:
+            return .cloud(.nvidia)
         case .whisper:
             return .localWhisper
         case .fluidAudio:
@@ -1297,7 +1312,7 @@ public enum VoiceInkTranscriptionModelCatalog {
 
     public static func modelNames(for provider: VoiceInkTranscriptionModelProvider) -> [String] {
         switch provider {
-        case .assemblyAI, .cartesia, .groq, .deepgram, .elevenLabs, .mistral, .gemini, .soniox, .speechmatics, .xai:
+        case .assemblyAI, .cartesia, .groq, .deepgram, .elevenLabs, .mistral, .gemini, .soniox, .speechmatics, .xai, .nvidia:
             return cloudModels(for: provider).map(\.name)
         case .openAI:
             return [
@@ -1314,6 +1329,16 @@ public enum VoiceInkTranscriptionModelCatalog {
 
     public static func cloudModels(for provider: VoiceInkTranscriptionModelProvider) -> [VoiceInkCloudTranscriptionModelSpec] {
         switch provider {
+        case .nvidia:
+            return [VoiceInkCloudTranscriptionModelSpec(
+                name: "parakeet-ctc-0.6b-zh-tw",
+                displayName: "Parakeet zh-TW (NVIDIA Cloud)",
+                description: "Optional cloud backup for Taiwanese Mandarin and English. Sends audio to NVIDIA; requires your API key and macOS 15 or later.",
+                speed: 0,
+                accuracy: 0,
+                isMultilingual: true,
+                supportsStreaming: false
+            )]
         case .assemblyAI:
             return [
                 VoiceInkCloudTranscriptionModelSpec(

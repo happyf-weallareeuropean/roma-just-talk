@@ -22,9 +22,11 @@ let package = Package(
             targets: ["VoiceInkAudioProof"]
         )
     ],
+    dependencies: [.package(path: "../VoiceInkNVIDIA")],
     targets: [
         .target(
-            name: "VoiceInkCore"
+            name: "VoiceInkCore",
+            dependencies: [.product(name: "VoiceInkNVIDIA", package: "VoiceInkNVIDIA")]
         ),
         .executableTarget(
             name: "VoiceInkAudioProof",

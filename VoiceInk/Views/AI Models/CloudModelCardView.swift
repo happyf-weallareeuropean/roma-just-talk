@@ -129,25 +129,31 @@ struct CloudModelCardView: View {
                 .foregroundColor(Color(.secondaryLabelColor))
                 .lineLimit(1)
 
-            // Speed
-            HStack(spacing: 3) {
-                Text(VoiceInkModelManagementPresentation.speedLabel)
-                    .font(.system(size: 11, weight: .medium))
-                    .foregroundColor(Color(.secondaryLabelColor))
-                progressDotsWithNumber(value: model.speed * 10)
-            }
-            .lineLimit(1)
-            .fixedSize(horizontal: true, vertical: false)
+            if model.speed > 0 && model.accuracy > 0 {
+                // Speed
+                HStack(spacing: 3) {
+                    Text(VoiceInkModelManagementPresentation.speedLabel)
+                        .font(.system(size: 11, weight: .medium))
+                        .foregroundColor(Color(.secondaryLabelColor))
+                    progressDotsWithNumber(value: model.speed * 10)
+                }
+                .lineLimit(1)
+                .fixedSize(horizontal: true, vertical: false)
 
-            // Accuracy
-            HStack(spacing: 3) {
-                Text(VoiceInkModelManagementPresentation.accuracyLabel)
-                    .font(.system(size: 11, weight: .medium))
+                // Accuracy
+                HStack(spacing: 3) {
+                    Text(VoiceInkModelManagementPresentation.accuracyLabel)
+                        .font(.system(size: 11, weight: .medium))
+                        .foregroundColor(Color(.secondaryLabelColor))
+                    progressDotsWithNumber(value: model.accuracy * 10)
+                }
+                .lineLimit(1)
+                .fixedSize(horizontal: true, vertical: false)
+            } else {
+                Text("Not benchmarked")
+                    .font(.system(size: 11))
                     .foregroundColor(Color(.secondaryLabelColor))
-                progressDotsWithNumber(value: model.accuracy * 10)
             }
-            .lineLimit(1)
-            .fixedSize(horizontal: true, vertical: false)
         }
         .lineLimit(1)
     }
@@ -165,7 +171,11 @@ struct CloudModelCardView: View {
         apiKeyCardPresentation: VoiceInkProviderAPIKeyCardPresentation
     ) -> some View {
         HStack(spacing: 8) {
-            if isCurrent {
+            if !transcriptionModelManager.isAvailableOnCurrentOS(model) {
+                Text("macOS 15+")
+                    .font(.system(size: 12))
+                    .foregroundColor(Color(.secondaryLabelColor))
+            } else if isCurrent {
                 Text(VoiceInkModelManagementPresentation.defaultModelTitle)
                     .font(.system(size: 12))
                     .foregroundColor(Color(.secondaryLabelColor))

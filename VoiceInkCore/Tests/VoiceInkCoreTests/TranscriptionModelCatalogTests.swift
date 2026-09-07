@@ -542,6 +542,7 @@ final class TranscriptionModelCatalogTests: XCTestCase {
                 "AssemblyAI",
                 "xAI",
                 "Cartesia",
+                "NVIDIA",
                 "Custom",
                 "Native Apple"
             ]

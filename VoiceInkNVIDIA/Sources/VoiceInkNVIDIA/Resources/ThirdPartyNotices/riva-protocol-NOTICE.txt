@@ -1,0 +1,3 @@
+Riva protocol source: nvidia-riva/common 268890b7286031a6d4950e34f7ce13ed0d4ce621
+Copyright (c) 2022 NVIDIA CORPORATION & AFFILIATES. MIT license.
+Portions copyright 2019 Google LLC, Apache License 2.0 (see grpc-swift-2-LICENSE.txt).

@@ -1,4 +1,5 @@
 import Foundation
+import VoiceInkNVIDIA
 
 struct VoiceInkMultipartFormData {
     let boundary: String
@@ -430,6 +431,16 @@ public struct VoiceInkProviderAPIKeyVerifier: Sendable {
         }
 
         switch transport {
+        case .nvidiaRivaConfig:
+            guard #available(macOS 15, iOS 18, *) else {
+                return VoiceInkAPIKeyVerificationResult(isValid: false, errorMessage: NVIDIAParakeet.minimumOSMessage)
+            }
+            do {
+                try await NVIDIAParakeetClient.verifyAPIKey(apiKey)
+                return VoiceInkAPIKeyVerificationResult(isValid: true, errorMessage: nil)
+            } catch {
+                return VoiceInkAPIKeyVerificationResult(isValid: false, errorMessage: error.localizedDescription)
+            }
         case .openAICompatibleModels:
             return await openAICompatibleClient.verifyAPIKeyDetailed(
                 baseURL: provider.apiBaseURL,

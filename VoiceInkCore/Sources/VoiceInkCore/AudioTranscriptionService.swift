@@ -1,4 +1,5 @@
 import Foundation
+import VoiceInkNVIDIA
 
 public protocol VoiceInkAudioTranscriptionService {
     func transcribeAudioFile(
@@ -32,6 +33,8 @@ public enum VoiceInkCloudTranscriptionError: Error, LocalizedError {
     case unsupportedProvider
     case missingAPIKey
     case audioFileNotFound
+    case invalidAudioFormat(String)
+    case unsupportedOperatingSystem(String)
     case apiRequestFailed(statusCode: Int, message: String)
     case networkError(Error)
     case noTranscriptionReturned
@@ -42,6 +45,8 @@ public enum VoiceInkCloudTranscriptionError: Error, LocalizedError {
             return "The model provider is not supported by this service."
         case .missingAPIKey:
             return "API key for this service is missing. Please configure it in the settings."
+        case .invalidAudioFormat(let message), .unsupportedOperatingSystem(let message):
+            return message
         case .audioFileNotFound:
             return "The audio file to transcribe could not be found."
         case .apiRequestFailed(let statusCode, let message):
@@ -247,7 +252,7 @@ public struct VoiceInkRemoteTranscriptionOptions: Equatable, Sendable {
                 prompt: requestPrompt,
                 customVocabulary: normalizedCustomVocabulary
             )
-        case .cartesia, .elevenLabs, .gemini, .mistral, .xai, .local, .nativeApple:
+        case .cartesia, .elevenLabs, .gemini, .mistral, .xai, .nvidia, .local, .nativeApple:
             return Self()
         }
     }
@@ -2445,6 +2450,21 @@ public struct VoiceInkRemoteTranscriptionService: VoiceInkAudioTranscriptionServ
         options: VoiceInkRemoteTranscriptionOptions = VoiceInkRemoteTranscriptionOptions()
     ) async throws -> String {
         switch transport {
+        case .nvidiaRiva:
+            guard #available(macOS 15, iOS 18, *) else {
+                throw VoiceInkCloudTranscriptionError.unsupportedOperatingSystem(NVIDIAParakeet.minimumOSMessage)
+            }
+            guard model == NVIDIAParakeet.modelName else {
+                throw VoiceInkCloudTranscriptionError.unsupportedProvider
+            }
+            guard let pcmData = VoiceInkPCM16Audio.littleEndianPCM16Data(fromWAVData: audioData), !pcmData.isEmpty else {
+                throw VoiceInkCloudTranscriptionError.invalidAudioFormat("NVIDIA requires nonempty 16 kHz mono PCM16 WAV audio.")
+            }
+            do {
+                return try await NVIDIAParakeetClient.transcribe(pcm16Data: pcmData, apiKey: apiKey)
+            } catch NVIDIAParakeetError.emptyTranscript {
+                throw VoiceInkCloudTranscriptionError.noTranscriptionReturned
+            }
         case .openAICompatible:
             return try await openAICompatibleClient.transcribeAudioData(
                 baseURL: apiBaseURL,

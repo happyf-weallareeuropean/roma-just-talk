@@ -644,8 +644,10 @@ public struct Mode: Identifiable, Codable {
         availableTranscriptionProviders: [VoiceInkProviderKind],
         availablePostProcessingProviders: [VoiceInkProviderKind]
     ) {
-        if !availableTranscriptionProviders.contains(transcriptionProvider),
-           let provider = availableTranscriptionProviders.first {
+        // NVIDIA cloud backup is explicitly selected; never redirect audio into or out of it.
+        if transcriptionProvider != .nvidia,
+           !availableTranscriptionProviders.contains(transcriptionProvider),
+           let provider = availableTranscriptionProviders.first(where: { $0 != .nvidia }) {
             selectTranscriptionProvider(provider)
         }
 

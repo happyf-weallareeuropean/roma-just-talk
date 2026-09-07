@@ -76,9 +76,9 @@ class TranscriptionModelManager: ObservableObject {
     func setDefaultTranscriptionModel(_ model: any TranscriptionModel) {
         guard isAvailableOnCurrentOS(model) else {
             NotificationManager.shared.showNotification(
-                title: VoiceInkNativeAppleTranscriptionPolicy.requiresMacOS26Title(
-                    modelDisplayName: model.displayName
-                ),
+                title: model.provider == .nvidia
+                    ? "NVIDIA cloud transcription requires macOS 15 or later."
+                    : VoiceInkNativeAppleTranscriptionPolicy.requiresMacOS26Title(modelDisplayName: model.displayName),
                 type: .error
             )
             return
@@ -116,9 +116,14 @@ class TranscriptionModelManager: ObservableObject {
 
     private func availabilityFacts(for model: any TranscriptionModel) -> VoiceInkTranscriptionModelAvailabilityFacts {
         let availabilityRequirement = model.provider.transcriptionModelAvailabilityRequirement
-        let isAvailableOnCurrentOS = availabilityRequirement.requiresCurrentOSSupport
-            ? isAvailableOnCurrentOSForNativeAppleTranscription
-            : true
+        let isAvailableOnCurrentOS: Bool
+        if let remoteProvider = model.provider.remoteTranscriptionProviderKind {
+            isAvailableOnCurrentOS = remoteProvider.isSupportedOnCurrentOS
+        } else {
+            isAvailableOnCurrentOS = availabilityRequirement.requiresCurrentOSSupport
+                ? isAvailableOnCurrentOSForNativeAppleTranscription
+                : true
+        }
         let downloadedLocalWhisperModel = VoiceInkWhisperModelFiles.downloadedLocalModelFile(
             forModelName: model.name,
             in: whisperModelManager?.availableModels ?? []
