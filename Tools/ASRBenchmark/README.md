@@ -1,8 +1,9 @@
 # Roma ASR research probe
 
 Isolated model diagnostics, not a Roma application or release test. Audio and
-transcripts stay outside Git. There is no ground-truth inference or accuracy
-score: a model's transcript cannot serve as another model's reference.
+private transcripts stay outside Git. The initial private recordings have no
+corrected references. Public follow-up evaluations use independent human labels;
+a model's transcript cannot serve as another model's reference.
 
 ## Reproduce on a disposable Apple Silicon Mac
 
@@ -95,3 +96,46 @@ Keep raw Traditional output, script-normalized recognition, embedded English
 term accuracy, and formatting/grammar edits separate. Run silence/noise controls
 and real subsecond speech before judging hallucination or short-word reliability.
 Do not publish private WAVs, filenames, or transcripts in research commits.
+
+## Scoring independently labeled recordings
+
+Install `opencc-python-reimplemented==0.1.7` in the isolated evaluation environment.
+Reference JSON is an array of `{"clip": "001.wav", "text": "human reference"}`
+objects. Retain the source dataset/revision, original recording hash, resampled
+WAV hash, speaker and human/synthetic provenance in the same manifest.
+
+```sh
+python -m unittest discover -s Tools/ASRBenchmark -p 'test_score_references.py'
+python Tools/ASRBenchmark/score_references.py references.json events.jsonl scores.json
+```
+
+The scorer requires one first-repetition result for every reference, including
+empty answers. Duplicate or missing results fail; later repetitions cannot hide
+an initial failure. It reports raw CER, OpenCC-normalized CER, mixed-unit error
+rate, substitution/insertion/deletion counts, empty answers and exact matches.
+Mixed units are Chinese characters plus English words and number tokens; this is
+not a general English WER implementation. OpenCC `s2twp` changes both script and
+Taiwan vocabulary; canonical improvement is not an acoustic-recognition gain.
+Timing remains in the original probe output and is not included in the accuracy
+score, particularly because paced duration is not compute-only RTF.
+
+The public follow-up sources are:
+
+- [TaiMECS](https://huggingface.co/datasets/JacobLinCool/TaiMECS/tree/83f397e41840ba187cc6833e1320bd2e5fa858f1):
+  CC BY 4.0, JacobLinCool. Use only its 20 `human` recordings for this comparison;
+  the other 80 recordings are synthetic. One speaker, Taiwanese Mandarin with
+  embedded English. TEA-ASR trained on TaiMECS, so this is not held-out evidence
+  for that model.
+- [Common Voice 25 zh-TW mirror](https://huggingface.co/datasets/OpenFormosa/common_voice_25_zh-TW/tree/9e969df60ad63f812b68a755581c961bc967673d):
+  CC0. The exploratory subset selects 40 distinct speakers from the official
+  test split, with 20 recordings at most three seconds and 20 longer recordings,
+  at least two upvotes and no downvotes. This stratified subset is not the full
+  benchmark or a representative population accuracy estimate.
+- [Speech Commands V2](https://www.tensorflow.org/datasets/catalog/speech_commands):
+  human single-word test recordings. The exploratory subset takes three distinct
+  speaker IDs for each of ten target labels, in sorted filename order. These
+  one-second recordings test isolated words; their duration is not labeled speech
+  onset or proof of subsecond-utterance coverage.
+
+Keep the same exact selected manifest across candidate implementations, and
+separate native conversion/quantization results from the original model control.
