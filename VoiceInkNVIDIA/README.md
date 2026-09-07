@@ -10,6 +10,12 @@ NVIDIA documents separate gRPC and HTTP invocation routes: https://docs.nvidia.c
 
 Bundled third-party notices are retained under `Sources/VoiceInkNVIDIA/Resources/ThirdPartyNotices` for distribution.
 
+## Transport dependency
+
+The transport uses [Roma's maintained source revision `65adb0b`](https://github.com/negentropi/grpc-swift-nio-transport/commit/65adb0bc4721a6c4695e1956af9552970c06a59f), based on upstream 2.9.2 (`eaad084d6c26ff1f2e96f9c2ab76ef84d7165ab6`). The only changes declare the existing `NIOHTTP1` and `NIOTLS` products as direct dependencies of `GRPCNIOTransportCore`, plus a modification notice. That target references their symbols directly; omitting the edges breaks Xcode's dynamic package framework link during iOS tests even when the static app build passes. Runtime sources, dependency versions, Apache license, and upstream notices are unchanged.
+
+Keep this revision pinned until an upstream release includes the dependency correction. Validate replacements with the complete iOS simulator test build; a successful standalone package or app build does not cover this link boundary.
+
 ## Generated protocol
 
 Unmodified source protos from `nvidia-riva/common` commit `268890b7286031a6d4950e34f7ce13ed0d4ce621`; license retained under `Protos/LICENSE`. Generated with SwiftProtobuf 1.38.1 and grpc-swift-protobuf 2.4.1. Regeneration requires protoc plus these two generators on PATH:
