@@ -1,34 +1,45 @@
-# Roma local ASR investigation — 2026-09-07
+# Roma local ASR investigation — 2026-09-08
 
-Status: human-reference evaluation and native integration validation. Qwen3-ASR
-0.6B and Breeze ASR25 remain local bilingual candidates; neither is accepted for
-the onboarding suggestion. Parakeet V2 remains the current English choice.
+Status: native eight-bit Qwen is the local bilingual integration lead, with app
+acceptance still pending. Parakeet V2 remains the current English choice.
 No v1.95.1 release or landing deployment is implied by this work.
 
 ## Recommendation
 
-Continue the controlled native evaluation of **Qwen3-ASR 0.6B** for local Chinese + English.
-On the same 20 human Taiwanese code-switching recordings it produced 3.02%
-mixed-unit error and 2.44% normalized CER, with no empty outputs. Native whole-file
-inference ran at aggregate RTF 0.048 on a disposable Mac's virtual GPU. This is a
-one-speaker accuracy sample and a batch speed measurement, not a streaming or
-physical neural-memory acceptance result. Separate 40-speaker Common Voice
-testing revealed five empty outputs. A reviewed encoder-length correction
-recovered two; three true early-EOS failures remain. Decoder-only dequantization
-in the official FP32 runtime reproduced those same failures with 4-bit weights;
-8-bit recovered all three and matched the original 7.22% CV CER. Native 8-bit
-replay is the next acceptance step. Actual paced streaming
-also leaks protocol headers and repeats words. The MLX implementation therefore
-cannot yet be used as the regional default. The existing pinned FluidAudio
-CoreML Qwen manager is a separate native route: correcting its frontend produced
-11.00% CV CER and 4.23% mixed error, with no empty clips. A separate stock-frontend
-resource pass repeating one 2.28-second clip reached about 360 MiB neural
-allocation and 1.69 GiB process footprint, with barely reclaimable idle neural
-memory; this is not a corrected-native whole-corpus peak. Corrected native
-mixed-clip batch median was 1.181 seconds. The
-conversion also restricts attention context and handles padding differently.
-Its convenience streaming wrapper is whole-buffer retranscription and is not a
-ready solution. These are measured tradeoffs, not rejection based on model size.
+Advance **Qwen3-ASR 0.6B native MLX eight-bit** through Roma integration. On the
+physical Apple M5, automatic-language batch decoding returned no empty outputs
+across all 90 public clips. TaiMECS scored 24/662 mixed errors (3.63%) and
+39/1023 normalized CER (3.81%); the 40-speaker Common Voice subset scored 21/291
+CER (7.22%), matching the original FP32 aggregate. The three remaining four-bit
+early-EOS failures did not recur. Isolated English commands remain weak:
+12 errors over 30 words, affecting 11 clips; this is not general dictation WER.
+
+With cumulative-audio decoding every 350 ms, all 20 human mixed-language clips
+completed without empty output or token-cap hits: 27/662 mixed errors (4.08%)
+and 34/1023 normalized CER (3.32%). First nonempty text from recording start was
+median 672 ms / p95 876 ms, with a cold-process maximum of 2.196 seconds.
+Release-to-final was median 172.6 ms / p95 267.7 ms. Nonempty text is not a
+validated usable partial, and this headless result does not pass Roma's 250 ms
+insertion gate. On the same model and recordings at 350 ms cadence, cumulative
+decoding scored 27/662 versus the older window policy's 76/662. The two-second
+cumulative control scored 25/662. Context and prefix handling also change, so
+these comparisons do not isolate a single cause. Shared production-module compilation is
+complete; actual helper replay, lifecycle, and full app acceptance remain pending.
+
+A separate physical resource pass sampled MLX process footprint up to 1,446 MiB,
+with a kernel-reported lifetime peak of 2,121 MiB. Its zero neural-ledger tags
+reflect GPU accounting, not zero model memory. This is a substantial memory
+tradeoff requiring app-level validation. Batch timings that overlapped helper
+compilation at 16:04–16:12 UTC are excluded from performance comparisons.
+
+Correcting the separate FluidAudio CoreML frontend produced 11.00% CV CER and
+4.23% mixed error, without empty clips. The corrected whole-corpus resource
+follow-up measured 360 MiB active neural allocation and 1,827 MiB sampled
+process footprint. About 357 MiB became neural-reclaimable after 9.17 seconds
+idle, superseding the earlier six-second observation. Different workloads and
+observation windows prevent attributing this change to the frontend correction.
+CoreML's attention context/padding differences and whole-buffer streaming
+wrapper remain tradeoffs; it is not the integration lead.
 
 **Breeze ASR 25 Q8** produced 2.11% mixed error and 0.98% normalized CER on that
 set, plus 6.53% CER on the 40-speaker subset without empty answers. Its complete
@@ -51,7 +62,7 @@ rankings.
 
 | Candidate | Why it deserves testing | Main gap for Roma |
 | --- | --- | --- |
-| Qwen3-ASR 0.6B | Strong mixed-language accuracy; 8-bit decoder control resolves 4-bit empty outputs; native CoreML frontend measured | Native MLX 8-bit replay, streaming boundaries, Traditional output, and app lifecycle remain unresolved; CoreML has measured latency/context/idle-memory tradeoffs |
+| Qwen3-ASR 0.6B native MLX eight-bit | All 90 batch clips nonempty; original-level CV aggregate; 350 ms cumulative streaming measured | Isolated English/language choice, Traditional output, usable partials, >1 GiB process memory, lifecycle and actual app 250 ms gate |
 | Breeze ASR 25 | Best measured bilingual scores; complete Q8 artifact verified through whisper.cpp | Apple memory/performance and app greedy decoding/streaming unverified; wrong-language isolated English errors |
 | X-ASR-zh-en, 160/480 ms | Bilingual Zipformer with cached streaming | Tested accuracy and command deletions trail the leading alternatives; no onboarding integration |
 | SenseVoiceSmall INT8 Core ML | Compact multilingual CTC pipeline | Repeatable empty outputs on VM without ANE; batch architecture; physical ANE remains unmeasured |
@@ -99,6 +110,7 @@ Public manifest inspection found the following exact downloads. These are
 | SenseVoice preprocessor + INT8 + vocabulary | `cdea3526163035c19915d4a10268992d018ebd46` | 239,913,642 |
 | Parakeet V2 Roma manifest components | `ee09c569f73759e6d44c9bd16766f477b2b36d39` | 464,413,250 |
 | Qwen3-ASR 0.6B selected snapshot | `5eb144179a02acc5e5ba31e748d22b0cf3e303b0` | 1,880,618,159 |
+| Qwen3-ASR 0.6B MLX eight-bit weights only | `89e96d92ba34aca20b3e29fb10cc284097d1219f` | 1,006,229,426 |
 | Breeze ASR 25 selected snapshot | `cffe7ccb404d025296a00758d0a33468bec3a9d0` | 3,092,421,455 |
 
 [Pinned X-ASR files](https://huggingface.co/GilgameshWind/X-ASR-zh-en/tree/689ff18c584d29910da37b6fe904db0c1489c9d1),
@@ -196,8 +208,10 @@ and was stopped; it is excluded. The corrected runs used pinned local assets.
 Raw WAVs, transcripts, sampled RSS, run receipts, package versions, and a local
 listening/reference-export page remain under ignored
 `.local-build/asr-research/20260907/`. Audio, original filenames, and transcripts
-are excluded from the research commit. Active neural allocation, reclaimability, power, physical ANE
-usage, iPhone behavior, speech-onset latency, and Roma insertion remain **N/A**.
+are excluded from the research commit. For this historical private-recording pass,
+active neural allocation, reclaimability, power, physical ANE usage, iPhone
+behavior, speech-onset latency, and Roma insertion were **N/A**. Subsequent public
+physical memory measurements are recorded in the public benchmark report.
 
 ## Shipping constraints
 

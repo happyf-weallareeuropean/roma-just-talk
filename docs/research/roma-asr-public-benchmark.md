@@ -1,4 +1,4 @@
-# Roma public human-reference benchmark — 2026-09-07
+# Roma public human-reference benchmark — 2026-09-08
 
 This report concerns local bilingual model selection for v1.95.1. NVIDIA zh-TW
 is a separate, manually selected cloud backup. No model in this report has passed
@@ -6,15 +6,19 @@ all 32 Roma requirements or the complete app release gate.
 
 ## Current decision
 
-Qwen3-ASR 0.6B remains an integration candidate, but **the tested 4-bit native
-variant is not accepted yet**. Correcting an encoder-length calculation reduced
-five empty answers to three on the 40-speaker Taiwanese Mandarin subset; the
-original FP32 control returned none. Paced streaming also exposed protocol-header
-leakage and repeated words. These defects must be resolved before regional
-onboarding suggests it. Breeze Q8 has stronger measured bilingual accuracy and
-loads through whisper.cpp, but its larger footprint and actual Apple streaming
-behavior remain to be measured. The existing pinned FluidAudio CoreML Qwen
-implementation is being checked as another native runtime for the same model.
+**Native MLX eight-bit Qwen3-ASR 0.6B is the integration lead.** It returned
+nonempty text on all 90 public batch clips, matched the original FP32 Common
+Voice aggregate, and completed a 350 ms cumulative streaming control on all 20
+human mixed-language recordings. The four-bit variant remains unsuitable because
+three early-EOS failures persist after the encoder-length correction.
+
+This is a model/runtime recommendation, not shipping approval. Isolated English
+language choice, Traditional output, usable partials, memory, lifecycle, and the
+actual app's 250 ms insertion gate remain open. The shared production module has
+compiled; its actual helper replay and app lifecycle gates are pending. Breeze
+Q8 retains stronger measured bilingual scores but lacks Apple streaming/resource
+acceptance. Corrected CoreML Qwen is a measured alternative with 360 MiB active neural
+allocation, different attention context and weaker accuracy in this subset.
 
 ## Shared corpora
 
@@ -54,12 +58,13 @@ prompts were applied.
 
 | Implementation | TaiMECS mixed error | TaiMECS normalized CER | Common Voice normalized CER | English commands mixed error | Empty outputs |
 | --- | ---: | ---: | ---: | ---: | --- |
+| Qwen0.6 native MLX eight-bit, physical M5 | 24/662 = 3.63% | 39/1023 = 3.81% | 21/291 = 7.22% | 12/30 = 40.00% | **0/90** |
 | Qwen0.6 native MLX 4-bit | 20/662 = 3.02% | 25/1023 = 2.44% | 57/291 = 19.59% | 10/30 = 33.33% | 0/20 mixed; **5/40 CV**; 0/30 commands |
 | Qwen0.6 native MLX 4-bit, integer-length correction | — | — | 44/291 = 15.12% | — | **3/40 CV** |
 | Qwen0.6 original PyTorch FP32 CPU | 23/662 = 3.47% | 31/1023 = 3.03% | 21/291 = 7.22% | 11/30 = 36.67% | 0 on all three sets |
 | Qwen0.6 FP32, English hint | — | — | — | 7/30 = 23.33% | 0/30; diagnostic control only |
 | Qwen0.6 official FP32 runtime, dequantized 4-bit decoder only | — | — | 44/291 = 15.12% | — | **3/40 CV**, same three native failures |
-| Qwen0.6 official FP32 runtime, dequantized 8-bit decoder only | — | — | 21/291 = 7.22% | — | 0/40 CV; native 8-bit replay pending |
+| Qwen0.6 official FP32 runtime, dequantized 8-bit decoder only | — | — | 21/291 = 7.22% | — | 0/40 CV; decoder isolation control |
 | Qwen0.6 CoreML int8 variant, shipping SDK frontend | 115/662 = 17.37% | 157/1023 = 15.35% | 60/291 = 20.62% | — | 0/60 |
 | Qwen0.6 CoreML int8 variant, official precomputed frontend | 26/662 = 3.93% | 40/1023 = 3.91% | 32/291 = 11.00% | — | 0/60 |
 | Qwen0.6 CoreML int8 variant, corrected native frontend | 28/662 = 4.23% | 40/1023 = 3.91% | 32/291 = 11.00% | — | 0/60 |
@@ -72,11 +77,14 @@ prompts were applied.
 | SenseVoice INT8 Core ML | 104/662 = 15.71% | 149/1023 = 14.57% | — | — | **2/20 mixed**, repeated on all three passes |
 | SenseVoice FP32, fixed export shape | 55/662 = 8.31% | 56/1023 = 5.47% | — | — | 0/20 mixed |
 
-On TaiMECS, native Qwen's raw CER was 168/1022 = 16.44%, versus normalized 2.44%.
+On TaiMECS, native eight-bit Qwen's raw CER was 115/1022 = 11.25%, versus
+normalized 3.81%; four-bit raw CER was 168/1022 = 16.44%, versus normalized 2.44%.
 Breeze FP32's raw CER was 10/1022 = 0.98%; Q8's was 12/1022 = 1.17%. Traditional conversion therefore needs a
 separate product policy; normalized scores must not conceal the actual output
 script. Qwen's isolated English errors include wrong-language interpretation;
 a forced-English control helps but does not validate automatic code-switching.
+Eight-bit commands had 11 incorrect clips (19 exact), with 11 substitutions and
+one insertion: 12 errors is not 12 failed clips. All 30 produced text.
 
 The native Qwen 4-bit Common Voice failures are recordings of 2.256, 2.280,
 4.296, 4.704, and 4.032 seconds, so they are not simply zero-length inputs.
@@ -94,8 +102,9 @@ also verified; 197 quantized matrices and the tied output head were replaced.
 Repeating with the [8-bit checkpoint](https://huggingface.co/mlx-community/Qwen3-ASR-0.6B-8bit/tree/89e96d92ba34aca20b3e29fb10cc284097d1219f)
 returned 21/291 CER and zero empty outputs, matching the original's aggregate
 score. The 4-bit representation alone can therefore cause these failures; they
-are not exclusively a Swift runtime defect. Native 8-bit quality, arithmetic,
-memory and latency still require measurement.
+are not exclusively a Swift runtime defect. The later physical native eight-bit
+run independently recovered all three clips and matched 21/291 aggregate CER;
+the FP32 dequantization control itself does not prove MLX arithmetic equivalence.
 
 This isolation uses affine group-64 UInt32 unpacking into FP32
 `code * scale + bias`; it deliberately excludes MLX BF16/kernel arithmetic.
@@ -121,7 +130,32 @@ Its improved score relative to the FP32 run cannot be attributed to quantization
 because the decoding settings differ. All eight command errors selected Chinese
 for English audio; seven were empty.
 
-## Native deployment evidence
+## Physical native eight-bit deployment evidence
+
+The Apple M5 / 32 GiB / macOS 26.6.1 batch run used source fork
+`aee9bd1dffcf786f544d6562d971b3e25221e261`, MLX Swift 0.31.4, Swift LM 3.31.4,
+Swift 6.2.1 and eight-bit snapshot `89e96d92ba34aca20b3e29fb10cc284097d1219f`.
+Decoding was automatic language, GPU, greedy, maximum 256 tokens, without an
+FP32-encoder override. The weights file is 1,006,229,426 bytes, SHA-256
+`b5bfe4abc1b4c6e58b633096682ec2b6297298add1527119936107d211adf0e8`;
+config/tokenizer downloads are additional. The generated tokenizer SHA-256 is
+`a1b84857f2052751736e1ca96e208da455db7de53bea3b6e52c34600d59ec192`.
+
+Some batch timing intervals overlapped helper compilation at 16:04–16:12 UTC.
+The complete accuracy outputs remain recorded; those intervals are excluded from
+latency and resource comparisons. The paced controls and separate resource pass
+below have their own receipts and must not inherit those batch timing claims.
+
+The resource pass sampled its own PID 13 times while one loaded model processed
+61 sequential clips (longest-clip warmup, then the 60 bilingual recordings).
+Sampled physical footprint reached 1,516,308,376 bytes (1,446 MiB), while the
+kernel-reported lifetime peak was 2,223,998,872 bytes (2,121 MiB). All neural-ledger
+tags were zero; MLX used the GPU, so this is an accounting category, **not zero
+model memory**. These are profiling results, not latency results or an app-process
+delta. They establish a >1 GiB tradeoff; they do not establish sustained idle,
+pressure, energy, or superiority over CoreML under a matched workload.
+
+## Historical four-bit VM deployment evidence
 
 The clean Qwen mixed-language run used [mlx-audio-swift at bf14ae0](https://github.com/Blaizzy/mlx-audio-swift/tree/bf14ae0c26e4e85553dd989571cae29d70fa6735),
 MLX Swift 0.31.4, Swift LM 3.31.4, Swift 6.2.1, and [4-bit model revision
@@ -152,7 +186,8 @@ Breeze's 973.7-second CPU pass is not an MLX/Core ML latency estimate.
 The user's approximately 469 MiB physical active neural baseline is a different
 counter and environment. It cannot be compared directly with RSS, MLX active
 allocations, weight size, or total unified memory. Physical wired/reclaimable
-allocation, power, and idle behavior remain unmeasured for the MLX variant.
+allocation, power, and idle behavior were unmeasured in this VM pass. The later
+physical eight-bit process measurements above are a separate environment.
 
 ## Physical CoreML Qwen control
 
@@ -195,34 +230,67 @@ unquantized external token embeddings. The MLX 8-bit control instead uses affine
 group-64 BF16 scale/bias and quantized embeddings. Equal bit width does not make
 them a matched quantization comparison.
 
-A separate own-process resource pass used the **stock SDK frontend and one
-repeated 2.28-second public clip**. These are not corrected-native whole-corpus
-peak measurements. It collected six one-second samples per phase
-(24 successful samples), using `TASK_VM_INFO` and `footprint` neural counters
-matching the historical Parakeet measurement method. Before model loading,
-process footprint was 4,178,448 bytes and neural allocation was zero.
+A follow-up resource pass used the **corrected native frontend and all 60
+bilingual recordings**, after the longest-clip warmup. It collected 76 successful
+own-PID samples with no query failures, including 40 active-corpus samples and
+11 samples during 10.48 seconds of post-corpus idle. The largest collection took
+58.6 ms; this profiling pass is not a latency comparison.
 
-| Counter / phase | Physical CoreML Qwen result |
+| Counter / phase | Corrected native CoreML Qwen result |
 | --- | ---: |
-| Neural ledger peak | 377,634,816 bytes = 360.141 MiB |
-| Loaded / idle-after neural clean | 360.141 MiB |
-| Loaded / idle-after neural wired | 360.344 MiB |
-| Loaded / idle-after neural reclaimable | 0.203 MiB |
-| Loaded total process footprint | 972,834,160 bytes ≈ 928 MiB |
-| Active sampled process footprint maximum | 1,816,610,904 bytes ≈ 1.69 GiB |
-| Idle-after process footprint | 1,751,058,520–1,787,201,624 bytes ≈ 1.63–1.66 GiB |
+| Active neural ledger / wired | 360.141 MiB / 360.344 MiB |
+| Active neural reclaimable | 0.203 MiB |
+| Active sampled process footprint maximum | 1,915,373,632 bytes = 1,826.643 MiB |
+| Kernel-reported lifetime process peak | 1,929,611,328 bytes = 1,840.221 MiB |
+| After 9.17 s idle: neural clean / wired | 3.109 MiB / 0 MiB |
+| After 9.17 s idle: neural reclaimable | 357.234 MiB |
+| Process footprint at that idle sample | 1,745,307,712 bytes = 1,664.455 MiB |
 
-These columns are distinct overlapping accounting views, not quantities to add.
-The low first active neural sample preceded kernel work; it does not establish
-low active steady-state use. The neural peak is below the historical ~469 MiB
-Parakeet baseline, but idle reclaimability and substantial non-neural process
-memory remain disadvantages. The short sampling window is not an all-day or
-memory-pressure test. `ps` CPU readings are sampled process values, not energy
-or GPU/ANE placement measurements; no power advantage is established.
+These are overlapping accounting views, not quantities to add. The earlier
+stock-frontend repeated-clip pass observed only six seconds of idle and missed
+this transition. Its apparent lack of reclaimability is superseded; different
+workloads and observation windows prevent a frontend-causality claim. The active
+neural ledger is below the historical ~469 MiB Parakeet reference, but substantial
+non-neural process memory remains. Neither pass proves all-day behavior, memory
+pressure response, energy use, or actual GPU/ANE placement.
 
-## Streaming findings
+## Current physical eight-bit streaming controls
 
-The maintained native Qwen session accepts new samples and caches completed
+The same 20 TaiMECS human recordings were replayed with causal packet-end pacing,
+automatic language and no reference prompts. The cumulative control follows the
+official policy: fresh decoding over all audio so far, first two passes without
+an output prefix, then a five-token rollback of prior raw output. It is not
+bounded-cost cached decoding. The older window policy and cumulative policy also
+differ in cadence, context and prefix handling; their comparison is not a one-variable
+experiment. At the same 350 ms cadence, cumulative decoding scored 27/662
+versus the window policy's 76/662 on the same model and recordings.
+
+| Native eight-bit policy | Mixed error | Normalized CER | Empty / token-cap hits |
+| --- | ---: | ---: | --- |
+| Older eight-second window policy, 350 ms cadence | 76/662 = 11.48% | 106/1023 = 10.36% | 0/20 / not summarized here |
+| Cumulative policy, 350 ms cadence | 27/662 = 4.08% | 34/1023 = 3.32% | 0/20 / 0 |
+| Cumulative policy, two-second cadence | 25/662 = 3.78% | 29/1023 = 2.83% | 0/20 / 0 |
+
+| Cumulative timing, 20 clips | Two-second cadence median / p95 | 350 ms cadence median / p95 |
+| --- | ---: | ---: |
+| First nonempty partial from recording start | 2,199.7 / 2,686.3 ms | 672.4 / 875.9 ms |
+| Nominal release-to-final, including feed backlog | 175.6 / 293.6 ms | 172.6 / 267.7 ms |
+| Stop invocation-to-final | 160.3 / 217.0 ms | 139.0 / 167.3 ms |
+
+For 350 ms cadence, first-partial maximum was 2.196 s (cold-process first clip),
+release-to-final maximum 292.5 ms and feed-overrun maximum 158.3 ms. Cold-process
+work is included; this is not a fresh-install cold-start measurement. Nonempty
+text does not prove a useful partial: a post-hoc check found the first three
+canonical reference units in a live prefix on 18/20 clips, median 1.238 s /
+p95 2.488 s among those 18. Suffixes could still be wrong; references were used
+only after decoding. There are no labeled speech onsets or human usability/stability
+judgments. Release-to-final p95 remains above 250 ms before app insertion overhead.
+Actual shared-module helper replay, model lifecycle, and end-to-end app insertion
+are still required; probe acceptance does not establish those boundaries.
+
+## Historical four-bit window-stream findings
+
+The earlier native Qwen window session accepts new samples and caches completed
 eight-second encoder windows. It re-encodes the incomplete window and creates a
 new decoder cache per decoding pass. This is bounded-window incremental
 processing, not fully cached decoding. The API defaults to English; a bilingual
@@ -241,12 +309,13 @@ batch/stream mel parity, uneven packets, and short-buffer flushing.
 
 The fixes are maintained in a minimal [reviewed source fork at 9adf5b3](https://github.com/negentropi/mlx-audio-swift/commit/9adf5b35d1e15119785e7bc1b531877ee680f7dc),
 with original MIT terms and provenance retained. No build-time source patch or
-app dependency change is used. A drop-last-STFT-frame experiment did not recover
+app dependency change was used in that experiment. A drop-last-STFT-frame experiment did not recover
 the remaining CV failures and was excluded from the fork.
 
 A subsequent [protocol-parser correction at aee9bd1](https://github.com/negentropi/mlx-audio-swift/commit/aee9bd1dffcf786f544d6562d971b3e25221e261)
 passed 12 actual-source Foundation test bodies and two fresh independent reviews.
-Native MLX replay remains pending; the scores below are from before that correction.
+The physical eight-bit results above include this correction; the historical
+four-bit scores below precede it.
 
 With these three fixes, a paced native run finished all 20 human clips without
 empty output, but **all 20 exposed generated language/protocol headers**. Raw
@@ -259,7 +328,7 @@ preserving decoder token/cache state and ordinary literal text.
 The probe supplied each packet at its start-sample timestamp, making up to 80 ms
 of future microphone audio available early; it waited until the full recording
 duration before stopping. This is an exploratory schedule, not causal microphone
-pacing. A corrected packet-end schedule must be used for the next acceptance run.
+pacing. The current physical eight-bit controls above use the corrected packet-end schedule.
 
 Finalization from nominal audio end was median 293.3 ms, p95 502.5 ms,
 maximum 503.8 ms. It includes ingestion backlog (maximum 136.4 ms) and is not the
@@ -271,7 +340,7 @@ text. Peak RSS was 877,854,720 bytes; MLX peak was 1,371,771,332 bytes.
 
 | Requirement | Evidence / remaining work |
 | --- | --- |
-| 1. zh-TW CER | Two public human sets above; native CV regression unresolved |
+| 1. zh-TW CER | Two public human sets; native eight-bit CV matches original aggregate with no empties; broader coverage pending |
 | 2. English WER | General labeled dictation set not measured; keyword test is narrower |
 | 3–5. Code-switching, embedded technical words, Taiwanese accent | TaiMECS one speaker; independent broad-speaker switching set still needed |
 | 6. Single words | Thirty labeled commands, including exact current Parakeet comparison; narrower than general dictation and no excellent-recognition claim |
@@ -281,13 +350,13 @@ text. Peak RSS was 877,854,720 bytes; MLX peak was 1,371,771,332 bytes.
 | 10–12. Fast speech, noise, microphone variation | Not controlled or annotated |
 | 13. Insertions/deletions/substitutions | Recorded in scorer JSON per clip and aggregate |
 | 14. Hallucination rate | Not a labeled silence/non-speech benchmark yet |
-| 15–18. First token, partial delay, finalization, stability | Paced native run exposed header leakage/repetition; finalization measured above, usable partial/stability proof remains pending |
+| 15–18. First token, partial delay, finalization, stability | 350 ms control measured nonempty partials and release tail; speech-onset, usable partial/stability and app insertion proof pending |
 | 19. RTF | Native batch and CPU controls measured separately |
-| 20–23. Neural/process/idle memory | Physical CoreML own-process phase samples above; MLX physical counters, sustained/pressure behavior and app process delta remain pending |
-| 24–26. CPU, GPU/ANE, energy | CoreML sampled process CPU only; controlled silent-hold comparison, actual GPU/ANE placement and energy not established |
+| 20–23. Neural/process/idle memory | Physical MLX and corrected CoreML own-process samples above; sustained/pressure behavior and app process delta pending |
+| 24–26. CPU, GPU/ANE, energy | MLX GPU route and CoreML sampled process CPU; zero MLX neural tags are accounting, not energy proof; controlled silent-hold/power and CoreML placement pending |
 | 27. Cold start/load | Warm-cache load measured; fresh-install cold start pending |
 | 28. Download size | Pinned file bytes above; not RAM |
-| 29–30. Apple runtime and macOS integration | Native Metal and corrected CoreML batch probes pass within stated limits; actual app lifecycle integration pending |
+| 29–30. Apple runtime and macOS integration | Native batch/stream probes and shared production-module compile complete; actual helper replay, lifecycle and app gate pending |
 | 31. iOS viability | Package deployment declaration only; native device/runtime validation pending |
 | 32. Commercial shipping | Code/model licenses identified; retain notices, conversion provenance and pinned artifacts; no broad training-data clearance claim |
 
@@ -296,6 +365,14 @@ text. Peak RSS was 877,854,720 bytes; MLX peak was 1,371,771,332 bytes.
 Local ignored evidence lives in `.local-build/asr-research/`:
 `qwen-native/`, `linux-controls-20260907/`, `public-20260907/`, `breeze-ggml/`,
 `qwen-quantization-control/`, and `qwen-coreml/`.
+Current physical eight-bit receipts are under `qwen-native/physical-8bit/`:
+`human20-score.json`, `cv40-score.json`, `commands30-score.json`,
+`window-human20-score.json`, `official-human20-score.json`, `fast-human20-score.json`,
+the matching `*-human20-summary.json` files, `fast-human20-coverage.json`, and
+`resource/{summary,samples,receipt}.json`. Corrected CoreML resource receipts are
+under `qwen-coreml/resource-native-corpus/`, with summary, samples, source and
+public-audio hashes. These distinguish current results from the older controls.
+
 They contain public reference manifests, raw outputs, reviewed scores, environment
 receipts, source revisions, and failed/contended diagnostics. Neither disposable
 initial Linux instance remains running. The decoder-isolation instance was also
