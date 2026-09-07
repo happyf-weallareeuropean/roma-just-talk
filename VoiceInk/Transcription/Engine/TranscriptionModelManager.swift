@@ -167,7 +167,10 @@ class TranscriptionModelManager: ObservableObject {
 
         if let currentName = currentModelName,
            let updatedModel = allAvailableModels.first(where: { $0.name == currentName }) {
-            setDefaultTranscriptionModel(updatedModel)
+            // Refreshing metadata must not turn the registered fallback into a saved user choice.
+            currentTranscriptionModel = updatedModel
+            ensureSelectedLanguageIsSupported(by: updatedModel)
+            notifyCurrentModelDidChange()
         }
     }
 

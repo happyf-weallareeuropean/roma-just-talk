@@ -1,5 +1,6 @@
 import Foundation
 import Testing
+import VoiceInkCore
 @testable import VoiceInk
 
 private final class ModelChangeNotificationRecorder: NSObject {
@@ -19,6 +20,53 @@ private final class ModelChangeNotificationRecorder: NSObject {
 
 @Suite(.serialized)
 struct TranscriptionModelManagerTests {
+    @Test @MainActor func refreshingRegisteredFallbackDoesNotPersistIt() {
+        withFreshModelDefaults {
+            let whisper = makeWhisperManager()
+            let fluid = FluidAudioModelManager()
+            let manager = TranscriptionModelManager(whisperModelManager: whisper, fluidAudioModelManager: fluid)
+            manager.refreshAllAvailableModels()
+            manager.loadCurrentTranscriptionModel()
+            manager.refreshAllAvailableModels()
+            manager.refreshAllAvailableModels()
+
+            #expect(manager.currentTranscriptionModel?.name == VoiceInkTranscriptionModelCatalog.defaultMacOSFluidAudioModelName)
+            #expect(persistedPreference(VoiceInkUserDefaultsKey.currentTranscriptionModel) == nil)
+            #expect(persistedPreference(VoiceInkUserDefaultsKey.selectedTranscriptionLanguage) == nil)
+        }
+    }
+
+    @Test @MainActor func metadataRefreshUpdatesDescriptorAndPreservesExplicitPreferences() {
+        let restore = prepareFreshModelDefaults()
+        defer { restore() }
+        let whisper = makeWhisperManager()
+        let fluid = FluidAudioModelManager()
+        let manager = TranscriptionModelManager(whisperModelManager: whisper, fluidAudioModelManager: fluid)
+        let selectedModel = TranscriptionModelRegistry.defaultMacOSFluidAudioModel
+        manager.setDefaultTranscriptionModel(selectedModel)
+        VoiceInkTranscriptionLanguagePreference.saveSelectedLanguage("en")
+
+        let recorder = ModelChangeNotificationRecorder()
+        NotificationCenter.default.addObserver(
+            recorder,
+            selector: #selector(ModelChangeNotificationRecorder.modelDidChange(_:)),
+            name: .didChangeModel,
+            object: nil
+        )
+        defer { NotificationCenter.default.removeObserver(recorder) }
+
+        manager.refreshAllAvailableModels()
+        #expect(manager.currentTranscriptionModel?.id == manager.allAvailableModels.first(where: { $0.name == selectedModel.name })?.id)
+        #expect(manager.currentTranscriptionModel?.id != selectedModel.id)
+        #expect(persistedPreference(VoiceInkUserDefaultsKey.currentTranscriptionModel) == selectedModel.name)
+        #expect(persistedPreference(VoiceInkUserDefaultsKey.selectedTranscriptionLanguage) == "en")
+        #expect(recorder.modelChangeCount == 1)
+
+        let returning = TranscriptionModelManager(whisperModelManager: whisper, fluidAudioModelManager: fluid)
+        returning.loadCurrentTranscriptionModel()
+        #expect(returning.currentTranscriptionModel?.name == selectedModel.name)
+    }
+
     @Test @MainActor func loadingSavedCurrentModelBroadcastsModelAndSettingsChange() {
         let oldModelName = UserDefaults.standard.string(forKey: "CurrentTranscriptionModel")
         let oldLanguage = UserDefaults.standard.string(forKey: "SelectedLanguage")
@@ -67,5 +115,43 @@ struct TranscriptionModelManagerTests {
         } else {
             UserDefaults.standard.removeObject(forKey: key)
         }
+    }
+
+    @MainActor private func makeWhisperManager() -> WhisperModelManager {
+        WhisperModelManager(modelsDirectory: FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString))
+    }
+
+    @MainActor private func withFreshModelDefaults(_ body: () -> Void) {
+        let restore = prepareFreshModelDefaults()
+        defer { restore() }
+        body()
+    }
+
+    @MainActor private func prepareFreshModelDefaults() -> () -> Void {
+        let defaults = UserDefaults.standard
+        let domain = defaultsDomainName
+        let previousDomain = defaults.persistentDomain(forName: domain) ?? [:]
+        let previousRegistration = defaults.volatileDomain(forName: UserDefaults.registrationDomain)
+        let keys = [VoiceInkUserDefaultsKey.currentTranscriptionModel, VoiceInkUserDefaultsKey.selectedTranscriptionLanguage]
+        for key in keys { defaults.removeObject(forKey: key) }
+        defaults.register(defaults: [
+            VoiceInkUserDefaultsKey.currentTranscriptionModel: VoiceInkTranscriptionModelCatalog.defaultMacOSFluidAudioModelName,
+            VoiceInkUserDefaultsKey.selectedTranscriptionLanguage: "en"
+        ])
+        return {
+            for key in keys {
+                if let previous = previousDomain[key] { defaults.set(previous, forKey: key) }
+                else { defaults.removeObject(forKey: key) }
+            }
+            defaults.setVolatileDomain(previousRegistration, forName: UserDefaults.registrationDomain)
+        }
+    }
+
+    private var defaultsDomainName: String {
+        Bundle.main.bundleIdentifier ?? ProcessInfo.processInfo.processName
+    }
+
+    private func persistedPreference(_ key: String) -> String? {
+        UserDefaults.standard.persistentDomain(forName: defaultsDomainName)?[key] as? String
     }
 }

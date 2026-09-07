@@ -2,6 +2,7 @@
 
 ## v1.95.1 - 2026-09-07
 
+- Keep automatic model-list refreshes from saving the fallback model as your chosen default.
 - Added NVIDIA Parakeet zh-TW as an optional cloud model using your own NVIDIA API key on macOS 15+ and iOS 18+; local transcription never switches to it automatically.
 - Restrict Homebrew installation to Apple Silicon, matching the architecture of the released Mac app.
 - Removed the keyboard-modifier settling delay from Accessibility menu paste commands; simulated Cmd-V retains its settling delay.
