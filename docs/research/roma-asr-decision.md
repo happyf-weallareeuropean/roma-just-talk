@@ -1,26 +1,60 @@
 # Roma local ASR investigation — 2026-09-07
 
-Status: candidate investigation and first private-audio diagnostics. No replacement
-selected; Parakeet V2 remains the default. No v1.95.1 release or landing deployment
-is implied by this work.
+Status: human-reference evaluation and native integration validation. Qwen3-ASR
+0.6B and Breeze ASR25 remain local bilingual candidates; neither is accepted for
+the onboarding suggestion. Parakeet V2 remains the current English choice.
+No v1.95.1 release or landing deployment is implied by this work.
 
 ## Recommendation
 
-Investigate **X-ASR-zh-en** as the streaming candidate and **SenseVoiceSmall INT8
-Core ML** as the compact Apple-runtime candidate. Use **Breeze ASR 25** as a
-Taiwanese/code-switching accuracy control and **Qwen3-ASR 0.6B** as an additional
-accuracy candidate. These are evaluation priorities, not measured accuracy ranks.
-There is no verified single model satisfying the entire requirement list yet.
-X-ASR's missing outputs on several private clips need resolution before it is
-an integration recommendation. All five model families now have actual local
-diagnostic outputs; none has a human-scored accuracy result on this corpus.
+Continue the controlled native evaluation of **Qwen3-ASR 0.6B** for local Chinese + English.
+On the same 20 human Taiwanese code-switching recordings it produced 3.02%
+mixed-unit error and 2.44% normalized CER, with no empty outputs. Native whole-file
+inference ran at aggregate RTF 0.048 on a disposable Mac's virtual GPU. This is a
+one-speaker accuracy sample and a batch speed measurement, not a streaming or
+physical neural-memory acceptance result. Separate 40-speaker Common Voice
+testing revealed five empty outputs. A reviewed encoder-length correction
+recovered two; three true early-EOS failures remain. Decoder-only dequantization
+in the official FP32 runtime reproduced those same failures with 4-bit weights;
+8-bit recovered all three and matched the original 7.22% CV CER. Native 8-bit
+replay is the next acceptance step. Actual paced streaming
+also leaks protocol headers and repeats words. The MLX implementation therefore
+cannot yet be used as the regional default. The existing pinned FluidAudio
+CoreML Qwen manager is a separate native route: correcting its frontend produced
+11.00% CV CER and 4.23% mixed error, with no empty clips. A separate stock-frontend
+resource pass repeating one 2.28-second clip reached about 360 MiB neural
+allocation and 1.69 GiB process footprint, with barely reclaimable idle neural
+memory; this is not a corrected-native whole-corpus peak. Corrected native
+mixed-clip batch median was 1.181 seconds. The
+conversion also restricts attention context and handles padding differently.
+Its convenience streaming wrapper is whole-buffer retranscription and is not a
+ready solution. These are measured tradeoffs, not rejection based on model size.
+
+**Breeze ASR 25 Q8** produced 2.11% mixed error and 0.98% normalized CER on that
+set, plus 6.53% CER on the 40-speaker subset without empty answers. Its complete
+1.656 GB artifact loads through whisper.cpp; the CPU beam-search control is not
+the app's greedy decoder or an Apple performance result. Its quality makes it a
+credible alternative if native memory and streaming costs are acceptable.
+**X-ASR** is excluded from the current recommendation: its measured bilingual
+accuracy trails both candidates and 16 of 30 labeled English commands were empty
+even with a 500 ms flush (13 with beam search). Current Parakeet also returned
+16 empty commands, so the keyword failure alone is not evidence of a regression
+from the current app. **SenseVoice INT8**
+also returned two repeatable empty bilingual outputs on the VM without an ANE;
+FP32 avoided those failures but required a research frontend-shape correction.
+
+The [public benchmark report](roma-asr-public-benchmark.md) records corpora,
+settings, scores, limitations, and the remaining 32-requirement coverage. No
+candidate has yet demonstrated the entire requirement list. Earlier unlabeled
+private-recording diagnostics below remain historical evidence, not accuracy
+rankings.
 
 | Candidate | Why it deserves testing | Main gap for Roma |
 | --- | --- | --- |
-| X-ASR-zh-en, 160/480 ms | Bilingual Zipformer streaming; downloadable ONNX; existing sherpa Swift/C integration | Taiwan, mixed technical vocabulary, and subsecond accuracy unproven; CPU cost/porting to ANE must be measured |
-| SenseVoiceSmall INT8 Core ML | Existing FluidAudio manager; compact multilingual CTC pipeline; quantized artifact available | Whole-utterance inference, not native streaming; exact zh-TW/code-switch quality and physical ANE behavior unproven |
-| Breeze ASR 25 | Publisher directly targets Taiwanese Mandarin and intra-utterance English; Whisper architecture fits Roma's existing family of runtimes | Larger model; batch architecture; conversion/quantization parity and actual short-word behavior need testing |
-| Qwen3-ASR 0.6B | Multilingual accuracy candidate, local Apple ports available | Official wrapper reprocesses accumulated audio; experimental incremental ports need independent validation |
+| Qwen3-ASR 0.6B | Strong mixed-language accuracy; 8-bit decoder control resolves 4-bit empty outputs; native CoreML frontend measured | Native MLX 8-bit replay, streaming boundaries, Traditional output, and app lifecycle remain unresolved; CoreML has measured latency/context/idle-memory tradeoffs |
+| Breeze ASR 25 | Best measured bilingual scores; complete Q8 artifact verified through whisper.cpp | Apple memory/performance and app greedy decoding/streaming unverified; wrong-language isolated English errors |
+| X-ASR-zh-en, 160/480 ms | Bilingual Zipformer with cached streaming | Tested accuracy and command deletions trail the leading alternatives; no onboarding integration |
+| SenseVoiceSmall INT8 Core ML | Compact multilingual CTC pipeline | Repeatable empty outputs on VM without ANE; batch architecture; physical ANE remains unmeasured |
 | Nemotron 3.5 multilingual Core ML | Cache-aware native stream, Swift integration, commercial model license | Mandarin is zh-CN broad coverage; current Core ML port has a substantial Chinese latency/quality tradeoff; no demonstrated zh-TW switching advantage |
 
 The [external-source report](asr-candidates-external.md) contains the X-ASR,
@@ -37,9 +71,12 @@ Roma source at `94d5ed65` pins FluidAudio `50aa07193e84b9cf192d8f36041c24a9a4867
 `FluidAudioStreamingProvider.runTranscriptionPass()` selects an overlapping audio
 slice and creates a fresh `TdtDecoderState` on each transcription pass. Its word
 agreement engine stabilizes/retires text. It is not a cache-aware encoder stream.
-The research harness uses newer FluidAudio
+Some early research harnesses use newer FluidAudio
 `5c19d5e12320e22bbfb7a1877b089d2665a69add`, so a standalone Parakeet result is an
-engine control, not an exact current-app runtime baseline. Source:
+engine control, not an exact current-app runtime baseline. A later headless
+Parakeet command control uses the exact shipping SDK and all matching model/audio
+hashes; its 19/30 errors and 16 empty outputs are recorded in the public report.
+It still does not prove the live app's recording/insertion behavior. Source:
 [Roma provider](../../VoiceInk/Transcription/Streaming/FluidAudioStreamingProvider.swift),
 [existing dependency pin](../../VoiceInk.xcodeproj/project.xcworkspace/xcshareddata/swiftpm/Package.resolved),
 [research SDK](https://github.com/FluidInference/FluidAudio/tree/5c19d5e12320e22bbfb7a1877b089d2665a69add).
@@ -175,9 +212,12 @@ to check; they are not a blanket legal or training-data clearance.
 [SenseVoice publisher clarification](https://github.com/QwenAudio/SenseVoice),
 [OpenMDW-1.1](https://openmdw.ai/license/1-1/)
 
-The originally requested NVIDIA `parakeet-ctc-0.6b-zh-tw` remains conditional:
-its Riva/NIM offering is not proof of a portable, commercially redistributable
-Mac checkpoint. Do not silently replace the requirement with a hosted API.
+The user clarified that NVIDIA `parakeet-ctc-0.6b-zh-tw` belongs in the optional
+**cloud backup** list. The committed client uses the documented hosted Riva gRPC
+contract and the user's NVIDIA API key, gated to macOS 15 / iOS 18. It never
+replaces a local selection automatically. Native client tests, Core policy tests,
+and an iOS 17 package cross-build passed; live hosted inference still requires a
+key and remains unverified. Local bilingual selection is a separate requirement.
 
 ## Acceptance experiment
 
