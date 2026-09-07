@@ -19,16 +19,19 @@ function escapeXML(value) {
 }
 
 function releaseVersion(tagName) {
-  const match = /^v?(\d+)\.(\d+)$/.exec(tagName || "");
+  const match = /^v?(\d+)\.(\d+)(?:\.(\d+))?$/.exec(tagName || "");
   if (!match) return null;
 
   const major = Number(match[1]);
   const minor = Number(match[2]);
+  const patch = match[3] === undefined ? null : Number(match[3]);
   if (!Number.isSafeInteger(major) || !Number.isSafeInteger(minor) || minor > 99) return null;
+  if (patch !== null && (!Number.isSafeInteger(patch) || patch > 99)) return null;
 
   return {
-    build: String(major * 100 + minor),
-    short: `${major}.${minor}`,
+    // Preserve historical builds: 195 < 195.1 < 196 in Sparkle's numeric comparison.
+    build: `${major * 100 + minor}${patch === null ? "" : `.${patch}`}`,
+    short: `${major}.${minor}${patch === null ? "" : `.${patch}`}`,
   };
 }
 

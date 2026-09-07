@@ -1,7 +1,8 @@
 # Changelog
 
-## v1.96 - Unreleased
+## v1.95.1 - 2026-09-07
 
+- Added patch-version support to Roma's informational update feed.
 - Added an early-beta label and post-download Mac setup guide with copyable Terminal and agent instructions, plus optional Open Anyway GUI steps.
 - Reframed Trust around Felix's commitments to privacy controls, protected access, testing public downloads, and support, backed by a release checklist, with a visible current-release summary and keyboard-accessible expandable details.
 - Clarified Trust wording for first-time visitors with direct support links, plain-language release evidence, privacy exceptions beside setup advice, and an accurate microphone disclosure for the browser demo.

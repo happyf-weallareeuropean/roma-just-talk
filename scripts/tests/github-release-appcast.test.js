@@ -23,7 +23,17 @@ function release(overrides = {}) {
 test("maps release tags to the app build-number scheme", () => {
   assert.deepEqual(releaseVersion("v1.96"), { build: "196", short: "1.96" });
   assert.deepEqual(releaseVersion("v2.1"), { build: "201", short: "2.1" });
-  assert.equal(releaseVersion("v1.96.1"), null);
+  assert.deepEqual(releaseVersion("v1.95.1"), { build: "195.1", short: "1.95.1" });
+  assert.equal(releaseVersion("v1.95.1.2"), null);
+});
+
+test("publishes a patch release with the packaged app version", () => {
+  const appcast = buildAppcast(release({
+    tag_name: "v1.95.1",
+    html_url: "https://github.com/negentropi/roma-just-talk/releases/tag/v1.95.1",
+  }));
+  assert.match(appcast, /<sparkle:version>195\.1<\/sparkle:version>/);
+  assert.match(appcast, /<sparkle:shortVersionString>1\.95\.1<\/sparkle:shortVersionString>/);
 });
 
 test("builds a GitHub-backed informational Sparkle appcast", () => {
