@@ -73,6 +73,48 @@ Runtime execution for this project is Namespace-first. Local commands below are
 opt-in tools for a dedicated test Mac; CI/static checks never launch Roma or
 change the frontmost application.
 
+## Calibrate the visibility observer
+
+Reports include `visibleText.observationTimings`: each sampling iteration's
+start offset, screenshot capture/conversion duration, AX text-read duration,
+DOM paste-proof traversal duration, and target-refresh traversal duration.
+Skipped operations omit their duration field; aggregate only observed values.
+These diagnose observer overhead; none is subtracted from the rendered latency
+or changes the `250ms` gate.
+
+To isolate the observer from audio and ASR, build the helper and run this on the
+disposable test Mac after granting its Accessibility and Screen Recording access:
+
+```sh
+open -W -n -o /tmp/visibility-calibration.stdout \
+  --stderr /tmp/visibility-calibration.stderr \
+  /absolute/path/RuntimeE2EHarness.app --args \
+  --visibility-calibration --config /absolute/path/runtime-config.json \
+  --json-output /tmp/visibility-calibration.json
+```
+
+This command uses each configured target, empty and existing-text scenarios,
+and the same preparation, pixel observer, text reader, and cleanup as runtime
+E2E. It posts one controlled Cmd-V after a `200ms` scheduling delay, checks the
+exact inserted text and browser DOM paste proof, and restores the clipboard.
+`pasteToRenderedMilliseconds` measures from the recorded paste dispatch to the
+first persistent rendered change. Nested observation fields retain their runtime
+names, but their `keyUp` origin is this calibration's start, not a Roma shortcut.
+The command does not launch Roma, load a model, or establish product latency.
+
+Launch through `open`, as above, so capture permission belongs to the helper.
+After rebuilding an ad-hoc signed test helper, refresh its exact designated
+requirement grants and TCC caches using the disposable runtime setup procedure.
+Restart test targets if they retain stale AX authorization, then keep the helper
+binary unchanged through preflight and scored controls. `open -W` waits for the
+app but does not forward its exit status; inspect the JSON case errors and
+cleanup results. A direct CLI or launchd job exposes the helper exit code.
+On macOS 26, complete the additional private-window-picker consent before
+scoring. Dismiss first-run browser dialogs too. A setup dialog over the editor
+invalidates pixel evidence even when TCC reports access granted. Preserve a
+clean baseline screenshot when investigating a new capture method; a blank
+or blocked capture is not a speed result.
+
 ## Autonomous Namespace Run
 
 For a fast hypothesis check, use the same inputs below with

@@ -17,6 +17,8 @@ private struct RuntimeHarnessArguments {
                 result.mode = "preflight"
             case "--target-probe":
                 result.mode = "target-probe"
+            case "--visibility-calibration":
+                result.mode = "visibility-calibration"
             case "--audio-probe":
                 result.mode = "audio-probe"
                 index += 1
@@ -84,6 +86,7 @@ private func printUsage() {
     Usage:
       RuntimeE2EHarness --preflight [--config PATH] [--json-output PATH]
       RuntimeE2EHarness --target-probe [--config PATH] [--json-output PATH]
+      RuntimeE2EHarness --visibility-calibration [--config PATH] [--json-output PATH]
       RuntimeE2EHarness --audio-probe WAV [--config PATH] [--json-output PATH]
       RuntimeE2EHarness --restore [--config PATH]
       RuntimeE2EHarness --playback-check
@@ -114,6 +117,12 @@ do {
         )
         try writeJSON(report, path: arguments.jsonOutputPath)
         exit(report.passed ? 0 : 2)
+    case "visibility-calibration":
+        let report = RuntimeVisibilityCalibration.run(
+            configuration: try loadConfiguration(path: arguments.configurationPath)
+        )
+        try writeJSON(report, path: arguments.jsonOutputPath)
+        exit(!report.isEmpty && report.allSatisfy { $0.error == nil && $0.cleanup?.passed == true } ? 0 : 2)
     case "audio-probe":
         let configuration = try loadConfiguration(path: arguments.configurationPath)
         let devices = try RuntimeAudioDeviceCatalog.devices()

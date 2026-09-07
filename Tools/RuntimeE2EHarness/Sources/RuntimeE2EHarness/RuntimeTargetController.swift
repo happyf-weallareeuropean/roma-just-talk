@@ -10,8 +10,18 @@ struct RuntimeVisibleTextResult: Codable {
     let keyUpToAccessibilityTextMilliseconds: Double?
     let keyUpToVisibleMilliseconds: Double?
     let renderedText: RuntimeRenderedTextChangeResult?
+    let observationTimings: [RuntimeVisibilityObservationTiming]?
     let role: String?
     let error: String?
+}
+
+struct RuntimeVisibilityObservationTiming: Codable {
+    let startedAfterKeyUpMilliseconds: Double
+    var renderedCaptureMilliseconds: Double?
+    var accessibilityReadMilliseconds: Double = 0
+    var domProofMilliseconds: Double?
+    var targetRefreshMilliseconds: Double?
+    var accessibilityReadSucceeded = false
 }
 
 struct RuntimeTargetPreparationInfo: Codable {
@@ -130,9 +140,16 @@ final class RuntimePreparedTarget {
         var stableSinceSystemUptime: TimeInterval?
         var renderedText: RuntimeRenderedTextChangeResult?
         var renderedError = renderedTextObserver.beginObservation()
+        var observationTimings: [RuntimeVisibilityObservationTiming] = []
 
         while Date() < deadline {
+            var timing = RuntimeVisibilityObservationTiming(
+                startedAfterKeyUpMilliseconds:
+                    (ProcessInfo.processInfo.systemUptime - keyUpAtSystemUptime) * 1_000
+            )
+            defer { observationTimings.append(timing) }
             if renderedText == nil, renderedError == nil {
+                let captureStarted = ProcessInfo.processInfo.systemUptime
                 do {
                     renderedText = try renderedTextObserver.observeRenderedChange(
                         keyUpAtSystemUptime: keyUpAtSystemUptime
@@ -140,10 +157,16 @@ final class RuntimePreparedTarget {
                 } catch {
                     renderedError = String(describing: error)
                 }
+                timing.renderedCaptureMilliseconds =
+                    (ProcessInfo.processInfo.systemUptime - captureStarted) * 1_000
             }
 
             let now = ProcessInfo.processInfo.systemUptime
-            if let currentText = RuntimeAX.text(from: textElement) {
+            let currentText = RuntimeAX.text(from: textElement)
+            timing.accessibilityReadMilliseconds =
+                (ProcessInfo.processInfo.systemUptime - now) * 1_000
+            timing.accessibilityReadSucceeded = currentText != nil
+            if let currentText {
                 fullText = currentText
                 if let insertedText = textScenario.insertedText(from: currentText),
                    !insertedText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
@@ -168,13 +191,17 @@ final class RuntimePreparedTarget {
                 }
             }
             if let pasteProofToken {
+                let proofStarted = ProcessInfo.processInfo.systemUptime
                 domPasteProof = RuntimeAX.domPasteProof(
                     in: windowElement,
                     identifying: pasteProofToken
                 )
+                timing.domProofMilliseconds =
+                    (ProcessInfo.processInfo.systemUptime - proofStarted) * 1_000
             }
 
             if accessibilityText == nil {
+                let refreshStarted = ProcessInfo.processInfo.systemUptime
                 if let refreshedWindow = RuntimeAX.window(
                     containing: info.windowTitleToken,
                     in: appElement
@@ -191,6 +218,8 @@ final class RuntimePreparedTarget {
                 } else {
                     lastError = "Unique target surface no longer exposes an editable AX element"
                 }
+                timing.targetRefreshMilliseconds =
+                    (ProcessInfo.processInfo.systemUptime - refreshStarted) * 1_000
             }
 
             let finalTextIsStable = stableSinceSystemUptime.map {
@@ -226,6 +255,7 @@ final class RuntimePreparedTarget {
             keyUpToAccessibilityTextMilliseconds: accessibilityLatency,
             keyUpToVisibleMilliseconds: visibleLatency,
             renderedText: renderedText,
+            observationTimings: observationTimings,
             role: RuntimeAX.stringAttribute(kAXRoleAttribute, from: textElement),
             error: errors.isEmpty ? nil : errors.joined(separator: "; ")
         )
