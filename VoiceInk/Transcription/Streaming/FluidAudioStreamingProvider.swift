@@ -28,12 +28,34 @@ final class FluidAudioStreamingProvider {
     private let config: AgreementConfig
 
     private var transcriptionTask: Task<Void, Never>?
+    private var finalTranscriptionTask: Task<String?, Never>?
+    private var isDisconnected = false
     private var isTranscribing = false
+    private var isFinalizing = false
+    private var inFlightSampleCount = 0
     private var lastTranscribedSampleCount = 0
     private var latestHypothesisText = ""
     private var latestHypothesisSampleCount = 0
     private let minimumAudioSamples = ASRConstants.minimumRequiredSamples(forSampleRate: ASRConstants.sampleRate)
     private let minNewSamples = ASRConstants.minimumRequiredSamples(forSampleRate: ASRConstants.sampleRate)
+
+    #if DEBUG
+    private var transcribeForTesting: (([Float]) async throws -> ASRResult)?
+    private var beforeDisconnectCleanupForTesting: (() -> Void)?
+
+    convenience init(
+        config: AgreementConfig,
+        beforeDisconnectCleanupForTesting: (() -> Void)? = nil,
+        transcribeForTesting: @escaping ([Float]) async throws -> ASRResult
+    ) {
+        self.init(loadModels: { _ in throw CancellationError() }, config: config)
+        self.asrManager = AsrManager(config: .default)
+        self.decoderLayerCount = 2
+        self.transcribeForTesting = transcribeForTesting
+        self.beforeDisconnectCleanupForTesting = beforeDisconnectCleanupForTesting
+        startTranscriptionLoop()
+    }
+    #endif
 
     init(loadModels: @escaping ModelLoader, config: AgreementConfig = AgreementConfig()) {
         self.loadModels = loadModels
@@ -63,6 +85,7 @@ final class FluidAudioStreamingProvider {
 
     deinit {
         transcriptionTask?.cancel()
+        finalTranscriptionTask?.cancel()
         eventsContinuation?.finish()
     }
 
@@ -114,6 +137,9 @@ final class FluidAudioStreamingProvider {
         lastTranscribedSampleCount = 0
         latestHypothesisText = ""
         latestHypothesisSampleCount = 0
+        isFinalizing = false
+        isDisconnected = false
+        inFlightSampleCount = 0
 
         startTranscriptionLoop()
 
@@ -133,20 +159,26 @@ final class FluidAudioStreamingProvider {
         let latencyTrace = VoiceInkLatencyTrace.shared
         let traceToken = latencyTraceToken
         let loopStopSpan = latencyTrace.begin("fluid_streaming.stop_background_loop", token: traceToken)
-        transcriptionTask?.cancel()
-        await transcriptionTask?.value
-        transcriptionTask = nil
-        latencyTrace.end(loopStopSpan)
+        let liveTask = currentLiveTask()
+        liveTask?.cancel()
+        let canOverlapFinal = freezeLiveTranscription()
+        if !canOverlapFinal {
+            await liveTask?.value
+        }
+        latencyTrace.end(loopStopSpan, details: "overlapFinal=\(canOverlapFinal)")
 
         let commitPlan = completeHypothesisCommitPlan()
         if let reusableText = commitPlan.reusableText {
+            await liveTask?.value
+            clearLiveTask()
+            try ensureCommitActive()
             latencyTrace.event(
                 "fluid_streaming.commit.reuse_complete_hypothesis",
                 details: "pendingSamples=\(commitPlan.pendingSamples) chars=\(reusableText.count)",
                 token: traceToken
             )
             logger.notice("FluidAudio commit reused complete key-down hypothesis elapsed=\(Date().timeIntervalSince(commitStartedAt), format: .fixed(precision: 3), privacy: .public)s chars=\(reusableText.count, privacy: .public)")
-            eventsContinuation?.yield(.committed(text: reusableText))
+            try yieldFinalText(reusableText)
             return
         }
 
@@ -157,12 +189,27 @@ final class FluidAudioStreamingProvider {
         )
 
         let finalASRSpan = latencyTrace.begin("fluid_streaming.final_asr", token: traceToken)
-        let finalASRText = await transcribeRemainingAudio() ?? ""
+        guard !Task.isCancelled, let finalTask = beginFinalTranscription() else {
+            await liveTask?.value
+            clearLiveTask()
+            throw CancellationError()
+        }
+        let finalASRText = await withTaskCancellationHandler {
+            await finalTask.value ?? ""
+        } onCancel: {
+            finalTask.cancel()
+        }
         latencyTrace.end(finalASRSpan, details: "chars=\(finalASRText.count)")
+        // Core ML cancellation is cooperative. Drain the cancelled pass after overlapping final ASR.
+        let joinSpan = latencyTrace.begin("fluid_streaming.join_background_loop", token: traceToken)
+        await liveTask?.value
+        clearLiveTask()
+        latencyTrace.end(joinSpan)
+        try ensureCommitActive()
         // A cold final pass can be empty after live ASR already recognized the remaining speech.
         let committedText = VoiceInkFluidAudioTranscriptionPolicy.resolvedCommitText(
             finalASRText: finalASRText,
-            latestHypothesisText: latestHypothesisText
+            latestHypothesisText: currentHypothesisText()
         )
         if finalASRText.isEmpty && !committedText.isEmpty {
             latencyTrace.event(
@@ -173,14 +220,20 @@ final class FluidAudioStreamingProvider {
             logger.notice("FluidAudio final ASR was empty; committed the latest live hypothesis chars=\(committedText.count, privacy: .public)")
         }
         logger.notice("FluidAudio commit ran final ASR elapsed=\(Date().timeIntervalSince(commitStartedAt), format: .fixed(precision: 3), privacy: .public)s chars=\(finalASRText.count, privacy: .public)")
-        eventsContinuation?.yield(.committed(text: committedText))
+        try yieldFinalText(committedText)
     }
 
     func disconnect() async {
-        transcriptionTask?.cancel()
-        await transcriptionTask?.value
-        transcriptionTask = nil
+        let tasks = disconnectTasks()
+        tasks.live?.cancel()
+        tasks.final?.cancel()
+        await tasks.live?.value
+        _ = await tasks.final?.value
+        clearLiveTask()
 
+        #if DEBUG
+        beforeDisconnectCleanupForTesting?()
+        #endif
         await asrManager?.cleanup()
         asrManager = nil
         decoderLayerCount = 0
@@ -191,14 +244,63 @@ final class FluidAudioStreamingProvider {
         trimmedSampleCount = 0
         latestHypothesisText = ""
         latestHypothesisSampleCount = 0
-        bufferLock.unlock()
         agreementEngine.reset()
+        bufferLock.unlock()
 
         eventsContinuation?.finish()
         logger.notice("FluidAudio agreement streaming disconnected")
     }
 
     // MARK: - Private
+
+    private func beginFinalTranscription() -> Task<String?, Never>? {
+        bufferLock.lock()
+        defer { bufferLock.unlock() }
+        guard !isDisconnected else { return nil }
+        let task = Task { [weak self] in await self?.transcribeRemainingAudio() }
+        finalTranscriptionTask = task
+        return task
+    }
+
+    private func ensureCommitActive() throws {
+        try Task.checkCancellation()
+        bufferLock.lock()
+        defer { bufferLock.unlock() }
+        guard !isDisconnected else { throw CancellationError() }
+    }
+
+    private func yieldFinalText(_ text: String) throws {
+        bufferLock.lock()
+        defer { bufferLock.unlock() }
+        guard !isDisconnected, !Task.isCancelled else { throw CancellationError() }
+        eventsContinuation?.yield(.committed(text: text))
+    }
+
+    private func clearLiveTask() {
+        bufferLock.lock()
+        transcriptionTask = nil
+        bufferLock.unlock()
+    }
+
+    private func currentLiveTask() -> Task<Void, Never>? {
+        bufferLock.lock()
+        defer { bufferLock.unlock() }
+        return transcriptionTask
+    }
+
+    private func currentHypothesisText() -> String {
+        bufferLock.lock()
+        defer { bufferLock.unlock() }
+        return latestHypothesisText
+    }
+
+    private func disconnectTasks() -> (live: Task<Void, Never>?, final: Task<String?, Never>?) {
+        bufferLock.lock()
+        defer { bufferLock.unlock() }
+        isDisconnected = true
+        isFinalizing = true
+        return (transcriptionTask, finalTranscriptionTask)
+    }
 
     private func startTranscriptionLoop() {
         transcriptionTask = Task { [weak self] in
@@ -216,127 +318,151 @@ final class FluidAudioStreamingProvider {
         }
     }
 
-    private func runTranscriptionPass() async {
-        guard !isTranscribing else { return }
-        guard let asrManager else { return }
-
+    private func freezeLiveTranscription() -> Bool {
         bufferLock.lock()
-        let absoluteSampleCount = trimmedSampleCount + audioBuffer.count
-        bufferLock.unlock()
-
-        guard VoiceInkFluidAudioTranscriptionPolicy.shouldRunTranscriptionPass(
-            absoluteSampleCount: absoluteSampleCount,
-            lastTranscribedSampleCount: lastTranscribedSampleCount,
-            minimumAudioSamples: minimumAudioSamples,
-            minimumNewSamples: minNewSamples
-        ) else { return }
-
-        isTranscribing = true
-        defer { isTranscribing = false }
-
-        let seekSample = VoiceInkFluidAudioTranscriptionPolicy.seekSample(
+        defer { bufferLock.unlock() }
+        isFinalizing = true
+        let seek = VoiceInkFluidAudioTranscriptionPolicy.seekSample(
             hypothesisStartTime: agreementEngine.hypothesisStartTime,
             confirmedEndTime: agreementEngine.confirmedEndTime,
             sampleRate: sampleRate
         )
-
-        bufferLock.lock()
-        let bufferRelativeSeek = VoiceInkFluidAudioTranscriptionPolicy.bufferRelativeSeek(
-            seekSample: seekSample,
-            trimmedSampleCount: trimmedSampleCount
+        let relativeSeek = VoiceInkFluidAudioTranscriptionPolicy.bufferRelativeSeek(
+            seekSample: seek, trimmedSampleCount: trimmedSampleCount
         )
-        let sliceEnd = audioBuffer.count
-        guard bufferRelativeSeek < sliceEnd else {
-            bufferLock.unlock()
-            return
-        }
-        var audioSlice = Array(audioBuffer[bufferRelativeSeek..<sliceEnd])
+        // Long chunks share SDK progress sessions; keep those calls sequential.
+        return inFlightSampleCount <= ASRConstants.maxModelSamples &&
+            audioBuffer.count - relativeSeek <= ASRConstants.maxModelSamples
+    }
+
+    private func beginLivePass() -> (samples: [Float], absoluteCount: Int, seek: Int)? {
+        bufferLock.lock()
+        defer { bufferLock.unlock() }
+        guard !isFinalizing, !isTranscribing, !Task.isCancelled else { return nil }
+        let absoluteCount = trimmedSampleCount + audioBuffer.count
+        guard VoiceInkFluidAudioTranscriptionPolicy.shouldRunTranscriptionPass(
+            absoluteSampleCount: absoluteCount,
+            lastTranscribedSampleCount: lastTranscribedSampleCount,
+            minimumAudioSamples: minimumAudioSamples,
+            minimumNewSamples: minNewSamples
+        ) else { return nil }
+        let seek = VoiceInkFluidAudioTranscriptionPolicy.seekSample(
+            hypothesisStartTime: agreementEngine.hypothesisStartTime,
+            confirmedEndTime: agreementEngine.confirmedEndTime,
+            sampleRate: sampleRate
+        )
+        let relativeSeek = VoiceInkFluidAudioTranscriptionPolicy.bufferRelativeSeek(
+            seekSample: seek, trimmedSampleCount: trimmedSampleCount
+        )
+        guard relativeSeek < audioBuffer.count else { return nil }
+        let samples = VoiceInkFluidAudioTranscriptionPolicy.paddedSamplesForTranscription(
+            Array(audioBuffer[relativeSeek...])
+        )
+        guard samples.count >= minimumAudioSamples else { return nil }
+        isTranscribing = true
+        inFlightSampleCount = samples.count
+        return (samples, absoluteCount, seek)
+    }
+
+    private func endLivePass() {
+        bufferLock.lock()
+        isTranscribing = false
+        inFlightSampleCount = 0
         bufferLock.unlock()
+    }
 
-        audioSlice = VoiceInkFluidAudioTranscriptionPolicy.paddedSamplesForTranscription(audioSlice)
+    private func transcribe(
+        _ samples: [Float], manager: AsrManager, state: inout TdtDecoderState
+    ) async throws -> ASRResult {
+        #if DEBUG
+        if let transcribeForTesting {
+            return try await transcribeForTesting(samples)
+        }
+        #endif
+        return try await manager.transcribe(samples, decoderState: &state, language: languageHint)
+    }
 
-        guard audioSlice.count >= minimumAudioSamples else { return }
-
+    private func runTranscriptionPass() async {
+        guard let asrManager, let pass = beginLivePass() else { return }
+        defer { endLivePass() }
         do {
             var state = TdtDecoderState.make(decoderLayers: decoderLayerCount)
-            let result = try await asrManager.transcribe(
-                audioSlice,
-                decoderState: &state,
-                language: languageHint
-            )
-            lastTranscribedSampleCount = absoluteSampleCount
-
-            guard let tokenTimings = result.tokenTimings, !tokenTimings.isEmpty else {
-                let text = TextNormalizer.shared.normalizeSentence(result.text.trimmingCharacters(in: .whitespacesAndNewlines))
-                if !text.isEmpty {
-                    latestHypothesisText = text
-                    latestHypothesisSampleCount = absoluteSampleCount
-                    eventsContinuation?.yield(.partial(text: text))
-                }
-                return
-            }
-
-            let timeOffset = Double(seekSample) / sampleRate
-            let words = WordAgreementEngine.mergeTokensToWords(tokenTimings, timeOffset: timeOffset)
-            guard !words.isEmpty else { return }
-
-            let agreementResult = agreementEngine.processTranscriptionResult(words: words, resultConfidence: result.confidence)
-            latestHypothesisText = TextNormalizer.shared.normalizeSentence(agreementResult.hypothesisText)
-            latestHypothesisSampleCount = absoluteSampleCount
-
-            if !agreementResult.newlyConfirmedText.isEmpty {
-                let normalizedConfirmed = TextNormalizer.shared.normalizeSentence(agreementResult.newlyConfirmedText)
-                eventsContinuation?.yield(.committed(text: normalizedConfirmed))
-            }
-            if !agreementResult.fullText.isEmpty {
-                eventsContinuation?.yield(.partial(text: agreementResult.fullText))
-            }
-
-            // Trim audio up to the hypothesis start point, keeping unconfirmed audio intact.
-            let newHypothesisStartTime = agreementEngine.hypothesisStartTime
-            if newHypothesisStartTime > 0 {
-                let safeTrimPoint = max(0, Int(newHypothesisStartTime * sampleRate))
-                let samplesToTrim = safeTrimPoint - trimmedSampleCount
-                if samplesToTrim > 0 {
-                    bufferLock.lock()
-                    let actualTrim = min(samplesToTrim, audioBuffer.count)
-                    audioBuffer.removeFirst(actualTrim)
-                    trimmedSampleCount += actualTrim
-                    bufferLock.unlock()
-                }
-            }
-
+            let result = try await transcribe(pass.samples, manager: asrManager, state: &state)
+            applyLiveResult(result, absoluteSampleCount: pass.absoluteCount, seekSample: pass.seek)
         } catch {
+            guard !Task.isCancelled else { return }
             logger.error("Transcription pass failed: \(error.localizedDescription, privacy: .public)")
             eventsContinuation?.yield(.error(error))
         }
     }
 
-    // Final transcription of audio after the last confirmed word.
-    private func transcribeRemainingAudio() async -> String? {
-        guard let asrManager else { return nil }
+    private func applyLiveResult(_ result: ASRResult, absoluteSampleCount: Int, seekSample: Int) {
+        bufferLock.lock()
+        defer { bufferLock.unlock() }
+        // Freezing and applying share this lock: a late cancelled result cannot trim final audio.
+        guard !isFinalizing, !Task.isCancelled else { return }
+        lastTranscribedSampleCount = absoluteSampleCount
+        guard let tokenTimings = result.tokenTimings, !tokenTimings.isEmpty else {
+            let text = TextNormalizer.shared.normalizeSentence(result.text.trimmingCharacters(in: .whitespacesAndNewlines))
+            if !text.isEmpty {
+                latestHypothesisText = text
+                latestHypothesisSampleCount = absoluteSampleCount
+                eventsContinuation?.yield(.partial(text: text))
+            }
+            return
+        }
+        let timeOffset = Double(seekSample) / sampleRate
+        let words = WordAgreementEngine.mergeTokensToWords(tokenTimings, timeOffset: timeOffset)
+        guard !words.isEmpty else { return }
+        let agreementResult = agreementEngine.processTranscriptionResult(words: words, resultConfidence: result.confidence)
+        latestHypothesisText = TextNormalizer.shared.normalizeSentence(agreementResult.hypothesisText)
+        latestHypothesisSampleCount = absoluteSampleCount
+        if !agreementResult.newlyConfirmedText.isEmpty {
+            let text = TextNormalizer.shared.normalizeSentence(agreementResult.newlyConfirmedText)
+            eventsContinuation?.yield(.committed(text: text))
+        }
+        if !agreementResult.fullText.isEmpty {
+            eventsContinuation?.yield(.partial(text: agreementResult.fullText))
+        }
+        let newHypothesisStartTime = agreementEngine.hypothesisStartTime
+        if newHypothesisStartTime > 0 {
+            let safeTrimPoint = max(0, Int(newHypothesisStartTime * sampleRate))
+            let samplesToTrim = safeTrimPoint - trimmedSampleCount
+            if samplesToTrim > 0 {
+                let actualTrim = min(samplesToTrim, audioBuffer.count)
+                audioBuffer.removeFirst(actualTrim)
+                trimmedSampleCount += actualTrim
+            }
+        }
+    }
 
+    private func finalAudioSnapshot() -> (samples: [Float], seek: Int, trimmed: Int)? {
+        bufferLock.lock()
+        defer { bufferLock.unlock() }
         let seekSample = VoiceInkFluidAudioTranscriptionPolicy.seekSample(
             hypothesisStartTime: agreementEngine.hypothesisStartTime,
             confirmedEndTime: agreementEngine.confirmedEndTime,
             sampleRate: sampleRate
         )
 
-        bufferLock.lock()
         let bufferRelativeSeek = VoiceInkFluidAudioTranscriptionPolicy.bufferRelativeSeek(
             seekSample: seekSample,
             trimmedSampleCount: trimmedSampleCount
         )
         guard bufferRelativeSeek < audioBuffer.count else {
-            bufferLock.unlock()
             return nil
         }
-        var samples = Array(audioBuffer[bufferRelativeSeek...])
-        bufferLock.unlock()
+        return (Array(audioBuffer[bufferRelativeSeek...]), bufferRelativeSeek, trimmedSampleCount)
+    }
+
+    // Final transcription of audio after the last confirmed word.
+    private func transcribeRemainingAudio() async -> String? {
+        guard let asrManager, let snapshot = finalAudioSnapshot() else { return nil }
+        var samples = snapshot.samples
 
         VoiceInkLatencyTrace.shared.event(
             "fluid_streaming.final_audio",
-            details: "samples=\(samples.count) seek=\(bufferRelativeSeek) trimmed=\(trimmedSampleCount)",
+            details: "samples=\(samples.count) seek=\(snapshot.seek) trimmed=\(snapshot.trimmed)",
             token: latencyTraceToken
         )
 
@@ -362,11 +488,7 @@ final class FluidAudioStreamingProvider {
             token: traceToken
         )
         do {
-            let result = try await asrManager.transcribe(
-                samples,
-                decoderState: &state,
-                language: languageHint
-            )
+            let result = try await transcribe(samples, manager: asrManager, state: &state)
             // Single-chunk SDK timing ends before result formatting; this await also includes scheduling.
             latencyTrace.end(
                 inferenceSpan,
@@ -395,8 +517,8 @@ final class FluidAudioStreamingProvider {
 
     private func completeHypothesisCommitPlan() -> VoiceInkFluidAudioCompleteHypothesisCommitPlan {
         bufferLock.lock()
+        defer { bufferLock.unlock() }
         let absoluteSampleCount = trimmedSampleCount + audioBuffer.count
-        bufferLock.unlock()
 
         return VoiceInkFluidAudioTranscriptionPolicy.completeHypothesisCommitPlan(
             latestHypothesisText: latestHypothesisText,
