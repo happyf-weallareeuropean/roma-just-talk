@@ -39,6 +39,7 @@ on:
       - "VoiceInk/**"
       - "VoiceInkCore/**"
       - "VoiceInkNVIDIA/**"
+      - "VoiceInkQwen/**"
       - "VoiceInkTests/**"
       - "VoiceInk.xcodeproj/**"
   push:
@@ -74,6 +75,7 @@ on:
       - "VoiceInk/**"
       - "VoiceInkCore/**"
       - "VoiceInkNVIDIA/**"
+      - "VoiceInkQwen/**"
       - "VoiceInkTests/**"
       - "VoiceInk.xcodeproj/**"
 
@@ -230,6 +232,10 @@ jobs:
 
       - name: Build release app
         run: make local CONFIGURATION=Release
+
+      - name: Verify local bilingual model package
+        timeout-minutes: 15
+        run: swift test --package-path VoiceInkQwen -c release --enable-testable-imports
 
       - name: Run Debug unit tests
         timeout-minutes: 15
