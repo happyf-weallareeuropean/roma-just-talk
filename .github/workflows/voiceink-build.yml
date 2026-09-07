@@ -245,6 +245,7 @@ jobs:
             -scheme VoiceInk \
             -configuration Debug \
             -destination 'platform=macOS' \
+            -parallel-testing-enabled NO \
             -derivedDataPath "$PWD/.local-build" \
             -xcconfig LocalBuild.xcconfig \
             CODE_SIGN_IDENTITY="-" \
