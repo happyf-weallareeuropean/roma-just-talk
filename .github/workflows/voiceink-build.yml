@@ -231,6 +231,7 @@ jobs:
           bash scripts/tests/verify-runtime-empty-final-regression.test.sh
 
       - name: Build release app
+        id: release_app
         run: make local CONFIGURATION=Release
 
       - name: Verify local bilingual model package
@@ -238,6 +239,7 @@ jobs:
         run: swift test --package-path VoiceInkQwen -c release --enable-testable-imports
 
       - name: Run Debug unit tests
+        if: ${{ !cancelled() && steps.release_app.outcome == 'success' }}
         timeout-minutes: 15
         run: |
           xcodebuild test \
