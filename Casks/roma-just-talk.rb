@@ -13,6 +13,7 @@ cask "roma-just-talk" do
   end
 
   conflicts_with cask: "voiceink"
+  depends_on arch: :arm64
   depends_on macos: :sonoma
 
   app "roma just talk.app"

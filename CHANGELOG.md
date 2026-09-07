@@ -2,6 +2,7 @@
 
 ## v1.95.1 - 2026-09-07
 
+- Restrict Homebrew installation to Apple Silicon, matching the architecture of the released Mac app.
 - Removed the keyboard-modifier settling delay from Accessibility menu paste commands; simulated Cmd-V retains its settling delay.
 - Added patch-version support to Roma's informational update feed.
 - Added an early-beta label and post-download Mac setup guide with copyable Terminal and agent instructions, plus optional Open Anyway GUI steps.
