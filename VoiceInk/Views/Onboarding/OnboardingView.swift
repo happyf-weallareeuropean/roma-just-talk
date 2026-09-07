@@ -242,10 +242,12 @@ struct SkipButton: View {
     let action: () -> Void
     
     var body: some View {
-        Text(text)
-            .font(.system(size: 13, weight: .regular))
-            .foregroundColor(.white.opacity(0.65))
-            .onTapGesture(perform: action)
+        Button(action: action) {
+            Text(text)
+                .font(.system(size: 13, weight: .regular))
+                .foregroundColor(.white.opacity(0.65))
+        }
+        .buttonStyle(.plain)
     }
 }
 

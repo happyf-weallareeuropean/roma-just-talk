@@ -2,6 +2,8 @@
 
 ## v1.95.1 - 2026-09-07
 
+- Make onboarding’s Skip controls accessible as native buttons while preserving their appearance and setup-later behavior.
+
 - Add local Chinese + English dictation on Apple silicon Macs running macOS 15+, with an English-only setup choice, a country-based suggestion that respects your selection, and download controls. Continuing setup saves your model choice for future onboarding visits. Startup prewarm only loads installed models, so it cannot download the English fallback before you choose. On release, queued bilingual audio is finalized together instead of replaying every live-update chunk.
 - Start final local dictation recognition while a cancelled live pass finishes, reducing release delays without dropping audio or publishing stale live text.
 - Keep automatic model-list refreshes from saving the fallback model as your chosen default.
