@@ -34,10 +34,10 @@ public actor QwenRuntime {
 
         func decode(samples: [Float], prefix: String, language: String?) async throws -> QwenDecodeResult {
             try Device.withDefaultDevice(.gpu) {
-                try Stream.withNewDefaultStream(device: .gpu) {
-                    defer { StreamOrDevice.default.stream.synchronize() }
-                    return try QwenGreedyDecoder.decode(model: value, samples: samples, prefix: prefix, language: language)
-                }
+                // Reuse MLX's GPU stream; new streams retain a queue beyond this call.
+                // The runtime still owns the model until this stream actually drains.
+                defer { StreamOrDevice.default.stream.synchronize() }
+                return try QwenGreedyDecoder.decode(model: value, samples: samples, prefix: prefix, language: language)
             }
         }
     }

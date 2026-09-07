@@ -45,6 +45,18 @@ releasing the model or files. Recording startup retains audio in the app until
 the verified model session is connected. Session IDs prevent stale disconnects
 from cancelling a newer recording.
 
+Decoding reuses MLX's default GPU stream instead of creating a stream for every
+live pass. In the pinned MLX implementation, creating a stream adds a command
+queue retained beyond the stream scope. Each runtime retains separate model and
+cache state and grants one operation at a time; evaluation and final stream
+synchronization use MLX's evaluation lock. Other MLX consumers can share the
+default stream, so this does not promise exclusive GPU scheduling. The separate
+model-load stream still drains before its model is published. Cancellation,
+errors and successful decoding all synchronize before releasing model ownership.
+Matched native stream controls retained all 11 final transcripts and full audio
+coverage; alternating focused runs confirmed lower completion latency. These are
+runtime controls, not the app's 250 ms release gate or encoder caching.
+
 The exact bundled tokenizer was used for native eight-bit controls. First cached
 load cannot regenerate it. Tests compare all vocabulary IDs, ordered merges and
 special-token semantics with pinned inputs; compact fixture hashes use UTF-8
