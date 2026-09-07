@@ -166,6 +166,13 @@ public struct RuntimeDOMPasteProof: Codable, Equatable, Sendable {
 }
 
 public enum RuntimeTargetIsolationPlan {
+    public static func visibilityCalibrationRunID(
+        targetID: String,
+        textScenario: RuntimeTextScenario
+    ) -> String {
+        "visibility-calibration-\(targetID)-\(textScenario.rawValue)-r1-\(UUID().uuidString.prefix(6))"
+    }
+
     public static func runID(_ runID: String, belongsToTargetID targetID: String) -> Bool {
         if runID.contains("-\(targetID)-r") {
             return true

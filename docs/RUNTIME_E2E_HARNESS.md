@@ -79,6 +79,11 @@ Reports include `visibleText.observationTimings`: each sampling iteration's
 start offset, screenshot capture/conversion duration, AX text-read duration,
 DOM paste-proof traversal duration, and target-refresh traversal duration.
 Skipped operations omit their duration field; aggregate only observed values.
+The final browser receipt is a separate timing entry with no AX-read fields.
+Paste/input counts accumulate in the controlled page, so receipt inspection runs
+after pixel sampling. Valid pre-insertion AX values retain the prepared element;
+failed reads trigger rediscovery immediately, with periodic rediscovery while
+waiting for insertion to recover detached elements that retain cached values.
 These diagnose observer overhead; none is subtracted from the rendered latency
 or changes the `250ms` gate.
 
@@ -92,6 +97,10 @@ open -W -n -o /tmp/visibility-calibration.stdout \
   --visibility-calibration --config /absolute/path/runtime-config.json \
   --json-output /tmp/visibility-calibration.json
 ```
+
+Interrupted calibration targets use the same target/scenario/repetition naming
+contract as runtime cases, so the next harness run can safely recover their
+isolated surfaces and temporary files.
 
 This command uses each configured target, empty and existing-text scenarios,
 and the same preparation, pixel observer, text reader, and cleanup as runtime

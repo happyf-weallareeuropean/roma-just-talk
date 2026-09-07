@@ -18,10 +18,10 @@ struct RuntimeVisibleTextResult: Codable {
 struct RuntimeVisibilityObservationTiming: Codable {
     let startedAfterKeyUpMilliseconds: Double
     var renderedCaptureMilliseconds: Double?
-    var accessibilityReadMilliseconds: Double = 0
+    var accessibilityReadMilliseconds: Double?
     var domProofMilliseconds: Double?
     var targetRefreshMilliseconds: Double?
-    var accessibilityReadSucceeded = false
+    var accessibilityReadSucceeded: Bool?
 }
 
 struct RuntimeTargetPreparationInfo: Codable {
@@ -130,7 +130,9 @@ final class RuntimePreparedTarget {
         timeoutSeconds: TimeInterval
     ) -> RuntimeVisibleTextResult {
         let finalTextSettleSeconds: TimeInterval = 0.25
+        let targetRefreshIntervalSeconds: TimeInterval = 0.25
         let deadline = Date().addingTimeInterval(timeoutSeconds)
+        var lastTargetRefreshSystemUptime = ProcessInfo.processInfo.systemUptime
         var lastError: String?
         var accessibilityText: String?
         var fullText: String?
@@ -190,17 +192,10 @@ final class RuntimePreparedTarget {
                     renderedError = renderedTextObserver.beginObservation()
                 }
             }
-            if let pasteProofToken {
-                let proofStarted = ProcessInfo.processInfo.systemUptime
-                domPasteProof = RuntimeAX.domPasteProof(
-                    in: windowElement,
-                    identifying: pasteProofToken
-                )
-                timing.domProofMilliseconds =
-                    (ProcessInfo.processInfo.systemUptime - proofStarted) * 1_000
-            }
-
-            if accessibilityText == nil {
+            // A valid empty value is expected before insertion. Periodic rediscovery still
+            // recovers detached elements that keep returning their last cached value.
+            if currentText == nil || (accessibilityText == nil
+                && now - lastTargetRefreshSystemUptime >= targetRefreshIntervalSeconds) {
                 let refreshStarted = ProcessInfo.processInfo.systemUptime
                 if let refreshedWindow = RuntimeAX.window(
                     containing: info.windowTitleToken,
@@ -220,6 +215,7 @@ final class RuntimePreparedTarget {
                 }
                 timing.targetRefreshMilliseconds =
                     (ProcessInfo.processInfo.systemUptime - refreshStarted) * 1_000
+                lastTargetRefreshSystemUptime = ProcessInfo.processInfo.systemUptime
             }
 
             let finalTextIsStable = stableSinceSystemUptime.map {
@@ -230,6 +226,22 @@ final class RuntimePreparedTarget {
                 break
             }
             RunLoop.current.run(mode: .default, before: Date(timeIntervalSinceNow: 0.016))
+        }
+
+        // The controlled page retains cumulative paste/input counts. Inspect the final
+        // receipt after sampling so tree traversal cannot delay a rendered observation.
+        if let pasteProofToken {
+            let proofStarted = ProcessInfo.processInfo.systemUptime
+            domPasteProof = RuntimeAX.domPasteProof(
+                in: windowElement,
+                identifying: pasteProofToken
+            )
+            var timing = RuntimeVisibilityObservationTiming(
+                startedAfterKeyUpMilliseconds: (proofStarted - keyUpAtSystemUptime) * 1_000
+            )
+            timing.domProofMilliseconds =
+                (ProcessInfo.processInfo.systemUptime - proofStarted) * 1_000
+            observationTimings.append(timing)
         }
 
         if renderedText == nil {

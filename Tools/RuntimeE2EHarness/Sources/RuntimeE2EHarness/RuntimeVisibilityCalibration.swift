@@ -35,7 +35,10 @@ enum RuntimeVisibilityCalibration {
                     let surface = try RuntimeTargetController.prepare(
                         target: target,
                         textScenario: scenario,
-                        runID: "visibility-calibration-\(target.id)-\(scenario.rawValue)-\(UUID().uuidString.prefix(6))",
+                        runID: RuntimeTargetIsolationPlan.visibilityCalibrationRunID(
+                            targetID: target.id,
+                            textScenario: scenario
+                        ),
                         settleSeconds: configuration.targetSettleSeconds,
                         availabilityPolicy: configuration.targetAvailabilityPolicy
                     )

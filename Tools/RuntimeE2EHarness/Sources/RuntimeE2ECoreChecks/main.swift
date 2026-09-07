@@ -113,6 +113,24 @@ do {
         RuntimeTargetIsolationPlan.runID("fixture-chrome-r1-ABC123", belongsToTargetID: "chrome"),
         "abandoned-target cleanup must retain legacy run-ID support"
     )
+    for target in targets {
+        for scenario in RuntimeTextScenario.allCases {
+            let calibrationRunID = RuntimeTargetIsolationPlan.visibilityCalibrationRunID(
+                targetID: target.id,
+                textScenario: scenario
+            )
+            try require(
+                RuntimeTargetIsolationPlan.runID(calibrationRunID, belongsToTargetID: target.id),
+                "interrupted visibility calibration must be recoverable for its actual target"
+            )
+            for otherTarget in targets where otherTarget.id != target.id {
+                try require(
+                    !RuntimeTargetIsolationPlan.runID(calibrationRunID, belongsToTargetID: otherTarget.id),
+                    "calibration cleanup must not claim a different target's resources"
+                )
+            }
+        }
+    }
     print("PASS fixture/app/text-scenario/repetition matrix carries optional transcript answers")
 
     try require(targets.contains { $0.kind == .electron }, "default matrix should cover an Electron editor")
