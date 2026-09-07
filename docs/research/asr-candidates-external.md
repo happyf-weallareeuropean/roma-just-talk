@@ -1,0 +1,71 @@
+# External ASR candidates for Roma
+
+Research snapshot: 2026-09-07. This document covers primary-source research only: original model publishers, runtime maintainers, source code, and licenses. Subsequent private-audio diagnostics are in [the decision report](roma-asr-decision.md). Read against the supplied **Roma ASR model requirements**; ~470 MiB is the user's active neural allocation baseline, not a total-process ceiling. None of the candidates below has passed that complete benchmark.
+
+## Recommended evaluation order
+
+| Candidate | Role | Main unresolved question |
+| --- | --- | --- |
+| X-ASR-zh-en, 160/480 ms | First external true-streaming experiment | Taiwanese accent, embedded technical English, subsecond finalization, measured Apple memory |
+| Breeze ASR 25 / Twister | Taiwanese/code-switching accuracy reference | Does its directly relevant accuracy justify Whisper-class latency and footprint? |
+| Qwen3-ASR 0.6B, then 1.7B | Modern multilingual accuracy comparison | Streaming runtime correctness and quality versus offline; local footprint |
+| Paraformer-zh-streaming | Smaller stateful-streaming alternative | Taiwanese English mixing and short-word accuracy |
+| Older bilingual Zipformer small/full | Low-cost streaming control | Accuracy age, Taiwanese coverage, precise weights provenance |
+| Fun-ASR-Nano | Accuracy/hotword challenger | Streaming implementation is not cache-aware in inspected path |
+| NVIDIA Parakeet CTC zh-TW | Hold pending packaging/license clarification | Raw portable checkpoint and commercial Mac deployment permission |
+
+Nemotron 3.5 / FluidAudio / SenseVoice are covered by the separate Core ML investigation; do not confuse their artifacts or licenses with the older NVIDIA zh-TW NIM.
+
+## X-ASR-zh-en: highest-priority external streaming candidate
+
+The publisher explicitly licenses the **model** Apache-2.0 and supplies matched ONNX encoder/decoder/joiner/token sets for 160, 480, 960, and 1920 ms chunks. Zipformer transducer; punctuation and casing; CPU sherpa-onnx example. Claimed training: approximately one million hours of open and collected speech. The technical report and detailed training/evaluation protocol remain forthcoming. These are model chunk sizes, not measured end-to-end latency. [Model card and artifacts](https://huggingface.co/GilgameshWind/X-ASR-zh-en)
+
+The project is separately Apache-2.0. Its macOS application demonstrates intended local Chinese/English code-switching deployment, but an application description is not a controlled accuracy result. The card does not establish Taiwanese Mandarin or subsecond performance, and does not enumerate training datasets and their rights. [Project](https://github.com/Gilgamesh-J/X-ASR), [code license](https://github.com/Gilgamesh-J/X-ASR/blob/main/LICENSE)
+
+**Benchmark inconsistency:** the HF card reports 160 ms LibriSpeech clean/other 3.91/10.17; GitHub reports 3.49/8.75. Both describe current release, greedy decoding. Offline numbers also differ. Do not merge these tables or attach them to a checkpoint without a resolved revision. Neither table measures intra-utterance zh-TW/English switching. [HF evaluation](https://huggingface.co/GilgameshWind/X-ASR-zh-en#-evaluation), [GitHub evaluation](https://github.com/Gilgamesh-J/X-ASR#-evaluation)
+
+Streaming evidence is substantive: the supplied wrapper uses an online recognizer, and sherpa's Zipformer2 encoder accepts saved states and returns next states on every call. Its implementation carries bounded attention/convolution context. [X-ASR wrapper](https://github.com/Gilgamesh-J/X-ASR/blob/main/X-ASR-zh-en/deployment/infer_and_client/sherpa_streaming_infer.py), [sherpa encoder](https://github.com/k2-fsa/sherpa-onnx/blob/master/sherpa-onnx/csrc/online-zipformer2-transducer-model.cc)
+
+For the remote diagnostic, use `OnlineRecognizer.from_transducer` with `provider="cpu"`, `model_type="zipformer2"`, `sample_rate=16000`, `feature_dim=80`, `num_threads=1`, `decoding_method="greedy_search"`, and endpoint detection disabled. For each `N=160` or `480`, all four files come from `deployment/models/chunk-Nms-model/`: `tokens.txt`, `encoder-Nms.onnx`, `decoder-Nms.onnx`, `joiner-Nms.onnx`. Create one stream per recording; feed mono float32 chunks; repeatedly decode while ready, recording every changed hypothesis. Finish input and drain again. The publisher wrapper does not automatically add silence at finalization: test zero padding and explicit 500 ms tail padding separately. A 100 ms input packet is independent of the model chunk. [Wrapper lifecycle](https://github.com/Gilgamesh-J/X-ASR/blob/main/X-ASR-zh-en/deployment/infer_and_client/sherpa_streaming_infer.py)
+
+## Breeze ASR 25: strongest directly relevant published comparison
+
+MediaTek's Whisper-large-v2 derivative, called Twister in its paper, explicitly targets Taiwanese Mandarin and both intra/inter-sentence English switching. Publisher-reported results: CommonVoice16-zh-TW 7.97 versus Whisper-v2 9.84 and v3 8.95; CSZS-zh-en 13.01 versus 29.49 and 26.43. The table labels these WER; preserve that label rather than silently relabeling Chinese results CER. Some long-form sets show little gain. These are not Roma measurements. [Model and evaluation](https://huggingface.co/MediaTek-Research/Breeze-ASR-25)
+
+Weights are marked Apache-2.0. The publisher discloses synthetic Chinese data based on ODC-licensed text and Apache-licensed BreezyVoice, CC0 English Common Voice, and MIT NTUML2021 code-switching data. This is better provenance detail than a training-hours claim, but not a warranty over all underlying rights. Whisper remains an offline encoder-decoder; rolling windows do not become native stateful audio streaming. Use as an accuracy control before considering an Apple conversion. [Training disclosure](https://huggingface.co/MediaTek-Research/Breeze-ASR-25#training-data), [original Whisper code/weights MIT license](https://github.com/openai/whisper#license)
+
+Breeze ASR 26 is aimed at Taiwanese Hokkien/Taigi; that is a different primary language from Taiwanese Mandarin. Do not select it by the word “Taiwanese” alone. [Publisher's Breeze Taigi report](https://arxiv.org/abs/2603.19259)
+
+## Qwen3-ASR: separate weights, runtime, and meaning of streaming
+
+Official 0.6B and 1.7B weights are Apache-2.0. Chinese/English and many dialects are supported; the published dialect list does not establish Taiwanese-accent performance. Upstream publishes separate offline/streaming results, with measurable streaming degradation. Its high-concurrency throughput claims do not establish single-user Apple latency. [0.6B model](https://huggingface.co/Qwen/Qwen3-ASR-0.6B), [upstream evaluation](https://github.com/QwenLM/Qwen3-ASR#evaluation)
+
+**Official wrapper caveat:** `ASRStreamingState` stores accumulated audio; `streaming_transcribe` explicitly re-feeds all audio seen, with text-prefix rollback. Default chunk is two seconds; the documented backend is vLLM. This fails Roma's desired no-growing-window-rerun boundary, regardless of the model's unified streaming training. Code is Apache-2.0. [Actual wrapper](https://github.com/QwenLM/Qwen3-ASR/blob/main/qwen_asr/inference/qwen3_asr.py)
+
+**Apple paths differ:** mlx-audio's `stream=True` yields generated text from a supplied audio input; that flag alone does not prove incremental microphone encoding. The independent Apache-2.0 `moona3k/mlx-qwen3-asr` instead processes new audio chunks and reuses a decoder KV cache, bounded context, and optional tail refinement. Its code labels this experimental; it does not carry a Zipformer-like audio-encoder state between chunks. Treat it as a different inference algorithm requiring boundary/accuracy parity tests, not a proven equivalent upstream stream. [mlx-audio implementation](https://github.com/Blaizzy/mlx-audio/blob/main/mlx_audio/stt/models/qwen3_asr/qwen3_asr.py), [incremental MLX code](https://github.com/moona3k/mlx-qwen3-asr/blob/main/mlx_qwen3_asr/streaming.py), [license](https://github.com/moona3k/mlx-qwen3-asr/blob/main/LICENSE)
+
+Native Swift integration exists in `soniqo/speech-swift` (formerly `ivan-digital/qwen3-asr-swift`), with Qwen3-ASR MLX/hybrid Core ML support and Apache-2.0 code. This is an integration lead; its other models' streaming APIs do not establish Qwen's streaming behavior. [Swift project](https://github.com/soniqo/speech-swift), [license](https://github.com/soniqo/speech-swift/blob/main/LICENSE)
+
+## Paraformer and older Zipformer: useful compact streaming controls
+
+`funasr/paraformer-zh-streaming` lists 220M parameters and Chinese/English. **Pin `apache-2.0-20260804`:** publisher explicitly licenses weights and accompanying files at that tag, and warns an earlier revision lacked the referenced license. Do not transfer this conclusion to arbitrary iic/ModelScope revisions. The documented `[0,10,5]` setup uses 60 ms units: 600 ms chunk plus 300 ms lookahead, not 600 ms observed first-token latency. [Exact model/license scope](https://huggingface.co/funasr/paraformer-zh-streaming), [tagged license](https://huggingface.co/funasr/paraformer-zh-streaming/blob/apache-2.0-20260804/LICENSE)
+
+FunASR code is separately MIT. Its streaming implementation maintains frontend, encoder/CIF, decoder, and pending-sample state, then calls chunk inference and flushes final tails. Genuine incremental path; still no published Taiwan/embedded-English/subsecond evidence here. Sherpa provides online Paraformer support and Swift integration, so ONNX avoids mandatory CUDA; Core ML performance remains unproven. [FunASR code license](https://github.com/modelscope/FunASR/blob/main/LICENSE), [streaming source](https://github.com/modelscope/FunASR/blob/main/funasr/models/paraformer_streaming/model.py), [sherpa Paraformer docs](https://k2-fsa.github.io/sherpa/onnx/pretrained_models/online-paraformer/index.html), [Swift API](https://k2-fsa.github.io/sherpa/onnx/swift-api/index.html)
+
+The 2023 bilingual full/small Zipformer exports are immediately available and trained on an internal dataset of tens of thousands of hours. Original/full model card is Apache-2.0; source benchmarks are Mainland Mandarin datasets and do not establish Taiwanese or mixed-utterance accuracy. Pin the exact original/export artifact and license, especially for the small variant. Sherpa runtime itself is Apache-2.0. These make useful efficiency controls, not presumptive accuracy winners. [Maintainer's model catalog](https://k2-fsa.github.io/sherpa/onnx/pretrained_models/online-transducer/zipformer-transducer-models.html), [original weights](https://huggingface.co/pfluo/k2fsa-zipformer-chinese-english-mixed), [runtime license](https://github.com/k2-fsa/sherpa-onnx/blob/master/LICENSE)
+
+## Fun-ASR-Nano: accuracy contender; inspected streaming path unsuitable
+
+The 800M Nano-2512 checkpoint supports Chinese, English, Japanese, accents/dialects, and hotword prompts; the 31-language MLT checkpoint is separate. HF lists Apache-2.0 weights; FunASR runtime MIT. Its English FLEURS/LibriSpeech and Mandarin tables justify testing, but neither broad accent claims nor aggregate scores establish Taiwanese technical code-switching. [Official model](https://huggingface.co/FunAudioLLM/Fun-ASR-Nano-2512)
+
+The inspected vLLM streaming implementation explicitly uses cumulative re-encoding, batches prefixes, and comments that output stabilizes after roughly three seconds. Its `_is_meaningful` check requires at least two CJK characters, making this particular demo path unsuitable evidence for English-only/single-character output. That is a wrapper limitation, not proof the weights cannot recognize those inputs. CPU/GGUF packages now exist, but file size is not peak resident or active neural memory. [Streaming source](https://github.com/modelscope/FunASR/blob/main/funasr/models/fun_asr_nano/inference_vllm_streaming.py), [publisher runtime updates](https://github.com/QwenAudio/Fun-ASR)
+
+## NVIDIA Parakeet CTC zh-TW: no verified locally shippable package
+
+Official card describes a 600M Taiwanese Mandarin/English model with Traditional output, approximately 90 hours of Taiwanese adaptation, and Riva/NVIDIA/Linux deployment. NGC calls its English switching “light”; strong English support is not established. “Downloadable” on Build refers to a deployable offering and does not establish an accessible raw `.nemo`/ONNX checkpoint. No portable raw checkpoint was verified in this investigation. [Model card](https://build.nvidia.com/nvidia/parakeet-ctc-0_6b-zh-tw/modelcard), [NGC description](https://catalog.ngc.nvidia.com/orgs/nim/nvidia/containers/parakeet-ctc-0.6b-zh-tw/1.1), [deployment](https://docs.nvidia.com/nim/speech/26.05.0/asr/deploy-asr-models/parakeet-ctc-zh-tw.html)
+
+The Build page links **NVIDIA Community Model License**, not Apache or the newer Open Model License. Its general downloadable grant permits distribution with terms, but production requires NIM/AI Enterprise except designated RTX/ACE exceptions. Exact applicability of an exception to this zh-TW artifact remains unverified; the linked ACE list did not resolve. “Ready for commercial use” therefore does not establish a commercially redistributable Apple port. Obtain exact checkpoint availability and license/exception before considering conversion. [Governing-terms link](https://build.nvidia.com/nvidia/parakeet-ctc-0_6b-zh-tw), [license §1.2](https://www.nvidia.com/content/dam/en-zz/Solutions/license-agreements/enterprise-software/NVIDIA-Models-Community-License-2025-04-15-FINAL.pdf)
+
+## Decision boundary
+
+Advance X-ASR 160/480 ms, Breeze ASR 25, and Qwen3-ASR 0.6B to the same Roma corpus first; include Paraformer/older Zipformer if streaming efficiency is weak. Compare raw Traditional output separately from script normalization. Test cold one-word/subsecond requests, mixed technical terms, release-to-final flushing, silence, fast speech, noisy microphones, and bounded cost over long streams. Record encoder/decoder invocations to prove state reuse. Measure active neural allocations and total process delta separately, plus idle reclaimability, CPU/GPU/ANE, energy, load time, and final/partial latency. Large weights or a published RAM headline alone must not eliminate a model that could deliver substantially better accuracy.
