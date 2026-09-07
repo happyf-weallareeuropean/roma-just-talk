@@ -16,6 +16,8 @@ The transport uses [Roma's maintained source revision `65adb0b`](https://github.
 
 Keep this revision pinned until an upstream release includes the dependency correction. Validate replacements with the complete iOS simulator test build; a successful standalone package or app build does not cover this link boundary.
 
+`VoiceInkNVIDIA` also declares `NIOTransportServices` directly at the existing resolved version. The default `eventLoopGroup` argument of gRPC's `http2NIOTS` factory emits references to `NIOTSEventLoopGroup` in the caller. Its symbols must therefore link into this package's dynamic framework as well.
+
 ## Generated protocol
 
 Unmodified source protos from `nvidia-riva/common` commit `268890b7286031a6d4950e34f7ce13ed0d4ce621`; license retained under `Protos/LICENSE`. Generated with SwiftProtobuf 1.38.1 and grpc-swift-protobuf 2.4.1. Regeneration requires protoc plus these two generators on PATH:
