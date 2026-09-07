@@ -1,6 +1,6 @@
 const repoUrl = "https://github.com/happyf-weallareeuropean/roma-just-talk";
 const repoBranch = "without/no-adhoc-macos-tcc";
-const pinnedMacReleaseTag = "v1.95";
+const pinnedMacReleaseTag = "v1.95.1";
 const pinnedMacDownloadUrl = `https://github.com/negentropi/roma-just-talk/releases/download/${pinnedMacReleaseTag}/roma.just.talk.app.zip`;
 const releasesApi = "https://api.github.com/repos/happyf-weallareeuropean/roma-just-talk/releases";
 const releasesPageUrl = `${repoUrl}/releases`;

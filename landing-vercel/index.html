@@ -64,7 +64,7 @@
 
             <div class="action-row">
               <div class="cta-row" id="mac-actions">
-                <a class="button primary" id="download-button" href="https://github.com/negentropi/roma-just-talk/releases/download/v1.95/roma.just.talk.app.zip">
+                <a class="button primary" id="download-button" href="https://github.com/negentropi/roma-just-talk/releases/download/v1.95.1/roma.just.talk.app.zip">
                   <span class="icon apple" aria-hidden="true"></span>
                   <span>download macos (early beta)</span>
                   <span class="keycap" aria-label="enter">
@@ -252,7 +252,7 @@
               <p>
                 Today, you can read the source and release notes and contact me directly.
                 The commitments below describe the standard for future releases. They are not
-                all delivered in v1.95.
+                all delivered in v1.95.1.
               </p>
             </header>
             <article>
@@ -295,25 +295,25 @@
             </article>
             <nav class="trust-links" aria-label="Follow Roma's work">
               <a href="/changelogs">Read release notes</a>
-              <a href="https://github.com/negentropi/roma-just-talk/tree/v1.95">Inspect the v1.95 source</a>
+              <a href="https://github.com/negentropi/roma-just-talk/tree/v1.95.1">Inspect the v1.95.1 source</a>
               <a href="#trust-support">How I handle reports</a>
             </nav>
           </section>
 
           <section class="trust-current" id="trust-release" aria-labelledby="trust-release-title">
-            <h3 id="trust-release-title">Current v1.95 recommendation</h3>
+            <h3 id="trust-release-title">Current v1.95.1 recommendation</h3>
             <p>
-              v1.95 is an early evaluation build. It is not Apple-notarized, and I have not
-              published hands-on test results for this exact download. I do not recommend it
-              for your main Mac yet.
+              v1.95.1 is an early beta. It has no Apple Developer ID signature and is not
+              Apple-notarized. Read the release notes for the checks completed on this download
+              and the cases still untested. I do not recommend it for your main Mac yet.
             </p>
             <p>
-              In v1.95, cloud streaming can send audio before Shift. Context switches do not stop
-              clipboard or window collection, and API keys are stored outside macOS Keychain.
+              In v1.95.1, recording includes buffered audio from before Shift. Context switches
+              do not stop clipboard or window collection, and API keys are stored outside macOS Keychain.
               These are gaps the commitments above are meant to address.
             </p>
             <details class="trust-details">
-              <summary>Read v1.95 privacy, permissions, setup, and test details</summary>
+              <summary>Read v1.95.1 privacy, permissions, setup, and test details</summary>
               <div class="trust-disclosures">
                 <article class="trust-disclosure trust-public">
                   <h4>Trying the current download</h4>
@@ -324,11 +324,12 @@
                       <p>
                         Use a secondary Mac without sensitive data. Choose a local transcription model
                         to keep audio on your Mac, and turn AI Enhancement off to avoid sending your
-                        transcript and other text for polishing. Set Settings &gt; Rolling Buffer &gt;
-                        Buffer Preload to Off to stop audio being sent before Shift if you use a cloud model.
+                        transcript and other text for polishing. Cloud transcription can include
+                        audio captured before Shift from the rolling buffer; choose a local model
+                        if you do not want that audio sent to a provider.
                       </p>
                       <p>
-                        Leave Screen Recording permission off. Granting it lets v1.95 capture a visible
+                        Leave Screen Recording permission off. Granting it lets v1.95.1 capture a visible
                         window when recording starts, even with Screen Context off. Roma also reads
                         your clipboard when recording starts, even with Clipboard Context off. Do not
                         grant Automation unless you need it. Quitting Roma stops microphone capture.
@@ -341,18 +342,19 @@
                     <div class="trust-proof">
                       <h4>What the available checks show</h4>
                       <p>
-                        The automated build check created the app and its tests. It did not run those
-                        tests or try the published download on a clean Mac. A successful build does not
-                        establish that Roma works reliably on your laptop.
+                        Build, unit-test, package, and hands-on runtime checks cover different things.
+                        The release notes identify which checks passed on the candidate and which
+                        remain untested. A successful build does not establish that Roma works reliably
+                        on your laptop.
                       </p>
                       <p>
-                        The linked check ran on June 17, 2026, on macOS 26. The download is an ad hoc
-                        signed Debug build. Its checksum lets you check that the file matches the one
+                        This download is an ad hoc signed Release build, without Apple notarization.
+                        Its checksum lets you check that the file matches the one
                         published; it does not establish safety or stability.
                       </p>
-                      <nav class="trust-links trust-proof-links" aria-label="v1.95 release evidence">
-                        <a href="https://github.com/negentropi/roma-just-talk/releases/tag/v1.95">v1.95 download and file checksum</a>
-                        <a href="https://github.com/negentropi/roma-just-talk/actions/runs/27668369598">v1.95 automated build check</a>
+                      <nav class="trust-links trust-proof-links" aria-label="v1.95.1 release evidence">
+                        <a href="https://github.com/negentropi/roma-just-talk/releases/tag/v1.95.1">v1.95.1 download, checksum, and test results</a>
+                        <a href="https://github.com/negentropi/roma-just-talk/actions/runs/34080401935">v1.95.1 automated build and unit tests</a>
                       </nav>
                     </div>
                   </div>
@@ -366,7 +368,7 @@
                   <nav class="trust-links" aria-label="Project transparency">
                     <a href="/demo">Browser demo, uses microphone</a>
                     <a href="/changelogs">release notes</a>
-                    <a href="https://github.com/negentropi/roma-just-talk/tree/v1.95">v1.95 source code</a>
+                    <a href="https://github.com/negentropi/roma-just-talk/tree/v1.95.1">v1.95.1 source code</a>
                     <a href="https://github.com/negentropi/roma-just-talk/actions">public automated checks</a>
                   </nav>
                 </article>
@@ -377,15 +379,14 @@
                     <div class="trust-data-item">
                       <h4>Microphone and cloud audio</h4>
                       <p>
-                        With microphone permission, v1.95 listens while its rolling buffer is active.
+                        With microphone permission, v1.95.1 listens while its rolling buffer is active.
                         Its default buffer holds the latest three seconds of audio and replaces older
                         audio as you speak.
                       </p>
                       <p class="trust-warning">
-                        With a cloud streaming model, v1.95 can start sending audio when its local
-                        speech detector fires, before you press Shift. The rolling buffer and audio that
-                        follows may reach that provider. Set Buffer Preload to Off before using a cloud
-                        model to stop this pre-Shift sending.
+                        Buffer Preload has been removed in v1.95.1. Recognition starts when you start
+                        recording. With a cloud model, the rolling buffer and audio that follows may
+                        reach that provider, including speech captured before you pressed Shift.
                       </p>
                     </div>
                     <div class="trust-data-item">
@@ -409,7 +410,7 @@
                         Roma reads your clipboard whenever you start a recording, even if Clipboard
                         Context is off. With Screen Recording permission, it also captures and reads a
                         visible window, even if Screen Context is off. It tries the frontmost window
-                        first, but v1.95 can fall back to another visible non-Roma window. Those switches
+                        first, but v1.95.1 can fall back to another visible non-Roma window. Those switches
                         only control what AI Enhancement receives. Revoke Screen Recording to stop
                         window capture.
                       </p>
@@ -424,7 +425,7 @@
                         record. Deleting local history cannot delete data a provider retained.
                       </p>
                       <p>
-                        The public v1.95 download stores provider API keys in Roma's local settings, not
+                        The public v1.95.1 download stores provider API keys in Roma's local settings, not
                         macOS Keychain. Use a separate key you can revoke and set a provider spending
                         limit when available.
                       </p>
@@ -432,8 +433,9 @@
                     <div class="trust-data-item">
                       <h4>Automatic connections</h4>
                       <p>
-                        This website measures visits with Vercel Web Analytics. v1.95 checks beingpax.github.io for
-                        updates and announcements. The Mac app does not automatically send usage or
+                        This website measures visits with Vercel Web Analytics. v1.95.1 checks Roma's
+                        GitHub releases for updates and beingpax.github.io for announcements.
+                        The Mac app does not automatically send usage or
                         crash reports to me, so I may not know about a problem unless you contact me.
                       </p>
                     </div>
@@ -442,7 +444,7 @@
 
                 <article class="trust-disclosure trust-permissions">
                   <h3>Why Roma asks for broad access</h3>
-                  <p>Here is how v1.95 uses each permission.</p>
+                  <p>Here is how v1.95.1 uses each permission.</p>
                   <dl class="trust-permission-list">
                     <div>
                       <dt>Microphone</dt>
@@ -462,7 +464,7 @@
                     <div>
                       <dt>Screen Recording</dt>
                       <dd>
-                        Optional. Captures a visible window for on-device text recognition. v1.95 can
+                        Optional. Captures a visible window for on-device text recognition. v1.95.1 can
                         fall back from the frontmost window to another visible non-Roma window.
                       </dd>
                     </div>

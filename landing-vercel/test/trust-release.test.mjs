@@ -67,7 +67,7 @@ test("every direct app download matches the release described by Trust", async (
     readFile(new URL("index.html", landingRoot), "utf8"),
     readFile(new URL(".vercelignore", landingRoot), "utf8"),
   ]);
-  const trustVersion = landing.match(/Current (v\d+\.\d+) recommendation/)?.[1];
+  const trustVersion = landing.match(/Current (v\d+\.\d+(?:\.\d+)?) recommendation/)?.[1];
   assert.ok(trustVersion, "Trust must name the reviewed release");
   const ignoredDirectories = new Set(vercelIgnore
     .split("\n")
@@ -88,7 +88,7 @@ test("every direct app download matches the release described by Trust", async (
 test("mouse, keyboard, and changelog downloads use only the reviewed app", async () => {
   const source = await readFile(new URL("app.js", landingRoot), "utf8");
   const { context, downloadListeners, listeners, window } = runLandingApp(source);
-  const expected = "https://github.com/negentropi/roma-just-talk/releases/download/v1.95/roma.just.talk.app.zip";
+  const expected = "https://github.com/negentropi/roma-just-talk/releases/download/v1.95.1/roma.just.talk.app.zip";
   const event = {
     key: "Enter",
     ctrlKey: false,
@@ -115,6 +115,6 @@ test("mouse, keyboard, and changelog downloads use only the reviewed app", async
   });
   assert.doesNotMatch(unreviewed, /download app|example\.com\/new/i);
 
-  const reviewed = context.releaseAssetLinks({ tag_name: "v1.95", assets: [] });
+  const reviewed = context.releaseAssetLinks({ tag_name: "v1.95.1", assets: [] });
   assert.match(reviewed, new RegExp(expected.replaceAll(".", "\\.")));
 });
