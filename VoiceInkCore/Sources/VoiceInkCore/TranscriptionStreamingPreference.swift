@@ -220,6 +220,7 @@ public struct VoiceInkTranscriptionStreamingModePresentation: Equatable, Sendabl
 public enum VoiceInkStreamingFinalCommitSource: Equatable, Sendable {
     case cloud
     case localFluidAudio
+    case localQwen
 }
 
 public struct TimedWord: Equatable, Sendable {
@@ -530,6 +531,7 @@ public enum VoiceInkFluidAudioTranscriptionPolicy {
 public enum VoiceInkStreamingFinalCommitTimeout {
     public static let cloudNanoseconds: UInt64 = 10_000_000_000
     public static let localFluidAudioNanoseconds: UInt64 = 1_000_000_000
+    public static let localQwenNanoseconds: UInt64 = 10_000_000_000
 
     public static func nanoseconds(for source: VoiceInkStreamingFinalCommitSource) -> UInt64 {
         switch source {
@@ -537,6 +539,8 @@ public enum VoiceInkStreamingFinalCommitTimeout {
             cloudNanoseconds
         case .localFluidAudio:
             localFluidAudioNanoseconds
+        case .localQwen:
+            localQwenNanoseconds
         }
     }
 }
@@ -656,6 +660,7 @@ public enum VoiceInkStreamingKeysMigration {
 public enum VoiceInkTranscriptionServiceRoute: Equatable, Sendable {
     case cloud
     case localFluidAudio
+    case localQwen
     case localWhisper
     case nativeApple
 
@@ -680,6 +685,7 @@ public enum VoiceInkTranscriptionServiceRouteDiagnostics {
 public enum VoiceInkTranscriptionStreamingAdapterKind: Equatable, Sendable {
     case cloud
     case localFluidAudio
+    case localQwen
 }
 
 public struct VoiceInkTranscriptionStreamingSessionRequest: Equatable, Sendable {
@@ -763,6 +769,9 @@ public struct VoiceInkTranscriptionSessionRoutePlan: Equatable, Sendable {
         case .localFluidAudio:
             self.streamingAdapterKind = .localFluidAudio
             self.finalCommitSource = .localFluidAudio
+        case .localQwen:
+            self.streamingAdapterKind = .localQwen
+            self.finalCommitSource = .localQwen
         case .cloud, .localWhisper, .nativeApple:
             self.streamingAdapterKind = .cloud
             self.finalCommitSource = .cloud

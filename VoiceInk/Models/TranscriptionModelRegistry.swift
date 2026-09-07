@@ -13,7 +13,8 @@ enum TranscriptionModelRegistry {
     
     private static let predefinedModels: [any TranscriptionModel] = {
         let platformModels: [any TranscriptionModel] = [
-            NativeAppleModel(spec: VoiceInkTranscriptionModelCatalog.nativeAppleModel)
+            NativeAppleModel(spec: VoiceInkTranscriptionModelCatalog.nativeAppleModel),
+            QwenModel()
         ] + VoiceInkTranscriptionModelCatalog.fluidAudioModels.map(FluidAudioModel.init(spec:))
         let localModels = VoiceInkWhisperModelFiles.downloadableModels.map(WhisperModel.init(spec:))
         let nonCloudModels = platformModels + localModels

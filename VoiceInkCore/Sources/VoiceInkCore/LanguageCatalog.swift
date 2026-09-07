@@ -35,6 +35,7 @@ public enum VoiceInkTranscriptionLanguageSource: Equatable, Sendable {
     case whisper
     case nativeApple
     case fluidAudio
+    case qwen
     case provider(VoiceInkTranscriptionModelProvider)
     case all
 }
@@ -545,6 +546,8 @@ public enum VoiceInkTranscriptionLanguageSupport {
             return VoiceInkLanguageCatalog.nativeApple
         case .fluidAudio:
             return VoiceInkLanguageCatalog.fluidAudioLanguages()
+        case .qwen:
+            return ["auto": "Auto-detect", "en": "English", "zh": "Chinese (Traditional output)"]
         case .provider(.assemblyAI):
             return assemblyAILanguages(usesRealtime: assemblyAIUsesRealtime)
         case .provider(let provider):

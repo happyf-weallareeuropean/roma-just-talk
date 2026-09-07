@@ -65,13 +65,15 @@ extension TranscriptionModel {
         hasConfiguredAPIKey: Bool = false,
         isAvailableOnCurrentOS: Bool = true,
         isLocalFluidAudioModelDownloaded: Bool = false,
-        isLocalWhisperModelDownloaded: Bool = false
+        isLocalWhisperModelDownloaded: Bool = false,
+        isLocalQwenModelDownloaded: Bool = false
     ) -> VoiceInkTranscriptionModelAvailabilityFacts {
         coreFacts.transcriptionModelAvailabilityFacts(
             hasConfiguredAPIKey: hasConfiguredAPIKey,
             isAvailableOnCurrentOS: isAvailableOnCurrentOS,
             isLocalFluidAudioModelDownloaded: isLocalFluidAudioModelDownloaded,
-            isLocalWhisperModelDownloaded: isLocalWhisperModelDownloaded
+            isLocalWhisperModelDownloaded: isLocalWhisperModelDownloaded,
+            isLocalQwenModelDownloaded: isLocalQwenModelDownloaded
         )
     }
 
@@ -276,4 +278,15 @@ struct ImportedWhisperModel: TranscriptionModel {
         self.isMultilingualModel = true
         self.supportedLanguages = VoiceInkMacOSTranscriptionModelProvider.whisper.supportedLanguages(isMultilingual: true)
     }
+}
+
+struct QwenModel: TranscriptionModel {
+    let id = UUID()
+    let name = VoiceInkTranscriptionModelCatalog.localQwenModelName
+    let displayName = "Qwen Chinese + English"
+    let description = "Local Chinese and English dictation with Traditional Chinese output. Requires Apple Silicon and macOS 15 or later. Downloads about 1 GB; measured memory can exceed 2 GB."
+    let provider: VoiceInkMacOSTranscriptionModelProvider = .qwen
+    let isMultilingualModel = true
+    let supportsStreaming = true
+    let supportedLanguages = VoiceInkTranscriptionLanguageSupport.languages(for: .qwen)
 }

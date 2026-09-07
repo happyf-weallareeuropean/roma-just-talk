@@ -6,6 +6,7 @@ public enum VoiceInkTranscriptionModelAvailabilityRequirement: Equatable, Sendab
     case currentOSSupport
     case downloadedLocalFluidAudioModel
     case downloadedLocalWhisperModel
+    case downloadedLocalQwenModel
     case alwaysAvailable
     case unavailable
 
@@ -14,7 +15,7 @@ public enum VoiceInkTranscriptionModelAvailabilityRequirement: Equatable, Sendab
     }
 
     public var requiresCurrentOSSupport: Bool {
-        self == .currentOSSupport || self == .configuredAPIKeyAndCurrentOSSupport
+        self == .currentOSSupport || self == .configuredAPIKeyAndCurrentOSSupport || self == .downloadedLocalQwenModel
     }
 }
 
@@ -24,19 +25,22 @@ public struct VoiceInkTranscriptionModelAvailabilityFacts: Equatable, Sendable {
     public let isAvailableOnCurrentOS: Bool
     public let isLocalFluidAudioModelDownloaded: Bool
     public let isLocalWhisperModelDownloaded: Bool
+    public let isLocalQwenModelDownloaded: Bool
 
     public init(
         requirement: VoiceInkTranscriptionModelAvailabilityRequirement,
         hasConfiguredAPIKey: Bool = false,
         isAvailableOnCurrentOS: Bool = true,
         isLocalFluidAudioModelDownloaded: Bool = false,
-        isLocalWhisperModelDownloaded: Bool = false
+        isLocalWhisperModelDownloaded: Bool = false,
+        isLocalQwenModelDownloaded: Bool = false
     ) {
         self.requirement = requirement
         self.hasConfiguredAPIKey = hasConfiguredAPIKey
         self.isAvailableOnCurrentOS = isAvailableOnCurrentOS
         self.isLocalFluidAudioModelDownloaded = isLocalFluidAudioModelDownloaded
         self.isLocalWhisperModelDownloaded = isLocalWhisperModelDownloaded
+        self.isLocalQwenModelDownloaded = isLocalQwenModelDownloaded
     }
 
     public var isUsable: Bool {
@@ -51,6 +55,8 @@ public struct VoiceInkTranscriptionModelAvailabilityFacts: Equatable, Sendable {
             isLocalFluidAudioModelDownloaded
         case .downloadedLocalWhisperModel:
             isLocalWhisperModelDownloaded
+        case .downloadedLocalQwenModel:
+            isLocalQwenModelDownloaded && isAvailableOnCurrentOS
         case .alwaysAvailable:
             true
         case .unavailable:
@@ -143,6 +149,7 @@ fileprivate enum VoiceInkTranscriptionRecordingStartupLoadAction: Equatable, Sen
     case none
     case loadLocalWhisperModel
     case loadLocalFluidAudioModel
+    case loadLocalQwenModel
 }
 
 fileprivate enum VoiceInkTranscriptionModelSelectionResourceAction: Equatable, Sendable {
@@ -235,6 +242,10 @@ public struct VoiceInkTranscriptionRuntimeResourcePlan: Equatable, Sendable {
             self.shouldPrewarmModel = true
             self.recordingStartupLoadAction = .loadLocalFluidAudioModel
             self.modelSelectionResourceAction = .clearLocalWhisperModelAndMarkLoaded
+        case .localQwen:
+            self.shouldPrewarmModel = true
+            self.recordingStartupLoadAction = .loadLocalQwenModel
+            self.modelSelectionResourceAction = .clearLocalWhisperModelAndMarkLoaded
         case .cloud, .nativeApple:
             self.shouldPrewarmModel = false
             self.recordingStartupLoadAction = .none
@@ -248,7 +259,8 @@ public struct VoiceInkTranscriptionRuntimeResourcePlan: Equatable, Sendable {
 
     public func applyRecordingStartupRuntimeState(
         loadLocalWhisperModel: () async throws -> Void,
-        loadLocalFluidAudioModel: () async throws -> Void
+        loadLocalFluidAudioModel: () async throws -> Void,
+        loadLocalQwenModel: () async throws -> Void
     ) async rethrows {
         switch recordingStartupLoadAction {
         case .none:
@@ -257,6 +269,8 @@ public struct VoiceInkTranscriptionRuntimeResourcePlan: Equatable, Sendable {
             try await loadLocalWhisperModel()
         case .loadLocalFluidAudioModel:
             try await loadLocalFluidAudioModel()
+        case .loadLocalQwenModel:
+            try await loadLocalQwenModel()
         }
     }
 }
@@ -701,6 +715,7 @@ public enum VoiceInkModelManagementPresentation {
 public enum VoiceInkTranscriptionModelProviderRole: Equatable, Sendable {
     case localWhisper
     case localFluidAudio
+    case localQwen
     case nativeApple
     case customCloud
     case cloud(VoiceInkTranscriptionModelProvider?)
@@ -709,7 +724,7 @@ public enum VoiceInkTranscriptionModelProviderRole: Equatable, Sendable {
         switch self {
         case .cloud(let provider):
             return provider
-        case .localWhisper, .localFluidAudio, .nativeApple, .customCloud:
+        case .localWhisper, .localFluidAudio, .localQwen, .nativeApple, .customCloud:
             return nil
         }
     }
@@ -720,6 +735,8 @@ public enum VoiceInkTranscriptionModelProviderRole: Equatable, Sendable {
             return .whisper
         case .localFluidAudio:
             return .fluidAudio
+        case .localQwen:
+            return .qwen
         case .nativeApple:
             return .nativeApple
         case .customCloud:
@@ -732,7 +749,7 @@ public enum VoiceInkTranscriptionModelProviderRole: Equatable, Sendable {
 
     public var modelManagementCategory: VoiceInkModelManagementModelCategory {
         switch self {
-        case .localWhisper, .localFluidAudio, .nativeApple:
+        case .localWhisper, .localFluidAudio, .localQwen, .nativeApple:
             return .local
         case .customCloud:
             return .custom
@@ -747,6 +764,8 @@ public enum VoiceInkTranscriptionModelProviderRole: Equatable, Sendable {
             return .localWhisper
         case .localFluidAudio:
             return .localFluidAudio
+        case .localQwen:
+            return .localQwen
         case .nativeApple:
             return .nativeApple
         case .customCloud, .cloud:
@@ -760,6 +779,8 @@ public enum VoiceInkTranscriptionModelProviderRole: Equatable, Sendable {
             return .downloadedLocalWhisperModel
         case .localFluidAudio:
             return .downloadedLocalFluidAudioModel
+        case .localQwen:
+            return .downloadedLocalQwenModel
         case .nativeApple:
             return .currentOSSupport
         case .customCloud:
@@ -799,7 +820,7 @@ public enum VoiceInkTranscriptionModelProviderRole: Equatable, Sendable {
         switch self {
         case .customCloud:
             return defaultLanguages
-        case .localWhisper, .localFluidAudio, .nativeApple, .cloud:
+        case .localWhisper, .localFluidAudio, .localQwen, .nativeApple, .cloud:
             return VoiceInkTranscriptionLanguageSupport.languages(
                 for: transcriptionLanguageSource,
                 isMultilingual: isMultilingual,
@@ -968,6 +989,7 @@ public struct VoiceInkFluidAudioDownloadStatus: Equatable, Sendable {
 public enum VoiceInkMacOSTranscriptionModelProvider: String, Codable, Hashable, CaseIterable, Sendable {
     case whisper = "Whisper"
     case fluidAudio = "Parakeet"
+    case qwen = "Qwen"
     case groq = "Groq"
     case elevenLabs = "ElevenLabs"
     case deepgram = "Deepgram"
@@ -1028,6 +1050,8 @@ public enum VoiceInkMacOSTranscriptionModelProvider: String, Codable, Hashable, 
             return .localWhisper
         case .fluidAudio:
             return .localFluidAudio
+        case .qwen:
+            return .localQwen
         case .nativeApple:
             return .nativeApple
         case .custom:
@@ -1194,14 +1218,16 @@ public struct VoiceInkMacOSTranscriptionModelFacts: Equatable, Sendable {
         hasConfiguredAPIKey: Bool = false,
         isAvailableOnCurrentOS: Bool = true,
         isLocalFluidAudioModelDownloaded: Bool = false,
-        isLocalWhisperModelDownloaded: Bool = false
+        isLocalWhisperModelDownloaded: Bool = false,
+        isLocalQwenModelDownloaded: Bool = false
     ) -> VoiceInkTranscriptionModelAvailabilityFacts {
         VoiceInkTranscriptionModelAvailabilityFacts(
             requirement: provider.transcriptionModelAvailabilityRequirement,
             hasConfiguredAPIKey: hasConfiguredAPIKey,
             isAvailableOnCurrentOS: isAvailableOnCurrentOS,
             isLocalFluidAudioModelDownloaded: isLocalFluidAudioModelDownloaded,
-            isLocalWhisperModelDownloaded: isLocalWhisperModelDownloaded
+            isLocalWhisperModelDownloaded: isLocalWhisperModelDownloaded,
+            isLocalQwenModelDownloaded: isLocalQwenModelDownloaded
         )
     }
 
@@ -1254,6 +1280,7 @@ public struct VoiceInkMacOSTranscriptionModelFacts: Equatable, Sendable {
 
 public enum VoiceInkTranscriptionModelCatalog {
     public static let localBaseModel = "base"
+    public static let localQwenModelName = "qwen3-asr-0.6b-8bit"
     public static let defaultMacOSFluidAudioModelName = "parakeet-tdt-0.6b-v2"
 
     public static let nativeAppleModel = VoiceInkNativeAppleTranscriptionModelSpec(

@@ -57,6 +57,49 @@ final class TranscriptionModelCatalogTests: XCTestCase {
         ).isUsable)
     }
 
+    func testQwenNeedsInstalledModelAndSupportedHardware() {
+        for installed in [false, true] {
+            for supported in [false, true] {
+                let facts = VoiceInkTranscriptionModelAvailabilityFacts(
+                    requirement: .downloadedLocalQwenModel,
+                    hasConfiguredAPIKey: true,
+                    isAvailableOnCurrentOS: supported,
+                    isLocalFluidAudioModelDownloaded: true,
+                    isLocalQwenModelDownloaded: installed
+                )
+                XCTAssertEqual(facts.isUsable, installed && supported)
+            }
+        }
+    }
+
+    func testQwenRoutesAndLanguagesStayLocalAndRespectEnglishChoice() async {
+        let provider = VoiceInkMacOSTranscriptionModelProvider.qwen
+        XCTAssertNil(provider.remoteTranscriptionProviderKind)
+        XCTAssertEqual(provider.modelManagementCategory, .local)
+        XCTAssertEqual(provider.transcriptionServiceRoute, .localQwen)
+        XCTAssertFalse(provider.transcriptionModelAvailabilityRequirement.requiresConfiguredAPIKey)
+        XCTAssertTrue(provider.transcriptionModelAvailabilityRequirement.requiresCurrentOSSupport)
+        let languages = provider.supportedLanguages(isMultilingual: true)
+        XCTAssertEqual(Set(languages.keys), Set(["auto", "en", "zh"]))
+        XCTAssertEqual(VoiceInkTranscriptionLanguageSupport.validLanguageOrFallback(nil, source: .qwen), "auto")
+        XCTAssertEqual(VoiceInkTranscriptionLanguageSupport.validLanguageOrFallback("en", source: .qwen), "en")
+        XCTAssertEqual(VoiceInkTranscriptionModelCatalog.defaultMacOSFluidAudioModelName, "parakeet-tdt-0.6b-v2")
+        let streaming = VoiceInkTranscriptionSessionRoutePlan(serviceRoute: .localQwen, usesStreaming: true)
+        XCTAssertEqual(streaming.streamingAdapterKind, .localQwen)
+        XCTAssertEqual(streaming.finalCommitSource, .localQwen)
+        let batch = VoiceInkTranscriptionSessionRoutePlan(serviceRoute: .localQwen, usesStreaming: false)
+        XCTAssertNil(batch.streamingAdapterKind)
+        let resource = VoiceInkTranscriptionRuntimeResourcePlan(serviceRoute: .localQwen)
+        var calls: [String] = []
+        await resource.applyRecordingStartupRuntimeState(
+            loadLocalWhisperModel: { calls.append("whisper") },
+            loadLocalFluidAudioModel: { calls.append("fluid") },
+            loadLocalQwenModel: { calls.append("qwen") }
+        )
+        XCTAssertEqual(calls, ["qwen"])
+        XCTAssertTrue(resource.shouldPrewarmModel)
+    }
+
     func testAlwaysAvailableAndUnavailableRequirementsStayExplicit() {
         XCTAssertTrue(VoiceInkTranscriptionModelAvailabilityFacts(requirement: .alwaysAvailable).isUsable)
         XCTAssertFalse(VoiceInkTranscriptionModelAvailabilityFacts(requirement: .unavailable).isUsable)
@@ -72,7 +115,8 @@ final class TranscriptionModelCatalogTests: XCTestCase {
             },
             loadLocalFluidAudioModel: {
                 events.append("fluid")
-            }
+            },
+            loadLocalQwenModel: { events.append("qwen") }
         )
 
         XCTAssertTrue(plan.shouldPrewarmModel)
@@ -89,7 +133,8 @@ final class TranscriptionModelCatalogTests: XCTestCase {
             },
             loadLocalFluidAudioModel: {
                 events.append("fluid")
-            }
+            },
+            loadLocalQwenModel: { events.append("qwen") }
         )
 
         XCTAssertTrue(plan.shouldPrewarmModel)
@@ -106,7 +151,8 @@ final class TranscriptionModelCatalogTests: XCTestCase {
             },
             loadLocalFluidAudioModel: {
                 events.append("fluid")
-            }
+            },
+            loadLocalQwenModel: { events.append("qwen") }
         )
 
         XCTAssertFalse(plan.shouldPrewarmModel)
@@ -123,7 +169,8 @@ final class TranscriptionModelCatalogTests: XCTestCase {
             },
             loadLocalFluidAudioModel: {
                 events.append("fluid")
-            }
+            },
+            loadLocalQwenModel: { events.append("qwen") }
         )
 
         XCTAssertFalse(plan.shouldPrewarmModel)
@@ -532,6 +579,7 @@ final class TranscriptionModelCatalogTests: XCTestCase {
             [
                 "Whisper",
                 "Parakeet",
+                "Qwen",
                 "Groq",
                 "ElevenLabs",
                 "Deepgram",
