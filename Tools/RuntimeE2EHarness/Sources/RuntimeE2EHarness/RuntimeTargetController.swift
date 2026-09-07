@@ -183,8 +183,10 @@ final class RuntimePreparedTarget {
                 }
                 if let refreshed = RuntimeAX.editableElement(
                     in: windowElement,
-                    identifying: info.windowTitleToken
-                ) ?? RuntimeAX.firstEditableElement(in: windowElement) {
+                    identifying: target.kind == .browser
+                        ? RuntimeTargetIsolationPlan.browserEditableLabel(windowTitleToken: info.windowTitleToken)
+                        : info.windowTitleToken
+                ) ?? (target.kind == .browser ? nil : RuntimeAX.firstEditableElement(in: windowElement)) {
                     textElement = refreshed
                 } else {
                     lastError = "Unique target surface no longer exposes an editable AX element"
@@ -409,6 +411,7 @@ enum RuntimeTargetController {
             )
             var surface = try waitForTargetSurface(
                 bundleIdentifier: target.bundleIdentifier,
+                targetKind: target.kind,
                 windowTitleToken: resource.windowTitleToken,
                 timeoutSeconds: 15
             )
@@ -512,6 +515,7 @@ enum RuntimeTargetController {
             for token in tokens {
                 if let surface = try? waitForTargetSurface(
                     bundleIdentifier: target.bundleIdentifier,
+                    targetKind: target.kind,
                     windowTitleToken: token,
                     timeoutSeconds: 0.5
                 ) {
@@ -749,6 +753,7 @@ enum RuntimeTargetController {
 
     private static func waitForTargetSurface(
         bundleIdentifier: String,
+        targetKind: RuntimeTargetApp.Kind,
         windowTitleToken: String,
         timeoutSeconds: TimeInterval
     ) throws -> TargetSurface {
@@ -757,7 +762,9 @@ enum RuntimeTargetController {
             let applications = orderedApplications(bundleIdentifier: bundleIdentifier)
             for application in applications {
                 let appElement = AXUIElementCreateApplication(application.processIdentifier)
-                if let windowElement = RuntimeAX.window(containing: windowTitleToken, in: appElement),
+                // A browser window can exist before its editor; never accept the address bar.
+                if targetKind != .browser,
+                   let windowElement = RuntimeAX.window(containing: windowTitleToken, in: appElement),
                    let textElement = RuntimeAX.firstEditableElement(in: windowElement) {
                     return TargetSurface(
                         application: application,
@@ -770,7 +777,9 @@ enum RuntimeTargetController {
 
                 if let textElement = RuntimeAX.editableElement(
                     in: appElement,
-                    identifying: windowTitleToken
+                    identifying: targetKind == .browser
+                        ? RuntimeTargetIsolationPlan.browserEditableLabel(windowTitleToken: windowTitleToken)
+                        : windowTitleToken
                 ), let windowElement = RuntimeAX.window(for: textElement) {
                     return TargetSurface(
                         application: application,
@@ -781,7 +790,8 @@ enum RuntimeTargetController {
                     )
                 }
 
-                if let markerElement = RuntimeAX.element(
+                if targetKind != .browser,
+                   let markerElement = RuntimeAX.element(
                     in: appElement,
                     identifying: windowTitleToken
                 ), let windowElement = RuntimeAX.window(for: markerElement),
@@ -839,6 +849,7 @@ enum RuntimeTargetController {
             guard attempt == 0,
                   let refreshed = try? waitForTargetSurface(
                     bundleIdentifier: bundleIdentifier,
+                    targetKind: targetKind,
                     windowTitleToken: windowTitleToken,
                     timeoutSeconds: 2
                   ) else {
@@ -877,6 +888,7 @@ enum RuntimeTargetController {
         var safeToTerminate = false
         if let surface = try? waitForTargetSurface(
             bundleIdentifier: bundleIdentifier,
+            targetKind: target.kind,
             windowTitleToken: windowTitleToken,
             timeoutSeconds: 1
         ) {
@@ -1361,8 +1373,7 @@ enum RuntimeAX {
                 flags: .maskCommand,
                 processIdentifier: application.processIdentifier
             )
-            if useCloseButtonFallback,
-               discardChangesSheetIfPresent(
+            if discardChangesSheetIfPresent(
                     in: currentWindow,
                     processIdentifier: application.processIdentifier,
                     timeoutSeconds: 0.5

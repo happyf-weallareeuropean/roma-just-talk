@@ -318,6 +318,12 @@ make runtime-e2e-run
 The default case count is `fixtures x currently-running selected apps x 2 text baselines x 3`; the
 four-app minimum is enforced before Roma or audio state changes.
 
+Browser preparation and observation require the fixture editor's unique accessible
+label; a matching window title alone can expose only the address bar while the
+page loads. Document cleanup handles the standard save sheet after closing the
+uniquely identified temporary document, including VS Code's initially empty files.
+Check each case's cleanup evidence separately from insertion and latency.
+
 Custom manifest:
 
 ```bash
