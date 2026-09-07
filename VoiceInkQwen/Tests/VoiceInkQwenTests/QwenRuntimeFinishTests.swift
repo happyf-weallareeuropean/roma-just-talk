@@ -4,7 +4,7 @@ import Testing
 
 @Test(.timeLimit(.minutes(1)), arguments: [151645, 151643])
 func releaseCoalescesQueuedPCMAndKeepsCompletedPrefix(eosToken: Int) async throws {
-    let fixture = try FinishFixture(blockedPass: 3, eosToken: eosToken)
+    let fixture = try FinishFixture(blockedPass: 3, eosToken: eosToken, succeedsAfterCancellation: true)
     let session = try await fixture.runtime.startStreaming(language: "English")
     defer { fixture.releaseAndCancel(session.id) }
     var text = session.events.makeAsyncIterator()
@@ -43,7 +43,7 @@ func releaseCoalescesQueuedPCMAndKeepsCompletedPrefix(eosToken: Int) async throw
 
 @Test(.timeLimit(.minutes(1)))
 func releaseWithoutPendingPCMFinalizesTheInFlightResultOnce() async throws {
-    let fixture = try FinishFixture(blockedPass: 1)
+    let fixture = try FinishFixture(blockedPass: 1, succeedsAfterCancellation: true)
     let session = try await fixture.runtime.startStreaming(language: "English")
     defer { fixture.releaseAndCancel(session.id) }
     var text = session.events.makeAsyncIterator()
@@ -107,8 +107,8 @@ private struct FinishFixture: Sendable {
     let lifecycle: AsyncStream<QwenRuntime.LifecycleEvent>
     let emissions = FinishEmissions()
 
-    init(blockedPass: Int, eosToken: Int = 151645) throws {
-        let model = FinishModel(blockedPass: blockedPass, eosToken: eosToken)
+    init(blockedPass: Int, eosToken: Int = 151645, succeedsAfterCancellation: Bool = false) throws {
+        let model = FinishModel(blockedPass: blockedPass, eosToken: eosToken, succeedsAfterCancellation: succeedsAfterCancellation)
         let events = AsyncStream<QwenRuntime.LifecycleEvent>.makeStream()
         self.model = model
         lifecycle = events.stream
@@ -142,14 +142,16 @@ private actor FinishModel: QwenRuntimeModel {
     private let continuation: AsyncStream<Event>.Continuation
     private let blockedPass: Int
     private let eosToken: Int
+    private let succeedsAfterCancellation: Bool
     private var held: CheckedContinuation<Void, Never>?
     private var released = false
     private(set) var requests: [Request] = []
     private(set) var blockedDecodeExited = false
 
-    init(blockedPass: Int, eosToken: Int) {
+    init(blockedPass: Int, eosToken: Int, succeedsAfterCancellation: Bool) {
         self.blockedPass = blockedPass
         self.eosToken = eosToken
+        self.succeedsAfterCancellation = succeedsAfterCancellation
         let pair = AsyncStream<Event>.makeStream()
         events = pair.stream
         continuation = pair.continuation
@@ -172,7 +174,8 @@ private actor FinishModel: QwenRuntimeModel {
             } onCancel: { [continuation] in continuation.yield(.cancelled(pass)) }
             blockedDecodeExited = true
         }
-        try Task.checkCancellation()
+        // Model completion can win a cancellation request; keep that race covered.
+        if pass != blockedPass || !succeedsAfterCancellation { try Task.checkCancellation() }
         let fullText = pass >= 3 ? Self.completedText : Self.rawText
         #expect(fullText.hasPrefix(prefix))
         return QwenDecodeResult(generatedText: String(fullText.dropFirst(prefix.count)),

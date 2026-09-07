@@ -17,6 +17,7 @@ on:
       - "scripts/check-find-reusable-ci-run.sh"
       - "scripts/find-reusable-ci-run.sh"
       - "scripts/run-macos-ci-unit-tests.sh"
+      - "scripts/test-qwen-package.sh"
       - "scripts/tests/verify-adhoc-library-validation.test.sh"
       - "scripts/tests/verify-macos-distribution-launch.test.sh"
       - "scripts/tests/verify-macos-framework-signature-crash.test.sh"
@@ -54,6 +55,7 @@ on:
       - "scripts/check-find-reusable-ci-run.sh"
       - "scripts/find-reusable-ci-run.sh"
       - "scripts/run-macos-ci-unit-tests.sh"
+      - "scripts/test-qwen-package.sh"
       - "scripts/tests/verify-adhoc-library-validation.test.sh"
       - "scripts/tests/verify-macos-distribution-launch.test.sh"
       - "scripts/tests/verify-macos-framework-signature-crash.test.sh"
@@ -243,7 +245,7 @@ jobs:
 
       - name: Verify local bilingual model package
         timeout-minutes: 15
-        run: swift test --package-path VoiceInkQwen -c release --enable-testable-imports
+        run: bash scripts/test-qwen-package.sh "$HOME/Applications/roma just talk.app"
 
       - name: Run Debug unit tests
         if: ${{ !cancelled() && steps.release_app.outcome == 'success' }}

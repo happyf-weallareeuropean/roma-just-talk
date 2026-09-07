@@ -28,14 +28,19 @@ Both batch and streaming call the same raw greedy decoder. Streaming consumes
 350 ms packets against cumulative utterance audio, resetting the prefix for two
 passes and then rolling back five tokens, matching the qualified control.
 The model recomputes the cumulative encoder input; this is not encoder KV caching.
-Manual release takes precedence over the live-update cadence: after any in-flight
-decode drains and updates the raw prefix, all queued PCM joins one cumulative
-final pass. No queued audio is discarded or split into additional live passes.
-The runtime emits one final result, without intermediate post-release updates.
-This scheduling rule belongs to Roma; the pinned tokenizer, greedy decoder and
-official prefix rollback policy remain unchanged.
-EOS, token exhaustion and cancellation remain distinct. The 256-token generation
-cap produces an explicit error; no repetition filter silently truncates speech.
+Manual release supersedes an unfinished live pass. Its child task cooperatively
+cancels and drains before one final pass uses all captured PCM and the last
+completed raw prefix. A canceled pass contributes no hypothesis; a completed EOS
+can still update the prefix. Even when that live pass consumed the last full
+packet, its accumulated PCM receives final inference. No audio is discarded.
+The final pass cannot be superseded by another finish call. The runtime emits one
+final result, without intermediate post-release updates. This scheduling rule
+belongs to Roma; tokenizer, model math and official prefix rollback stay unchanged.
+EOS, token exhaustion and cancellation remain distinct. A reached 256-token cap
+remains an explicit error even if release concurrently cancels the child task.
+User cancellation and teardown remain terminal and await the actual drain; finish
+installs its cancellation handler before suspending and never initiates model load.
+No repetition filter silently truncates speech.
 Raw tokens remain unchanged. Complete display/final text converts Simplified
 Chinese to Traditional Chinese through Foundation. Explicit language choice is
 preserved; nil requests detection.
@@ -81,11 +86,15 @@ package tests, full app dependency/build gates, offline installed-store use,
 model switch/delete during inference and cold/warm app recording tests. Earlier
 standalone controls do not substitute for these gates.
 
-Package test command (Xcode 26.3 / Swift 6.2.1 or newer):
+Package test command after the Release app build (Xcode 26 / Swift 6.2.1 or newer):
 
 ```sh
-swift test --package-path VoiceInkQwen -c release --enable-testable-imports
+bash scripts/test-qwen-package.sh "$HOME/Applications/roma just talk.app"
 ```
 
-Tests do not load model weights or run Metal inference; compilation still builds
-MLX dependencies. The application gate separately verifies shipped shaders.
+Tests do not load model weights or run inference. Unload/delete tests initialize
+MLX's Metal device when clearing its cache. The script checks resolved revisions
+against the preceding app build, builds the test executable, and supplies that
+app's shader through MLX's supported executable-adjacent lookup before running
+the complete suite. It never changes the app. The application gate separately
+verifies shipped shaders and inference.

@@ -66,7 +66,9 @@ public enum QwenGreedyDecoder {
             logits = model(inputIds: MLXArray([Int32(token)]).expandedDimensions(axis: 0), cache: cache)
             eval(logits)
         }
-        try Task.checkCancellation()
+        // A reached output cap is terminal, even if release supersedes this pass.
+        // Cancellation before reaching the cap is still checked inside the loop.
+        if case .eos = termination { try Task.checkCancellation() }
         return QwenDecodeResult(generatedText: tokenizer.decode(tokens: generated),
             generationTokens: generated.count, termination: termination)
     }

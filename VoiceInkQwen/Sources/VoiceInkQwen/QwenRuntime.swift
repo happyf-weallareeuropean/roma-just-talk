@@ -67,6 +67,9 @@ public actor QwenRuntime {
         var policy = QwenStreamingPolicy(chunkSamples: 5_600)
         var task: Task<Void, Never>?
         var finishing = false
+        var liveDecode: (id: UUID, task: Task<QwenDecodeResult, Error>)?
+        var supersededDecodeID: UUID?
+        var needsFinalDecode = false
         var failure: Error?
 
         init(language: String?, continuation: AsyncThrowingStream<QwenStreamingEvent, Error>.Continuation) {
@@ -226,15 +229,20 @@ public actor QwenRuntime {
     }
 
     public func finishStreaming(sessionID: UUID) async throws {
-        guard !closing, let session = streaming, session.id == sessionID else { throw QwenRuntimeError.busy }
+        try Task.checkCancellation()
+        guard !closing, model != nil, let session = streaming, session.id == sessionID else { throw QwenRuntimeError.busy }
         if let failure = session.failure { throw failure }
         session.finishing = true
-        lifecycle(.finishRequested(sessionID))
-        try await prewarm()
-        guard streaming?.id == session.id, !closing else { throw CancellationError() }
+        if let live = session.liveDecode {
+            session.supersededDecodeID = live.id
+            live.task.cancel()
+        }
+        // startStreaming already owns a warm model. Install cancellation before
+        // suspending so a canceled finish cannot leave its stream running.
         scheduleStream(session)
         if let task = session.task {
             await withTaskCancellationHandler {
+                lifecycle(.finishRequested(sessionID))
                 await task.value
             } onCancel: {
                 task.cancel()
@@ -290,10 +298,10 @@ public actor QwenRuntime {
                 guard let model else {
                     throw QwenDecodeError.tokenizerUnavailable
                 }
-                // Release consumes every queued sample in one final pass, after the
-                // in-flight pass has completed and updated the raw prefix state.
+                // Superseded inference drains before one final pass over all PCM.
                 let finalTail = session.finishing
                 let audio = session.policy.takeAudio(finalTail: finalTail)
+                    ?? (finalTail && session.needsFinalDecode ? session.policy.accumulatedAudio : nil)
                 if audio == nil, !finalTail {
                     session.task = nil
                     return
@@ -307,18 +315,40 @@ public actor QwenRuntime {
                 }
                 let prefix = try model.prefix(for: session.policy, finalTail: finalTail)
                 let language = session.language
+                let decodeID = UUID()
                 let task = Task.detached {
-                    try await model.decode(samples: audio, prefix: prefix, language: language)
+                    try Task.checkCancellation()
+                    return try await model.decode(samples: audio, prefix: prefix, language: language)
                 }
-                let result = try await withTaskCancellationHandler {
-                    try await task.value
-                } onCancel: {
-                    task.cancel()
+                if !finalTail { session.liveDecode = (decodeID, task) }
+                let result: QwenDecodeResult
+                do {
+                    result = try await withTaskCancellationHandler {
+                        try await task.value
+                    } onCancel: {
+                        task.cancel()
+                    }
+                } catch {
+                    if session.liveDecode?.id == decodeID { session.liveDecode = nil }
+                    let wasSuperseded = session.supersededDecodeID == decodeID
+                    if wasSuperseded { session.supersededDecodeID = nil }
+                    if error is CancellationError, wasSuperseded, !finalTail,
+                       !Task.isCancelled, streaming?.id == id, epoch == startedEpoch,
+                       session.finishing, !closing {
+                        // takeAudio already moved these samples into accumulatedAudio.
+                        // Even an empty pending tail still needs a complete final decode.
+                        session.needsFinalDecode = true
+                        continue
+                    }
+                    throw error
                 }
+                if session.liveDecode?.id == decodeID { session.liveDecode = nil }
+                if session.supersededDecodeID == decodeID { session.supersededDecodeID = nil }
                 try Task.checkCancellation()
                 guard streaming?.id == id, epoch == startedEpoch, !closing else { return }
                 guard case .eos = result.termination else { throw QwenRuntimeError.outputLimitReached }
                 session.policy.accept(prefix: prefix, generated: result.generatedText)
+                session.needsFinalDecode = false
                 if finalTail {
                     emit(.final(try presentation(session, isFinal: true)), for: session)
                     session.continuation.finish()
