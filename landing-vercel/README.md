@@ -16,6 +16,13 @@ does not sign/notarize the app or grant macOS privacy permissions.
 Keep `setup.js` and `setup.css` loaded on pages offering Mac downloads. Release
 links, Trust disclosures, and the release evidence record must advance together.
 
+Deploy from the repository root: the existing Vercel project has
+`landing-vercel` configured as its Root Directory. The root `.vercelignore`
+allows only site files and excludes app sources and private test results.
+Run `vercel deploy --dry --json` there to inspect the upload, then
+`vercel deploy` for a preview. Deploying from inside this directory duplicates
+the configured root and fails. Advance production only with the verified release.
+
 ```sh
 npm install
 npm run dev

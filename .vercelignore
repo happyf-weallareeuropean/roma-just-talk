@@ -1,0 +1,19 @@
+# Vercel's project root is landing-vercel; upload no app or private test data.
+/*
+!landing-vercel
+!landing-vercel/**
+landing-vercel/.*
+landing-vercel/api
+landing-vercel/README.md
+landing-vercel/.vercel
+landing-vercel/node_modules
+landing-vercel/alts
+landing-vercel/e2e
+landing-vercel/test
+landing-vercel/test-results
+landing-vercel/playwright-report
+landing-vercel/playwright-report-real-audio
+landing-vercel/demo/*.test.mjs
+landing-vercel/scripts
+landing-vercel/playwright.config.mjs
+landing-vercel/playwright.real-audio.config.mjs
