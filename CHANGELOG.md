@@ -2,7 +2,7 @@
 
 ## v1.95.1 - 2026-09-07
 
-- Add local Chinese + English dictation on Apple silicon Macs running macOS 15+, with an English-only setup choice, a country-based suggestion that respects your selection, and download controls.
+- Add local Chinese + English dictation on Apple silicon Macs running macOS 15+, with an English-only setup choice, a country-based suggestion that respects your selection, and download controls. Continuing setup saves your model choice for future onboarding visits.
 - Start final local dictation recognition while a cancelled live pass finishes, reducing release delays without dropping audio or publishing stale live text.
 - Keep automatic model-list refreshes from saving the fallback model as your chosen default.
 - Added NVIDIA Parakeet zh-TW as an optional cloud model using your own NVIDIA API key on macOS 15+ and iOS 18+; local transcription never switches to it automatically.

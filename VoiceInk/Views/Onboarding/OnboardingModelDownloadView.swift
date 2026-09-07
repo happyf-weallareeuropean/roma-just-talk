@@ -96,7 +96,7 @@ struct OnboardingModelDownloadView: View {
 
                         VStack(spacing: 16) {
                             Button {
-                                advance()
+                                continueWithCurrentModel()
                             } label: {
                                 Text(presentation.nextButtonTitle)
                                     .font(.headline)
@@ -162,6 +162,18 @@ struct OnboardingModelDownloadView: View {
             .padding(24)
         }
         .background(Color(nsColor: .controlBackgroundColor))
+    }
+
+    private func continueWithCurrentModel() {
+        guard canContinue, let model = transcriptionModelManager.currentTranscriptionModel else { return }
+        // Continue confirms the ready model; Skip only defers setup.
+        transcriptionModelManager.setDefaultTranscriptionModel(model)
+        if model.name == QwenModel().name {
+            VoiceInkLocalOnboardingModelPreference.save(.chineseAndEnglish)
+        } else if model.name == TranscriptionModelRegistry.defaultMacOSFluidAudioModel.name {
+            VoiceInkLocalOnboardingModelPreference.save(.englishOnly)
+        }
+        advance()
     }
 
     private func advance() {

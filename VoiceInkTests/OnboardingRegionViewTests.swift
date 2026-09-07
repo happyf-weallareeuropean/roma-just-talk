@@ -103,6 +103,41 @@ final class OnboardingRegionViewTests: XCTestCase {
         attach(reopened, name: "Reopened explicit English")
     }
 
+    @MainActor func testContinueConfirmsCachedEnglishAcrossOnboardingReset() async throws {
+        let preferences = OnboardingTestPreferences()
+        defer { preferences.restore() }
+        let first = OnboardingTestWindow()
+        defer { first.close() }
+        try await first.waitForLookup()
+        let continueButton = try await first.continueButton()
+        XCTAssertTrue(continueButton.isAccessibilityEnabled())
+        XCTAssertTrue(continueButton.accessibilityPerformPress())
+        try await first.waitUntil { first.didAdvance }
+        first.close(resumePendingLookup: false)
+        await first.region.respond("TW")
+        try await first.waitUntil { first.regionLookupFinished }
+        XCTAssertEqual(preferences.persisted(VoiceInkUserDefaultsKey.currentTranscriptionModel), first.englishName)
+        XCTAssertEqual(VoiceInkLocalOnboardingModelPreference.choice(), .englishOnly)
+        XCTAssertEqual(VoiceInkTranscriptionLanguagePreference.storedLanguage(), "en")
+        XCTAssertNil(preferences.persisted(VoiceInkUserDefaultsKey.selectedTranscriptionLanguage))
+
+        // Settings' Reset onboarding action clears progress, preserving model choices.
+        VoiceInkMacOSOnboardingProgressStore.reset()
+        let reopened = OnboardingTestWindow()
+        defer { reopened.close() }
+        _ = try await reopened.continueButton()
+        try await reopened.waitForLookupOrCompletion()
+        await reopened.region.respond("TW")
+        try await reopened.waitUntil { reopened.regionLookupFinished }
+        let requests = await reopened.region.requestCount
+        XCTAssertEqual(requests, 0)
+        XCTAssertEqual(reopened.manager.currentTranscriptionModel?.name, reopened.englishName)
+        XCTAssertFalse(reopened.contains(label: QwenModel().displayName))
+        let reopenedContinue = try await reopened.continueButton()
+        XCTAssertTrue(reopenedContinue.isAccessibilityEnabled())
+        attach(reopened, name: "Continue preserves English after onboarding reset")
+    }
+
     @MainActor private func attach(_ fixture: OnboardingTestWindow, name: String) {
         let tree = XCTAttachment(string: fixture.treeDescription())
         tree.name = name + " accessibility tree"
@@ -223,6 +258,15 @@ private actor DelayedOnboardingRegion {
         throw Failure.missing("Production view did not start its injected lookup")
     }
 
+    func waitForLookupOrCompletion() async throws {
+        for _ in 0..<100 {
+            let requests = await region.requestCount
+            if regionLookupFinished || requests > 0 { return }
+            try await Task.sleep(for: .milliseconds(20))
+        }
+        throw Failure.missing("Lookup neither started nor completed")
+    }
+
     func waitForLabel(_ label: String) async throws { try await waitUntil { self.contains(label: label) } }
 
     func waitUntil(_ condition: () -> Bool) async throws {
@@ -246,7 +290,7 @@ private actor DelayedOnboardingRegion {
     private let domain = Bundle.main.bundleIdentifier ?? ProcessInfo.processInfo.processName
     private let keys = [VoiceInkUserDefaultsKey.currentTranscriptionModel,
                         VoiceInkUserDefaultsKey.selectedTranscriptionLanguage,
-                        "macOSOnboardingLocalModelChoice", "macOSOnboardingStage"]
+                        "macOSOnboardingLocalModelChoice", "macOSOnboardingStage", "macOSOnboardingPermissionKind"]
     private var previous: [String: Any] = [:]
     private var registration: [String: Any] = [:]
 
