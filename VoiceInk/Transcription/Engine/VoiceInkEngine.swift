@@ -5,6 +5,7 @@ import SwiftData
 import AppKit
 import os
 import VoiceInkCore
+import VoiceInkQwen
 
 @MainActor
 class VoiceInkEngine: NSObject, ObservableObject {
@@ -16,6 +17,9 @@ class VoiceInkEngine: NSObject, ObservableObject {
     private var activePipelineTranscriptionID: UUID?
     private var canceledPipelineTranscriptionIDs = Set<UUID>()
     private var stopRequestedDuringStart = false
+    private var qwenStartupWarmup: Task<Void, Never>?
+    private weak var qwenRecordingSession: (any TranscriptionSession)?
+    private var qwenRecordingModelName: String?
 
     let recorder = Recorder()
     var recordedFile: URL? = nil
@@ -37,6 +41,7 @@ class VoiceInkEngine: NSObject, ObservableObject {
         modelContext: ModelContext,
         whisperModelManager: WhisperModelManager,
         transcriptionModelManager: TranscriptionModelManager,
+        qwenRuntimeResult: Result<QwenRuntime, Error>,
         enhancementService: AIEnhancementService? = nil
     ) {
         self.modelContext = modelContext
@@ -49,7 +54,9 @@ class VoiceInkEngine: NSObject, ObservableObject {
         let serviceRegistry = TranscriptionServiceRegistry(
             modelProvider: whisperModelManager,
             modelsDirectory: whisperModelManager.modelsDirectory,
-            modelContext: modelContext
+            modelContext: modelContext,
+            qwenRuntimeResult: qwenRuntimeResult,
+            ownsQwenRuntime: true
         )
         self.serviceRegistry = serviceRegistry
         self.pipeline = TranscriptionPipeline(
@@ -314,6 +321,12 @@ class VoiceInkEngine: NSObject, ObservableObject {
                                             if let fluidAudioModel = model as? FluidAudioModel {
                                                 try? await self.serviceRegistry.fluidAudioTranscriptionService.loadModel(for: fluidAudioModel)
                                             }
+                                        },
+                                        loadLocalQwenModel: {
+                                            if self.currentSession is FileTranscriptionSession {
+                                                await self.prewarmQwenBatchRecording(model: model)
+                                            }
+                                            // Streaming's prepared session owns its own model load.
                                         }
                                     )
                                 }
@@ -383,6 +396,11 @@ class VoiceInkEngine: NSObject, ObservableObject {
         audioRelay: RecordingStartupAudioRelay,
         latencyTraceToken: VoiceInkLatencyTrace.Token?
     ) async throws {
+        if model.provider == .qwen {
+            await transcriptionModelManager.awaitQwenRecordingSelection()
+            try Task.checkCancellation()
+            guard transcriptionModelManager.currentTranscriptionModel?.name == model.name else { throw CancellationError() }
+        }
         let latencyTrace = VoiceInkLatencyTrace.shared
         let traceToken = latencyTraceToken
         let session = serviceRegistry.createSession(
@@ -393,6 +411,7 @@ class VoiceInkEngine: NSObject, ObservableObject {
                 }
             }
         )
+        trackQwenRecordingSession(session, model: model)
         currentSession = session
         latencyTrace.event(
             "streaming_session.created",
@@ -437,6 +456,10 @@ class VoiceInkEngine: NSObject, ObservableObject {
         audioRelay: RecordingStartupAudioRelay,
         latencyTraceToken: VoiceInkLatencyTrace.Token?
     ) async -> TranscriptionSession? {
+        if model.provider == .qwen {
+            await transcriptionModelManager.awaitQwenRecordingSelection()
+            guard !Task.isCancelled, transcriptionModelManager.currentTranscriptionModel?.name == model.name else { return nil }
+        }
         let latencyTrace = VoiceInkLatencyTrace.shared
         let traceToken = latencyTraceToken
         latencyTrace.event(
@@ -452,6 +475,7 @@ class VoiceInkEngine: NSObject, ObservableObject {
                 }
             }
         )
+        trackQwenRecordingSession(session, model: model)
 
         let prepareSpan = latencyTrace.begin("startup_stop_session.prepare", token: traceToken)
         do {
@@ -798,6 +822,7 @@ class VoiceInkEngine: NSObject, ObservableObject {
     }
 
     private func cancelCurrentSession() {
+        qwenStartupWarmup?.cancel()
         currentSession?.cancel()
         currentSession = nil
     }
@@ -831,7 +856,45 @@ class VoiceInkEngine: NSObject, ObservableObject {
 
     // MARK: - Notification Handling
 
+    func trackQwenRecordingSession(_ session: TranscriptionSession, model: any TranscriptionModel) {
+        qwenRecordingSession = model.provider == .qwen ? session : nil
+        qwenRecordingModelName = model.provider == .qwen ? model.name : nil
+    }
+
+    private func prewarmQwenBatchRecording(model: any TranscriptionModel) async {
+        qwenStartupWarmup?.cancel()
+        let warmup = Task { [weak self] in
+            guard let self else { return }
+            await transcriptionModelManager.awaitQwenRecordingSelection()
+            guard !Task.isCancelled, transcriptionModelManager.currentTranscriptionModel?.name == model.name else { return }
+            do { try await serviceRegistry.qwenTranscriptionService.loadModel() }
+            catch is CancellationError { }
+            catch { logger.error("Qwen model loading failed: \(error.localizedDescription, privacy: .public)") }
+        }
+        qwenStartupWarmup = warmup
+        await warmup.value
+    }
+
+    @objc private func qwenModelSelectionChanged() {
+        qwenStartupWarmup?.cancel()
+        guard let name = qwenRecordingModelName,
+              name != transcriptionModelManager.currentTranscriptionModel?.name,
+              let session = qwenRecordingSession else { return }
+        // Stop the queued connect synchronously, before selection cleanup can see an empty runtime.
+        session.cancel()
+        qwenRecordingSession = nil
+        qwenRecordingModelName = nil
+        requestRecordingCancellation()
+        Task { [weak self] in
+            guard let self, shouldCancelRecording else { return }
+            await cancelRecording()
+        }
+    }
+
     func setupNotifications() {
+        NotificationCenter.default.addObserver(
+            self, selector: #selector(qwenModelSelectionChanged), name: .didChangeModel, object: nil
+        )
         NotificationCenter.default.addObserver(
             self,
             selector: #selector(handleLicenseStatusChanged),

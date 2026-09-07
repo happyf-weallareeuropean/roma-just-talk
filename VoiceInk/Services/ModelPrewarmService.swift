@@ -2,6 +2,7 @@ import Foundation
 import SwiftData
 import os
 import VoiceInkCore
+import VoiceInkQwen
 import AppKit
 
 @MainActor
@@ -14,11 +15,13 @@ final class ModelPrewarmService: ObservableObject {
         category: VoiceInkMacOSLogCategory.modelPrewarm
     )
     private let serviceRegistry: TranscriptionServiceRegistry
+    private var prewarmTask: Task<Void, Never>?
 
     init(
         transcriptionModelManager: TranscriptionModelManager,
         whisperModelManager: WhisperModelManager,
         modelContext: ModelContext,
+        qwenRuntimeResult: Result<QwenRuntime, Error>,
         serviceRegistry: TranscriptionServiceRegistry? = nil
     ) {
         self.transcriptionModelManager = transcriptionModelManager
@@ -27,7 +30,8 @@ final class ModelPrewarmService: ObservableObject {
         self.serviceRegistry = serviceRegistry ?? TranscriptionServiceRegistry(
             modelProvider: whisperModelManager,
             modelsDirectory: whisperModelManager.modelsDirectory,
-            modelContext: modelContext
+            modelContext: modelContext,
+            qwenRuntimeResult: qwenRuntimeResult
         )
         setupNotifications()
         schedulePrewarmOnAppLaunch()
@@ -44,6 +48,9 @@ final class ModelPrewarmService: ObservableObject {
             selector: #selector(schedulePrewarm),
             name: NSWorkspace.didWakeNotification,
             object: nil
+        )
+        NotificationCenter.default.addObserver(
+            self, selector: #selector(modelSelectionChanged), name: .didChangeModel, object: nil
         )
 
         logger.notice("\(VoiceInkModelPrewarmDiagnostics.initializedMessage, privacy: .public)")
@@ -64,10 +71,17 @@ final class ModelPrewarmService: ObservableObject {
     }
 
     private func scheduleDelayedPrewarm() {
-        Task {
-            try? await Task.sleep(for: VoiceInkModelRuntimePreference.prewarmScheduleDelay)
+        prewarmTask?.cancel()
+        prewarmTask = Task { [weak self] in
+            do { try await Task.sleep(for: VoiceInkModelRuntimePreference.prewarmScheduleDelay) }
+            catch { return }
+            guard let self, !Task.isCancelled else { return }
             await performPrewarm()
         }
+    }
+
+    @objc private func modelSelectionChanged() {
+        scheduleDelayedPrewarm()
     }
 
     // MARK: - Core Prewarming Logic
@@ -107,6 +121,14 @@ final class ModelPrewarmService: ObservableObject {
                         throw VoiceInkEngineError.modelLoadFailed
                     }
                     try await self.serviceRegistry.fluidAudioTranscriptionService.loadModel(for: fluidAudioModel)
+                },
+                loadLocalQwenModel: {
+                    await self.transcriptionModelManager.awaitQwenRecordingSelection()
+                    try Task.checkCancellation()
+                    guard self.transcriptionModelManager.currentTranscriptionModel?.name == currentModel.name else {
+                        throw CancellationError()
+                    }
+                    try await self.serviceRegistry.qwenTranscriptionService.loadModel()
                 }
             )
             let duration = Date().timeIntervalSince(startTime)
@@ -119,6 +141,8 @@ final class ModelPrewarmService: ObservableObject {
     }
 
     deinit {
+        prewarmTask?.cancel()
+        NotificationCenter.default.removeObserver(self)
         NSWorkspace.shared.notificationCenter.removeObserver(self)
         logger.notice("\(VoiceInkModelPrewarmDiagnostics.deinitializedMessage, privacy: .public)")
     }

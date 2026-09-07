@@ -2,6 +2,7 @@ import Foundation
 import SwiftData
 import os
 import VoiceInkCore
+import VoiceInkQwen
 
 /// Sendable source that bridges audio chunks from any thread into an AsyncStream.
 private final class AudioChunkSource: @unchecked Sendable {
@@ -90,6 +91,7 @@ class StreamingTranscriptionService {
     private let modelContext: ModelContext?
     private let streamingAdapterKind: VoiceInkTranscriptionStreamingAdapterKind
     private let fluidAudioService: FluidAudioTranscriptionService?
+    private let qwenRuntimeResult: Result<QwenRuntime, Error>?
     private let providerFactory: ((any TranscriptionModel) -> StreamingTranscriptionProvider)?
     private let onDrainWaitStarted: (@Sendable () -> Void)?
     private let finalCommitTimeoutNanoseconds: UInt64
@@ -103,12 +105,14 @@ class StreamingTranscriptionService {
         modelContext: ModelContext,
         streamingAdapterKind: VoiceInkTranscriptionStreamingAdapterKind,
         fluidAudioService: FluidAudioTranscriptionService? = nil,
+        qwenRuntimeResult: Result<QwenRuntime, Error>? = nil,
         finalCommitTimeoutNanoseconds: UInt64 = VoiceInkStreamingFinalCommitTimeout.cloudNanoseconds,
         onPartialTranscript: ((String) -> Void)? = nil
     ) {
         self.modelContext = modelContext
         self.streamingAdapterKind = streamingAdapterKind
         self.fluidAudioService = fluidAudioService
+        self.qwenRuntimeResult = qwenRuntimeResult
         self.providerFactory = nil
         self.onDrainWaitStarted = nil
         self.finalCommitTimeoutNanoseconds = finalCommitTimeoutNanoseconds
@@ -125,6 +129,7 @@ class StreamingTranscriptionService {
         self.modelContext = nil
         self.streamingAdapterKind = streamingAdapterKind
         self.fluidAudioService = nil
+        self.qwenRuntimeResult = nil
         self.providerFactory = providerFactory
         self.onDrainWaitStarted = onDrainWaitStarted
         self.finalCommitTimeoutNanoseconds = finalCommitTimeoutNanoseconds
@@ -350,6 +355,10 @@ class StreamingTranscriptionService {
         }
 
         switch streamingAdapterKind {
+        case .localQwen:
+            return QwenStreamingProvider(
+                runtimeResult: qwenRuntimeResult ?? .failure(VoiceInkEngineError.modelLoadFailed)
+            )
         case .localFluidAudio:
             guard let fluidAudioService else {
                 fatalError("FluidAudioTranscriptionService required for FluidAudio streaming. Ensure it is passed to StreamingTranscriptionService.")

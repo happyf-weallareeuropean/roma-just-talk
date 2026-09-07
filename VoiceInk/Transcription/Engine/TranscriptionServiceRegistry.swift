@@ -3,12 +3,15 @@ import SwiftUI
 import SwiftData
 import os
 import VoiceInkCore
+import VoiceInkQwen
 
 @MainActor
 class TranscriptionServiceRegistry {
     private weak var modelProvider: (any WhisperModelProvider)?
     private let modelsDirectory: URL
     private let modelContext: ModelContext
+    let qwenRuntimeResult: Result<QwenRuntime, Error>
+    private let ownsQwenRuntime: Bool
     private let logger = Logger(
         subsystem: VoiceInkAppIdentity.loggingSubsystem,
         category: VoiceInkMacOSLogCategory.transcriptionServiceRegistry
@@ -21,11 +24,20 @@ class TranscriptionServiceRegistry {
     private(set) lazy var cloudTranscriptionService = CloudTranscriptionService(modelContext: modelContext)
     private(set) lazy var nativeAppleTranscriptionService = NativeAppleTranscriptionService()
     private(set) lazy var fluidAudioTranscriptionService = FluidAudioTranscriptionService()
+    private(set) lazy var qwenTranscriptionService = QwenTranscriptionService(runtimeResult: qwenRuntimeResult)
 
-    init(modelProvider: any WhisperModelProvider, modelsDirectory: URL, modelContext: ModelContext) {
+    init(
+        modelProvider: any WhisperModelProvider,
+        modelsDirectory: URL,
+        modelContext: ModelContext,
+        qwenRuntimeResult: Result<QwenRuntime, Error>,
+        ownsQwenRuntime: Bool = false
+    ) {
         self.modelProvider = modelProvider
         self.modelsDirectory = modelsDirectory
         self.modelContext = modelContext
+        self.qwenRuntimeResult = qwenRuntimeResult
+        self.ownsQwenRuntime = ownsQwenRuntime
     }
 
     func service(for route: VoiceInkTranscriptionServiceRoute) -> TranscriptionService {
@@ -34,6 +46,8 @@ class TranscriptionServiceRegistry {
             return localTranscriptionService
         case .localFluidAudio:
             return fluidAudioTranscriptionService
+        case .localQwen:
+            return qwenTranscriptionService
         case .nativeApple:
             return nativeAppleTranscriptionService
         case .cloud:
@@ -67,6 +81,7 @@ class TranscriptionServiceRegistry {
                     modelContext: modelContext,
                     streamingAdapterKind: request.adapterKind,
                     fluidAudioService: request.adapterKind == .localFluidAudio ? fluidAudioTranscriptionService : nil,
+                    qwenRuntimeResult: request.adapterKind == .localQwen ? qwenRuntimeResult : nil,
                     finalCommitTimeoutNanoseconds: request.finalCommitTimeoutNanoseconds,
                     onPartialTranscript: onPartialTranscript
                 )
@@ -81,5 +96,9 @@ class TranscriptionServiceRegistry {
 
     func cleanup() async {
         await fluidAudioTranscriptionService.cleanup()
+        // File imports and recording share Qwen; release only when neither is active.
+        if ownsQwenRuntime {
+            try? await qwenRuntimeResult.get().unloadIfIdle()
+        }
     }
 }

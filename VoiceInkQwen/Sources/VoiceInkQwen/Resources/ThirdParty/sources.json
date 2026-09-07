@@ -1,0 +1,243 @@
+[
+  {
+    "identity": "eventsource",
+    "repo": "mattt/EventSource",
+    "revision": "86b5096ac59ab46e66bd1f6377c604bc1dab0bc2",
+    "sourcePath": "LICENSE.md",
+    "localPath": "eventsource/LICENSE.md",
+    "sourceURL": "https://raw.githubusercontent.com/mattt/EventSource/86b5096ac59ab46e66bd1f6377c604bc1dab0bc2/LICENSE.md",
+    "sha256": "2f9b695627d569a3ce452b2c03fdd34310df78c8ea94edfafd9ce38381e5b502",
+    "bytes": 1062
+  },
+  {
+    "identity": "mlx-audio-swift",
+    "repo": "negentropi/mlx-audio-swift",
+    "revision": "ad2f08874165b054b3d3647003159858e1047bed",
+    "sourcePath": "LICENSE",
+    "localPath": "mlx-audio-swift/LICENSE",
+    "sourceURL": "https://raw.githubusercontent.com/negentropi/mlx-audio-swift/ad2f08874165b054b3d3647003159858e1047bed/LICENSE",
+    "sha256": "fd330bb5d9adf9e65bfe4d8f6f90c808a4196ef5c98aad018a3344256fcb2374",
+    "bytes": 1070
+  },
+  {
+    "identity": "mlx-swift",
+    "repo": "ml-explore/mlx-swift",
+    "revision": "dc43e62d7055353c7f99fa071a4e71d29dfddc44",
+    "sourcePath": "LICENSE",
+    "localPath": "mlx-swift/LICENSE",
+    "sourceURL": "https://raw.githubusercontent.com/ml-explore/mlx-swift/dc43e62d7055353c7f99fa071a4e71d29dfddc44/LICENSE",
+    "sha256": "44326a4ea062241ae6fc26ee2ec90bdc81af7eb7b9d3966181b733fa69d42057",
+    "bytes": 1067
+  },
+  {
+    "identity": "mlx-swift",
+    "repo": "ml-explore/mlx-swift",
+    "revision": "dc43e62d7055353c7f99fa071a4e71d29dfddc44",
+    "sourcePath": "Source/Cmlx/fmt/LICENSE",
+    "localPath": "mlx-swift/Source/Cmlx/fmt/LICENSE",
+    "sourceURL": "https://raw.githubusercontent.com/ml-explore/mlx-swift/dc43e62d7055353c7f99fa071a4e71d29dfddc44/Source/Cmlx/fmt/LICENSE",
+    "sha256": "07580f2a3b35709ce703d523f447b242f6dfec7582a8c0df102c7fa2849375f8",
+    "bytes": 1431
+  },
+  {
+    "identity": "mlx-swift",
+    "repo": "ml-explore/mlx-swift",
+    "revision": "dc43e62d7055353c7f99fa071a4e71d29dfddc44",
+    "sourcePath": "Source/Cmlx/json/LICENSE.MIT",
+    "localPath": "mlx-swift/Source/Cmlx/json/LICENSE.MIT",
+    "sourceURL": "https://raw.githubusercontent.com/ml-explore/mlx-swift/dc43e62d7055353c7f99fa071a4e71d29dfddc44/Source/Cmlx/json/LICENSE.MIT",
+    "sha256": "86b998c792894ccb911a1cb7994f7a9652894e7a094c0b5e45be2f553f45cf14",
+    "bytes": 1076
+  },
+  {
+    "identity": "mlx-swift",
+    "repo": "ml-explore/mlx-swift",
+    "revision": "dc43e62d7055353c7f99fa071a4e71d29dfddc44",
+    "sourcePath": "Source/Cmlx/metal-cpp/LICENSE.txt",
+    "localPath": "mlx-swift/Source/Cmlx/metal-cpp/LICENSE.txt",
+    "sourceURL": "https://raw.githubusercontent.com/ml-explore/mlx-swift/dc43e62d7055353c7f99fa071a4e71d29dfddc44/Source/Cmlx/metal-cpp/LICENSE.txt",
+    "sha256": "f4e92c7fe2aa066e294c0da9d08683dc9fb741ee6e6debbfad99a0c96e07c1f2",
+    "bytes": 11344
+  },
+  {
+    "identity": "mlx-swift-lm",
+    "repo": "ml-explore/mlx-swift-lm",
+    "revision": "bd4b7434e6bdb588c7ef55706ff8904cb7fd4c57",
+    "sourcePath": "LICENSE",
+    "localPath": "mlx-swift-lm/LICENSE",
+    "sourceURL": "https://raw.githubusercontent.com/ml-explore/mlx-swift-lm/bd4b7434e6bdb588c7ef55706ff8904cb7fd4c57/LICENSE",
+    "sha256": "7b1d86acac816ce8192209d7e01141c129b4d48d474c15cc5fb4af62f497c323",
+    "bytes": 1067
+  },
+  {
+    "identity": "swift-asn1",
+    "repo": "apple/swift-asn1",
+    "revision": "d9a5b37470adc940d22c3bcd5ca6953a516b727f",
+    "sourcePath": "LICENSE.txt",
+    "localPath": "swift-asn1/LICENSE.txt",
+    "sourceURL": "https://raw.githubusercontent.com/apple/swift-asn1/d9a5b37470adc940d22c3bcd5ca6953a516b727f/LICENSE.txt",
+    "sha256": "8c6db340475136df3c1201d458fa5755698eace76e510471ecc9d857d6083dac",
+    "bytes": 11359
+  },
+  {
+    "identity": "swift-asn1",
+    "repo": "apple/swift-asn1",
+    "revision": "d9a5b37470adc940d22c3bcd5ca6953a516b727f",
+    "sourcePath": "NOTICE.txt",
+    "localPath": "swift-asn1/NOTICE.txt",
+    "sourceURL": "https://raw.githubusercontent.com/apple/swift-asn1/d9a5b37470adc940d22c3bcd5ca6953a516b727f/NOTICE.txt",
+    "sha256": "11dd3b3b783e6ec26098dd38ebc962986ea109b85447e28e62867b83bd0f8c5b",
+    "bytes": 1450
+  },
+  {
+    "identity": "swift-collections",
+    "repo": "apple/swift-collections",
+    "revision": "a0cb0954ecb21e4e31b0070e6ed5674e8556685a",
+    "sourcePath": "LICENSE.txt",
+    "localPath": "swift-collections/LICENSE.txt",
+    "sourceURL": "https://raw.githubusercontent.com/apple/swift-collections/a0cb0954ecb21e4e31b0070e6ed5674e8556685a/LICENSE.txt",
+    "sha256": "770af8291f708538d8ff885a0bbc4e045cd700531741c4f99528d435c14d7f55",
+    "bytes": 11751
+  },
+  {
+    "identity": "swift-crypto",
+    "repo": "apple/swift-crypto",
+    "revision": "da9d28d69ebe3894b18376c8f2395c2f37b8448f",
+    "sourcePath": "LICENSE.txt",
+    "localPath": "swift-crypto/LICENSE.txt",
+    "sourceURL": "https://raw.githubusercontent.com/apple/swift-crypto/da9d28d69ebe3894b18376c8f2395c2f37b8448f/LICENSE.txt",
+    "sha256": "cfc7749b96f63bd31c3c42b5c471bf756814053e847c10f3eb003417bc523d30",
+    "bytes": 11358
+  },
+  {
+    "identity": "swift-crypto",
+    "repo": "apple/swift-crypto",
+    "revision": "da9d28d69ebe3894b18376c8f2395c2f37b8448f",
+    "sourcePath": "NOTICE.txt",
+    "localPath": "swift-crypto/NOTICE.txt",
+    "sourceURL": "https://raw.githubusercontent.com/apple/swift-crypto/da9d28d69ebe3894b18376c8f2395c2f37b8448f/NOTICE.txt",
+    "sha256": "b3ddc2ae068e76b3beb71be03c0400f90090f9469aa491bf7b1ac42320af37b8",
+    "bytes": 1563
+  },
+  {
+    "identity": "swift-huggingface",
+    "repo": "huggingface/swift-huggingface",
+    "revision": "9ebe9cb568ff9ebe2f1bcd3ae7d925fbb45ec8d2",
+    "sourcePath": "LICENSE",
+    "localPath": "swift-huggingface/LICENSE",
+    "sourceURL": "https://raw.githubusercontent.com/huggingface/swift-huggingface/9ebe9cb568ff9ebe2f1bcd3ae7d925fbb45ec8d2/LICENSE",
+    "sha256": "4d6ad72952a8329063a71de28329b493de96cf57459e2ac217110d1a6a5f84ae",
+    "bytes": 11347
+  },
+  {
+    "identity": "swift-jinja",
+    "repo": "huggingface/swift-jinja",
+    "revision": "12ea4955e380dae6b0cd98299effe48c7fe584fc",
+    "sourcePath": "LICENSE",
+    "localPath": "swift-jinja/LICENSE",
+    "sourceURL": "https://raw.githubusercontent.com/huggingface/swift-jinja/12ea4955e380dae6b0cd98299effe48c7fe584fc/LICENSE",
+    "sha256": "648b81e6c6f9975c3b6cf6d630229b6c8d6f1ddaef55f5770f576adda19f3495",
+    "bytes": 11347
+  },
+  {
+    "identity": "swift-numerics",
+    "repo": "apple/swift-numerics",
+    "revision": "0c0290ff6b24942dadb83a929ffaaa1481df04a2",
+    "sourcePath": "LICENSE.txt",
+    "localPath": "swift-numerics/LICENSE.txt",
+    "sourceURL": "https://raw.githubusercontent.com/apple/swift-numerics/0c0290ff6b24942dadb83a929ffaaa1481df04a2/LICENSE.txt",
+    "sha256": "770af8291f708538d8ff885a0bbc4e045cd700531741c4f99528d435c14d7f55",
+    "bytes": 11751
+  },
+  {
+    "identity": "swift-syntax",
+    "repo": "swiftlang/swift-syntax",
+    "revision": "79e4b74a295b6eb74a8b585e3a39d29e70c1dbd1",
+    "sourcePath": "LICENSE.txt",
+    "localPath": "swift-syntax/LICENSE.txt",
+    "sourceURL": "https://raw.githubusercontent.com/swiftlang/swift-syntax/79e4b74a295b6eb74a8b585e3a39d29e70c1dbd1/LICENSE.txt",
+    "sha256": "770af8291f708538d8ff885a0bbc4e045cd700531741c4f99528d435c14d7f55",
+    "bytes": 11751
+  },
+  {
+    "identity": "swift-transformers",
+    "repo": "huggingface/swift-transformers",
+    "revision": "c21fdcde390313a6d98d8e33a346f2c3486c3ab0",
+    "sourcePath": "LICENSE",
+    "localPath": "swift-transformers/LICENSE",
+    "sourceURL": "https://raw.githubusercontent.com/huggingface/swift-transformers/c21fdcde390313a6d98d8e33a346f2c3486c3ab0/LICENSE",
+    "sha256": "648b81e6c6f9975c3b6cf6d630229b6c8d6f1ddaef55f5770f576adda19f3495",
+    "bytes": 11347
+  },
+  {
+    "identity": "yyjson",
+    "repo": "ibireme/yyjson",
+    "revision": "8b4a38dc994a110abaec8a400615567bd996105f",
+    "sourcePath": "LICENSE",
+    "localPath": "yyjson/LICENSE",
+    "sourceURL": "https://raw.githubusercontent.com/ibireme/yyjson/8b4a38dc994a110abaec8a400615567bd996105f/LICENSE",
+    "sha256": "45e384d3d52c73cba3a64d6e6c25d47cd738cd8a55c30629e3201046eda62947",
+    "bytes": 1084
+  },
+  {
+    "identity": "qwen3-asr-policy",
+    "repo": "QwenLM/Qwen3-ASR",
+    "revision": "7c6daf77a2421100f5fb066495372c00129d39ff",
+    "sourcePath": "LICENSE",
+    "localPath": "qwen3-asr-policy/LICENSE",
+    "sourceURL": "https://raw.githubusercontent.com/QwenLM/Qwen3-ASR/7c6daf77a2421100f5fb066495372c00129d39ff/LICENSE",
+    "sha256": "a44a6081c73ad75f0255bb2bb5cab74ef1829565a895a24e53a4f11290ab7655",
+    "bytes": 11343
+  },
+  {
+    "identity": "mlx-vendored",
+    "repo": "ml-explore/mlx",
+    "revision": "ce45c52505c8158ea48d2a54e8caae05efd86bfe",
+    "sourcePath": "LICENSE",
+    "localPath": "mlx-vendored/LICENSE",
+    "sourceURL": "https://raw.githubusercontent.com/ml-explore/mlx/ce45c52505c8158ea48d2a54e8caae05efd86bfe/LICENSE",
+    "sha256": "ccfab7ccb2ea306f71531c8ca77bb55507606cd90768b1e32b8b52ab5b48cf01",
+    "bytes": 1066
+  },
+  {
+    "identity": "mlx-c-vendored",
+    "repo": "ml-explore/mlx-c",
+    "revision": "0726ca922fc902c4c61ef9c27d94132be418e945",
+    "sourcePath": "LICENSE",
+    "localPath": "mlx-c-vendored/LICENSE",
+    "sourceURL": "https://raw.githubusercontent.com/ml-explore/mlx-c/0726ca922fc902c4c61ef9c27d94132be418e945/LICENSE",
+    "sha256": "44326a4ea062241ae6fc26ee2ec90bdc81af7eb7b9d3966181b733fa69d42057",
+    "bytes": 1067
+  },
+  {
+    "identity": "boringssl-vendored",
+    "repo": "google/boringssl",
+    "revision": "0226f30467f540a3f62ef48d453f93927da199b6",
+    "sourcePath": "LICENSE",
+    "localPath": "boringssl-vendored/LICENSE",
+    "sourceURL": "https://raw.githubusercontent.com/google/boringssl/0226f30467f540a3f62ef48d453f93927da199b6/LICENSE",
+    "sha256": "827c8d8fc207c2392794eef9e00fe246f9f61fdcc132556c275be3dd8c3cd97f",
+    "bytes": 13115
+  },
+  {
+    "identity": "boringssl-vendored",
+    "repo": "google/boringssl",
+    "revision": "0226f30467f540a3f62ef48d453f93927da199b6",
+    "sourcePath": "third_party/fiat/LICENSE",
+    "localPath": "boringssl-vendored/third_party/fiat/LICENSE",
+    "sourceURL": "https://raw.githubusercontent.com/google/boringssl/0226f30467f540a3f62ef48d453f93927da199b6/third_party/fiat/LICENSE",
+    "sha256": "9eacbcb81be660840c714a560a9d65ba07913db98dd4baf969f78dd499fdd60f",
+    "bytes": 638
+  },
+  {
+    "identity": "mlx-vendored",
+    "repo": "ml-explore/mlx",
+    "revision": "ce45c52505c8158ea48d2a54e8caae05efd86bfe",
+    "sourcePath": "mlx/3rdparty/pocketfft.h",
+    "localPath": "mlx-vendored/pocketfft-LICENSE.txt",
+    "extract": "opening copyright and license comment",
+    "sourceURL": "https://raw.githubusercontent.com/ml-explore/mlx/ce45c52505c8158ea48d2a54e8caae05efd86bfe/mlx/3rdparty/pocketfft.h",
+    "sha256": "46810eb31419fe6f675d585633b08b871175ef50bfe6d54e808bc7d98277d565",
+    "bytes": 1760
+  }
+]
