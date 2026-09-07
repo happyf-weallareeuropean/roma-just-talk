@@ -18,6 +18,9 @@ private struct RuntimeVoiceInkRestorationJournal: Codable {
     let originalAudioInputModeExisted: Bool
     let originalSelectedDeviceUID: String?
     let originalSelectedDeviceUIDExisted: Bool
+    let originalSystemMuteMode: String?
+    // Older crash journals did not override recording mute.
+    let originalSystemMuteModeExisted: Bool?
     let originallyRunningPaths: [String]
 }
 
@@ -45,13 +48,15 @@ final class RuntimeVoiceInkSession {
         let runningPaths = runningApplications(bundleIdentifier: configuration.voiceInkBundleIdentifier)
             .compactMap { $0.bundleURL?.path }
             .sorted()
-        let snapshot = preferenceSnapshot(bundleIdentifier: configuration.voiceInkBundleIdentifier)
+        let snapshot = try preferenceSnapshot(bundleIdentifier: configuration.voiceInkBundleIdentifier)
         let journal = RuntimeVoiceInkRestorationJournal(
             bundleIdentifier: configuration.voiceInkBundleIdentifier,
             originalAudioInputMode: snapshot.audioInputMode,
             originalAudioInputModeExisted: snapshot.audioInputModeExisted,
             originalSelectedDeviceUID: snapshot.selectedDeviceUID,
             originalSelectedDeviceUIDExisted: snapshot.selectedDeviceUIDExisted,
+            originalSystemMuteMode: snapshot.systemMuteMode,
+            originalSystemMuteModeExisted: snapshot.systemMuteModeExisted,
             originallyRunningPaths: runningPaths
         )
         try writeJournal(journal)
@@ -60,6 +65,8 @@ final class RuntimeVoiceInkSession {
             try terminateRunningApplications(bundleIdentifier: configuration.voiceInkBundleIdentifier)
             setPreference("Custom Device", key: "audioInputMode", bundleIdentifier: configuration.voiceInkBundleIdentifier)
             setPreference(audioDeviceUID, key: "selectedAudioDeviceUID", bundleIdentifier: configuration.voiceInkBundleIdentifier)
+            // BlackHole is both speaker output and microphone input in this test.
+            setPreference("never", key: "systemMuteMode", bundleIdentifier: configuration.voiceInkBundleIdentifier)
             try synchronize(bundleIdentifier: configuration.voiceInkBundleIdentifier)
             try launchApplication(
                 atPath: resolution.path,
@@ -114,6 +121,14 @@ final class RuntimeVoiceInkSession {
             key: "selectedAudioDeviceUID",
             bundleIdentifier: journal.bundleIdentifier
         )
+        if let existed = journal.originalSystemMuteModeExisted {
+            restorePreference(
+                journal.originalSystemMuteMode,
+                existed: existed,
+                key: "systemMuteMode",
+                bundleIdentifier: journal.bundleIdentifier
+            )
+        }
         try synchronize(bundleIdentifier: journal.bundleIdentifier)
         for path in journal.originallyRunningPaths {
             try launchApplication(atPath: path, bundleIdentifier: journal.bundleIdentifier)
@@ -162,20 +177,31 @@ final class RuntimeVoiceInkSession {
 
     private static func preferenceSnapshot(
         bundleIdentifier: String
-    ) -> (
+    ) throws -> (
         audioInputMode: String?,
         audioInputModeExisted: Bool,
         selectedDeviceUID: String?,
-        selectedDeviceUIDExisted: Bool
+        selectedDeviceUIDExisted: Bool,
+        systemMuteMode: String?,
+        systemMuteModeExisted: Bool
     ) {
         let appID = bundleIdentifier as CFString
         let audioMode = CFPreferencesCopyAppValue("audioInputMode" as CFString, appID)
         let deviceUID = CFPreferencesCopyAppValue("selectedAudioDeviceUID" as CFString, appID)
+        let systemMuteMode = CFPreferencesCopyAppValue("systemMuteMode" as CFString, appID)
+        if let systemMuteMode {
+            guard let mode = systemMuteMode as? String,
+                  ["auto", "always", "never"].contains(mode) else {
+                throw RuntimeVoiceInkSessionError.unsupportedSystemMuteMode
+            }
+        }
         return (
             audioMode as? String,
             audioMode != nil,
             deviceUID as? String,
-            deviceUID != nil
+            deviceUID != nil,
+            systemMuteMode as? String,
+            systemMuteMode != nil
         )
     }
 
@@ -370,6 +396,7 @@ enum RuntimeVoiceInkSessionError: Error, CustomStringConvertible {
     case applicationNotFound(String)
     case applicationWouldNotTerminate
     case preferenceSynchronizationFailed
+    case unsupportedSystemMuteMode
     case launchFailed(String)
     case launchIdentityUnavailable(String)
     case launchEvidenceInvalid
@@ -383,6 +410,8 @@ enum RuntimeVoiceInkSessionError: Error, CustomStringConvertible {
             return "VoiceInk did not terminate within 10 seconds; preferences were not changed"
         case .preferenceSynchronizationFailed:
             return "Could not synchronize VoiceInk audio preferences"
+        case .unsupportedSystemMuteMode:
+            return "Unsupported recording-mute preference; no preferences were changed"
         case .launchFailed(let path):
             return "Could not launch VoiceInk at \(path)"
         case .launchIdentityUnavailable(let path):

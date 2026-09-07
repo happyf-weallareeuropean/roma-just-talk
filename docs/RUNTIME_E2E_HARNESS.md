@@ -19,6 +19,13 @@ the text. Pixel sampling starts at key-up, independently of AX arrival, and a
 render is accepted only after two baseline-different frames are also mutually
 stable. AX may arrive later without moving the earlier rendered timestamp.
 
+While routing fixture playback through BlackHole, the helper temporarily sets
+Roma's recording mute to Off and restores the prior preference afterward,
+including recovery from its crash journal. Otherwise automatic speaker mute
+also silences the simulated microphone after key-down. Check saved recordings
+for the fixture's speech throughout the hold before accepting runtime evidence;
+successful playback and nonempty opening text alone do not prove audio delivery.
+
 ## Default Matrix
 
 - Audio: every supported fixture under `~/Downloads/roma jt builds/audio/`
