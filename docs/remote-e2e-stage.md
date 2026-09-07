@@ -357,6 +357,27 @@ The scenario:
 The TCC database writes are intentionally remote-only. They are not a local setup
 mechanism and disappear with the Namespace VM.
 
+## macOS onboarding unit-test host
+
+The macOS build workflow holds temporary, one-hour display and user-active
+`caffeinate` assertions from the start of its disposable build job. This does
+not unlock an already locked session; fixture readiness still checks the actual
+desktop. The workflow then runs
+`scripts/run-macos-ci-unit-tests.sh` on that logged-in Actions runner. The script
+builds the Debug test host first, then
+grants that exact host's designated requirement Accessibility and Microphone
+access. `test-without-building` preserves the identity that received permission;
+embedding a rebuilt XCTest bundle after granting permission invalidates this setup.
+
+Each onboarding fixture uses the public AX probe compiled from
+`Tools/OnboardingAccessibilityProbe.swift` at
+`/tmp/roma-onboarding-diagnostic/ExternalAXProbe`. The child verifies its parent
+and runtime trust before querying the fixture window. Permission rows alone are
+not interaction proof. The workflow retains the XCTest result bundle and checks
+the host requirement and host/probe executable hashes before and after testing.
+The probe is not packaged in the release app. This provisioning is not a local
+installation procedure and does not establish first-launch permission behavior.
+
 ## Deterministic iOS local STT scenario
 
 Choose `target=ios`, set `ios_artifact_run_id` to the exact green build, choose

@@ -16,6 +16,7 @@ on:
       - "Tools/**"
       - "scripts/check-find-reusable-ci-run.sh"
       - "scripts/find-reusable-ci-run.sh"
+      - "scripts/run-macos-ci-unit-tests.sh"
       - "scripts/tests/verify-adhoc-library-validation.test.sh"
       - "scripts/tests/verify-macos-distribution-launch.test.sh"
       - "scripts/tests/verify-macos-framework-signature-crash.test.sh"
@@ -52,6 +53,7 @@ on:
       - "Tools/**"
       - "scripts/check-find-reusable-ci-run.sh"
       - "scripts/find-reusable-ci-run.sh"
+      - "scripts/run-macos-ci-unit-tests.sh"
       - "scripts/tests/verify-adhoc-library-validation.test.sh"
       - "scripts/tests/verify-macos-distribution-launch.test.sh"
       - "scripts/tests/verify-macos-framework-signature-crash.test.sh"
@@ -206,6 +208,11 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
+      - name: Keep disposable test desktop awake
+        run: |
+          /usr/bin/caffeinate -d -i -u -t 3600 </dev/null >/dev/null 2>&1 &
+          echo "Temporary desktop assertion PID: $!"
+
       - name: Show Xcode version
         run: |
           xcode-select -p
@@ -241,22 +248,15 @@ jobs:
       - name: Run Debug unit tests
         if: ${{ !cancelled() && steps.release_app.outcome == 'success' }}
         timeout-minutes: 15
-        run: |
-          xcodebuild test \
-            -project VoiceInk.xcodeproj \
-            -scheme VoiceInk \
-            -configuration Debug \
-            -destination 'platform=macOS' \
-            -parallel-testing-enabled NO \
-            -derivedDataPath "$PWD/.local-build" \
-            -xcconfig LocalBuild.xcconfig \
-            CODE_SIGN_IDENTITY="-" \
-            CODE_SIGNING_REQUIRED=NO \
-            CODE_SIGNING_ALLOWED=YES \
-            DEVELOPMENT_TEAM="" \
-            CODE_SIGN_ENTITLEMENTS="$PWD/VoiceInk/VoiceInk.local.entitlements" \
-            SWIFT_ACTIVE_COMPILATION_CONDITIONS='$(inherited) LOCAL_BUILD' \
-            -only-testing:VoiceInkTests
+        run: bash scripts/run-macos-ci-unit-tests.sh
+
+      - name: Upload Debug test evidence
+        if: ${{ !cancelled() && steps.release_app.outcome == 'success' }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: roma.debug-test-evidence
+          path: .local-build/onboarding-test-evidence
+          if-no-files-found: error
 
       - name: Reject debug-only release payload
         run: |
