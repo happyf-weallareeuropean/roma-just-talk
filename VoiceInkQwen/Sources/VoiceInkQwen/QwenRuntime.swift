@@ -87,7 +87,7 @@ public actor QwenRuntime {
     deinit {
         loading?.task.cancel()
         generation?.task.cancel()
-        streaming?.task.cancel()
+        streaming?.task?.cancel()
         streaming?.continuation.finish(throwing: CancellationError())
     }
 
