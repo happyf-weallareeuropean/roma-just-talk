@@ -12,27 +12,50 @@ public struct QwenStreamingSession: Sendable {
     public let events: AsyncThrowingStream<QwenStreamingEvent, Error>
 }
 
+// The runtime grants one caller access; native decode returns only after Metal drains.
+protocol QwenRuntimeModel: Sendable {
+    func prefix(for policy: QwenStreamingPolicy, finalTail: Bool) throws -> String
+    func decode(samples: [Float], prefix: String, language: String?) async throws -> QwenDecodeResult
+}
+
 /// One local model owner shared by file transcription and the streaming adapter.
 public actor QwenRuntime {
     // MLX modules are not Sendable. Only this actor grants access, one operation at a time;
     // a task retains the model until its Metal stream has actually drained.
-    final class LoadedModel: @unchecked Sendable {
-        let value: Qwen3ASRModel
+    final class LoadedModel: QwenRuntimeModel, @unchecked Sendable {
+        private let value: Qwen3ASRModel
         init(_ value: Qwen3ASRModel) { self.value = value }
+
+        func prefix(for policy: QwenStreamingPolicy, finalTail: Bool) throws -> String {
+            guard let tokenizer = value.tokenizer else { throw QwenDecodeError.tokenizerUnavailable }
+            return policy.prefix(finalTail: finalTail,
+                encode: { tokenizer.encode(text: $0) }, decode: { tokenizer.decode(tokens: $0) })
+        }
+
+        func decode(samples: [Float], prefix: String, language: String?) async throws -> QwenDecodeResult {
+            try Device.withDefaultDevice(.gpu) {
+                try Stream.withNewDefaultStream(device: .gpu) {
+                    defer { StreamOrDevice.default.stream.synchronize() }
+                    return try QwenGreedyDecoder.decode(model: value, samples: samples, prefix: prefix, language: language)
+                }
+            }
+        }
     }
 
     private let store: QwenModelStore
-    private let modelLoader: @Sendable () async throws -> LoadedModel
+    private let modelLoader: @Sendable () async throws -> any QwenRuntimeModel
     enum LifecycleEvent: Sendable {
         case modelWaitStarted
         case streamingRequested
         case streamReserved(UUID)
         case cancellationRequested(UUID)
         case selectionEnding
+        case finishRequested(UUID)
+        case streamEvent(UUID, QwenStreamingEvent)
     }
     private let lifecycle: @Sendable (LifecycleEvent) -> Void
-    private var model: LoadedModel?
-    private var loading: (id: UUID, task: Task<LoadedModel, Error>)?
+    private var model: (any QwenRuntimeModel)?
+    private var loading: (id: UUID, task: Task<any QwenRuntimeModel, Error>)?
     private var generation: (id: UUID, task: Task<String, Error>)?
     private var batchStarting: UUID?
     private var streamCancellation: (id: UUID, task: Task<Void, Never>)?
@@ -76,7 +99,7 @@ public actor QwenRuntime {
     // Tests replace only model acquisition; actor ownership and drain paths remain real.
     init(
         cacheDirectory: URL,
-        modelLoader: @escaping @Sendable () async throws -> LoadedModel,
+        modelLoader: @escaping @Sendable () async throws -> any QwenRuntimeModel,
         lifecycle: @escaping @Sendable (LifecycleEvent) -> Void
     ) throws {
         store = QwenModelStore(root: cacheDirectory, snapshot: try .bundled())
@@ -152,17 +175,12 @@ public actor QwenRuntime {
         let id = UUID()
         let task = Task.detached {
             try Task.checkCancellation()
-            return try Device.withDefaultDevice(.gpu) {
-                try Stream.withNewDefaultStream(device: .gpu) {
-                    defer { StreamOrDevice.default.stream.synchronize() }
-                    let result = try QwenGreedyDecoder.decode(model: model.value, samples: samples, language: language)
-                    try Task.checkCancellation()
-                    guard case .eos = result.termination else { throw QwenRuntimeError.outputLimitReached }
-                    return try QwenTextPresentation.traditional(QwenTranscriptionText.parse(
-                        result.generatedText, forcedLanguage: language, expectsHeader: language == nil
-                    ).text)
-                }
-            }
+            let result = try await model.decode(samples: samples, prefix: "", language: language)
+            try Task.checkCancellation()
+            guard case .eos = result.termination else { throw QwenRuntimeError.outputLimitReached }
+            return try QwenTextPresentation.traditional(QwenTranscriptionText.parse(
+                result.generatedText, forcedLanguage: language, expectsHeader: language == nil
+            ).text)
         }
         generation = (id, task)
         defer { if generation?.id == id { generation = nil } }
@@ -211,6 +229,7 @@ public actor QwenRuntime {
         guard !closing, let session = streaming, session.id == sessionID else { throw QwenRuntimeError.busy }
         if let failure = session.failure { throw failure }
         session.finishing = true
+        lifecycle(.finishRequested(sessionID))
         try await prewarm()
         guard streaming?.id == session.id, !closing else { throw CancellationError() }
         scheduleStream(session)
@@ -268,43 +287,28 @@ public actor QwenRuntime {
         do {
             while let session = streaming, session.id == id, epoch == startedEpoch, !closing {
                 try Task.checkCancellation()
-                guard let model, let tokenizer = model.value.tokenizer else {
+                guard let model else {
                     throw QwenDecodeError.tokenizerUnavailable
                 }
-                let audio: [Float]?
-                let finalTail: Bool
-                if let chunk = session.policy.takeAudio() {
-                    audio = chunk
-                    finalTail = false
-                } else if session.finishing {
-                    audio = session.policy.takeAudio(finalTail: true)
-                    finalTail = true
-                } else {
+                // Release consumes every queued sample in one final pass, after the
+                // in-flight pass has completed and updated the raw prefix state.
+                let finalTail = session.finishing
+                let audio = session.policy.takeAudio(finalTail: finalTail)
+                if audio == nil, !finalTail {
                     session.task = nil
                     return
                 }
                 guard let audio else {
                     let text = try presentation(session, isFinal: true)
-                    session.continuation.yield(.final(text))
+                    emit(.final(text), for: session)
                     session.continuation.finish()
                     streaming = nil
                     return
                 }
-                let prefix = session.policy.prefix(
-                    finalTail: finalTail,
-                    encode: { tokenizer.encode(text: $0) },
-                    decode: { tokenizer.decode(tokens: $0) }
-                )
+                let prefix = try model.prefix(for: session.policy, finalTail: finalTail)
                 let language = session.language
                 let task = Task.detached {
-                    try Device.withDefaultDevice(.gpu) {
-                        try Stream.withNewDefaultStream(device: .gpu) {
-                            defer { StreamOrDevice.default.stream.synchronize() }
-                            return try QwenGreedyDecoder.decode(
-                                model: model.value, samples: audio, prefix: prefix, language: language
-                            )
-                        }
-                    }
+                    try await model.decode(samples: audio, prefix: prefix, language: language)
                 }
                 let result = try await withTaskCancellationHandler {
                     try await task.value
@@ -315,7 +319,15 @@ public actor QwenRuntime {
                 guard streaming?.id == id, epoch == startedEpoch, !closing else { return }
                 guard case .eos = result.termination else { throw QwenRuntimeError.outputLimitReached }
                 session.policy.accept(prefix: prefix, generated: result.generatedText)
-                session.continuation.yield(.partial(try presentation(session, isFinal: false)))
+                if finalTail {
+                    emit(.final(try presentation(session, isFinal: true)), for: session)
+                    session.continuation.finish()
+                    streaming = nil
+                    return
+                }
+                if !session.finishing {
+                    emit(.partial(try presentation(session, isFinal: false)), for: session)
+                }
             }
         } catch {
             if let session = streaming, session.id == id {
@@ -326,6 +338,11 @@ public actor QwenRuntime {
                 // Retain the terminal error until this lease disconnects; stop must report it.
             }
         }
+    }
+
+    private func emit(_ event: QwenStreamingEvent, for session: LiveSession) {
+        lifecycle(.streamEvent(session.id, event))
+        session.continuation.yield(event)
     }
 
     private func presentation(_ session: LiveSession, isFinal: Bool) throws -> String {

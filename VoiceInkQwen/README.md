@@ -28,6 +28,12 @@ Both batch and streaming call the same raw greedy decoder. Streaming consumes
 350 ms packets against cumulative utterance audio, resetting the prefix for two
 passes and then rolling back five tokens, matching the qualified control.
 The model recomputes the cumulative encoder input; this is not encoder KV caching.
+Manual release takes precedence over the live-update cadence: after any in-flight
+decode drains and updates the raw prefix, all queued PCM joins one cumulative
+final pass. No queued audio is discarded or split into additional live passes.
+The runtime emits one final result, without intermediate post-release updates.
+This scheduling rule belongs to Roma; the pinned tokenizer, greedy decoder and
+official prefix rollback policy remain unchanged.
 EOS, token exhaustion and cancellation remain distinct. The 256-token generation
 cap produces an explicit error; no repetition filter silently truncates speech.
 Raw tokens remain unchanged. Complete display/final text converts Simplified
