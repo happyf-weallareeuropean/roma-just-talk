@@ -1344,6 +1344,7 @@ enum RuntimeAX {
                 return true
             }
             guard let currentTextElement = editableElement(in: currentWindow, identifying: token)
+                ?? focusedEditableElement(in: appElement, matchingWindow: currentWindow)
                 ?? firstEditableElement(in: currentWindow) else {
                 return reportCloseFailure("editable element unavailable", token: token, in: appElement)
             }
@@ -1381,6 +1382,7 @@ enum RuntimeAX {
         }
         guard let currentWindow = surfaceWindow(token: token, in: appElement),
               let currentTextElement = editableElement(in: currentWindow, identifying: token)
+                ?? focusedEditableElement(in: appElement, matchingWindow: currentWindow)
                 ?? firstEditableElement(in: currentWindow) else {
             return reportCloseFailure("fallback surface unavailable", token: token, in: appElement)
         }
