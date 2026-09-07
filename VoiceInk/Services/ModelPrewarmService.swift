@@ -15,6 +15,7 @@ final class ModelPrewarmService: ObservableObject {
         category: VoiceInkMacOSLogCategory.modelPrewarm
     )
     private let serviceRegistry: TranscriptionServiceRegistry
+    private let loadFluidAudioModel: (FluidAudioModel) async throws -> Void
     private var prewarmTask: Task<Void, Never>?
 
     init(
@@ -22,17 +23,22 @@ final class ModelPrewarmService: ObservableObject {
         whisperModelManager: WhisperModelManager,
         modelContext: ModelContext,
         qwenRuntimeResult: Result<QwenRuntime, Error>,
-        serviceRegistry: TranscriptionServiceRegistry? = nil
+        serviceRegistry: TranscriptionServiceRegistry? = nil,
+        loadFluidAudioModel: ((FluidAudioModel) async throws -> Void)? = nil
     ) {
         self.transcriptionModelManager = transcriptionModelManager
         self.whisperModelManager = whisperModelManager
         self.modelContext = modelContext
-        self.serviceRegistry = serviceRegistry ?? TranscriptionServiceRegistry(
+        let registry = serviceRegistry ?? TranscriptionServiceRegistry(
             modelProvider: whisperModelManager,
             modelsDirectory: whisperModelManager.modelsDirectory,
             modelContext: modelContext,
             qwenRuntimeResult: qwenRuntimeResult
         )
+        self.serviceRegistry = registry
+        self.loadFluidAudioModel = loadFluidAudioModel ?? { model in
+            try await registry.fluidAudioTranscriptionService.loadModel(for: model)
+        }
         setupNotifications()
         schedulePrewarmOnAppLaunch()
     }
@@ -86,7 +92,7 @@ final class ModelPrewarmService: ObservableObject {
 
     // MARK: - Core Prewarming Logic
 
-    private func performPrewarm() async {
+    func performPrewarm() async {
         let currentModel = transcriptionModelManager.currentTranscriptionModel
         let prewarmPlan = VoiceInkModelPrewarmPlan.plan(
             isEnabled: VoiceInkModelRuntimePreference.shouldPrewarmModelOnWake(),
@@ -100,7 +106,9 @@ final class ModelPrewarmService: ObservableObject {
             }
             return
         }
-        guard let currentModel else { return }
+        // Runtime loading may download missing files; prewarm only installed models.
+        guard !Task.isCancelled, let currentModel,
+              transcriptionModelManager.usableModels.contains(where: { $0.name == currentModel.name }) else { return }
 
         logger.notice("\(VoiceInkModelPrewarmDiagnostics.prewarmingMessage(modelDisplayName: currentModel.displayName), privacy: .public)")
         let startTime = Date()
@@ -120,12 +128,13 @@ final class ModelPrewarmService: ObservableObject {
                     guard let fluidAudioModel = currentModel as? FluidAudioModel else {
                         throw VoiceInkEngineError.modelLoadFailed
                     }
-                    try await self.serviceRegistry.fluidAudioTranscriptionService.loadModel(for: fluidAudioModel)
+                    try await self.loadFluidAudioModel(fluidAudioModel)
                 },
                 loadLocalQwenModel: {
                     await self.transcriptionModelManager.awaitQwenRecordingSelection()
                     try Task.checkCancellation()
-                    guard self.transcriptionModelManager.currentTranscriptionModel?.name == currentModel.name else {
+                    guard self.transcriptionModelManager.currentTranscriptionModel?.name == currentModel.name,
+                          self.transcriptionModelManager.usableModels.contains(where: { $0.name == currentModel.name }) else {
                         throw CancellationError()
                     }
                     try await self.serviceRegistry.qwenTranscriptionService.loadModel()
