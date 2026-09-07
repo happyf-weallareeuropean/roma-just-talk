@@ -7,6 +7,7 @@ actor QwenModelStore {
     typealias Download = @Sendable (QwenSnapshot, URL, @escaping ProgressHandler) async throws -> Void
 
     private let root: URL
+    private let directory: URL
     private let snapshot: QwenSnapshot
     private let download: Download
     private var active: (id: UUID, task: Task<URL, Error>)?
@@ -14,6 +15,7 @@ actor QwenModelStore {
 
     init(root: URL, snapshot: QwenSnapshot, download: @escaping Download = QwenModelStore.downloadSnapshot) {
         self.root = root
+        directory = root.appendingPathComponent(snapshot.revision, isDirectory: true)
         self.snapshot = snapshot
         self.download = download
     }
@@ -21,12 +23,11 @@ actor QwenModelStore {
     deinit { active?.task.cancel() }
 
     func isInstalled() -> Bool {
-        !deleting && active == nil && snapshot.isPresent(at: root.appendingPathComponent(snapshot.revision))
+        !deleting && active == nil && snapshot.isPresent(at: directory)
     }
 
     func cachedDirectory() throws -> URL {
         guard !deleting else { throw QwenRuntimeError.busy }
-        let directory = root.appendingPathComponent(snapshot.revision)
         guard FileManager.default.fileExists(atPath: directory.path) else {
             throw QwenRuntimeError.notInstalled
         }
@@ -42,10 +43,10 @@ actor QwenModelStore {
         }
         try Task.checkCancellation()
         let id = UUID()
-        let task = Task.detached { [root, snapshot, download] in
+        let task = Task.detached { [root, directory, snapshot, download] in
             let files = FileManager.default
             try files.createDirectory(at: root, withIntermediateDirectories: true)
-            let staging = root.appendingPathComponent(".download-\(id.uuidString)")
+            let staging = root.appendingPathComponent(".download-\(id.uuidString)", isDirectory: true)
             try files.createDirectory(at: staging, withIntermediateDirectories: false)
             defer { try? files.removeItem(at: staging) }
             try await download(snapshot, staging, progress)
@@ -53,7 +54,7 @@ actor QwenModelStore {
             try snapshot.verify(at: staging, includingTokenizer: false)
             try snapshot.copyTokenizer(to: staging)
             try Task.checkCancellation()
-            let destination = root.appendingPathComponent(snapshot.revision)
+            let destination = directory
             if files.fileExists(atPath: destination.path) {
                 // Replacement preserves the previous complete install if the atomic operation fails.
                 _ = try files.replaceItemAt(destination, withItemAt: staging)
@@ -84,7 +85,7 @@ actor QwenModelStore {
         deleting = true
         defer { deleting = false }
         await cancelAndDrain()
-        let destination = root.appendingPathComponent(snapshot.revision)
+        let destination = directory
         if FileManager.default.fileExists(atPath: destination.path) {
             try FileManager.default.removeItem(at: destination)
         }

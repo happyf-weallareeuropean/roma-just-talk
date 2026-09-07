@@ -11,6 +11,8 @@ import Testing
         try bytes.write(to: directory.appendingPathComponent("model.safetensors"))
     }
     let installed = try await store.install { _ in }
+    #expect(installed.hasDirectoryPath)
+    #expect(installed == root.appendingPathComponent(snapshot.revision, isDirectory: true))
     try snapshot.verify(at: installed)
     let offline = QwenModelStore(root: root, snapshot: snapshot) { _, _, _ in
         Issue.record("A verified offline cache must not contact the network")
