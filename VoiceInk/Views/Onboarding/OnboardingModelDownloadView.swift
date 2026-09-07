@@ -79,14 +79,14 @@ struct OnboardingModelDownloadView: View {
                                     .foregroundColor(.white.opacity(0.7))
                                     .multilineTextAlignment(.center)
                                     .frame(maxWidth: 620)
+                                    .fixedSize(horizontal: false, vertical: true)
                             }
                         }
+                        .fixedSize(horizontal: false, vertical: true)
 
                         modelChoices
-                            .frame(
-                                width: min(max(geometry.size.width * 0.86, 620), 800),
-                                height: min(max(geometry.size.height * 0.48, 420), 500)
-                            )
+                            .frame(width: min(max(geometry.size.width * 0.86, 620), 800))
+                            .frame(maxHeight: .infinity)
                             .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
                             .overlay(
                                 RoundedRectangle(cornerRadius: 16, style: .continuous)
@@ -114,6 +114,7 @@ struct OnboardingModelDownloadView: View {
                             }
                             .accessibilityIdentifier("onboarding-model-skip")
                         }
+                        .fixedSize(horizontal: false, vertical: true)
                     }
                     .scaleEffect(scale)
                     .opacity(opacity)

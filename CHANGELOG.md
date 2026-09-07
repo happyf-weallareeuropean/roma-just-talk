@@ -2,6 +2,8 @@
 
 ## v1.95.1 - 2026-09-07
 
+- Keep model setup instructions and navigation visible on shorter Mac windows by letting the model list scroll within the available space.
+
 - Make onboarding’s Skip controls accessible as native buttons while preserving their appearance and setup-later behavior.
 
 - Add local Chinese + English dictation on Apple silicon Macs running macOS 15+, with an English-only setup choice, a country-based suggestion that respects your selection, and download controls. Continuing setup saves your model choice for future onboarding visits. Startup prewarm only loads installed models, so it cannot download the English fallback before you choose. On release, queued bilingual audio is finalized together instead of replaying every live-update chunk. Reuse the GPU stream across bilingual decoding passes to reduce completion delays.

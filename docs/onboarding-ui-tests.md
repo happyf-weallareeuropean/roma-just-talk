@@ -43,3 +43,9 @@ The helper is a test dependency and is not included in release packaging. Test r
 Keep the protocol-cast known-bad control and the candidate under the same trusted activation and permission conditions. Require the known-bad test to fail and the candidate to pass. Then run all six actual interaction scenarios. The Continue persistence regression additionally requires the same Continue action to fail against the known-bad pre-fix view and pass against the candidate view. Rebuild, freeze, and regrant each changed Debug identity; do not compare an unauthorized host with an authorized one.
 
 Source compilation, external tree enumeration, and a passing single scenario are separate receipts. None alone establishes the full onboarding regression gate.
+
+## Short-window visual check
+
+The disposable Mac can constrain the hosted content to 950 × 697 points even when the requested onboarding window is taller. Compare the Taiwan suggestion and explicit English screenshots at that same actual content size: the complete setup subtitle, Next, and Skip must remain visible, while the model list scrolls within the remaining height. Exercise the real navigation controls in the same fixture. A passing AX press alone does not establish visibility: macOS can press an offscreen control.
+
+The known-bad fixed 420-point minimum model panel visibly clipped Next and Skip and truncated the subtitle. Retain that screenshot alongside the candidate at matching dimensions; larger-window screenshots cannot establish the short-window regression.
