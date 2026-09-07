@@ -257,6 +257,102 @@ struct VoiceInkTests {
         ) == ["einfügen"])
     }
 
+    @Test func accessibilityMenuBatchPreservesUnsupportedAttributeSlots() throws {
+        var unsupported = AXError.attributeUnsupported
+        let error = try #require(AXValueCreate(.axError, &unsupported))
+        let child = AXUIElementCreateApplication(123)
+        let attributes = CursorTextContextReader.commandVMenuAttributes(
+            from: child,
+            copyMultiple: { _, _, _, values in
+                values.pointee = [
+                    kAXMenuItemRole, "Einfügen", error, NSNumber(value: 0x09),
+                    NSNumber(value: 0), NSNumber(value: true), [child],
+                ] as CFArray
+                return .success
+            },
+            copySingle: { _, _, _ in
+                #expect(false, "A successful batch must not repeat individual AX reads")
+                return .failure
+            }
+        )
+        #expect(attributes.role == kAXMenuItemRole)
+        #expect(attributes.title == "Einfügen")
+        #expect(attributes.commandCharacter == nil)
+        #expect(attributes.virtualKey == 0x09)
+        #expect(attributes.modifiers == 0)
+        #expect(attributes.enabled)
+        #expect(attributes.children.count == 1)
+        #expect(CFEqual(attributes.children[0], child))
+        #expect(CursorTextContextReader.isPlainCommandVMenuItem(
+            commandCharacter: attributes.commandCharacter,
+            virtualKey: attributes.virtualKey,
+            modifiers: attributes.modifiers,
+            enabled: attributes.enabled
+        ))
+    }
+
+    @Test func accessibilityMenuBatchRejectsMissingOrInvalidShortcutState() throws {
+        var noValue = AXError.noValue
+        let error = try #require(AXValueCreate(.axError, &noValue))
+        for unavailable in [NSNull(), error] as [Any] {
+            let attributes = CursorTextContextReader.CommandVMenuAttributes(values: [
+                kAXMenuItemRole, "Paste", "v", unavailable, unavailable, unavailable, unavailable,
+            ])
+            #expect(attributes.virtualKey == nil)
+            #expect(attributes.modifiers == nil)
+            #expect(!attributes.enabled)
+            #expect(attributes.children.isEmpty)
+            #expect(!CursorTextContextReader.isPlainCommandVMenuItem(
+                commandCharacter: attributes.commandCharacter,
+                virtualKey: attributes.virtualKey,
+                modifiers: attributes.modifiers,
+                enabled: true
+            ))
+        }
+        let truncated = CursorTextContextReader.CommandVMenuAttributes(values: [kAXMenuItemRole])
+        #expect(truncated.title == nil)
+        #expect(!truncated.enabled)
+        #expect(truncated.children.isEmpty)
+    }
+
+    @Test func accessibilityMenuBatchFailureRetainsScalarChildrenAndShortcut() {
+        let child = AXUIElementCreateApplication(123)
+        for failure in [AXError.cannotComplete, .notImplemented, .attributeUnsupported, .success] {
+            var reads: [String] = []
+            let attributes = CursorTextContextReader.commandVMenuAttributes(
+                from: child,
+                copyMultiple: { _, _, options, values in
+                    #expect(options.rawValue == 0)
+                    values.pointee = [kAXMenuItemRole] as CFArray
+                    return failure
+                },
+                copySingle: { _, attribute, value in
+                    reads.append(attribute as String)
+                    switch attribute as String {
+                    case kAXRoleAttribute: value.pointee = kAXMenuItemRole as CFString
+                    case kAXTitleAttribute: value.pointee = "Paste" as CFString
+                    case kAXMenuItemCmdCharAttribute: return .attributeUnsupported
+                    case kAXMenuItemCmdVirtualKeyAttribute: value.pointee = NSNumber(value: 0x09)
+                    case kAXMenuItemCmdModifiersAttribute: value.pointee = NSNumber(value: 0)
+                    case kAXEnabledAttribute: value.pointee = NSNumber(value: true)
+                    case kAXChildrenAttribute: value.pointee = [child] as CFArray
+                    default: return .attributeUnsupported
+                    }
+                    return .success
+                }
+            )
+            #expect(reads == CursorTextContextReader.CommandVMenuAttributes.names)
+            #expect(attributes.children.count == 1)
+            #expect(CFEqual(attributes.children[0], child))
+            #expect(CursorTextContextReader.isPlainCommandVMenuItem(
+                commandCharacter: attributes.commandCharacter,
+                virtualKey: attributes.virtualKey,
+                modifiers: attributes.modifiers,
+                enabled: attributes.enabled
+            ))
+        }
+    }
+
     @Test func browserPasteTargetRejectsFocusTextAndSelectionDrift() {
         let capturedRange = CFRange(location: 7, length: 0)
         #expect(CursorTextContextReader.pasteTargetSnapshotMatches(

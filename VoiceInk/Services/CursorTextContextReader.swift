@@ -599,6 +599,67 @@ enum CursorTextContextReader {
         let timedOut: Bool
     }
 
+    struct CommandVMenuAttributes {
+        static let names = [
+            kAXRoleAttribute, kAXTitleAttribute, kAXMenuItemCmdCharAttribute,
+            kAXMenuItemCmdVirtualKeyAttribute, kAXMenuItemCmdModifiersAttribute,
+            kAXEnabledAttribute, kAXChildrenAttribute,
+        ]
+
+        let role: String?
+        let title: String?
+        let commandCharacter: String?
+        let virtualKey: Int?
+        let modifiers: UInt32?
+        let enabled: Bool
+        let children: [AXUIElement]
+
+        init(values: [Any]) {
+            func value<T>(_ index: Int, as type: T.Type) -> T? {
+                guard values.indices.contains(index) else { return nil }
+                return values[index] as? T
+            }
+            // Unsupported attributes occupy their original slots as CFNull or AXError values.
+            role = value(0, as: String.self)
+            title = value(1, as: String.self)
+            commandCharacter = value(2, as: String.self)
+            virtualKey = value(3, as: NSNumber.self)?.intValue
+            modifiers = value(4, as: NSNumber.self)?.uint32Value
+            enabled = value(5, as: NSNumber.self)?.boolValue == true
+            children = value(6, as: [AXUIElement].self) ?? []
+        }
+    }
+
+    static func commandVMenuAttributes(
+        from element: AXUIElement,
+        copyMultiple: (
+            AXUIElement, CFArray, AXCopyMultipleAttributeOptions, UnsafeMutablePointer<CFArray?>
+        ) -> AXError = AXUIElementCopyMultipleAttributeValues,
+        copySingle: (
+            AXUIElement, CFString, UnsafeMutablePointer<CFTypeRef?>
+        ) -> AXError = AXUIElementCopyAttributeValue
+    ) -> CommandVMenuAttributes {
+        var values: CFArray?
+        let result = copyMultiple(
+            element,
+            CommandVMenuAttributes.names as CFArray,
+            [],
+            &values
+        )
+        if result == .success,
+           let values = values as? [Any],
+           values.count == CommandVMenuAttributes.names.count {
+            return CommandVMenuAttributes(values: values)
+        }
+        // A failed bulk read must not hide children that individual AX reads can still retrieve.
+        return CommandVMenuAttributes(values: CommandVMenuAttributes.names.map { attribute in
+            var value: CFTypeRef?
+            guard copySingle(element, attribute as CFString, &value) == .success,
+                  let value else { return NSNull() }
+            return value
+        })
+    }
+
     private static func plainCommandVMenuItem(
         in menuBar: AXUIElement,
         matchingTitles: Set<String> = []
@@ -615,25 +676,13 @@ enum CursorTextContextReader {
               Date() < deadline {
             let element = queue[index]
             index += 1
-            let elementRole = role(from: element)
-            if elementRole == kAXMenuItemRole as String {
-                let title = stringAttribute(kAXTitleAttribute as CFString, from: element)
-                let commandCharacter = stringAttribute(
-                    kAXMenuItemCmdCharAttribute as CFString,
-                    from: element
-                )
-                let virtualKey = numberAttribute(
-                    kAXMenuItemCmdVirtualKeyAttribute as CFString,
-                    from: element
-                )?.intValue
-                let modifiers = numberAttribute(
-                    kAXMenuItemCmdModifiersAttribute as CFString,
-                    from: element
-                )?.uint32Value
-                let enabled = numberAttribute(
-                    kAXEnabledAttribute as CFString,
-                    from: element
-                )?.boolValue == true
+            let attributes = commandVMenuAttributes(from: element)
+            if attributes.role == kAXMenuItemRole as String {
+                let title = attributes.title
+                let commandCharacter = attributes.commandCharacter
+                let virtualKey = attributes.virtualKey
+                let modifiers = attributes.modifiers
+                let enabled = attributes.enabled
                 if isPlainCommandVShortcut(
                     commandCharacter: commandCharacter,
                     virtualKey: virtualKey,
@@ -666,7 +715,7 @@ enum CursorTextContextReader {
 
             let remainingCapacity = commandVMenuTraversalLimit - queue.count
             guard remainingCapacity > 0 else { continue }
-            queue.append(contentsOf: childElements(from: element).prefix(remainingCapacity))
+            queue.append(contentsOf: attributes.children.prefix(remainingCapacity))
         }
         let titleFallbackItems = enabledTitledMenuItems.filter {
             shortcutTitles.contains($0.title)

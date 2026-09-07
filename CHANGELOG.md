@@ -5,6 +5,7 @@
 - Added NVIDIA Parakeet zh-TW as an optional cloud model using your own NVIDIA API key on macOS 15+ and iOS 18+; local transcription never switches to it automatically.
 - Restrict Homebrew installation to Apple Silicon, matching the architecture of the released Mac app.
 - Removed the keyboard-modifier settling delay from Accessibility menu paste commands; simulated Cmd-V retains its settling delay.
+- Reduced the time spent locating target apps’ Paste command while preserving shortcut and disabled-menu handling.
 - Added patch-version support to Roma's informational update feed.
 - Added an early-beta label and post-download Mac setup guide with copyable Terminal and agent instructions, plus optional Open Anyway GUI steps.
 - Reframed Trust around Felix's commitments to privacy controls, protected access, testing public downloads, and support, backed by a release checklist, with a visible current-release summary and keyboard-accessible expandable details.
