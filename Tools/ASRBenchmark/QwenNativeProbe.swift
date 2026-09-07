@@ -14,16 +14,27 @@ struct QwenNativeProbe {
         let cpuOnly = args.contains("--cpu")
         let streaming = args.contains("--streaming")
         let official = args.contains("--official-streaming")
+        let chunkOptions = args.filter { $0.hasPrefix("--official-chunk-ms=") }
+        guard chunkOptions.count <= 1 else { throw NSError(domain: "QwenNativeProbe", code: 8) }
+        let officialChunkMS: Int
+        if let option = chunkOptions.first {
+            guard official, let value = Int(option.dropFirst("--official-chunk-ms=".count)), (80...30_000).contains(value) else {
+                throw NSError(domain: "QwenNativeProbe", code: 8, userInfo: [NSLocalizedDescriptionKey:
+                    "--official-chunk-ms requires --official-streaming and an integer from 80 through 30000."])
+            }
+            officialChunkMS = value
+        } else { officialChunkMS = 2000 }
+        args.removeAll { $0.hasPrefix("--official-chunk-ms=") }
         let tokenStream = args.contains("--token-stream")
         let encoderFP32 = args.contains("--encoder-fp32")
         args.removeAll { ["--cpu", "--streaming", "--official-streaming", "--token-stream", "--encoder-fp32"].contains($0) }
         guard [streaming, official, tokenStream].filter({ $0 }).count <= 1 else { throw NSError(domain: "QwenNativeProbe", code: 7) }
-        try await Device.withDefaultDevice(cpuOnly ? .cpu : .gpu) { @Sendable [args, cpuOnly, streaming, official, tokenStream, encoderFP32] in
-            try await run(args, cpuOnly: cpuOnly, streaming: streaming, official: official, tokenStream: tokenStream, encoderFP32: encoderFP32)
+        try await Device.withDefaultDevice(cpuOnly ? .cpu : .gpu) { @Sendable [args, cpuOnly, streaming, official, officialChunkMS, tokenStream, encoderFP32] in
+            try await run(args, cpuOnly: cpuOnly, streaming: streaming, official: official, officialChunkMS: officialChunkMS, tokenStream: tokenStream, encoderFP32: encoderFP32)
         }
     }
 
-    nonisolated static func run(_ args: [String], cpuOnly: Bool, streaming: Bool, official: Bool, tokenStream: Bool, encoderFP32: Bool) async throws {
+    nonisolated static func run(_ args: [String], cpuOnly: Bool, streaming: Bool, official: Bool, officialChunkMS: Int, tokenStream: Bool, encoderFP32: Bool) async throws {
         if args == ["--frontend-proof"] {
             try frontendProof(cpuOnly: cpuOnly)
             return
@@ -61,7 +72,7 @@ struct QwenNativeProbe {
         var streamingConfiguration: [String: Any] = [:]
         if official {
             streamingConfiguration = ["reference_revision": QwenOfficialStreamingPolicy.sourceRevision,
-                "chunk_seconds": 2.0, "unfixed_chunk_num": 2, "unfixed_token_num": 5,
+                "chunk_seconds": Double(officialChunkMS) / 1000, "unfixed_chunk_num": 2, "unfixed_token_num": 5,
                 "audio_context": "cumulative from utterance start", "global_repetition_filter": false,
                 "packet_samples": 1280, "packet_availability": "last sample received",
                 "final_tail_policy": "official max(1, tokens-5), without Unicode repair"]
@@ -96,13 +107,15 @@ struct QwenNativeProbe {
             if streaming || official {
                 let measured: StreamMeasurement
                 if official {
-                    let result = try await officialStream(model: model, samples: audio.asArray(Float.self))
+                    let result = try await officialStream(model: model, samples: audio.asArray(Float.self), chunkSamples: officialChunkMS * 16)
                     measured = result.measurement
                     language = result.language
                     streamingMetrics["official_passes"] = result.passes.map { pass -> [String: Any] in
                         ["index": pass.index, "audio_samples": pass.audioSamples, "final_tail": pass.finalTail,
                          "prefix": pass.prefix, "generated": pass.generated, "raw_text": pass.rawText,
-                         "generation_tokens": pass.generationTokens, "seconds": pass.seconds]
+                         "generation_tokens": pass.generationTokens, "seconds": pass.seconds,
+                         "completed_seconds": pass.completedSeconds, "display_text": pass.displayText,
+                         "termination": pass.termination]
                     }
                 } else {
                     measured = try await stream(model: model, samples: audio.asArray(Float.self))

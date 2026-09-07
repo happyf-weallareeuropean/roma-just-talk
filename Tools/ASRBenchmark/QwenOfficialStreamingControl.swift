@@ -14,6 +14,9 @@ extension QwenNativeProbe {
         let rawText: String
         let generationTokens: Int
         let seconds: Double
+        let completedSeconds: Double
+        let displayText: String
+        let termination: String
     }
 
     struct OfficialMeasurement: Sendable {
@@ -22,9 +25,9 @@ extension QwenNativeProbe {
         let passes: [OfficialPass]
     }
 
-    nonisolated static func officialStream(model: Qwen3ASRModel, samples: [Float]) async throws -> OfficialMeasurement {
+    nonisolated static func officialStream(model: Qwen3ASRModel, samples: [Float], chunkSamples: Int = 32_000) async throws -> OfficialMeasurement {
         guard let tokenizer = model.tokenizer else { throw NSError(domain: "QwenOfficialControl", code: 1) }
-        var policy = QwenOfficialStreamingPolicy()
+        var policy = QwenOfficialStreamingPolicy(chunkSamples: chunkSamples)
         var passes: [OfficialPass] = []
         var displayTimes: [Double] = []
         let begin = ProcessInfo.processInfo.systemUptime
@@ -40,7 +43,9 @@ extension QwenNativeProbe {
             policy.accept(prefix: prefix, generated: result.text)
             passes.append(OfficialPass(index: index, audioSamples: audio.count, finalTail: finalTail,
                 prefix: prefix, generated: result.text, rawText: policy.rawDecoded,
-                generationTokens: result.tokens, seconds: ProcessInfo.processInfo.systemUptime - start))
+                generationTokens: result.tokens, seconds: ProcessInfo.processInfo.systemUptime - start,
+                completedSeconds: ProcessInfo.processInfo.systemUptime - begin,
+                displayText: QwenOfficialStreamingPolicy.output(policy.rawDecoded).text, termination: result.termination))
             if !QwenOfficialStreamingPolicy.output(policy.rawDecoded).text.isEmpty {
                 displayTimes.append(ProcessInfo.processInfo.systemUptime)
             }
@@ -64,7 +69,7 @@ extension QwenNativeProbe {
             feedOverrun: max(0, stop - release)), language: output.language, passes: passes)
     }
 
-    nonisolated static func officialDecode(model: Qwen3ASRModel, samples: [Float], prefix: String) throws -> (text: String, tokens: Int) {
+    nonisolated static func officialDecode(model: Qwen3ASRModel, samples: [Float], prefix: String) throws -> (text: String, tokens: Int, termination: String) {
         guard let tokenizer = model.tokenizer else { throw NSError(domain: "QwenOfficialControl", code: 1) }
         let (features, mask, count) = model.preprocessAudio(MLXArray(samples))
         let base = model.buildPrompt(numAudioTokens: count, language: nil).asArray(Int32.self).map(Int.init)
@@ -79,10 +84,11 @@ extension QwenNativeProbe {
         var logits = model(inputIds: ids, inputFeatures: features, featureAttentionMask: mask, cache: cache)
         eval(logits)
         var generated: [Int] = []
+        var termination = "max_tokens"
         for _ in 0..<256 {
             try Task.checkCancellation()
             let token = logits[0..., -1, 0...].argMax(axis: -1).item(Int.self)
-            if token == 151645 || token == 151643 { break }
+            if token == 151645 || token == 151643 { termination = "eos_\(token)"; break }
             generated.append(token)
             if generated.count == 256 { break }
             logits = model(inputIds: MLXArray([Int32(token)]).expandedDimensions(axis: 0), cache: cache)
@@ -90,6 +96,6 @@ extension QwenNativeProbe {
         }
         let text = tokenizer.decode(tokens: generated)
         Memory.clearCache()
-        return (text, generated.count)
+        return (text, generated.count, termination)
     }
 }

@@ -18,7 +18,7 @@ authorized headless slot; preserve the executable and adjacent Metal library.
 The fork preserves the original package's Swift 6.2, macOS 14 and iOS 17 baseline.
 It contains the reviewed encoder-length, incremental frontend, short-packet and
 language-header corrections. No dependency-source patch is applied during builds.
-The current parser pin has passed Foundation tests; full native replay remains due.
+The parser pin has passed Foundation tests and the complete native probe compiles.
 
 Stage this directory's `QwenNativePackage.swift` as `/tmp/roma-qwen-native/Package.swift`
 and `QwenNativeProbe.swift` as `/tmp/roma-qwen-native/Sources/Probe.swift`. Copy
@@ -52,6 +52,7 @@ JSON inside the disposable model directory; preserve that receipt too.
 .build/release/QwenNativeProbe MODEL_DIRECTORY WAV_DIRECTORY batch.jsonl MODEL_REVISION
 .build/release/QwenNativeProbe --streaming MODEL_DIRECTORY WAV_DIRECTORY paced.jsonl MODEL_REVISION
 .build/release/QwenNativeProbe --official-streaming MODEL_DIRECTORY WAV_DIRECTORY official.jsonl MODEL_REVISION
+.build/release/QwenNativeProbe --official-streaming --official-chunk-ms=350 MODEL_DIRECTORY WAV_DIRECTORY fast.jsonl MODEL_REVISION
 ```
 
 Preserve `Package.resolved`, executable/shader hashes, model file receipt, source
@@ -94,6 +95,14 @@ includes every remaining sample without padding; matching the official source,
 its rollback retains at least one token and does not repair incomplete Unicode.
 Raw protocol state remains separate from display parsing.
 
+`--official-chunk-ms=350` is an explicit cadence experiment; the default remains
+2,000 ms. Accepted intervals are 80 through 30,000 ms, bounded below by the input
+packet duration to avoid unsupported tiny frontend inputs. The first-two-pass
+prefix rule stays unchanged, so reducing the chunk interval also reduces the
+initial audio context before prefix retention. This tradeoff requires accuracy
+measurement. With 80 ms packet delivery, a 350 ms chunk first becomes available
+at 400 ms; the setting does not promise a 350 ms visible update.
+
 The control uses native public model/tokenizer APIs, full-prompt retokenization
 and a fresh KV cache each pass. It checks that the native prompt round-trips
 through the tokenizer before extending it. This is a policy comparison, not a
@@ -108,7 +117,9 @@ slow inference can delay ingestion. Compare `release_to_final_seconds` for user
 latency and inspect `feed_overrun_seconds`. `stop_to_final_seconds` excludes prior
 ingestion delays and can approach zero for exact chunk multiples whose last pass
 finished before stop. `official_passes` records cumulative audio length, raw
-prefix, generated suffix, complete raw text, token count and measured decode time.
+prefix, generated suffix, complete raw text, token count, measured decode time,
+completion time from utterance start, display text and EOS versus token-limit
+termination. A nonempty display event is not automatically a correct usable prefix.
 These timings describe this control implementation, not vLLM or an app provider.
 
 The small policy proof compiles without MLX:
@@ -123,6 +134,31 @@ rollback, final-tail differences and preserving repeated words. Synthetic
 tokenizers establish state transitions; actual BPE and audio quality require the
 native replay. The proof is not itself a known-bad model regression test.
 
+## Physical reference evidence
+
+The native eight-bit two-second cumulative control completed all 20 mixed-language
+clips with 25/662 mixed errors (3.78%), 29/1,023 canonical character errors (2.83%),
+zero empty outputs and zero token-limit hits. Median release-to-final was 176 ms,
+p95 294 ms; first nonempty text arrived at median 2.20 seconds. These are model
+control timings on a physical M5, not the app's end-to-end 250 ms gate. The first
+clip includes cold work.
+
+The explicit 350 ms control completed the same 20 clips with 27/662 mixed errors
+(4.08%), zero empty outputs and zero token-limit hits. Median release-to-final was
+173 ms, p95 268 ms; median first nonempty output was 672 ms. A stricter post-hoc
+proxy found a live output matching at least three initial reference units in
+18/20 clips, median 1.24 seconds. That proxy is not human usability judgment; the
+remaining suffix may still be wrong. References never entered inference prompts.
+These model-only timings do not pass the app's 250 ms p95 requirement.
+
+Memory is a substantial tradeoff: the native batch allocator peak reached
+1,593.68 MiB. A separate one-model resource pass over the longest warm-up clip plus
+all 60 clips recorded 13 own-PID samples with zero query errors: sampled physical
+footprint peaked at 1,446.06 MiB and the kernel's lifetime physical-footprint peak
+at 2,120.97 MiB. GPU model allocations appear under graphics categories; zero
+neural ledger tags do not mean zero model memory. Preserve these distinct counters;
+resource polling results are not uncontended inference timing evidence.
+
 ## Historical evidence and remaining gates
 
 Ignored evidence lives in `.local-build/asr-research/qwen-native/` and `qwen-header/`.
@@ -134,7 +170,11 @@ errors (3.021%) and 25/1,023 canonical character errors (2.444%). Its larger Tai
 control produced five empty outputs; the encoder-length fix rescued two, leaving
 three. Independent official-runtime decoder-representation controls reproduced
 those three with four-bit decoder weights; eight-bit restored zero empty outputs
-in that control. Native eight-bit inference remains a separate gate.
+in that control. Physical M5 native eight-bit batch now scored 21/291 canonical
+character errors (7.22%), zero empty and 28 exact on the 40 Taiwan sentences;
+the 20 mixed-language clips scored 24/662 mixed errors (3.63%), zero empty.
+The 30 isolated English commands remained ambiguous: 19 exact, zero empty,
+12/30 mixed errors (40%). Do not generalize that command set to sentence accuracy.
 
 The earlier paced run completed 20/20 but leaked language headers in all 20 outputs.
 The published parser correction passed 12 actual Foundation test bodies; native
@@ -147,10 +187,15 @@ Earlier paced timings used packet-start scheduling, feeding up to 80ms unavailab
 future audio. Their reported 293ms median/502ms p95 finalization are exploratory;
 do not use them as causal microphone-latency evidence. The current packet-end
 schedule has actual-loop RED/GREEN proof: original two early packets, candidate
-zero, including the last short packet. No corrected native latency is claimed yet.
+zero, including the last short packet. Current model-control results use the
+corrected schedule; historical timings remain excluded.
 
 Repeated suffixes remain around eight-second boundaries. Source analysis and
 saved-window Foundation replay identify overlapping acoustic input and unverified
-completion-text coverage; no global repeated-text filter was added. Native parser
-replay, fresh completed-window decoding control and independent overlap ownership
-controls remain required before real app integration or onboarding exposure.
+completion-text coverage; no global repeated-text filter was added. The matched
+eight-bit physical replay scored 76/662 mixed errors (11.48%) with 44 insertions
+for the existing windowed policy, versus 25/662 with five insertions for cumulative
+two-second decoding. Both used the same corpus, model and causal packet schedule;
+multiple policy details differ. Use the cumulative policy for further integration
+work. Longer dictation, language constraints, shared production decoder parity and
+the complete app path remain separate acceptance gates.
