@@ -143,6 +143,11 @@ class CursorPaster {
         let pasteboard = NSPasteboard.general
         let shouldRestoreClipboard = VoiceInkPastePreference.shouldRestoreClipboardAfterPaste()
         var shouldRetryCommandVMenuDiscovery = false
+        let cursorContext = if VoiceInkPasteMethod.current() == .standard {
+            await preparedCursorTextContext?.value
+        } else {
+            nil as CursorTextContextReader.PreparedContext?
+        }
         latencyTrace.event(
             "paste_session.enter",
             details: "chars=\(text.count) restoreClipboard=\(shouldRestoreClipboard) method=\(VoiceInkPasteMethod.current().rawValue)",
@@ -154,7 +159,6 @@ class CursorPaster {
                 "paste_session.accessibility_insert",
                 token: latencyTraceToken
             )
-            let cursorContext = await preparedCursorTextContext?.value
             let insertionResult = if let accessibilityTextInserterForTesting {
                 accessibilityTextInserterForTesting(text, cursorContext)
             } else {
@@ -217,6 +221,7 @@ class CursorPaster {
         let pasteResult = await postPasteCommand(
             expectedText: text,
             retryCommandVMenuDiscovery: shouldRetryCommandVMenuDiscovery,
+            preparedCursorTextContext: cursorContext,
             latencyTraceToken: latencyTraceToken
         )
         latencyTrace.end(
@@ -265,6 +270,7 @@ class CursorPaster {
     private static func postPasteCommand(
         expectedText: String,
         retryCommandVMenuDiscovery: Bool,
+        preparedCursorTextContext: CursorTextContextReader.PreparedContext?,
         latencyTraceToken: VoiceInkLatencyTrace.Token?
     ) async -> PasteResult {
         if let pasteCommandPosterForTesting {
@@ -285,6 +291,7 @@ class CursorPaster {
             return await pasteFromClipboard(
                 expectedText: expectedText,
                 retryCommandVMenuDiscovery: retryCommandVMenuDiscovery,
+                preparedCursorTextContext: preparedCursorTextContext,
                 latencyTraceToken: latencyTraceToken
             )
         }
@@ -386,6 +393,7 @@ class CursorPaster {
     private static func pasteFromClipboard(
         expectedText: String,
         retryCommandVMenuDiscovery: Bool,
+        preparedCursorTextContext: CursorTextContextReader.PreparedContext?,
         latencyTraceToken: VoiceInkLatencyTrace.Token?
     ) async -> PasteResult {
         VoiceInkLatencyTrace.shared.event(
@@ -407,6 +415,7 @@ class CursorPaster {
         // AX menu actions do not synthesize modifiers, so they need no key-release delay.
         let menuAttempt = await CursorTextContextReader.pressFocusedCommandVMenuItem(
             retryIfUnavailable: retryCommandVMenuDiscovery,
+            preparedContext: preparedCursorTextContext,
             latencyTraceToken: latencyTraceToken
         )
         let stableTarget: CursorTextContextReader.FocusedPasteTarget?

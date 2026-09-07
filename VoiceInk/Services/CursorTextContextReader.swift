@@ -117,6 +117,7 @@ enum CursorTextContextReader {
         fileprivate let focusedElement: AXUIElement
         fileprivate let selectedRange: CFRange?
         fileprivate let text: String?
+        fileprivate var commandVMenuItem: AXUIElement?
 
         fileprivate init(
             focusedElement: AXUIElement,
@@ -127,6 +128,37 @@ enum CursorTextContextReader {
             self.selectedRange = selectedRange
             self.text = text
         }
+    }
+
+    @MainActor
+    static func prepareCommandVMenuItem(
+        for context: PreparedContext?,
+        latencyTraceToken: VoiceInkLatencyTrace.Token?
+    ) {
+        guard !Task.isCancelled, let context else { return }
+        var processIdentifier = pid_t()
+        guard AXUIElementGetPid(context.focusedElement, &processIdentifier) == .success,
+              processIdentifier > 0,
+              processIdentifier != ProcessInfo.processInfo.processIdentifier,
+              capturedEditorIsFocused(context.focusedElement, processIdentifier: processIdentifier),
+              !shouldUseDirectAccessibilityInsertion(
+                ancestorRoles: insertionAncestorRoles(startingAt: context.focusedElement)
+              ),
+              let menuBar = elementAttribute(
+                kAXMenuBarAttribute as CFString,
+                from: AXUIElementCreateApplication(processIdentifier)
+              ) else { return }
+        let span = VoiceInkLatencyTrace.shared.begin(
+            "paste_command_v_menu_prefetch",
+            token: latencyTraceToken
+        )
+        // An empty clipboard can disable Paste until the completed transcript is written.
+        let result = plainCommandVMenuItem(in: menuBar, includeDisabledShortcut: true)
+        context.commandVMenuItem = result.menuItem
+        VoiceInkLatencyTrace.shared.end(
+            span,
+            details: "found=\(result.menuItem != nil) visited=\(result.visitedNodes)"
+        )
     }
 
     @MainActor
@@ -207,6 +239,7 @@ enum CursorTextContextReader {
     @MainActor
     static func pressFocusedCommandVMenuItem(
         retryIfUnavailable: Bool,
+        preparedContext: PreparedContext? = nil,
         latencyTraceToken: VoiceInkLatencyTrace.Token?
     ) async -> CommandVMenuAttempt {
         guard AXIsProcessTrusted(),
@@ -226,6 +259,41 @@ enum CursorTextContextReader {
             selectedRange: selectedTextRange(from: focusedElement)
         )
         let application = AXUIElementCreateApplication(processIdentifier)
+
+        if let preparedContext,
+           CFEqual(focusedElement, preparedContext.focusedElement),
+           sameRange(target.selectedRange, preparedContext.selectedRange),
+           let menuItem = preparedContext.commandVMenuItem {
+            let span = VoiceInkLatencyTrace.shared.begin(
+                "paste_command_v_menu_revalidate",
+                token: latencyTraceToken
+            )
+            let attributes = commandVMenuAttributes(from: menuItem)
+            var menuProcessIdentifier = pid_t()
+            let valid = attributes.role == kAXMenuItemRole as String
+                && isPlainCommandVMenuItem(
+                    commandCharacter: attributes.commandCharacter,
+                    virtualKey: attributes.virtualKey,
+                    modifiers: attributes.modifiers,
+                    enabled: attributes.enabled
+                )
+                && AXUIElementGetPid(menuItem, &menuProcessIdentifier) == .success
+                && menuProcessIdentifier == processIdentifier
+                && elementAttribute(kAXMenuBarAttribute as CFString, from: application).map {
+                    element(menuItem, belongsTo: $0)
+                } == true
+            VoiceInkLatencyTrace.shared.end(span, details: "valid=\(valid)")
+            if valid {
+                guard !Task.isCancelled, pasteTargetIsCurrent(target) else {
+                    return .targetChanged(processIdentifier)
+                }
+                // Once attempted, retain the existing AXPress outcome and fallback behavior.
+                guard AXUIElementPerformAction(menuItem, kAXPressAction as CFString) == .success else {
+                    return .unavailable(target)
+                }
+                return .pressed(processIdentifier)
+            }
+        }
 
         let traversalAttempts = retryIfUnavailable ? commandVMenuTraversalAttempts : 1
         for attempt in 0..<traversalAttempts {
@@ -587,7 +655,7 @@ enum CursorTextContextReader {
         )
     }
 
-    private struct CommandVMenuSearchResult {
+    struct CommandVMenuSearchResult {
         let menuItem: AXUIElement?
         let visitedNodes: Int
         let enqueuedNodes: Int
@@ -660,9 +728,11 @@ enum CursorTextContextReader {
         })
     }
 
-    private static func plainCommandVMenuItem(
+    static func plainCommandVMenuItem(
         in menuBar: AXUIElement,
-        matchingTitles: Set<String> = []
+        matchingTitles: Set<String> = [],
+        includeDisabledShortcut: Bool = false,
+        readAttributes: (AXUIElement) -> CommandVMenuAttributes = { commandVMenuAttributes(from: $0) }
     ) -> CommandVMenuSearchResult {
         let deadline = Date().addingTimeInterval(commandVMenuTraversalTimeout)
         var queue = [menuBar]
@@ -673,10 +743,11 @@ enum CursorTextContextReader {
         var enabledTitledMenuItems: [(element: AXUIElement, title: String)] = []
         while index < queue.count,
               index < commandVMenuTraversalLimit,
+              !Task.isCancelled,
               Date() < deadline {
             let element = queue[index]
             index += 1
-            let attributes = commandVMenuAttributes(from: element)
+            let attributes = readAttributes(element)
             if attributes.role == kAXMenuItemRole as String {
                 let title = attributes.title
                 let commandCharacter = attributes.commandCharacter
@@ -693,7 +764,7 @@ enum CursorTextContextReader {
                         shortcutTitles,
                         adding: title
                     )
-                    if enabled {
+                    if enabled || includeDisabledShortcut {
                         return CommandVMenuSearchResult(
                             menuItem: element,
                             visitedNodes: index,
@@ -720,7 +791,7 @@ enum CursorTextContextReader {
         let titleFallbackItems = enabledTitledMenuItems.filter {
             shortcutTitles.contains($0.title)
         }
-        if let titleFallbackItem = titleFallbackItems.first {
+        if !includeDisabledShortcut, let titleFallbackItem = titleFallbackItems.first {
             return CommandVMenuSearchResult(
                 menuItem: titleFallbackItem.element,
                 visitedNodes: index,

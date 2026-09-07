@@ -120,12 +120,19 @@ class TranscriptionPipeline {
                 token: traceToken
             )
             let context = CursorTextContextReader.prepareTextBeforeCursor()
+            if VoiceInkPasteMethod.current() == .standard {
+                CursorTextContextReader.prepareCommandVMenuItem(
+                    for: context,
+                    latencyTraceToken: traceToken
+                )
+            }
             latencyTrace.end(
                 span,
                 details: "available=\(context != nil)"
             )
             return context
         }
+        defer { preparedCursorTextContext.cancel() }
         let pasteAuthorizationCheckpoint = latencyTrace.executorEnqueued(
             "pipeline.paste_authorization_preflight",
             token: traceToken

@@ -291,6 +291,63 @@ struct VoiceInkTests {
         ))
     }
 
+    @Test func commandVPrefetchFindsDisabledPasteBeforeClipboardWrite() throws {
+        let menuBar = AXUIElementCreateApplication(101)
+        let pasteItem = AXUIElementCreateApplication(102)
+        var clipboardHasText = false
+        let readAttributes: (AXUIElement) -> CursorTextContextReader.CommandVMenuAttributes = { element in
+            if CFEqual(element, menuBar) {
+                return .init(values: [
+                    kAXMenuBarRole, "", NSNull(), NSNull(), NSNull(), true, [pasteItem],
+                ])
+            }
+            return .init(values: [
+                kAXMenuItemRole, "Einfügen", "v", 0x09, 0, clipboardHasText, [],
+            ])
+        }
+        #expect(CursorTextContextReader.plainCommandVMenuItem(
+            in: menuBar,
+            readAttributes: readAttributes
+        ).menuItem == nil)
+        let prepared = try #require(CursorTextContextReader.plainCommandVMenuItem(
+            in: menuBar,
+            includeDisabledShortcut: true,
+            readAttributes: readAttributes
+        ).menuItem)
+        #expect(CFEqual(prepared, pasteItem))
+        #expect(!readAttributes(prepared).enabled)
+        clipboardHasText = true
+        let current = try #require(CursorTextContextReader.plainCommandVMenuItem(
+            in: menuBar,
+            readAttributes: readAttributes
+        ).menuItem)
+        #expect(CFEqual(prepared, current))
+        #expect(readAttributes(prepared).enabled)
+    }
+
+    @Test func commandVPrefetchNeverUsesTitleOnlyOrModifiedShortcuts() {
+        let menuBar = AXUIElementCreateApplication(101)
+        let pasteItem = AXUIElementCreateApplication(102)
+        for modifiers: Any in [NSNull(), 1, 2, 4, 8] {
+            let result = CursorTextContextReader.plainCommandVMenuItem(
+                in: menuBar,
+                matchingTitles: ["paste"],
+                includeDisabledShortcut: true,
+                readAttributes: { element in
+                    if CFEqual(element, menuBar) {
+                        return .init(values: [
+                            kAXMenuBarRole, "", NSNull(), NSNull(), NSNull(), true, [pasteItem],
+                        ])
+                    }
+                    return .init(values: [
+                        kAXMenuItemRole, "Paste", "v", 0x09, modifiers, true, [],
+                    ])
+                }
+            )
+            #expect(result.menuItem == nil)
+        }
+    }
+
     @Test func accessibilityMenuBatchRejectsMissingOrInvalidShortcutState() throws {
         var noValue = AXError.noValue
         let error = try #require(AXValueCreate(.axError, &noValue))
