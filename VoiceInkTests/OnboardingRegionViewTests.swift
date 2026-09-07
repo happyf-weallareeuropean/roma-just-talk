@@ -255,6 +255,7 @@ private actor DelayedOnboardingRegion {
             if await region.requestCount == 1 { return }
             try await Task.sleep(for: .milliseconds(20))
         }
+        recordFailure("Production view did not start its injected lookup")
         throw Failure.missing("Production view did not start its injected lookup")
     }
 
@@ -275,7 +276,32 @@ private actor DelayedOnboardingRegion {
             if condition() { return }
             try await Task.sleep(for: .milliseconds(20))
         }
+        recordFailure("UI condition timed out")
         throw Failure.missing("UI condition timed out\n\(treeDescription())")
+    }
+
+    private func recordFailure(_ message: String) {
+        let root = window.contentView
+        let children = root?.accessibilityChildren() ?? []
+        let navigation = root?.accessibilityChildrenInNavigationOrder() ?? []
+        let windowChildren = window.accessibilityChildren() ?? []
+        let rawTree = "root=\(String(describing: root)) rawChildren=\(children.map { String(describing: type(of: $0)) }) navigation=\(navigation.map { String(describing: type(of: $0)) }) windowChildren=\(windowChildren.map { String(describing: type(of: $0)) }) visible=\(window.isVisible) key=\(window.isKeyWindow) active=\(NSApplication.shared.isActive)"
+        let details = "\(message)\n\(rawTree)\n\(treeDescription())"
+        print("ROMA_ONBOARDING_TEST_FAILURE: \(details)")
+        XCTFail(details)
+        XCTContext.runActivity(named: message) { activity in
+            let tree = XCTAttachment(string: details)
+            tree.lifetime = .keepAlways
+            activity.add(tree)
+            if let root, let bitmap = root.bitmapImageRepForCachingDisplay(in: root.bounds) {
+                root.cacheDisplay(in: root.bounds, to: bitmap)
+                if let png = bitmap.representation(using: .png, properties: [:]) {
+                    let image = XCTAttachment(data: png, uniformTypeIdentifier: "public.png")
+                    image.lifetime = .keepAlways
+                    activity.add(image)
+                }
+            }
+        }
     }
 
     func treeDescription() -> String {

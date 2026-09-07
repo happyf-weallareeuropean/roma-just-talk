@@ -447,7 +447,7 @@ public enum VoiceInkMacOSOnboardingPresentation {
 
     public static let modelDownload = VoiceInkMacOSOnboardingModelDownloadPresentation(
         title: "Download AI Model",
-        subtitle: "Your default model starts downloading automatically. You can wait here, choose another model, or skip setup for now.",
+        subtitle: "Choose a local model and download it for offline dictation, or select another option. You can also skip setup for now.",
         nextButtonTitle: "Next",
         skipButtonTitle: "Skip for now"
     )
