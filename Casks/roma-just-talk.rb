@@ -1,6 +1,6 @@
 cask "roma-just-talk" do
   version "1.95.1"
-  sha256 "68594bd8476933872edc28b480a3ad81ea6fc8d0f9d537dab9062c30692d8665"
+  sha256 "0681e9c80b8137cbdd084409776b20f4903e8acc2dd89ff40e4eda1cef0e4110"
 
   url "https://github.com/negentropi/roma-just-talk/releases/download/v#{version}/roma.just.talk.app.zip"
   name "roma just talk"
