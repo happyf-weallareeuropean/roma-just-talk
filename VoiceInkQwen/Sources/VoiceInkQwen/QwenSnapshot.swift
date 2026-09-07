@@ -65,10 +65,15 @@ struct QwenSnapshot: Decodable, Sendable {
     let tokenizer: File
 
     static func bundled() throws -> Self {
-        guard let url = Bundle.module.url(forResource: "snapshot", withExtension: "json", subdirectory: "Resources") else {
-            throw QwenRuntimeError.invalidFile("snapshot.json")
-        }
+        let url = try resourceURL(named: "snapshot.json")
         return try JSONDecoder().decode(Self.self, from: Data(contentsOf: url))
+    }
+
+    static func resourceURL(named name: String, in bundle: Bundle = .module) throws -> URL {
+        guard let url = bundle.url(forResource: name, withExtension: nil, subdirectory: "Resources") else {
+            throw QwenRuntimeError.invalidFile(name)
+        }
+        return url
     }
 
     func isPresent(at directory: URL) -> Bool {
@@ -91,13 +96,11 @@ struct QwenSnapshot: Decodable, Sendable {
     }
 
     func copyTokenizer(to directory: URL) throws {
-        guard let resources = Bundle.module.resourceURL else {
-            throw QwenRuntimeError.invalidFile(tokenizer.file)
-        }
-        let resourceDirectory = resources.appendingPathComponent("Resources")
+        let resource = try Self.resourceURL(named: tokenizer.file)
+        let resourceDirectory = resource.deletingLastPathComponent()
         try tokenizer.verify(at: resourceDirectory)
         try FileManager.default.copyItem(
-            at: resourceDirectory.appendingPathComponent(tokenizer.file),
+            at: resource,
             to: directory.appendingPathComponent(tokenizer.file)
         )
     }

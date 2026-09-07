@@ -82,3 +82,23 @@ private func semanticHash(_ rows: [(String, Int?)]) -> String {
 func digest(_ data: Data) -> String {
     SHA256.hash(data: data).map { String(format: "%02x", $0) }.joined()
 }
+
+@Test(arguments: ["Resources", "Contents/Resources/Resources"])
+func bundleLookupSupportsSwiftPMAndPackagedMacLayouts(resourcePath: String) throws {
+    let root = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString)
+    let bundleURL = root.appendingPathComponent("Fixture.bundle")
+    let resources = bundleURL.appendingPathComponent(resourcePath)
+    try FileManager.default.createDirectory(at: resources, withIntermediateDirectories: true)
+    defer { try? FileManager.default.removeItem(at: root) }
+    if resourcePath.hasPrefix("Contents/") {
+        let info: [String: Any] = ["CFBundleIdentifier": "Roma.Qwen.ResourceFixture.\(UUID().uuidString)", "CFBundlePackageType": "BNDL"]
+        try PropertyListSerialization.data(fromPropertyList: info, format: .xml, options: 0)
+            .write(to: bundleURL.appendingPathComponent("Contents/Info.plist"))
+    }
+    let expected = Data("pinned fixture contents".utf8)
+    try expected.write(to: resources.appendingPathComponent("tokenizer.json"))
+    let bundle = try #require(Bundle(url: bundleURL))
+    let located = try QwenSnapshot.resourceURL(named: "tokenizer.json", in: bundle)
+    #expect(try Data(contentsOf: located) == expected)
+    #expect(located.standardizedFileURL == resources.appendingPathComponent("tokenizer.json").standardizedFileURL)
+}
