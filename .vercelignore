@@ -3,7 +3,8 @@
 !landing-vercel
 !landing-vercel/**
 landing-vercel/.*
-landing-vercel/api
+landing-vercel/api/*
+!landing-vercel/api/region.js
 landing-vercel/README.md
 landing-vercel/.vercel
 landing-vercel/node_modules

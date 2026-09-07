@@ -4,14 +4,34 @@ import VoiceInkCore
 struct OnboardingModelDownloadView: View {
     @Binding var hasCompletedOnboarding: Bool
     @EnvironmentObject private var transcriptionModelManager: TranscriptionModelManager
+    @EnvironmentObject private var fluidAudioModelManager: FluidAudioModelManager
+    @EnvironmentObject private var qwenModelManager: QwenModelManager
+    @State private var showAdvancedModels: Bool
+    @State private var displayedLocalModelName: String
     @State private var scale: CGFloat = 0.8
     @State private var opacity: CGFloat = 0
     @State private var showTutorial: Bool
 
+    private let lookupCountry: @Sendable () async -> String?
+    private let onRegionLookupFinished: (() -> Void)?
+    private let onAdvance: (() -> Void)?
     private let presentation = VoiceInkMacOSOnboardingPresentation.modelDownload
 
-    init(hasCompletedOnboarding: Binding<Bool>) {
+    init(
+        hasCompletedOnboarding: Binding<Bool>,
+        lookupCountry: @escaping @Sendable () async -> String? = { await VoiceInkOnboardingRegionLookup.countryCode() },
+        onRegionLookupFinished: (() -> Void)? = nil,
+        onAdvance: (() -> Void)? = nil
+    ) {
+        self.lookupCountry = lookupCountry
+        self.onRegionLookupFinished = onRegionLookupFinished
+        self.onAdvance = onAdvance
         self._hasCompletedOnboarding = hasCompletedOnboarding
+        let existing = VoiceInkLocalOnboardingModelPreference.persistedModelName()
+        _displayedLocalModelName = State(initialValue: existing ?? TranscriptionModelRegistry.defaultMacOSFluidAudioModel.name)
+        _showAdvancedModels = State(initialValue: existing != nil
+            && existing != QwenModel().name
+            && existing != TranscriptionModelRegistry.defaultMacOSFluidAudioModel.name)
         self._showTutorial = State(
             initialValue: VoiceInkMacOSOnboardingProgressStore.stage().resumesTutorial
         )
@@ -21,6 +41,8 @@ struct OnboardingModelDownloadView: View {
         guard let currentModel = transcriptionModelManager.currentTranscriptionModel else {
             return false
         }
+        if transcriptionModelManager.isAvailableOnCurrentOS(QwenModel()),
+           !showAdvancedModels, currentModel.name != displayedLocalModelName { return false }
         return transcriptionModelManager.usableModels.contains { $0.name == currentModel.name }
     }
 
@@ -60,7 +82,7 @@ struct OnboardingModelDownloadView: View {
                             }
                         }
 
-                        ModelManagementView(contentPadding: 24, minimumHeight: 420)
+                        modelChoices
                             .frame(
                                 width: min(max(geometry.size.width * 0.86, 620), 800),
                                 height: min(max(geometry.size.height * 0.48, 420), 500)
@@ -74,10 +96,7 @@ struct OnboardingModelDownloadView: View {
 
                         VStack(spacing: 16) {
                             Button {
-                                VoiceInkMacOSOnboardingProgressStore.saveStage(.tutorial)
-                                withAnimation {
-                                    showTutorial = true
-                                }
+                                advance()
                             } label: {
                                 Text(presentation.nextButtonTitle)
                                     .font(.headline)
@@ -88,13 +107,12 @@ struct OnboardingModelDownloadView: View {
                             }
                             .buttonStyle(ScaleButtonStyle())
                             .disabled(!canContinue)
+                            .accessibilityIdentifier("onboarding-model-continue")
 
                             SkipButton(text: presentation.skipButtonTitle) {
-                                VoiceInkMacOSOnboardingProgressStore.saveStage(.tutorial)
-                                withAnimation {
-                                    showTutorial = true
-                                }
+                                advance()
                             }
+                            .accessibilityIdentifier("onboarding-model-skip")
                         }
                     }
                     .scaleEffect(scale)
@@ -109,6 +127,47 @@ struct OnboardingModelDownloadView: View {
         .onAppear {
             animateIn()
         }
+    }
+
+    private var modelChoices: some View {
+        ScrollView {
+            VStack(alignment: .leading, spacing: 16) {
+                if transcriptionModelManager.isAvailableOnCurrentOS(QwenModel()) {
+                    OnboardingLocalModelPicker(
+                        bilingualModel: QwenModel(),
+                        englishModel: TranscriptionModelRegistry.defaultMacOSFluidAudioModel,
+                        isShowingAdvancedModels: showAdvancedModels,
+                        displayedModelName: $displayedLocalModelName,
+                        lookupCountry: lookupCountry,
+                        onRegionLookupFinished: onRegionLookupFinished
+                    ) { model, confirm in
+                        if model.provider == .qwen {
+                            QwenModelCardView(model: model, modelManager: qwenModelManager,
+                                              transcriptionModelManager: transcriptionModelManager,
+                                              confirmSelection: confirm)
+                        } else if let english = model as? FluidAudioModel {
+                            FluidAudioModelCardView(model: english, fluidAudioModelManager: fluidAudioModelManager,
+                                                    transcriptionModelManager: transcriptionModelManager,
+                                                    confirmSelection: confirm)
+                        }
+                    }
+                    DisclosureGroup("Other models and language settings", isExpanded: $showAdvancedModels) {
+                        ModelManagementView(contentPadding: 12, minimumHeight: 420)
+                    }
+                    .accessibilityIdentifier("onboarding-model-advanced")
+                } else {
+                    ModelManagementView(contentPadding: 12, minimumHeight: 420)
+                }
+            }
+            .padding(24)
+        }
+        .background(Color(nsColor: .controlBackgroundColor))
+    }
+
+    private func advance() {
+        VoiceInkMacOSOnboardingProgressStore.saveStage(.tutorial)
+        if let onAdvance { onAdvance() }
+        else { withAnimation { showTutorial = true } }
     }
 
     private func animateIn() {

@@ -2,6 +2,22 @@
 
 Static landing pages plus the full-screen `/demo` browser experience.
 
+`GET /api/region` supports the Mac's local model setup suggestion. It returns only
+a two-letter ISO country code, for example `{"countryCode":"TW"}`
+(or `{"countryCode":null}` when unknown), using Vercel's
+[`x-vercel-ip-country` header](https://vercel.com/docs/headers/request-headers#x-vercel-ip-country).
+The handler does not log or store location and disables browser/CDN caching.
+This is a preference hint, never authentication or a transcription service.
+The Mac requests it once during eligible first local setup with a two-second timeout;
+an explicit choice or existing model takes precedence, and lookup failure keeps English selected.
+The onboarding explanation and Trust privacy disclosure identify this approximate IP-country
+lookup, Vercel hosting, and that no audio is sent. The app does not persist the country.
+TW/CN/HK/MO/SG suggest Chinese + English; all other/unknown countries suggest English.
+The bilingual choice uses the local Qwen model, about 1 GB to download; automatic language
+detection handles mixed speech and Traditional Chinese output. Existing explicit language
+preferences remain intact. Its several-GB free-memory guidance reflects a larger runtime
+footprint than the English-only Parakeet model, not the model download size.
+
 The Trust section distinguishes current release behavior from future commitments.
 Use the [Trust release checklist](../docs/TRUST_RELEASE_CHECKLIST.md) to verify those
 commitments on a public download before strengthening its recommendation.

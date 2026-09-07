@@ -2,6 +2,7 @@ import SwiftUI
 import AppKit
 
 struct ModelCardView: View {
+    @EnvironmentObject private var qwenModelManager: QwenModelManager
     let model: any TranscriptionModel
     let fluidAudioModelManager: FluidAudioModelManager
     let transcriptionModelManager: TranscriptionModelManager
@@ -42,6 +43,8 @@ struct ModelCardView: View {
                         setDefaultAction: setDefaultAction
                     )
                 }
+            case .qwen:
+                QwenModelCardView(model: model, modelManager: qwenModelManager, transcriptionModelManager: transcriptionModelManager)
             case .fluidAudio:
                 if let fluidAudioModel = model as? FluidAudioModel {
                     FluidAudioModelCardView(

@@ -8,9 +8,11 @@ struct FluidAudioModelCardView: View {
     @ObservedObject var fluidAudioModelManager: FluidAudioModelManager
     @ObservedObject var transcriptionModelManager: TranscriptionModelManager
     @State private var streamingEnabled: Bool
+    private let confirmSelection: () -> Void
 
-    init(model: FluidAudioModel, fluidAudioModelManager: FluidAudioModelManager, transcriptionModelManager: TranscriptionModelManager) {
+    init(model: FluidAudioModel, fluidAudioModelManager: FluidAudioModelManager, transcriptionModelManager: TranscriptionModelManager, confirmSelection: @escaping () -> Void = {}) {
         self.model = model
+        self.confirmSelection = confirmSelection
         _fluidAudioModelManager = ObservedObject(wrappedValue: fluidAudioModelManager)
         _transcriptionModelManager = ObservedObject(wrappedValue: transcriptionModelManager)
         _streamingEnabled = State(initialValue: VoiceInkTranscriptionStreamingPreference.isEnabled(forModelName: model.name))
@@ -199,12 +201,13 @@ struct FluidAudioModelCardView: View {
                 }
                 .buttonStyle(.borderedProminent)
                 .controlSize(.small)
-            } else if isCurrent {
+            } else if isCurrent && isDownloaded {
                 Text(VoiceInkModelManagementPresentation.defaultModelTitle)
                     .font(.system(size: 12))
                     .foregroundColor(Color(.secondaryLabelColor))
             } else if isDownloaded {
                 Button(action: {
+                    confirmSelection()
                     Task {
                         transcriptionModelManager.setDefaultTranscriptionModel(model)
                     }
@@ -216,6 +219,7 @@ struct FluidAudioModelCardView: View {
                 .controlSize(.small)
             } else {
                 Button(action: {
+                    confirmSelection()
                     Task {
                         await fluidAudioModelManager.downloadFluidAudioModel(model)
                     }

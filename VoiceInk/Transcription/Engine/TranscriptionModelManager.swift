@@ -10,12 +10,16 @@ class TranscriptionModelManager: ObservableObject {
 
     private weak var whisperModelManager: WhisperModelManager?
     private weak var fluidAudioModelManager: FluidAudioModelManager?
+    private weak var qwenModelManager: QwenModelManager?
 
     private let logger = Logger(subsystem: VoiceInkAppIdentity.loggingSubsystem, category: "TranscriptionModelManager")
 
-    init(whisperModelManager: WhisperModelManager, fluidAudioModelManager: FluidAudioModelManager) {
+    init(whisperModelManager: WhisperModelManager, fluidAudioModelManager: FluidAudioModelManager, qwenModelManager: QwenModelManager? = nil) {
         self.whisperModelManager = whisperModelManager
         self.fluidAudioModelManager = fluidAudioModelManager
+        self.qwenModelManager = qwenModelManager
+        qwenModelManager?.onModelDeleted = { [weak self] name in self?.handleModelDeleted(name) }
+        qwenModelManager?.onModelsChanged = { [weak self] in self?.refreshAllAvailableModels() }
 
         // Wire up deletion callbacks so each manager notifies this manager.
         whisperModelManager.onModelDeleted = { [weak self] modelName in
@@ -76,7 +80,9 @@ class TranscriptionModelManager: ObservableObject {
     func setDefaultTranscriptionModel(_ model: any TranscriptionModel) {
         guard isAvailableOnCurrentOS(model) else {
             NotificationManager.shared.showNotification(
-                title: model.provider == .nvidia
+                title: model.provider == .qwen
+                    ? "The bilingual model requires Apple silicon and macOS 15 or later."
+                    : model.provider == .nvidia
                     ? "NVIDIA cloud transcription requires macOS 15 or later."
                     : VoiceInkNativeAppleTranscriptionPolicy.requiresMacOS26Title(modelDisplayName: model.displayName),
                 type: .error
@@ -97,8 +103,13 @@ class TranscriptionModelManager: ObservableObject {
     }
 
     private func notifyCurrentModelDidChange() {
+        qwenModelManager?.recordingSelectionChanged(isSelected: currentTranscriptionModel?.provider == .qwen)
         NotificationCenter.default.post(name: .didChangeModel, object: nil)
         NotificationCenter.default.post(name: .AppSettingsDidChange, object: nil)
+    }
+
+    func awaitQwenRecordingSelection() async {
+        await qwenModelManager?.awaitRecordingSelection()
     }
 
     private func ensureSelectedLanguageIsSupported(by model: any TranscriptionModel) {
@@ -117,7 +128,10 @@ class TranscriptionModelManager: ObservableObject {
     private func availabilityFacts(for model: any TranscriptionModel) -> VoiceInkTranscriptionModelAvailabilityFacts {
         let availabilityRequirement = model.provider.transcriptionModelAvailabilityRequirement
         let isAvailableOnCurrentOS: Bool
-        if let remoteProvider = model.provider.remoteTranscriptionProviderKind {
+        if model.provider == .qwen {
+            if #available(macOS 15, *) { isAvailableOnCurrentOS = !VoiceInkSystemArchitecture.isIntelMac }
+            else { isAvailableOnCurrentOS = false }
+        } else if let remoteProvider = model.provider.remoteTranscriptionProviderKind {
             isAvailableOnCurrentOS = remoteProvider.isSupportedOnCurrentOS
         } else {
             isAvailableOnCurrentOS = availabilityRequirement.requiresCurrentOSSupport
@@ -133,7 +147,8 @@ class TranscriptionModelManager: ObservableObject {
             hasConfiguredAPIKey: hasConfiguredAPIKey(for: model),
             isAvailableOnCurrentOS: isAvailableOnCurrentOS,
             isLocalFluidAudioModelDownloaded: fluidAudioModelManager?.isFluidAudioModelDownloaded(named: model.name) ?? false,
-            isLocalWhisperModelDownloaded: downloadedLocalWhisperModel != nil
+            isLocalWhisperModelDownloaded: downloadedLocalWhisperModel != nil,
+            isLocalQwenModelDownloaded: qwenModelManager?.isDownloaded ?? false
         )
     }
 
