@@ -342,19 +342,52 @@ final class FluidAudioStreamingProvider {
 
         guard samples.count >= minimumAudioSamples else { return nil }
 
+        let latencyTrace = VoiceInkLatencyTrace.shared
+        let traceToken = latencyTraceToken
+        let rawSampleCount = samples.count
+        let paddingSpan = latencyTrace.begin("fluid_streaming.final_padding", token: traceToken)
         samples = VoiceInkFluidAudioTranscriptionPolicy.paddedSamplesForTranscription(samples)
+        latencyTrace.end(
+            paddingSpan,
+            details: "rawSamples=\(rawSampleCount) paddedSamples=\(samples.count)"
+        )
 
+        let stateSpan = latencyTrace.begin("fluid_streaming.final_decoder_state", token: traceToken)
+        var state = TdtDecoderState.make(decoderLayers: decoderLayerCount)
+        latencyTrace.end(stateSpan, details: "layers=\(decoderLayerCount)")
+
+        let inferenceSpan = latencyTrace.begin(
+            "fluid_streaming.final_transcribe_await",
+            details: "samples=\(samples.count) singleChunk=\(samples.count <= ASRConstants.maxModelSamples) priority=\(Task.currentPriority.rawValue)",
+            token: traceToken
+        )
         do {
-            var state = TdtDecoderState.make(decoderLayers: decoderLayerCount)
             let result = try await asrManager.transcribe(
                 samples,
                 decoderState: &state,
                 language: languageHint
             )
+            // Single-chunk SDK timing ends before result formatting; this await also includes scheduling.
+            latencyTrace.end(
+                inferenceSpan,
+                details: "result=success sdkProcessingMs=\(result.processingTime * 1_000) sdkAudioSeconds=\(result.duration) tokens=\(result.tokenTimings?.count ?? 0)"
+            )
+
+            let normalizationSpan = latencyTrace.begin("fluid_streaming.final_normalization", token: traceToken)
             let text = result.text.trimmingCharacters(in: .whitespacesAndNewlines)
-            guard !text.isEmpty else { return nil }
-            return TextNormalizer.shared.normalizeSentence(text)
+            guard !text.isEmpty else {
+                latencyTrace.end(normalizationSpan, details: "result=empty")
+                return nil
+            }
+            let normalizer = TextNormalizer.shared
+            let normalized = normalizer.normalizeSentence(text)
+            latencyTrace.end(
+                normalizationSpan,
+                details: "result=success nativeITN=\(normalizer.isNativeAvailable) chars=\(normalized.count)"
+            )
+            return normalized
         } catch {
+            latencyTrace.end(inferenceSpan, details: "result=failure")
             logger.error("Final transcription failed: \(error.localizedDescription, privacy: .public)")
             return nil
         }
