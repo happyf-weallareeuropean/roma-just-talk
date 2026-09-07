@@ -403,8 +403,8 @@ class CursorPaster {
             return .commandNotPosted
         }
 
-        await wait(prePasteDelay)
         guard !Task.isCancelled else { return .commandNotPosted }
+        // AX menu actions do not synthesize modifiers, so they need no key-release delay.
         let menuAttempt = await CursorTextContextReader.pressFocusedCommandVMenuItem(
             retryIfUnavailable: retryCommandVMenuDiscovery,
             latencyTraceToken: latencyTraceToken
@@ -431,6 +431,7 @@ class CursorPaster {
         guard !Task.isCancelled else { return .commandNotPosted }
         if retryCommandVMenuDiscovery {
             guard let stableTarget else { return .commandNotPosted }
+            await wait(prePasteDelay)
             if let keyboardPaste = await CursorTextContextReader.postFocusedCommandVShortcut(
                 target: stableTarget,
                 expectedText: expectedText,
@@ -486,8 +487,8 @@ class CursorPaster {
             )
             return .commandNotPosted
         }
+        await wait(prePasteDelay)
         guard !Task.isCancelled else { return .commandNotPosted }
-
         let targetProcessIdentifier = CursorTextContextReader.focusedProcessIdentifierForPaste()
         // VoiceInk posts from the active login session, so share that session's
         // accumulated keyboard state instead of creating an isolated private state.

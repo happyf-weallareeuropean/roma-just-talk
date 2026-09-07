@@ -2,6 +2,7 @@
 
 ## v1.95.1 - 2026-09-07
 
+- Removed the keyboard-modifier settling delay from Accessibility menu paste commands; simulated Cmd-V retains its settling delay.
 - Added patch-version support to Roma's informational update feed.
 - Added an early-beta label and post-download Mac setup guide with copyable Terminal and agent instructions, plus optional Open Anyway GUI steps.
 - Reframed Trust around Felix's commitments to privacy controls, protected access, testing public downloads, and support, backed by a release checklist, with a visible current-release summary and keyboard-accessible expandable details.
