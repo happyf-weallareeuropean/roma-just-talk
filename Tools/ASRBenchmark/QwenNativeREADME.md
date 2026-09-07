@@ -2,7 +2,8 @@
 
 Research only; no model catalog, onboarding default, or app dependency changes.
 Native bilingual acceptance remains pending. Use a disposable Apple Silicon Mac
-with full Xcode and Metal tools. Keep model downloads and inference there.
+with full Xcode and Metal tools. Physical-device inference requires a separately
+authorized headless slot; preserve the executable and adjacent Metal library.
 
 ## Current reproducible candidate
 
@@ -20,7 +21,10 @@ language-header corrections. No dependency-source patch is applied during builds
 The current parser pin has passed Foundation tests; full native replay remains due.
 
 Stage this directory's `QwenNativePackage.swift` as `/tmp/roma-qwen-native/Package.swift`
-and `QwenNativeProbe.swift` as `/tmp/roma-qwen-native/Sources/Probe.swift`. Then:
+and `QwenNativeProbe.swift` as `/tmp/roma-qwen-native/Sources/Probe.swift`. Copy
+`QwenOfficialStreamingPolicy.swift` and `QwenOfficialStreamingControl.swift` into
+the same `Sources` directory. Keep the standalone `*Proof.swift` outside that
+executable target. Then:
 
 ```sh
 cd /tmp/roma-qwen-native
@@ -47,6 +51,7 @@ JSON inside the disposable model directory; preserve that receipt too.
 ```sh
 .build/release/QwenNativeProbe MODEL_DIRECTORY WAV_DIRECTORY batch.jsonl MODEL_REVISION
 .build/release/QwenNativeProbe --streaming MODEL_DIRECTORY WAV_DIRECTORY paced.jsonl MODEL_REVISION
+.build/release/QwenNativeProbe --official-streaming MODEL_DIRECTORY WAV_DIRECTORY official.jsonl MODEL_REVISION
 ```
 
 Preserve `Package.resolved`, executable/shader hashes, model file receipt, source
@@ -76,6 +81,48 @@ upcast encoder arithmetic and cannot restore precision lost in saved weights.
 `--frontend-proof` checks incremental versus batch interior mel frames without a
 model. The fork's regression suite separately covers framing boundaries and lengths.
 
+## Official streaming policy control
+
+`--official-streaming` is a separate research control based on
+[QwenLM/Qwen3-ASR's pinned implementation](https://github.com/QwenLM/Qwen3-ASR/blob/7c6daf77a2421100f5fb066495372c00129d39ff/qwen_asr/inference/qwen3_asr.py#L584).
+It consumes two-second chunks, re-encodes all audio from the utterance start, and
+retains no caller-owned decoder cache between passes. The first two passes use no
+text prefix. Later passes retokenize the prior raw output, roll back five tokens,
+and expand that rollback until the prefix contains no Unicode replacement
+character. The generated suffix replaces the previous suffix. A final short tail
+includes every remaining sample without padding; matching the official source,
+its rollback retains at least one token and does not repair incomplete Unicode.
+Raw protocol state remains separate from display parsing.
+
+The control uses native public model/tokenizer APIs, full-prompt retokenization
+and a fresh KV cache each pass. It checks that the native prompt round-trips
+through the tokenizer before extending it. This is a policy comparison, not a
+claim of identical vLLM runtime: it uses greedy generation capped at 256 tokens
+rather than the official vLLM default of 4,096. The official global repetition
+cleaner is deliberately omitted so legitimate repeated dictation is preserved.
+The official no-marker display fallback is retained for this control; it differs
+from the fork's stricter unfinished-header suppression.
+
+Packets use the same causal final-sample schedule. Decoding is synchronous, so
+slow inference can delay ingestion. Compare `release_to_final_seconds` for user
+latency and inspect `feed_overrun_seconds`. `stop_to_final_seconds` excludes prior
+ingestion delays and can approach zero for exact chunk multiples whose last pass
+finished before stop. `official_passes` records cumulative audio length, raw
+prefix, generated suffix, complete raw text, token count and measured decode time.
+These timings describe this control implementation, not vLLM or an app provider.
+
+The small policy proof compiles without MLX:
+
+```sh
+swiftc -parse-as-library QwenOfficialStreamingPolicy.swift QwenOfficialStreamingPolicyProof.swift -o /tmp/qwen-policy-proof
+/tmp/qwen-policy-proof
+```
+
+Its 20 assertions cover cumulative sample ownership, suffix replacement, Unicode
+rollback, final-tail differences and preserving repeated words. Synthetic
+tokenizers establish state transitions; actual BPE and audio quality require the
+native replay. The proof is not itself a known-bad model regression test.
+
 ## Historical evidence and remaining gates
 
 Ignored evidence lives in `.local-build/asr-research/qwen-native/` and `qwen-header/`.
@@ -91,7 +138,8 @@ in that control. Native eight-bit inference remains a separate gate.
 
 The earlier paced run completed 20/20 but leaked language headers in all 20 outputs.
 The published parser correction passed 12 actual Foundation test bodies; native
-Swift Testing, MLX compilation and paced replay are still required. Actual-module
+Swift Testing and paced replay are still required. The pinned parser and probe
+compiled with the complete native MLX graph on Xcode 26.3. Actual-module
 frontend tests previously passed all four tests, with the known-bad short-packet
 case failing as expected and mel error 2.022763 becoming 0 after correction.
 

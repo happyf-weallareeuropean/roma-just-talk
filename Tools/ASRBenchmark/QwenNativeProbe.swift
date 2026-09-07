@@ -13,16 +13,17 @@ struct QwenNativeProbe {
         var args = Array(CommandLine.arguments.dropFirst())
         let cpuOnly = args.contains("--cpu")
         let streaming = args.contains("--streaming")
+        let official = args.contains("--official-streaming")
         let tokenStream = args.contains("--token-stream")
         let encoderFP32 = args.contains("--encoder-fp32")
-        args.removeAll { ["--cpu", "--streaming", "--token-stream", "--encoder-fp32"].contains($0) }
-        guard !(streaming && tokenStream) else { throw NSError(domain: "QwenNativeProbe", code: 7) }
-        try await Device.withDefaultDevice(cpuOnly ? .cpu : .gpu) { @Sendable [args, cpuOnly, streaming, tokenStream, encoderFP32] in
-            try await run(args, cpuOnly: cpuOnly, streaming: streaming, tokenStream: tokenStream, encoderFP32: encoderFP32)
+        args.removeAll { ["--cpu", "--streaming", "--official-streaming", "--token-stream", "--encoder-fp32"].contains($0) }
+        guard [streaming, official, tokenStream].filter({ $0 }).count <= 1 else { throw NSError(domain: "QwenNativeProbe", code: 7) }
+        try await Device.withDefaultDevice(cpuOnly ? .cpu : .gpu) { @Sendable [args, cpuOnly, streaming, official, tokenStream, encoderFP32] in
+            try await run(args, cpuOnly: cpuOnly, streaming: streaming, official: official, tokenStream: tokenStream, encoderFP32: encoderFP32)
         }
     }
 
-    nonisolated static func run(_ args: [String], cpuOnly: Bool, streaming: Bool, tokenStream: Bool, encoderFP32: Bool) async throws {
+    nonisolated static func run(_ args: [String], cpuOnly: Bool, streaming: Bool, official: Bool, tokenStream: Bool, encoderFP32: Bool) async throws {
         if args == ["--frontend-proof"] {
             try frontendProof(cpuOnly: cpuOnly)
             return
@@ -57,6 +58,18 @@ struct QwenNativeProbe {
             try model.update(parameters: ModuleParameters.unflattened(parameters), verify: [.noUnusedKeys, .shapeMismatch])
             eval(model)
         }
+        var streamingConfiguration: [String: Any] = [:]
+        if official {
+            streamingConfiguration = ["reference_revision": QwenOfficialStreamingPolicy.sourceRevision,
+                "chunk_seconds": 2.0, "unfixed_chunk_num": 2, "unfixed_token_num": 5,
+                "audio_context": "cumulative from utterance start", "global_repetition_filter": false,
+                "packet_samples": 1280, "packet_availability": "last sample received",
+                "final_tail_policy": "official max(1, tokens-5), without Unicode repair"]
+        } else if streaming {
+            streamingConfiguration = ["packet_samples": 1280, "packet_availability": "last sample received",
+                "delay_preset": "realtime", "decode_interval_seconds": 0.35,
+                "max_cached_windows": 2, "encoder_window_overlap_seconds": 1.0]
+        }
         try emit([
             "event": "loaded", "model_revision": args[3],
             "package_revision": "aee9bd1dffcf786f544d6562d971b3e25221e261",
@@ -64,13 +77,9 @@ struct QwenNativeProbe {
             "load_seconds": ProcessInfo.processInfo.systemUptime - start,
             "mlx_active_bytes": Memory.activeMemory,
             "mlx_peak_bytes": Memory.peakMemory,
-            "mode": streaming ? "paced_streaming" : tokenStream ? "full_audio_token_stream" : "batch",
+            "mode": official ? "official_cumulative_streaming_control" : streaming ? "paced_streaming" : tokenStream ? "full_audio_token_stream" : "batch",
             "encoder_fp32": encoderFP32, "language": "auto", "max_tokens": 256,
-            "streaming_configuration": streaming ? [
-                "packet_samples": 1280, "packet_availability": "last sample received",
-                "delay_preset": "realtime", "decode_interval_seconds": 0.35,
-                "max_cached_windows": 2, "encoder_window_overlap_seconds": 1.0
-            ] as [String: Any] : [:]
+            "streaming_configuration": streamingConfiguration
         ])
         let files = try FileManager.default.contentsOfDirectory(
             at: URL(fileURLWithPath: args[1]), includingPropertiesForKeys: nil
@@ -84,14 +93,26 @@ struct QwenNativeProbe {
             let text: String
             let language: String?
             var streamingMetrics: [String: Any] = [:]
-            if streaming {
-                let measured = try await stream(model: model, samples: audio.asArray(Float.self))
+            if streaming || official {
+                let measured: StreamMeasurement
+                if official {
+                    let result = try await officialStream(model: model, samples: audio.asArray(Float.self))
+                    measured = result.measurement
+                    language = result.language
+                    streamingMetrics["official_passes"] = result.passes.map { pass -> [String: Any] in
+                        ["index": pass.index, "audio_samples": pass.audioSamples, "final_tail": pass.finalTail,
+                         "prefix": pass.prefix, "generated": pass.generated, "raw_text": pass.rawText,
+                         "generation_tokens": pass.generationTokens, "seconds": pass.seconds]
+                    }
+                } else {
+                    measured = try await stream(model: model, samples: audio.asArray(Float.self))
+                    language = nil
+                }
                 text = measured.text
-                language = nil
-                streamingMetrics = ["release_to_final_seconds": measured.finalization,
+                streamingMetrics.merge(["release_to_final_seconds": measured.finalization,
                     "stop_to_final_seconds": measured.stopFinalization,
                     "first_partial_seconds": measured.firstPartial.map { $0 as Any } ?? NSNull(),
-                    "partial_count": measured.partialCount, "feed_overrun_seconds": measured.feedOverrun]
+                    "partial_count": measured.partialCount, "feed_overrun_seconds": measured.feedOverrun]) { _, new in new }
             } else {
                 let result: STTOutput
                 if tokenStream {
@@ -112,7 +133,7 @@ struct QwenNativeProbe {
                 "text": text, "detected_language": language.map { $0 as Any } ?? NSNull(),
                 "audio_seconds": duration,
                 "inference_seconds": elapsed, "rtf": elapsed / duration,
-                "timing_semantics": streaming ? "paced wall time including playback" : "batch inference",
+                "timing_semantics": (streaming || official) ? "paced wall time including playback" : "batch inference",
                 "process_peak_rss_bytes": usage.ru_maxrss,
                 "mlx_active_bytes": Memory.activeMemory,
                 "mlx_peak_bytes": Memory.peakMemory
