@@ -38,6 +38,7 @@ struct RuntimeTargetPreparationInfo: Codable {
 
 struct RuntimeTargetCleanupInfo: Codable {
     let surfaceClosed: Bool
+    let surfaceClosureBoundary: String?
     let temporaryResourceRemoved: Bool
     let terminatedProcessIdentifiers: [Int32]
     let restoredInitiallyRunningApplication: Bool
@@ -66,6 +67,48 @@ struct RuntimeAbandonedTargetCleanupInfo: Codable {
     }
 }
 
+// AX identities are retained for this preparation only; a document title is not window ownership.
+final class RuntimeOwnedCodeWindow {
+    let application: NSRunningApplication
+    let appElement: AXUIElement
+    let windowElement: AXUIElement
+    let token: String
+
+    init(application: NSRunningApplication, appElement: AXUIElement, windowElement: AXUIElement, token: String) {
+        self.application = application
+        self.appElement = appElement
+        self.windowElement = windowElement
+        self.token = token
+    }
+
+    func stillContainsTarget() -> Bool {
+        guard !application.isTerminated,
+              let windows = RuntimeAX.readWindows(in: appElement) else { return false }
+        let matches = windows.filter { RuntimeAX.windowContainsTarget($0, token: token) }
+        return matches.count == 1 && CFEqual(matches[0], windowElement)
+    }
+
+    func waitForClose(timeoutSeconds: TimeInterval) -> Bool {
+        let deadline = Date().addingTimeInterval(timeoutSeconds)
+        repeat {
+            if application.isTerminated { return true }
+            if let windows = RuntimeAX.readWindows(in: appElement),
+               !windows.contains(where: { CFEqual($0, windowElement) }) { return true }
+            RunLoop.current.run(mode: .default, before: Date(timeIntervalSinceNow: 0.05))
+        } while Date() < deadline
+        return false
+    }
+
+    func close(timeoutSeconds: TimeInterval) -> Bool {
+        if waitForClose(timeoutSeconds: 0) { return true }
+        guard stillContainsTarget() else { return false }
+        // Code's Cmd+W closes the editor; window.closeWhenEmpty=false leaves its native window alive.
+        guard RuntimeAX.pressCloseButton(in: windowElement) else { return false }
+        // Never discard a window-level save sheet: it could contain unrelated documents.
+        return waitForClose(timeoutSeconds: timeoutSeconds)
+    }
+}
+
 final class RuntimePreparedTarget {
     let info: RuntimeTargetPreparationInfo
     private let target: RuntimeTargetApp
@@ -80,6 +123,7 @@ final class RuntimePreparedTarget {
     private let renderedTextObserver: RuntimeRenderedTextObserver
     private let textScenario: RuntimeTextScenario
     private let pasteProofToken: String?
+    private let ownedCodeWindow: RuntimeOwnedCodeWindow?
 
     init(
         target: RuntimeTargetApp,
@@ -92,6 +136,7 @@ final class RuntimePreparedTarget {
         windowTitleToken: String,
         textScenario: RuntimeTextScenario,
         pasteProofToken: String?,
+        ownedCodeWindow: RuntimeOwnedCodeWindow?,
         matchedBy: String,
         existingProcessIdentifiers: Set<pid_t>,
         temporaryDirectoryURL: URL,
@@ -110,6 +155,7 @@ final class RuntimePreparedTarget {
         self.renderedTextObserver = renderedTextObserver
         self.textScenario = textScenario
         self.pasteProofToken = pasteProofToken
+        self.ownedCodeWindow = ownedCodeWindow
         self.info = RuntimeTargetPreparationInfo(
             targetID: target.id,
             bundleIdentifier: target.bundleIdentifier,
@@ -217,7 +263,7 @@ final class RuntimePreparedTarget {
                 if let refreshedWindow = RuntimeAX.window(
                     containing: info.windowTitleToken,
                     in: appElement
-                ) {
+                ), ownedCodeWindow.map({ CFEqual($0.windowElement, refreshedWindow) }) ?? true {
                     windowElement = refreshedWindow
                 }
                 if let refreshed = RuntimeAX.editableElement(
@@ -299,8 +345,11 @@ final class RuntimePreparedTarget {
             !$0.isTerminated && $0.bundleIdentifier == target.bundleIdentifier ? $0 : nil
         }
 
-        var documentReadyToClose = true
-        if target.kind.usesDocumentResource {
+        var documentReadyToClose = ownedCodeWindow?.stillContainsTarget() ?? true
+        if !documentReadyToClose {
+            errors.append("Owned Code window no longer uniquely contains the temporary document; preserved it")
+        }
+        if target.kind.usesDocumentResource, documentReadyToClose {
             if let application,
                RuntimeAX.clear(
                 textElement: textElement,
@@ -323,16 +372,16 @@ final class RuntimePreparedTarget {
             }
         }
 
-        var surfaceClosed = documentReadyToClose && RuntimeAX.closeSurface(
+        var surfaceClosed = documentReadyToClose && (ownedCodeWindow?.close(timeoutSeconds: 3) ?? RuntimeAX.closeSurface(
             application: application,
             token: info.windowTitleToken,
             in: appElement,
             timeoutSeconds: 3,
             useCloseButtonFallback: target.bundleIdentifier == "com.apple.TextEdit"
-        )
+        ))
 
         var terminatedProcessIdentifiers: [Int32] = []
-        if documentReadyToClose {
+        if documentReadyToClose, ownedCodeWindow == nil {
             let running = NSRunningApplication.runningApplications(withBundleIdentifier: target.bundleIdentifier)
             for application in running where !existingProcessIdentifiers.contains(application.processIdentifier) {
                 if application.terminate(),
@@ -344,7 +393,7 @@ final class RuntimePreparedTarget {
             }
         }
         if !surfaceClosed {
-            surfaceClosed = RuntimeAX.waitForSurfaceToClose(
+            surfaceClosed = ownedCodeWindow?.waitForClose(timeoutSeconds: 1) ?? RuntimeAX.waitForSurfaceToClose(
                 token: info.windowTitleToken,
                 in: appElement,
                 timeoutSeconds: 1
@@ -393,6 +442,7 @@ final class RuntimePreparedTarget {
 
         return RuntimeTargetCleanupInfo(
             surfaceClosed: surfaceClosed,
+            surfaceClosureBoundary: ownedCodeWindow == nil ? "documentOrTab" : "ownedNativeWindow",
             temporaryResourceRemoved: temporaryResourceRemoved,
             terminatedProcessIdentifiers: terminatedProcessIdentifiers,
             restoredInitiallyRunningApplication: restoredInitiallyRunningApplication,
@@ -451,6 +501,21 @@ enum RuntimeTargetController {
             throw RuntimeTargetControllerError.targetNotRunning(target.bundleIdentifier)
         }
         let existingProcessIdentifiers = Set(existingApplications.map(\.processIdentifier))
+        let codeWindowsBeforeLaunch: [pid_t: [AXUIElement]]?
+        if target.bundleIdentifier == "com.microsoft.VSCode" {
+            var windowsByProcess: [pid_t: [AXUIElement]] = [:]
+            for application in existingApplications {
+                guard let windows = RuntimeAX.readWindows(
+                    in: AXUIElementCreateApplication(application.processIdentifier)
+                ) else {
+                    throw RuntimeTargetControllerError.codeWindowOwnershipUnavailable
+                }
+                windowsByProcess[application.processIdentifier] = windows
+            }
+            codeWindowsBeforeLaunch = windowsByProcess
+        } else {
+            codeWindowsBeforeLaunch = nil
+        }
         let temporaryDirectoryURL = temporaryTargetsRootURL
             .appendingPathComponent(runID, isDirectory: true)
         try FileManager.default.createDirectory(
@@ -463,6 +528,7 @@ enum RuntimeTargetController {
             title: "Roma Runtime E2E \(runID)",
             directoryURL: temporaryDirectoryURL
         )
+        var ownedCodeWindow: RuntimeOwnedCodeWindow?
         do {
             try launch(
                 appURL: appURL,
@@ -476,17 +542,30 @@ enum RuntimeTargetController {
                 windowTitleToken: resource.windowTitleToken,
                 timeoutSeconds: 15
             )
+            if let codeWindowsBeforeLaunch {
+                ownedCodeWindow = try claimCodeWindow(
+                    surface: surface,
+                    token: resource.windowTitleToken,
+                    windowsBeforeLaunch: codeWindowsBeforeLaunch
+                )
+            }
             guard let preparedSurface = establishBaseline(
                 surface: surface,
                 bundleIdentifier: target.bundleIdentifier,
                 windowTitleToken: resource.windowTitleToken,
                 textScenario: textScenario,
                 targetKind: target.kind,
-                settleSeconds: settleSeconds
+                settleSeconds: settleSeconds,
+                ownedCodeWindow: ownedCodeWindow
             ) else {
                 throw RuntimeTargetControllerError.couldNotPrepareTarget
             }
             surface = preparedSurface
+            if let ownedCodeWindow,
+               !CFEqual(ownedCodeWindow.windowElement, surface.windowElement)
+                || !ownedCodeWindow.stillContainsTarget() {
+                throw RuntimeTargetControllerError.codeWindowOwnershipUnavailable
+            }
             guard let editableFrame = RuntimeAX.observationFrame(
                 for: surface.textElement,
                 fallbackWindow: surface.windowElement
@@ -513,6 +592,7 @@ enum RuntimeTargetController {
                 windowTitleToken: resource.windowTitleToken,
                 textScenario: textScenario,
                 pasteProofToken: resource.pasteProofToken,
+                ownedCodeWindow: ownedCodeWindow,
                 matchedBy: surface.matchedBy,
                 existingProcessIdentifiers: existingProcessIdentifiers,
                 temporaryDirectoryURL: temporaryDirectoryURL,
@@ -528,7 +608,9 @@ enum RuntimeTargetController {
                 existingProcessIdentifiers: existingProcessIdentifiers,
                 temporaryDirectoryURL: temporaryDirectoryURL,
                 previousFrontmostApplication: previousFrontmostApplication,
-                testResourceURL: resource.url
+                testResourceURL: resource.url,
+                codeWindowsBeforeLaunch: codeWindowsBeforeLaunch,
+                ownedCodeWindow: ownedCodeWindow
             )
             throw error
         }
@@ -565,6 +647,12 @@ enum RuntimeTargetController {
                 RuntimeTargetIsolationPlan.runID(runID, belongsToTargetID: $0.id)
             }) else {
                 unresolvedRunIDs.append(runID)
+                continue
+            }
+            if target.bundleIdentifier == "com.microsoft.VSCode" {
+                // The old helper's live AX identities cannot be reconstructed from a document token.
+                unresolvedRunIDs.append(runID)
+                errors.append("Cannot prove abandoned Code window ownership for \(runID); preserved its windows and resource")
                 continue
             }
             let tokens = [
@@ -884,10 +972,14 @@ enum RuntimeTargetController {
         windowTitleToken: String,
         textScenario: RuntimeTextScenario,
         targetKind: RuntimeTargetApp.Kind,
-        settleSeconds: TimeInterval
+        settleSeconds: TimeInterval,
+        ownedCodeWindow: RuntimeOwnedCodeWindow?
     ) -> TargetSurface? {
         var candidate = surface
         for attempt in 0..<2 {
+            if let ownedCodeWindow,
+               !CFEqual(ownedCodeWindow.windowElement, candidate.windowElement)
+                || !ownedCodeWindow.stillContainsTarget() { return nil }
             RuntimeAX.focus(
                 application: candidate.application,
                 windowElement: candidate.windowElement,
@@ -942,8 +1034,11 @@ enum RuntimeTargetController {
         existingProcessIdentifiers: Set<pid_t>,
         temporaryDirectoryURL: URL,
         previousFrontmostApplication: NSRunningApplication?,
-        testResourceURL: URL
+        testResourceURL: URL,
+        codeWindowsBeforeLaunch: [pid_t: [AXUIElement]]?,
+        ownedCodeWindow: RuntimeOwnedCodeWindow?
     ) {
+        var ownedCodeWindow = ownedCodeWindow
         var preparedSurface: TargetSurface?
         var surfaceClosed = false
         var safeToTerminate = false
@@ -953,6 +1048,23 @@ enum RuntimeTargetController {
             windowTitleToken: windowTitleToken,
             timeoutSeconds: 1
         ) {
+            if let codeWindowsBeforeLaunch {
+                if ownedCodeWindow == nil {
+                    ownedCodeWindow = try? claimCodeWindow(
+                        surface: surface,
+                        token: windowTitleToken,
+                        windowsBeforeLaunch: codeWindowsBeforeLaunch
+                    )
+                }
+                guard let ownedCodeWindow,
+                      CFEqual(ownedCodeWindow.windowElement, surface.windowElement),
+                      ownedCodeWindow.stillContainsTarget() else {
+                    if let previousFrontmostApplication, !previousFrontmostApplication.isTerminated {
+                        _ = previousFrontmostApplication.activate()
+                    }
+                    return
+                }
+            }
             preparedSurface = surface
             var documentReadyToClose = true
             if target.kind.usesDocumentResource {
@@ -974,7 +1086,7 @@ enum RuntimeTargetController {
             }
             safeToTerminate = documentReadyToClose
             if documentReadyToClose {
-                surfaceClosed = RuntimeAX.closeSurface(
+                surfaceClosed = ownedCodeWindow?.close(timeoutSeconds: 2) ?? RuntimeAX.closeSurface(
                     application: surface.application,
                     token: windowTitleToken,
                     in: surface.appElement,
@@ -986,7 +1098,7 @@ enum RuntimeTargetController {
             }
         }
 
-        if safeToTerminate {
+        if safeToTerminate, codeWindowsBeforeLaunch == nil {
             for application in NSRunningApplication.runningApplications(withBundleIdentifier: bundleIdentifier)
             where !existingProcessIdentifiers.contains(application.processIdentifier) {
                 if application.terminate() {
@@ -995,7 +1107,7 @@ enum RuntimeTargetController {
             }
         }
         if !surfaceClosed, let preparedSurface {
-            surfaceClosed = RuntimeAX.waitForSurfaceToClose(
+            surfaceClosed = ownedCodeWindow?.waitForClose(timeoutSeconds: 1) ?? RuntimeAX.waitForSurfaceToClose(
                 token: windowTitleToken,
                 in: preparedSurface.appElement,
                 timeoutSeconds: 1
@@ -1013,6 +1125,34 @@ enum RuntimeTargetController {
            !previousFrontmostApplication.isTerminated {
             _ = previousFrontmostApplication.activate()
         }
+    }
+
+    private static func claimCodeWindow(
+        surface: TargetSurface,
+        token: String,
+        windowsBeforeLaunch: [pid_t: [AXUIElement]]
+    ) throws -> RuntimeOwnedCodeWindow {
+        guard let windows = RuntimeAX.readWindows(in: surface.appElement) else {
+            throw RuntimeTargetControllerError.codeWindowOwnershipUnavailable
+        }
+        let previousWindows = windowsBeforeLaunch[surface.application.processIdentifier] ?? []
+        let newWindows = windows.filter { window in
+            !previousWindows.contains(where: { CFEqual($0, window) })
+        }
+        guard newWindows.count == 1,
+              CFEqual(newWindows[0], surface.windowElement) else {
+            throw RuntimeTargetControllerError.codeWindowOwnershipUnavailable
+        }
+        let owned = RuntimeOwnedCodeWindow(
+            application: surface.application,
+            appElement: surface.appElement,
+            windowElement: surface.windowElement,
+            token: token
+        )
+        guard owned.stillContainsTarget() else {
+            throw RuntimeTargetControllerError.codeWindowOwnershipUnavailable
+        }
+        return owned
     }
 
     fileprivate static func restoreInitiallyRunningApplicationIfNeeded(
@@ -1779,12 +1919,28 @@ enum RuntimeAX {
     }
 
     private static func surfaceWindow(token: String, in appElement: AXUIElement) -> AXUIElement? {
-        elementArrayAttribute(kAXWindowsAttribute, from: appElement).first { windowElement in
-            stringAttribute(kAXTitleAttribute, from: windowElement)?
-                .localizedCaseInsensitiveContains(token) == true
-                || editableElement(in: windowElement, identifying: token) != nil
-                || element(in: windowElement, identifying: token) != nil
+        elementArrayAttribute(kAXWindowsAttribute, from: appElement).first {
+            windowContainsTarget($0, token: token)
         }
+    }
+
+    static func windowContainsTarget(_ window: AXUIElement, token: String) -> Bool {
+        stringAttribute(kAXTitleAttribute, from: window)?.localizedCaseInsensitiveContains(token) == true
+            || editableElement(in: window, identifying: token) != nil
+            || element(in: window, identifying: token) != nil
+    }
+
+    static func readWindows(in appElement: AXUIElement) -> [AXUIElement]? {
+        var value: CFTypeRef?
+        guard AXUIElementCopyAttributeValue(appElement, kAXWindowsAttribute as CFString, &value) == .success else {
+            return nil
+        }
+        return value as? [AXUIElement]
+    }
+
+    static func pressCloseButton(in window: AXUIElement) -> Bool {
+        guard let button = elementAttribute(kAXCloseButtonAttribute, from: window) else { return false }
+        return AXUIElementPerformAction(button, kAXPressAction as CFString) == .success
     }
 
     private static func boolAttribute(_ attribute: String, from element: AXUIElement) -> Bool? {
@@ -1848,6 +2004,7 @@ enum RuntimeTargetControllerError: Error, CustomStringConvertible {
     case launchFailed(String, Int32)
     case targetSurfaceTimedOut(String)
     case couldNotPrepareTarget
+    case codeWindowOwnershipUnavailable
     case renderObservationUnavailable(String)
 
     var description: String {
@@ -1866,6 +2023,8 @@ enum RuntimeTargetControllerError: Error, CustomStringConvertible {
             return "Target app did not expose the uniquely identified test surface: \(identifier)"
         case .couldNotPrepareTarget:
             return "Could not establish the requested target-text baseline and cursor"
+        case .codeWindowOwnershipUnavailable:
+            return "Could not prove a unique newly created Code window; preserved windows and temporary resource"
         case .renderObservationUnavailable(let message):
             return "Could not establish rendered-text observation: \(message)"
         }

@@ -391,6 +391,33 @@ Journals under `/tmp/` allow recovery after an interrupted process:
 make runtime-e2e-restore
 ```
 
+Code targets use a dedicated `--new-window` window. Before launch, the helper
+requires a readable AX window inventory; before editing, it binds the uniquely
+new window to the fixture token. Cleanup clears/saves the fixture, presses that
+exact window's AX close button, and requires a readable inventory proving that
+window disappeared. `surfaceClosureBoundary: "ownedNativeWindow"` identifies
+this proof in cleanup reports. Closing only the editor is insufficient: with
+Code's `window.closeWhenEmpty=false`, Cmd+W leaves an empty native window.
+Code cleanup never terminates the whole application or discards a window-level
+save sheet. Other apps retain their existing document/tab cleanup behavior.
+
+Code window ownership is live AX state, not a durable identifier. After helper
+interruption, `--restore` preserves abandoned Code directories and windows,
+reports their run IDs as unresolved, and exits unsuccessfully. A fixture token
+alone cannot authorize closing the whole window after a restart. Inspect these
+resources and close only the known test windows before manually removing their
+specific directories; do not treat token disappearance as recovered window state.
+
+For the Code cleanup regression, run the same `--target-probe` configuration
+against the unchanged known-bad helper and the candidate on a disposable Mac
+with `window.closeWhenEmpty=false` and an existing unrelated Code window.
+Record native window identities before, during, and after each run, including
+the unrelated window and its document contents. The known-bad run must leave
+new windows despite its successful cleanup flags; the candidate must remove
+each created window while preserving the original window and contents. Check
+empty and existing-text cases. Core checks/compilation and process counts alone
+do not establish this regression; retain the original helpers and captures.
+
 The exact Roma app is selected in this order:
 
 1. `voiceInkAppPath` from config
