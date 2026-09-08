@@ -346,7 +346,7 @@ struct VoiceInkApp: App {
                             appDelegate.pendingOpenFileURL = nil
                         }
                     }
-                    .background(WindowAccessor { window in
+                    .background(WindowAccessor(configurationID: VoiceInkMacOSWindowIdentity.mainIdentifierRawValue) { window in
                         WindowManager.shared.configureWindow(window)
                     })
                     .onDisappear {
@@ -367,11 +367,8 @@ struct VoiceInkApp: App {
                     .environmentObject(recorderUIManager)
                     .environmentObject(aiService)
                     .environmentObject(enhancementService)
-                    .frame(minWidth: 880, minHeight: 780)
-                    .background(WindowAccessor { window in
-                        if window.identifier == nil || window.identifier != NSUserInterfaceItemIdentifier("\(VoiceInkAppIdentity.loggingSubsystem).onboardingWindow") {
-                            WindowManager.shared.configureOnboardingPanel(window)
-                        }
+                    .background(WindowAccessor(configurationID: VoiceInkMacOSWindowIdentity.onboardingIdentifierRawValue) { window in
+                        WindowManager.shared.configureOnboardingPanel(window)
                     })
             }
         }
@@ -501,17 +498,50 @@ struct CheckForUpdatesView: View {
 }
 
 struct WindowAccessor: NSViewRepresentable {
+    let configurationID: String
     let callback: (NSWindow) -> Void
 
-    func makeNSView(context: Context) -> NSView {
-        let view = NSView()
-        DispatchQueue.main.async {
-            if let window = view.window {
-                callback(window)
-            }
-        }
+    func makeNSView(context: Context) -> AccessView {
+        let view = AccessView()
+        view.update(configurationID: configurationID, callback: callback)
         return view
     }
 
-    func updateNSView(_ nsView: NSView, context: Context) {}
+    func updateNSView(_ view: AccessView, context: Context) {
+        view.update(configurationID: configurationID, callback: callback)
+    }
+
+    final class AccessView: NSView {
+        private var configurationID = ""
+        private var callback: ((NSWindow) -> Void)?
+        private weak var configuredWindow: NSWindow?
+        private var appliedConfigurationID: String?
+        private var configurationPending = false
+
+        func update(configurationID: String, callback: @escaping (NSWindow) -> Void) {
+            self.configurationID = configurationID
+            self.callback = callback
+            scheduleConfiguration()
+        }
+
+        override func viewDidMoveToWindow() {
+            super.viewDidMoveToWindow()
+            scheduleConfiguration()
+        }
+
+        private func scheduleConfiguration() {
+            guard !configurationPending else { return }
+            configurationPending = true
+            DispatchQueue.main.async { [weak self] in
+                guard let self else { return }
+                self.configurationPending = false
+                guard let window = self.window,
+                      self.configuredWindow !== window || self.appliedConfigurationID != self.configurationID else { return }
+                // SwiftUI can reuse this NSView when switching between main and setup.
+                self.configuredWindow = window
+                self.appliedConfigurationID = self.configurationID
+                self.callback?(window)
+            }
+        }
+    }
 }

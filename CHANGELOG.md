@@ -2,6 +2,8 @@
 
 ## v1.95.1 - 2026-09-07
 
+- Fit onboarding within the active Mac desktop, keep navigation visible while welcome, permission, and tutorial content scrolls, and preserve the main window’s frame when repeating setup.
+
 - Keep model setup instructions and navigation visible on shorter Mac windows by letting the model list scroll within the available space.
 
 - Make onboarding’s Skip controls accessible as native buttons while preserving their appearance and setup-later behavior.

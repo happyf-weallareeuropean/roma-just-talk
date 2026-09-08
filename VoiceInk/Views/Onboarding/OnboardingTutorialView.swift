@@ -26,42 +26,46 @@ struct OnboardingTutorialView: View {
                 
                 HStack(spacing: 0) {
                     // Left side - Tutorial instructions
-                    VStack(alignment: .leading, spacing: 40) {
-                        // Title and description
-                        VStack(alignment: .leading, spacing: 16) {
-                            Text(presentation.title)
-                                .font(.system(size: 44, weight: .bold, design: .rounded))
-                                .foregroundColor(.white)
+                    VStack(alignment: .leading, spacing: 24) {
+                        ScrollView(.vertical) {
+                            VStack(alignment: .leading, spacing: 40) {
+                                // Title and description
+                                VStack(alignment: .leading, spacing: 16) {
+                                    Text(presentation.title)
+                                        .font(.system(size: 44, weight: .bold, design: .rounded))
+                                        .foregroundColor(.white)
                             
-                            Text(presentation.subtitle)
-                                .font(.system(size: 24, weight: .medium, design: .rounded))
-                                .foregroundColor(.white.opacity(0.7))
-                                .lineSpacing(4)
-                        }
+                                    Text(presentation.subtitle)
+                                        .font(.system(size: 24, weight: .medium, design: .rounded))
+                                        .foregroundColor(.white.opacity(0.7))
+                                        .lineSpacing(4)
+                                }
                         
-                        // Keyboard shortcut display
-                        VStack(alignment: .leading, spacing: 20) {
-                            HStack {
-                                Text(presentation.shortcutTitle)
-                                    .font(.system(size: 28, weight: .semibold, design: .rounded))
-                                    .foregroundColor(.white)
+                                // Keyboard shortcut display
+                                VStack(alignment: .leading, spacing: 20) {
+                                    HStack {
+                                        Text(presentation.shortcutTitle)
+                                            .font(.system(size: 28, weight: .semibold, design: .rounded))
+                                            .foregroundColor(.white)
                                 
                                 
-                            }
+                                    }
                             
-                            ShortcutPreviewView(shortcut: ShortcutStore.shortcut(for: .primaryRecording))
-                                .scaleEffect(1.2)
-                        }
+                                    ShortcutPreviewView(shortcut: ShortcutStore.shortcut(for: .primaryRecording))
+                                        .padding(4)
+                                }
+
+                                // Instructions
+                                VStack(alignment: .leading, spacing: 24) {
+                                    ForEach(Array(presentation.instructionSteps.enumerated()), id: \.offset) { offset, text in
+                                        instructionStep(number: offset + 1, text: text)
+                                    }
+                                }
                         
-                        // Instructions
-                        VStack(alignment: .leading, spacing: 24) {
-                            ForEach(Array(presentation.instructionSteps.enumerated()), id: \.offset) { offset, text in
-                                instructionStep(number: offset + 1, text: text)
                             }
+                            .frame(maxWidth: .infinity, alignment: .leading)
                         }
-                        
-                        Spacer()
-                        
+
                         // Continue button
                         Button(action: {
                             completeOnboarding()

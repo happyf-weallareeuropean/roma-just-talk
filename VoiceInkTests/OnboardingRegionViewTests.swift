@@ -8,6 +8,54 @@ import VoiceInkCore
 // Host the production view; interact through a trusted public accessibility client.
 // Only network completion and existing model files are controlled.
 final class OnboardingRegionViewTests: XCTestCase {
+    @MainActor func testWindowAccessorReconfiguresAfterSwiftUIReusesItsView() async throws {
+        var callbacks: [(String, ObjectIdentifier)] = []
+        let initial = WindowAccessor(configurationID: "main") { callbacks.append(("main", ObjectIdentifier($0))) }
+        let host = NSHostingView(rootView: initial)
+        let window = NSWindow(contentRect: NSRect(x: 0, y: 0, width: 200, height: 200),
+                              styleMask: [.titled, .closable], backing: .buffered, defer: false)
+        window.isReleasedWhenClosed = false
+        window.contentView = host
+        defer { window.close() }
+        window.orderFront(nil)
+        host.layoutSubtreeIfNeeded()
+
+        for _ in 0..<100 where callbacks.isEmpty { try await Task.sleep(for: .milliseconds(10)) }
+        XCTAssertEqual(callbacks.map(\.0), ["main"])
+        XCTAssertEqual(callbacks.first?.1, ObjectIdentifier(window))
+
+        host.rootView = WindowAccessor(configurationID: "onboarding") { callbacks.append(("onboarding", ObjectIdentifier($0))) }
+        for _ in 0..<100 where callbacks.count < 2 { try await Task.sleep(for: .milliseconds(10)) }
+        XCTAssertEqual(callbacks.map(\.0), ["main", "onboarding"], "A reused representable must apply its new window configuration")
+        XCTAssertEqual(callbacks.last?.1, ObjectIdentifier(window))
+
+        host.rootView = WindowAccessor(configurationID: "main") { callbacks.append(("returned-main", ObjectIdentifier($0))) }
+        for _ in 0..<100 where callbacks.count < 3 { try await Task.sleep(for: .milliseconds(10)) }
+        XCTAssertEqual(callbacks.map(\.0), ["main", "onboarding", "returned-main"])
+        XCTAssertEqual(callbacks.last?.1, ObjectIdentifier(window))
+    }
+
+    @MainActor func testProductionOnboardingWindowFitsVisibleDesktopAndKeepsUserResize() throws {
+        let window = NSWindow(
+            contentRect: NSRect(x: 0, y: 0, width: 950, height: 780),
+            styleMask: [.titled, .closable, .resizable], backing: .buffered, defer: false
+        )
+        window.isReleasedWhenClosed = false
+        defer { window.close() }
+        window.center()
+        let screen = try XCTUnwrap(window.screen ?? NSScreen.main)
+        WindowManager.shared.configureOnboardingPanel(window)
+        XCTAssertTrue(screen.visibleFrame.contains(window.frame), "Onboarding \(window.frame) extends beyond visible desktop \(screen.visibleFrame)")
+        XCTAssertLessThanOrEqual(window.minSize.height, screen.visibleFrame.height)
+
+        var resized = window.frame
+        resized.size.width = max(window.minSize.width, resized.width - 20)
+        window.setFrame(resized, display: true)
+        let userFrame = window.frame
+        WindowManager.shared.configureOnboardingPanel(window)
+        XCTAssertEqual(window.frame, userFrame, "Repeated setup configuration must preserve a user's resize")
+    }
+
     @MainActor func testLateTaiwanDraftBlocksCachedEnglishContinueWithoutPersistingIt() async throws {
         let preferences = OnboardingTestPreferences()
         defer { preferences.restore() }

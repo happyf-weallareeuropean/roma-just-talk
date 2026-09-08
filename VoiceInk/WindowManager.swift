@@ -13,6 +13,7 @@ class WindowManager: NSObject {
     private let logger = Logger(subsystem: VoiceInkAppIdentity.loggingSubsystem, category: VoiceInkMacOSLogCategory.windowManager)
     private weak var mainWindow: NSWindow?
     private var didApplyInitialPlacement = false
+    private var mainFrameBeforeOnboarding: NSRect?
 
     private override init() {
         super.init()
@@ -46,9 +47,14 @@ class WindowManager: NSObject {
     }
     
     func configureOnboardingPanel(_ window: NSWindow) {
-        if window.identifier == nil || window.identifier != Self.onboardingWindowIdentifier {
-            window.identifier = Self.onboardingWindowIdentifier
+        guard window.identifier != Self.onboardingWindowIdentifier else { return }
+        if window.identifier == Self.mainWindowIdentifier {
+            // Keep this live frame while the same window temporarily hosts setup.
+            mainFrameBeforeOnboarding = window.frame
+            window.setFrameAutosaveName("")
+            didApplyInitialPlacement = false
         }
+        window.identifier = Self.onboardingWindowIdentifier
         
         NSApplication.shared.setActivationPolicy(.regular)
 
@@ -63,7 +69,21 @@ class WindowManager: NSObject {
         window.collectionBehavior = [.fullScreenPrimary]
         window.title = VoiceInkMacOSWindowIdentity.onboardingTitle
         window.isOpaque = true
-        window.minSize = NSSize(width: 900, height: 780)
+        if let visibleFrame = (window.screen ?? NSScreen.main)?.visibleFrame {
+            let preferredFrame = window.frameRect(forContentRect: NSRect(x: 0, y: 0, width: 950, height: 730))
+            // AppKit minima are frame sizes, including the title bar, not content sizes.
+            window.minSize = NSSize(width: min(900, visibleFrame.width), height: min(780, visibleFrame.height))
+            let size = NSSize(
+                width: min(max(preferredFrame.width, window.minSize.width), visibleFrame.width),
+                height: min(max(preferredFrame.height, window.minSize.height), visibleFrame.height)
+            )
+            window.setFrame(NSRect(
+                x: visibleFrame.midX - size.width / 2,
+                y: visibleFrame.midY - size.height / 2,
+                width: size.width,
+                height: size.height
+            ), display: true)
+        }
         window.makeKeyAndOrderFront(nil)
     }
 
@@ -104,7 +124,10 @@ class WindowManager: NSObject {
     private func applyInitialPlacementIfNeeded(to window: NSWindow) {
         guard !didApplyInitialPlacement else { return }
         // Attempt to restore previous frame if one exists; otherwise fall back to a centered placement
-        if !window.setFrameUsingName(Self.mainWindowAutosaveName) {
+        if let frame = mainFrameBeforeOnboarding {
+            window.setFrame(frame, display: true)
+            mainFrameBeforeOnboarding = nil
+        } else if !window.setFrameUsingName(Self.mainWindowAutosaveName) {
             window.center()
         }
         didApplyInitialPlacement = true

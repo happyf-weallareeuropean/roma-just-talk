@@ -44,139 +44,145 @@ struct OnboardingPermissionsView: View {
                     // Reusable background
                     OnboardingBackgroundView()
                     
-                    VStack(spacing: 40) {
-                        // Progress indicator
-                        HStack(spacing: 8) {
-                            ForEach(0..<permissions.count, id: \.self) { index in
-                                Circle()
-                                    .fill(index <= currentPermissionIndex ? Color.accentColor : Color.white.opacity(0.1))
-                                    .frame(width: 8, height: 8)
-                                    .scaleEffect(index == currentPermissionIndex ? 1.2 : 1.0)
-                                    .animation(.spring(response: 0.3, dampingFraction: 0.7), value: currentPermissionIndex)
-                            }
-                        }
-                        .padding(.top, 40)
-                        
-                        // Current permission card
-                        VStack(spacing: 30) {
-                            // Permission icon
-                            ZStack {
-                                Circle()
-                                    .fill(Color.accentColor.opacity(0.1))
-                                    .frame(width: 100, height: 100)
-                                
-                                if permissionStates[currentPermissionIndex] {
-                                    Image(systemName: "checkmark.seal.fill")
-                                        .font(.system(size: 50))
-                                        .foregroundColor(.accentColor)
-                                        .transition(.scale.combined(with: .opacity))
-                                } else {
-                                    Image(systemName: permissions[currentPermissionIndex].iconSystemName)
-                                        .font(.system(size: 40))
-                                        .foregroundColor(.accentColor)
-                                }
-                            }
-                            .scaleEffect(scale)
-                            .opacity(opacity)
-                            
-                            // Permission text
-                            VStack(spacing: 12) {
+                    VStack(spacing: 24) {
+                        ScrollView(.vertical) {
+                            VStack(spacing: 40) {
+                                // Progress indicator
                                 HStack(spacing: 8) {
-                                    Text(permissions[currentPermissionIndex].title)
-                                        .font(.title2)
-                                        .fontWeight(.bold)
-                                        .foregroundColor(.white)
-                                    
-                                    if let infoMessage = permissions[currentPermissionIndex].screenContextInfoMessage {
-                                        if let infoURL = permissions[currentPermissionIndex].screenContextInfoURLString {
-                                            InfoTip(infoMessage, learnMoreURL: infoURL)
-                                        } else {
-                                            InfoTip(infoMessage)
-                                        }
+                                    ForEach(0..<permissions.count, id: \.self) { index in
+                                        Circle()
+                                            .fill(index <= currentPermissionIndex ? Color.accentColor : Color.white.opacity(0.1))
+                                            .frame(width: 8, height: 8)
+                                            .scaleEffect(index == currentPermissionIndex ? 1.2 : 1.0)
+                                            .animation(.spring(response: 0.3, dampingFraction: 0.7), value: currentPermissionIndex)
                                     }
                                 }
+                                .padding(.top, 40)
+                        
+                                // Current permission card
+                                VStack(spacing: 30) {
+                                    // Permission icon
+                                    ZStack {
+                                        Circle()
+                                            .fill(Color.accentColor.opacity(0.1))
+                                            .frame(width: 100, height: 100)
                                 
-                                Text(permissions[currentPermissionIndex].description)
-                                    .font(.body)
-                                    .foregroundColor(.white.opacity(0.7))
-                                    .multilineTextAlignment(.center)
-                                    .padding(.horizontal)
-                            }
-                            .scaleEffect(scale)
-                            .opacity(opacity)
-                            
-                            // Audio device selection (only shown for audio device selection step)
-                            if permissions[currentPermissionIndex].kind == .audioDeviceSelection {
-                                VStack(spacing: 20) {
-                                    if audioDeviceManager.availableDevices.isEmpty {
-                                        VStack(spacing: 12) {
-                                            Image(systemName: "mic.slash.circle.fill")
-                                                .font(.system(size: 36))
-                                                .symbolRenderingMode(.hierarchical)
-                                                .foregroundStyle(.secondary)
-                                            
-                                            Text(audioDeviceSelectionPresentation.emptyStateTitle)
-                                                .font(.subheadline)
-                                                .foregroundStyle(.secondary)
+                                        if permissionStates[currentPermissionIndex] {
+                                            Image(systemName: "checkmark.seal.fill")
+                                                .font(.system(size: 50))
+                                                .foregroundColor(.accentColor)
+                                                .transition(.scale.combined(with: .opacity))
+                                        } else {
+                                            Image(systemName: permissions[currentPermissionIndex].iconSystemName)
+                                                .font(.system(size: 40))
+                                                .foregroundColor(.accentColor)
                                         }
-                                        .padding()
-                                    } else {
-                                        styledPicker(
-                                            label: audioDeviceSelectionPresentation.pickerLabel,
-                                            selectedValue: audioDeviceManager.selectedDeviceID ?? 0,
-                                            displayValue: audioDeviceManager.availableDevices.first { $0.id == audioDeviceManager.selectedDeviceID }?.name ?? audioDeviceSelectionPresentation.selectedDevicePlaceholder,
-                                            options: audioDeviceManager.availableDevices.map { $0.id },
-                                            optionDisplayName: { deviceId in
-                                                audioDeviceManager.availableDevices.first { $0.id == deviceId }?.name ?? audioDeviceSelectionPresentation.unknownDeviceName
-                                            },
-                                            onSelection: { deviceId in
-                                                audioDeviceManager.selectDevice(id: deviceId)
-                                                audioDeviceManager.selectInputMode(.custom)
-                                                withAnimation {
-                                                    permissionStates[currentPermissionIndex] = true
-                                                    showAnimation = true
+                                    }
+                                    .scaleEffect(scale)
+                                    .opacity(opacity)
+
+                                    // Permission text
+                                    VStack(spacing: 12) {
+                                        HStack(spacing: 8) {
+                                            Text(permissions[currentPermissionIndex].title)
+                                                .font(.title2)
+                                                .fontWeight(.bold)
+                                                .foregroundColor(.white)
+
+                                            if let infoMessage = permissions[currentPermissionIndex].screenContextInfoMessage {
+                                                if let infoURL = permissions[currentPermissionIndex].screenContextInfoURLString {
+                                                    InfoTip(infoMessage, learnMoreURL: infoURL)
+                                                } else {
+                                                    InfoTip(infoMessage)
                                                 }
                                             }
-                                        )
-                                        .onAppear {
-                                            if !audioDeviceManager.availableDevices.isEmpty {
-                                                if let deviceID = audioDeviceManager.findBestAvailableDevice() {
-                                                    audioDeviceManager.selectDevice(id: deviceID)
-                                                    audioDeviceManager.selectInputMode(.custom)
-                                                    withAnimation {
-                                                        permissionStates[currentPermissionIndex] = true
-                                                        showAnimation = true
+                                        }
+                                
+                                        Text(permissions[currentPermissionIndex].description)
+                                            .font(.body)
+                                            .foregroundColor(.white.opacity(0.7))
+                                            .multilineTextAlignment(.center)
+                                            .padding(.horizontal)
+                                    }
+                                    .scaleEffect(scale)
+                                    .opacity(opacity)
+                            
+                                    // Audio device selection (only shown for audio device selection step)
+                                    if permissions[currentPermissionIndex].kind == .audioDeviceSelection {
+                                        VStack(spacing: 20) {
+                                            if audioDeviceManager.availableDevices.isEmpty {
+                                                VStack(spacing: 12) {
+                                                    Image(systemName: "mic.slash.circle.fill")
+                                                        .font(.system(size: 36))
+                                                        .symbolRenderingMode(.hierarchical)
+                                                        .foregroundStyle(.secondary)
+                                            
+                                                    Text(audioDeviceSelectionPresentation.emptyStateTitle)
+                                                        .font(.subheadline)
+                                                        .foregroundStyle(.secondary)
+                                                }
+                                                .padding()
+                                            } else {
+                                                styledPicker(
+                                                    label: audioDeviceSelectionPresentation.pickerLabel,
+                                                    selectedValue: audioDeviceManager.selectedDeviceID ?? 0,
+                                                    displayValue: audioDeviceManager.availableDevices.first { $0.id == audioDeviceManager.selectedDeviceID }?.name ?? audioDeviceSelectionPresentation.selectedDevicePlaceholder,
+                                                    options: audioDeviceManager.availableDevices.map { $0.id },
+                                                    optionDisplayName: { deviceId in
+                                                        audioDeviceManager.availableDevices.first { $0.id == deviceId }?.name ?? audioDeviceSelectionPresentation.unknownDeviceName
+                                                    },
+                                                    onSelection: { deviceId in
+                                                        audioDeviceManager.selectDevice(id: deviceId)
+                                                        audioDeviceManager.selectInputMode(.custom)
+                                                        withAnimation {
+                                                            permissionStates[currentPermissionIndex] = true
+                                                            showAnimation = true
+                                                        }
+                                                    }
+                                                )
+                                                .onAppear {
+                                                    if !audioDeviceManager.availableDevices.isEmpty {
+                                                        if let deviceID = audioDeviceManager.findBestAvailableDevice() {
+                                                            audioDeviceManager.selectDevice(id: deviceID)
+                                                            audioDeviceManager.selectInputMode(.custom)
+                                                            withAnimation {
+                                                                permissionStates[currentPermissionIndex] = true
+                                                                showAnimation = true
+                                                            }
+                                                        }
                                                     }
                                                 }
                                             }
+
+                                            Text(audioDeviceSelectionPresentation.recommendationText)
+                                                .font(.caption)
+                                                .foregroundColor(.white.opacity(0.7))
+                                                .multilineTextAlignment(.center)
+                                                .padding(.horizontal)
                                         }
+                                        .scaleEffect(scale)
+                                        .opacity(opacity)
                                     }
-                                    
-                                    Text(audioDeviceSelectionPresentation.recommendationText)
-                                        .font(.caption)
-                                        .foregroundColor(.white.opacity(0.7))
-                                        .multilineTextAlignment(.center)
-                                        .padding(.horizontal)
-                                }
-                                .scaleEffect(scale)
-                                .opacity(opacity)
-                            }
                             
-                            // Keyboard shortcut recorder (only shown for keyboard shortcut step)
-                            if permissions[currentPermissionIndex].kind == .keyboardShortcut {
-                                shortcutView { isConfigured in
-                                    withAnimation {
-                                        permissionStates[currentPermissionIndex] = isConfigured
-                                        showAnimation = isConfigured
+                                    // Keyboard shortcut recorder (only shown for keyboard shortcut step)
+                                    if permissions[currentPermissionIndex].kind == .keyboardShortcut {
+                                        shortcutView { isConfigured in
+                                            withAnimation {
+                                                permissionStates[currentPermissionIndex] = isConfigured
+                                                showAnimation = isConfigured
+                                            }
+                                        }
+                                        .scaleEffect(scale)
+                                        .opacity(opacity)
                                     }
                                 }
-                                .scaleEffect(scale)
-                                .opacity(opacity)
+                                .frame(maxWidth: 400)
+                                .padding(.vertical, 40)
+
                             }
+                            .frame(maxWidth: .infinity)
                         }
-                        .frame(maxWidth: 400)
-                        .padding(.vertical, 40)
-                        
+
                         // Action buttons
                         VStack(spacing: 16) {
                             Button(action: requestPermission) {
@@ -208,6 +214,7 @@ struct OnboardingPermissionsView: View {
                             }
                         }
                         .opacity(opacity)
+                        .fixedSize(horizontal: false, vertical: true)
                     }
                     .padding()
                 }

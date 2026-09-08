@@ -27,67 +27,70 @@ struct OnboardingView: View {
                     OnboardingBackgroundView()
                     
                     // Content container
-                    ScrollView(.vertical, showsIndicators: false) {
-                        VStack(spacing: 0) {
-                            // Content Area
-                            VStack(spacing: 60) {
-                                Spacer()
-                                    .frame(height: 40)
+                    VStack(spacing: 20) {
+                        ScrollView(.vertical) {
+                            VStack(spacing: 0) {
+                                // Content Area
+                                VStack(spacing: 60) {
+                                    Spacer()
+                                        .frame(height: 40)
                                 
-                                // Title and subtitle
-                                VStack(spacing: 16) {
-                                    Text(presentation.title)
-                                        .font(.system(size: min(geometry.size.width * 0.055, 42), weight: .bold, design: .rounded))
-                                        .foregroundColor(.white)
-                                        .opacity(textOpacity)
-                                        .multilineTextAlignment(.center)
-                                        .padding(.horizontal)
+                                    // Title and subtitle
+                                    VStack(spacing: 16) {
+                                        Text(presentation.title)
+                                            .font(.system(size: min(geometry.size.width * 0.055, 42), weight: .bold, design: .rounded))
+                                            .foregroundColor(.white)
+                                            .opacity(textOpacity)
+                                            .multilineTextAlignment(.center)
+                                            .padding(.horizontal)
                                     
-                                    Text(presentation.subtitle)
-                                        .font(.system(size: min(geometry.size.width * 0.032, 24), weight: .medium, design: .rounded))
-                                        .foregroundColor(.white.opacity(0.7))
-                                        .opacity(textOpacity)
-                                        .multilineTextAlignment(.center)
-                                }
+                                        Text(presentation.subtitle)
+                                            .font(.system(size: min(geometry.size.width * 0.032, 24), weight: .medium, design: .rounded))
+                                            .foregroundColor(.white.opacity(0.7))
+                                            .opacity(textOpacity)
+                                            .multilineTextAlignment(.center)
+                                    }
                                 
-                                if showSecondaryElements {
-                                    // Typewriter roles animation
-                                    TypewriterRoles(roles: presentation.typewriterRoles)
-                                        .frame(height: 160)
-                                        .transition(.scale.combined(with: .opacity))
-                                        .padding(.horizontal, 40)
-                                }
-                            }
-                            .padding(.top, geometry.size.height * 0.15)
-                            
-                            Spacer(minLength: geometry.size.height * 0.2)
-                            
-                            // Bottom navigation
-                            if showSecondaryElements {
-                                VStack(spacing: 20) {
-                                    Button(action: {
-                                        VoiceInkMacOSOnboardingProgressStore.saveStage(.permissions)
-                                        withAnimation(.spring(response: 0.5, dampingFraction: 0.7)) {
-                                            showPermissions = true
-                                        }
-                                    }) {
-                                        Text(presentation.primaryButtonTitle)
-                                            .font(.system(size: 18, weight: .semibold))
-                                            .foregroundColor(.black)
-                                            .frame(width: min(geometry.size.width * 0.3, 200), height: 50)
-                                            .background(Color.white)
-                                            .cornerRadius(25)
+                                    if showSecondaryElements {
+                                        // Typewriter roles animation
+                                        TypewriterRoles(roles: presentation.typewriterRoles)
+                                            .frame(height: 160)
+                                            .transition(.scale.combined(with: .opacity))
+                                            .padding(.horizontal, 40)
                                     }
-                                    .buttonStyle(ScaleButtonStyle())
+                                }
+                                .padding(.top, geometry.size.height * 0.15)
+                            
+                            }
+                            .frame(maxWidth: .infinity)
+                        }
 
-                                    SkipButton(text: presentation.skipButtonTitle) {
-                                        VoiceInkMacOSOnboardingProgressStore.reset()
-                                        hasCompletedOnboarding = true
+                        // Bottom navigation
+                        if showSecondaryElements {
+                            VStack(spacing: 20) {
+                                Button(action: {
+                                    VoiceInkMacOSOnboardingProgressStore.saveStage(.permissions)
+                                    withAnimation(.spring(response: 0.5, dampingFraction: 0.7)) {
+                                        showPermissions = true
                                     }
+                                }) {
+                                    Text(presentation.primaryButtonTitle)
+                                        .font(.system(size: 18, weight: .semibold))
+                                        .foregroundColor(.black)
+                                        .frame(width: min(geometry.size.width * 0.3, 200), height: 50)
+                                        .background(Color.white)
+                                        .cornerRadius(25)
                                 }
-                                .padding(.bottom, 35)
-                                .transition(.move(edge: .bottom).combined(with: .opacity))
+                                .buttonStyle(ScaleButtonStyle())
+
+                                SkipButton(text: presentation.skipButtonTitle) {
+                                    VoiceInkMacOSOnboardingProgressStore.reset()
+                                    hasCompletedOnboarding = true
+                                }
                             }
+                            .fixedSize(horizontal: false, vertical: true)
+                            .padding(.bottom, 35)
+                            .transition(.move(edge: .bottom).combined(with: .opacity))
                         }
                     }
                 }
