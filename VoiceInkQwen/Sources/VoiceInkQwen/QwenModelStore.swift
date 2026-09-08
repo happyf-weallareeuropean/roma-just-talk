@@ -94,17 +94,63 @@ actor QwenModelStore {
     private static func downloadSnapshot(
         _ snapshot: QwenSnapshot, to directory: URL, progress: @escaping ProgressHandler
     ) async throws {
+        // No credential discovery, mutable revision, global cache, or fallback model request.
+        let client = HubClient(host: HubClient.defaultHost, bearerToken: nil, cache: nil)
+        try await downloadFiles(snapshot, to: directory, client: client, progress: progress)
+    }
+
+    static func downloadFiles(
+        _ snapshot: QwenSnapshot, to directory: URL, client: HubClient,
+        progress: @escaping ProgressHandler
+    ) async throws {
         guard let repo = Repo.ID(rawValue: snapshot.repo) else {
             throw QwenRuntimeError.invalidFile("snapshot.json")
         }
-        // No credential discovery, mutable revision, global cache, or fallback model request.
-        let client = HubClient(host: HubClient.defaultHost, bearerToken: nil, cache: nil)
-        _ = try await client.downloadSnapshot(
-            of: repo, to: directory, revision: snapshot.revision,
-            matching: snapshot.files.map(\.file), maxConcurrentDownloads: 2
-        ) { value in
-            progress(.init(phase: .downloading, fractionCompleted: value.fractionCompleted))
+        // Hub 0.10.0's snapshot API throws after a successful cacheless download.
+        // The manifest already supplies exact filenames; single-file downloads need no cache.
+        let total = DownloadProgress(Progress(totalUnitCount: snapshot.files.reduce(0) { $0 + $1.bytes }))
+        let files = snapshot.files.sorted { $0.bytes > $1.bytes }.map { file in
+            (file, DownloadProgress(Progress(totalUnitCount: file.bytes,
+                parent: total.value, pendingUnitCount: file.bytes)))
+        }
+        progress(.init(phase: .downloading, fractionCompleted: 0))
+        try await withThrowingTaskGroup(of: Void.self) { tasks in
+            tasks.addTask {
+                try await withThrowingTaskGroup(of: Void.self) { downloads in
+                    for (index, entry) in files.enumerated() {
+                        if index >= 2 { try await downloads.next() }
+                        try Task.checkCancellation()
+                        downloads.addTask {
+                            let (file, fileProgress) = entry
+                            _ = try await client.downloadFile(
+                                at: file.file, from: repo,
+                                to: directory.appendingPathComponent(file.file),
+                                revision: snapshot.revision, progress: fileProgress.value,
+                                transport: .lfs
+                            )
+                            try Task.checkCancellation()
+                        }
+                    }
+                    try await downloads.waitForAll()
+                }
+            }
+            tasks.addTask {
+                while true {
+                    try await Task.sleep(for: .milliseconds(100))
+                    progress(.init(phase: .downloading, fractionCompleted: total.value.fractionCompleted))
+                }
+            }
+            // Only the downloader completes normally. Drain the sampler before ready/cleanup.
+            try await tasks.next()
+            tasks.cancelAll()
         }
         try Task.checkCancellation()
+        progress(.init(phase: .downloading, fractionCompleted: 1))
     }
+}
+
+// Foundation Progress synchronizes its counters internally; the references never change.
+private final class DownloadProgress: @unchecked Sendable {
+    let value: Progress
+    init(_ value: Progress) { self.value = value }
 }

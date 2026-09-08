@@ -2,6 +2,8 @@
 
 ## v1.95.1 - 2026-09-07
 
+- Fixed Chinese + English model setup failing after the download completed; verify and install the pinned files directly without requiring a separate model cache.
+
 - Fit onboarding within the active Mac desktop, keep navigation visible while welcome, permission, and tutorial content scrolls, and preserve the main window’s frame when repeating setup.
 
 - Keep model setup instructions and navigation visible on shorter Mac windows by letting the model list scroll within the available space.

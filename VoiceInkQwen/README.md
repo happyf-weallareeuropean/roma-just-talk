@@ -17,7 +17,11 @@ Pinned sources and model:
 
 `Resources/snapshot.json` pins every installed file, byte size and SHA256.
 Only `install` performs network access: immutable revision, explicit whitelist,
-no ambient credentials or global model cache. A sibling staging directory receives
+no ambient credentials or global model cache. The staging directory receives
+at most two concurrent file downloads from the pinned manifest. Hugging Face Swift
+0.10.0's snapshot API requires a cache after completing destination-only downloads;
+the installer uses its single-file API so a complete transfer can be verified and
+published without a second cache. The staging directory receives
 bounded-memory checksum checks and the exact bundled tokenizer before atomic
 installation. Cancellation and deletion await the actual download task. Partial
 installs do not count as ready. Cached `prewarm` validates all hashes and loads
