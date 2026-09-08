@@ -18,6 +18,7 @@ on:
       - "scripts/find-reusable-ci-run.sh"
       - "scripts/run-macos-ci-unit-tests.sh"
       - "scripts/test-qwen-package.sh"
+      - "scripts/test-fluidaudio-package.sh"
       - "scripts/tests/verify-adhoc-library-validation.test.sh"
       - "scripts/tests/verify-macos-distribution-launch.test.sh"
       - "scripts/tests/verify-macos-framework-signature-crash.test.sh"
@@ -44,6 +45,7 @@ on:
       - "VoiceInkQwen/**"
       - "VoiceInkTests/**"
       - "VoiceInk.xcodeproj/**"
+      - "VoiceInk.xcworkspace/**"
   push:
     branches:
       - main
@@ -56,6 +58,7 @@ on:
       - "scripts/find-reusable-ci-run.sh"
       - "scripts/run-macos-ci-unit-tests.sh"
       - "scripts/test-qwen-package.sh"
+      - "scripts/test-fluidaudio-package.sh"
       - "scripts/tests/verify-adhoc-library-validation.test.sh"
       - "scripts/tests/verify-macos-distribution-launch.test.sh"
       - "scripts/tests/verify-macos-framework-signature-crash.test.sh"
@@ -82,6 +85,7 @@ on:
       - "VoiceInkQwen/**"
       - "VoiceInkTests/**"
       - "VoiceInk.xcodeproj/**"
+      - "VoiceInk.xcworkspace/**"
 
 permissions:
   contents: read
@@ -242,6 +246,23 @@ jobs:
       - name: Build release app
         id: release_app
         run: make local CONFIGURATION=Release
+
+      - name: Verify FluidAudio array reset semantics
+        id: fluidaudio_test
+        timeout-minutes: 15
+        run: bash scripts/test-fluidaudio-package.sh
+
+      - name: Upload FluidAudio test evidence
+        if: ${{ !cancelled() && (steps.fluidaudio_test.outcome == 'success' || steps.fluidaudio_test.outcome == 'failure') }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: roma.fluidaudio-test-evidence
+          path: |
+            .local-build/fluidaudio-test-evidence/**/gate.log
+            .local-build/fluidaudio-test-evidence/**/provenance.txt
+            .local-build/fluidaudio-test-evidence/**/swift-test.log
+            .local-build/fluidaudio-test-evidence/**/result.txt
+          if-no-files-found: error
 
       - name: Verify local bilingual model package
         timeout-minutes: 15

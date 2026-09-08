@@ -718,10 +718,10 @@
 		};
 		E1DD20DC2FA20AD90020AF3B /* XCRemoteSwiftPackageReference "FluidAudio" */ = {
 			isa = XCRemoteSwiftPackageReference;
-			repositoryURL = "https://github.com/FluidInference/FluidAudio.git";
+			repositoryURL = "https://github.com/negentropi/FluidAudio.git";
 			requirement = {
-				branch = main;
-				kind = branch;
+				kind = revision;
+				revision = 56c9c2167efa4363690243709dda4a84f29e5f49;
 			};
 		};
 		E1DD20DF2FA20AEE0020AF3B /* XCRemoteSwiftPackageReference "LLMkit" */ = {

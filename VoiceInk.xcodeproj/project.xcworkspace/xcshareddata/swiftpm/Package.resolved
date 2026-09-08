@@ -21,10 +21,9 @@
     {
       "identity" : "fluidaudio",
       "kind" : "remoteSourceControl",
-      "location" : "https://github.com/FluidInference/FluidAudio.git",
+      "location" : "https://github.com/negentropi/FluidAudio.git",
       "state" : {
-        "branch" : "main",
-        "revision" : "50aa07193e84b9cf192d8f36041c24a9a4867cd6"
+        "revision" : "56c9c2167efa4363690243709dda4a84f29e5f49"
       }
     },
     {

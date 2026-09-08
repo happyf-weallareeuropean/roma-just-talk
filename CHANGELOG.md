@@ -23,6 +23,7 @@
 - Added a local-only Hardened Runtime exception for ad-hoc macOS builds that load bundled MediaRemoteAdapter and Sparkle frameworks, while keeping Library Validation enabled for certificate-signed releases.
 - Added a fresh-Mac distribution E2E that follows the exact GitHub Actions outer ZIP through Safari quarantine, Archive Utility's real recursive or separate Finder extraction path, Gatekeeper Open Anyway, App Translocation, generic mapped-code verification, and a real transcription smoke.
 - Fixed the first cold FluidAudio streaming dictation sometimes pasting nothing when live recognition had text but final ASR returned empty.
+- Reduced Parakeet array-clearing work with an exactly pinned FluidAudio patch, preserving scalar reset behavior for other values, types, and layouts; app latency acceptance remains pending.
 - Linked whisper.cpp statically into the macOS and iOS apps so ad-hoc builds no longer depend on a separately signed `whisper.framework` at launch.
 - Rebuilt `/demo` as a full-screen, zero-download browser dictation experience with a three-second rolling speech pre-roll, Left Shift release insertion, automatic writing-environment changes, microphone recovery, a narrated no-mic preview, and site navigation revealed only at the top edge.
 - Added a real-audio `/demo` E2E lane that routes a fixed WAV through BlackHole, starts the player 1.1 seconds before Left Shift, releases after playback, and gates the pre-trigger opening word, transcript accuracy, and key-up completion latency in Chrome's real speech service.
