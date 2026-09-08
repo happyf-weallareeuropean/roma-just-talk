@@ -14,6 +14,7 @@
 
 - Add local Chinese + English dictation on Apple silicon Macs running macOS 15+, with an English-only setup choice, a country-based suggestion that respects your selection, and download controls. Continuing setup saves your model choice for future onboarding visits. Startup prewarm only loads installed models, so it cannot download the English fallback before you choose. On release, queued bilingual audio is finalized together instead of replaying every live-update chunk. Reuse the GPU stream across bilingual decoding passes to reduce completion delays. Cancel obsolete bilingual live decoding on release, then finalize all captured audio after it drains; cancelling completion also drains the recording.
 - Start final local dictation recognition while a cancelled live pass finishes, reducing release delays without dropping audio or publishing stale live text.
+- Stop superseded Chinese + English decoding between existing model evaluation batches, so it can skip work that has not started. Finalization still waits for running GPU work to finish; the app latency gate remains pending.
 - Keep automatic model-list refreshes from saving the fallback model as your chosen default.
 - Added NVIDIA Parakeet zh-TW as an optional cloud model using your own NVIDIA API key on macOS 15+ and iOS 18+; local transcription never switches to it automatically.
 - Restrict Homebrew installation to Apple Silicon, matching the architecture of the released Mac app.

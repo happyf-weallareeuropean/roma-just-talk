@@ -67,7 +67,7 @@
       "kind" : "remoteSourceControl",
       "location" : "https://github.com/negentropi/mlx-audio-swift.git",
       "state" : {
-        "revision" : "ad2f08874165b054b3d3647003159858e1047bed"
+        "revision" : "2ad4b7ea03a5319053d5ad25f76bda1654513cda"
       }
     },
     {

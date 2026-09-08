@@ -6,9 +6,10 @@ The package is linked only into the macOS application; FluidAudio stays unchange
 
 Pinned sources and model:
 
-- MLX Audio Swift fork `ad2f08874165b054b3d3647003159858e1047bed`, based on
+- MLX Audio Swift fork `2ad4b7ea03a5319053d5ad25f76bda1654513cda`, based on
   upstream `bf14ae0c26e4e85553dd989571cae29d70fa6735`.
-  Maintained frontend length/frame corrections and public transcription parser.
+  Maintained frontend length/frame corrections, public transcription parser,
+  and cooperative model evaluation checkpoints.
 - MLX Swift 0.31.4, MLX LM 3.31.4, Hugging Face Swift 0.10.0.
 - `mlx-community/Qwen3-ASR-0.6B-8bit`, revision
   `89e96d92ba34aca20b3e29fb10cc284097d1219f`.
@@ -42,6 +43,13 @@ final result, without intermediate post-release updates. This scheduling rule
 belongs to Roma; tokenizer, model math and official prefix rollback stay unchanged.
 EOS, token exhaustion and cancellation remain distinct. A reached 256-token cap
 remains an explicit error even if release concurrently cancels the child task.
+The pinned model exposes synchronous throwing checkpoints around existing
+convolution and transformer evaluations and before text-model construction.
+The decoder checks task cancellation there and around its existing prefill/token
+evaluations. This skips unsubmitted obsolete work without adding evaluation
+fences or changing model math. An evaluation already running must still drain.
+Original nonthrowing model APIs delegate to the same implementation with a no-op
+checkpoint; completed EOS and token-cap handling retain their existing order.
 User cancellation and teardown remain terminal and await the actual drain; finish
 installs its cancellation handler before suspending and never initiates model load.
 No repetition filter silently truncates speech.

@@ -276,7 +276,7 @@ private func sessionDiagnosticsRetainTerminalOutcomeWithoutFinalEmission(outcome
     let end = try #require(log.values.first { $0.phase == .decodeEnd })
     switch outcome { case .error: #expect(end.outcome == .error)
     case .limit: #expect(end.outcome == .tokenLimit)
-    case .cooperative: Issue.record("Unexpected test outcome") }
+    case .cooperative, .lateEOS: Issue.record("Unexpected test outcome") }
     #expect(!log.values.contains { $0.phase == .presentationBegin || $0.phase == .finalEmitted })
     #expect(f.emissions.values.isEmpty)
 }
@@ -358,7 +358,7 @@ private struct SupersessionFixture: Sendable {
 private actor SupersessionModel: QwenRuntimeModel {
     static let liveText = "repeat repeat repeat. Earlier words."
     static let finalText = "repeat repeat repeat. Earlier words. Full captured ending."
-    enum Outcome: Sendable { case cooperative, error, limit }
+    enum Outcome: Sendable { case cooperative, error, limit, lateEOS }
     enum Failure: Error { case decoder }
     struct Request: Sendable { let samples: [Float]; let prefix: String; let language: String? }
     enum Event: Sendable { case entered(Int), cancelled(Int) }
@@ -390,6 +390,7 @@ private actor SupersessionModel: QwenRuntimeModel {
                 switch firstOutcome {
                 case .error: throw Failure.decoder
                 case .limit: return QwenDecodeResult(generatedText: "incomplete", generationTokens: 1, termination: .tokenLimit)
+                case .lateEOS: return QwenDecodeResult(generatedText: Self.liveText, generationTokens: 3, termination: .eos(151645))
                 case .cooperative: break
                 }
             }
@@ -465,5 +466,36 @@ private func expectError(_ error: Error, outcome: SupersessionModel.Outcome) {
     switch (outcome, error) {
     case (.error, SupersessionModel.Failure.decoder), (.limit, QwenRuntimeError.outputLimitReached): break
     default: Issue.record("Wrong terminal error: \(error)")
+    }
+}
+
+// Models release after the final EOS cancellation check, before native return/drain.
+@Test(.timeLimit(.minutes(1)), arguments: [0, 731])
+private func lateEOSAfterSupersessionPreservesCurrentTextAcceptance(tail: Int) async throws {
+    let f = try SupersessionFixture(blocked: [1], firstOutcome: .lateEOS)
+    let session = try await f.runtime.startStreaming(language: "English")
+    defer { f.cleanup(session.id) }
+    var text = session.events.makeAsyncIterator()
+    var calls = f.model.events.makeAsyncIterator()
+    var life = f.lifecycle.makeAsyncIterator()
+    try await f.runtime.appendAudio(Array(repeating: 0.1, count: 5_600), sessionID: session.id)
+    await entered(1, in: &calls)
+    if tail > 0 {
+        try await f.runtime.appendAudio(Array(repeating: 0.2, count: tail), sessionID: session.id)
+    }
+    let finish = Task { try await f.runtime.finishStreaming(sessionID: session.id) }
+    await marker(.finish, id: session.id, in: &life)
+    #expect(f.model.trace.cancelled.contains(1))
+    #expect(!f.model.trace.exited.contains(1))
+    await f.model.release(1)
+    try await finish.value
+    try await onlyFinal(&text, expected: tail == 0 ? SupersessionModel.liveText : SupersessionModel.finalText)
+    let requests = await f.model.requests
+    #expect(requests.count == (tail == 0 ? 1 : 2))
+    if tail > 0 {
+        #expect(requests[1].prefix == "")
+        let exited = try #require(f.model.trace.order.firstIndex(of: "exit:1"))
+        let finalEntered = try #require(f.model.trace.order.firstIndex(of: "enter:2"))
+        #expect(exited < finalEntered)
     }
 }

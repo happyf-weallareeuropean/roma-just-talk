@@ -39,7 +39,10 @@ public enum QwenGreedyDecoder {
         guard let tokenizer = model.tokenizer else { throw QwenDecodeError.tokenizerUnavailable }
         defer { Memory.clearCache() }
 
+        let checkpoint: (String) throws -> Void = { _ in try Task.checkCancellation() }
+        try Task.checkCancellation()
         let (features, mask, count) = model.preprocessAudio(MLXArray(samples))
+        try Task.checkCancellation()
         let base = model.buildPrompt(numAudioTokens: count, language: language)
             .asArray(Int32.self).map(Int.init)
         let prompt = tokenizer.decode(tokens: base, skipSpecialTokens: false)
@@ -49,9 +52,13 @@ public enum QwenGreedyDecoder {
         // Retokenize the whole prompt; independently tokenized fragments can merge differently.
         let ids = MLXArray(tokenizer.encode(text: prompt + prefix).map(Int32.init))
             .expandedDimensions(axis: 0)
+        try Task.checkCancellation()
         let cache = model.makeCache()
-        var logits = model(inputIds: ids, inputFeatures: features, featureAttentionMask: mask, cache: cache)
+        var logits = try model(inputIds: ids, inputFeatures: features, featureAttentionMask: mask,
+            cache: cache, checkpoint: checkpoint)
+        try Task.checkCancellation()
         eval(logits)
+        try Task.checkCancellation()
         var generated: [Int] = []
         var termination = QwenDecodeTermination.tokenLimit
         for _ in 0..<maxTokens {
@@ -63,8 +70,11 @@ public enum QwenGreedyDecoder {
             }
             generated.append(token)
             if generated.count == maxTokens { break }
-            logits = model(inputIds: MLXArray([Int32(token)]).expandedDimensions(axis: 0), cache: cache)
+            logits = try model(inputIds: MLXArray([Int32(token)]).expandedDimensions(axis: 0),
+                cache: cache, checkpoint: checkpoint)
+            try Task.checkCancellation()
             eval(logits)
+            try Task.checkCancellation()
         }
         // A reached output cap is terminal, even if release supersedes this pass.
         // Cancellation before reaching the cap is still checked inside the loop.

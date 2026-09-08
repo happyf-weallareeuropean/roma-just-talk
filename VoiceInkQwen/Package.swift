@@ -6,7 +6,7 @@ let package = Package(
     platforms: [.macOS(.v14)],
     products: [.library(name: "VoiceInkQwen", targets: ["VoiceInkQwen"])],
     dependencies: [
-        .package(url: "https://github.com/negentropi/mlx-audio-swift.git", revision: "ad2f08874165b054b3d3647003159858e1047bed"),
+        .package(url: "https://github.com/negentropi/mlx-audio-swift.git", revision: "2ad4b7ea03a5319053d5ad25f76bda1654513cda"),
         .package(url: "https://github.com/ml-explore/mlx-swift.git", exact: "0.31.4"),
         .package(url: "https://github.com/ml-explore/mlx-swift-lm.git", exact: "3.31.4"),
         .package(url: "https://github.com/huggingface/swift-huggingface.git", exact: "0.10.0")
