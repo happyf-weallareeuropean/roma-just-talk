@@ -65,6 +65,28 @@ an initially running target if closing its last isolated surface exits it, and
 restores the previously frontmost app. Existing documents and pages are not used
 as test targets.
 
+Electron existing-text fixtures position the caret with actual Command-Left and
+Right-arrow events before recording. VS Code can accept an AX selected-range
+write and report offset `17` while the editor still inserts at offset `0`.
+The helper therefore checks the original focused editor and unchanged fixture
+text before each PID-targeted key, then checks range, focus, and text again.
+This preparation never inserts a marker, changes the final transcript, or
+repairs the cursor after dictation.
+
+For a cursor-preparation regression, use the same isolated one-line fixture and
+frozen diagnostic on both helper versions. After preparation, type one unique
+ASCII marker with a real keyboard event, read its position in the complete
+document, and Undo back to the exact original text. Compare that with explicit
+keyboard positioning at `17` and an offset-`0` negative control on the same
+restored text. Require trusted, active, uniquely owned window/editor identity,
+all marker/Undo observations, and cleanup in every repetition. An AX readback
+alone cannot pass this regression. The known-bad `563f3486` helper reproduced an
+AX-`17`/actual-`0` disagreement in a valid four-repetition control; the candidate
+must put every prepared marker at `17` while preserving the negative control.
+Capture-permission interruptions invalidate the attempt and remain separate
+from the consent-cleared evidence. This control does not replace the full Roma
+runtime matrix or change the rendered `250ms` gate.
+
 Set `targetAvailabilityPolicy` to `launchIfNeeded` only on a dedicated test Mac.
 The local default remains `runningOnly` to avoid memory pressure and surprise app
 launches. `minimumTargetCount` controls the distinct-app coverage gate.

@@ -1284,15 +1284,48 @@ enum RuntimeAX {
             return true
         }
         let expectedRange = CFRange(location: scenario.cursorUTF16Offset, length: 0)
-        if setSelectedTextRange(expectedRange, on: textElement) {
+        if targetKind == .electron {
+            // VS Code can report a successful AX range change while its real caret stays at zero.
+            return positionElectronBaselineCursor(scenario, textElement: textElement)
+        }
+        return setSelectedTextRange(expectedRange, on: textElement)
+    }
+
+    private static func positionElectronBaselineCursor(
+        _ scenario: RuntimeTextScenario,
+        textElement: AXUIElement
+    ) -> Bool {
+        var processIdentifier: pid_t = 0
+        guard AXUIElementGetPid(textElement, &processIdentifier) == .success,
+              let windowElement = window(for: textElement) else { return false }
+        let appElement = AXUIElementCreateApplication(processIdentifier)
+        func hasOwnedBaselineEditor() -> Bool {
+            guard AXIsProcessTrusted(),
+                  NSWorkspace.shared.frontmostApplication?.processIdentifier == processIdentifier,
+                  let focused = focusedEditableElement(in: appElement, matchingWindow: windowElement),
+                  CFEqual(focused, textElement),
+                  text(from: focused) == scenario.initialText else {
+                return false
+            }
             return true
         }
-        guard targetKind == .electron else { return false }
-        postKey(keyCode: 123, flags: .maskCommand)
-        for _ in 0..<scenario.cursorUTF16Offset {
-            postKey(keyCode: 124, flags: [])
+        func postOwnedKey(_ keyCode: UInt16, flags: CGEventFlags) -> Bool {
+            guard hasOwnedBaselineEditor(),
+                  postKey(keyCode: keyCode, flags: flags, processIdentifier: processIdentifier) else {
+                return false
+            }
+            RunLoop.current.run(mode: .default, before: Date(timeIntervalSinceNow: 0.03))
+            return true
         }
-        return waitForSelectedTextRange(expectedRange, on: textElement, timeoutSeconds: 1)
+        guard postOwnedKey(123, flags: .maskCommand) else { return false }
+        for _ in 0..<scenario.cursorUTF16Offset {
+            guard postOwnedKey(124, flags: []) else { return false }
+        }
+        return waitForSelectedTextRange(
+            CFRange(location: scenario.cursorUTF16Offset, length: 0),
+            on: textElement,
+            timeoutSeconds: 1
+        ) && hasOwnedBaselineEditor()
     }
 
     static func matchesBaseline(
@@ -1580,15 +1613,16 @@ enum RuntimeAX {
         return false
     }
 
+    @discardableResult
     static func postKey(
         keyCode: UInt16,
         flags: CGEventFlags,
         processIdentifier: pid_t? = nil
-    ) {
+    ) -> Bool {
         guard let source = CGEventSource(stateID: .hidSystemState),
               let down = CGEvent(keyboardEventSource: source, virtualKey: CGKeyCode(keyCode), keyDown: true),
               let up = CGEvent(keyboardEventSource: source, virtualKey: CGKeyCode(keyCode), keyDown: false) else {
-            return
+            return false
         }
         down.flags = flags
         up.flags = flags
@@ -1599,6 +1633,7 @@ enum RuntimeAX {
             down.post(tap: .cghidEventTap)
             up.post(tap: .cghidEventTap)
         }
+        return true
     }
 
     private static func isEditable(_ element: AXUIElement) -> Bool {
