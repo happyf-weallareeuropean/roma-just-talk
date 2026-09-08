@@ -19,6 +19,7 @@ struct RuntimeVisibilityObservationTiming: Codable {
     let startedAfterKeyUpMilliseconds: Double
     var renderedCaptureMilliseconds: Double?
     var accessibilityReadMilliseconds: Double?
+    var precedingAccessibilityReadMilliseconds: Double?
     var domProofMilliseconds: Double?
     var targetRefreshMilliseconds: Double?
     var accessibilityReadSucceeded: Bool?
@@ -150,14 +151,18 @@ final class RuntimePreparedTarget {
                     (ProcessInfo.processInfo.systemUptime - keyUpAtSystemUptime) * 1_000
             )
             defer { observationTimings.append(timing) }
-            if renderedText == nil, renderedError == nil {
+            let precedingReadStarted = ProcessInfo.processInfo.systemUptime
+            let precedingText = RuntimeAX.text(from: textElement)
+            timing.precedingAccessibilityReadMilliseconds =
+                (ProcessInfo.processInfo.systemUptime - precedingReadStarted) * 1_000
+            var capturedFrame: RuntimeCapturedTextFrame?
+            if renderedError == nil {
                 let captureStarted = ProcessInfo.processInfo.systemUptime
                 do {
-                    renderedText = try renderedTextObserver.observeRenderedChange(
-                        keyUpAtSystemUptime: keyUpAtSystemUptime
-                    )
+                    capturedFrame = try renderedTextObserver.captureFrame()
                 } catch {
                     renderedError = String(describing: error)
+                    renderedText = nil
                 }
                 timing.renderedCaptureMilliseconds =
                     (ProcessInfo.processInfo.systemUptime - captureStarted) * 1_000
@@ -168,29 +173,41 @@ final class RuntimePreparedTarget {
             timing.accessibilityReadMilliseconds =
                 (ProcessInfo.processInfo.systemUptime - now) * 1_000
             timing.accessibilityReadSucceeded = currentText != nil
+            if let capturedFrame {
+                let inserted = currentText.flatMap { textScenario.insertedText(from: $0) }
+                do {
+                    renderedText = try renderedTextObserver.observeCapturedFrame(
+                        capturedFrame,
+                        accessibilityText: inserted,
+                        precedingAccessibilityText: precedingText.flatMap { textScenario.insertedText(from: $0) },
+                        keyUpAtSystemUptime: keyUpAtSystemUptime
+                    )
+                } catch {
+                    renderedError = String(describing: error)
+                    renderedText = nil
+                }
+            }
             if let currentText {
                 fullText = currentText
                 if let insertedText = textScenario.insertedText(from: currentText),
                    !insertedText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
                     if stableFullText != currentText {
-                        let replacedCandidate = stableFullText != nil
                         stableFullText = currentText
                         stableSinceSystemUptime = now
                         accessibilityText = insertedText
                         accessibilityLatency = max(0, now - keyUpAtSystemUptime) * 1_000
-                        if replacedCandidate {
-                            renderedText = nil
-                            renderedError = renderedTextObserver.beginObservation()
-                        }
                     }
                 } else if stableFullText != nil {
                     stableFullText = nil
                     stableSinceSystemUptime = nil
                     accessibilityText = nil
                     accessibilityLatency = nil
-                    renderedText = nil
-                    renderedError = renderedTextObserver.beginObservation()
                 }
+            } else {
+                stableFullText = nil
+                stableSinceSystemUptime = nil
+                accessibilityText = nil
+                accessibilityLatency = nil
             }
             // A valid empty value is expected before insertion. Periodic rediscovery still
             // recovers detached elements that keep returning their last cached value.
@@ -222,7 +239,8 @@ final class RuntimePreparedTarget {
                 now - $0 >= finalTextSettleSeconds
             } ?? false
             if finalTextIsStable,
-               (renderedText?.keyUpToRenderedTextMilliseconds != nil || renderedError != nil) {
+               (renderedText?.keyUpToRenderedTextMilliseconds != nil || renderedError != nil
+                || renderedTextObserver.associationError != nil) {
                 break
             }
             RunLoop.current.run(mode: .default, before: Date(timeIntervalSinceNow: 0.016))
@@ -246,7 +264,8 @@ final class RuntimePreparedTarget {
 
         if renderedText == nil {
             renderedText = renderedTextObserver.failureResult(
-                error: renderedError ?? "Stable rendered pixels were not observed before timeout"
+                error: renderedError ?? renderedTextObserver.associationError
+                    ?? "Stable rendered pixels associated with inserted AX text were not observed before timeout"
             )
         }
         let visibleLatency = RuntimeTextVisibilityAttribution.renderedLatency(

@@ -941,6 +941,121 @@ public struct RuntimeRenderedTextLatencyTracker: Sendable {
     }
 }
 
+/// Associates a capture only with matching AX reads bracketing that capture.
+public struct RuntimeRenderedTextAssociationTracker: Sendable {
+    private var baseline: [UInt8]?
+    private var previousFrame: [UInt8]
+    private var insertedText: String?
+    private var latencyTracker: RuntimeRenderedTextLatencyTracker?
+    private var acceptedSample: RuntimeRenderedTextLatencySample?
+    private var acceptedFrame: [UInt8]?
+    public private(set) var associationError: String?
+
+    public init(baseline: [UInt8]) {
+        self.baseline = baseline
+        previousFrame = baseline
+        latencyTracker = RuntimeRenderedTextLatencyTracker(baseline: baseline)
+    }
+
+    public mutating func observe(
+        current: [UInt8],
+        atSystemUptime: TimeInterval,
+        accessibilityText: String?,
+        precedingAccessibilityText: String?
+    ) -> RuntimeRenderedTextLatencySample? {
+        defer { previousFrame = current }
+        guard current.count == previousFrame.count, current.count.isMultiple(of: 4) else {
+            baseline = nil
+            latencyTracker = nil
+            insertedText = nil
+            acceptedSample = nil
+            acceptedFrame = nil
+            associationError = "Captured frame dimensions changed during text observation"
+            return nil
+        }
+        guard let accessibilityText else {
+            // Unknown text cannot label a frame as either pre-insertion or inserted text.
+            baseline = nil
+            latencyTracker = nil
+            insertedText = nil
+            acceptedSample = nil
+            acceptedFrame = nil
+            associationError = "AX text was unreadable; no confirmed pre-insertion frame"
+            return nil
+        }
+        guard let precedingAccessibilityText else {
+            baseline = nil
+            latencyTracker = nil
+            insertedText = nil
+            acceptedSample = nil
+            acceptedFrame = nil
+            associationError = "AX text before capture was unreadable; no confirmed pre-insertion frame"
+            return nil
+        }
+        guard precedingAccessibilityText == accessibilityText else {
+            // The capture straddled a text transition. Never assign its timestamp to either text.
+            acceptedSample = nil
+            acceptedFrame = nil
+            latencyTracker = baseline.map { RuntimeRenderedTextLatencyTracker(baseline: $0) }
+            if insertedText != nil {
+                baseline = nil
+                latencyTracker = nil
+            }
+            insertedText = nil
+            associationError = "AX text changed across the captured frame"
+            return nil
+        }
+        guard !accessibilityText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else {
+            baseline = current
+            latencyTracker = RuntimeRenderedTextLatencyTracker(baseline: current)
+            insertedText = nil
+            acceptedSample = nil
+            acceptedFrame = nil
+            associationError = nil
+            return nil
+        }
+        if insertedText != accessibilityText {
+            acceptedSample = nil
+            acceptedFrame = nil
+            if insertedText != nil {
+                // A replacement must change pixels relative to the preceding text epoch.
+                baseline = previousFrame
+                latencyTracker = RuntimeRenderedTextLatencyTracker(baseline: previousFrame)
+            }
+            insertedText = accessibilityText
+        }
+        guard let baseline, var latencyTracker else {
+            associationError = "Inserted text has no confirmed pre-insertion frame"
+            return nil
+        }
+        // Preserve proved timing through caret motion, but not disappearance of the change.
+        if let acceptedSample {
+            let stillChanged = RuntimeRenderedTextChangePolicy.compareRGBA(baseline: baseline, current: current)
+            let jitter = acceptedFrame.flatMap {
+                RuntimeRenderedTextChangePolicy.compareRGBA(baseline: $0, current: current)?.changedPixels
+            }
+            if stillChanged?.passed == true,
+               let jitter,
+               jitter <= RuntimeRenderedTextChangePolicy.maximumStableJitterPixels(
+                   requiredChangedPixels: acceptedSample.stabilitySample.baselineDifference.requiredChangedPixels
+               ) {
+                return acceptedSample
+            }
+            self.acceptedSample = nil
+            acceptedFrame = nil
+            latencyTracker = RuntimeRenderedTextLatencyTracker(baseline: baseline)
+        }
+        let sample = latencyTracker.observe(current: current, atSystemUptime: atSystemUptime)
+        if sample?.firstPersistentChangeAtSystemUptime != nil {
+            acceptedSample = sample
+            acceptedFrame = current
+        }
+        self.latencyTracker = latencyTracker
+        associationError = sample == nil ? "Incompatible rendered frames" : nil
+        return sample
+    }
+}
+
 public enum RuntimeTextVisibilityAttribution {
     public static func renderedLatency(
         accessibilityText: String?,

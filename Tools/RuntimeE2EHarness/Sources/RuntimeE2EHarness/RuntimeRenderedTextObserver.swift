@@ -16,7 +16,7 @@ final class RuntimeRenderedTextObserver {
     private let captureSession: RuntimeScreenshotCaptureSession
     private var baseline: RuntimeRGBAFrame?
     private var baselineError: String?
-    private var latencyTracker: RuntimeRenderedTextLatencyTracker?
+    private var latencyTracker: RuntimeRenderedTextAssociationTracker?
     private var lastSample: RuntimeRenderedTextStabilitySample?
 
     init(editableFrame: CGRect) throws {
@@ -32,7 +32,7 @@ final class RuntimeRenderedTextObserver {
         self.captureSession = captureSession
         let baseline = try captureSession.captureRGBA()
         self.baseline = baseline
-        latencyTracker = RuntimeRenderedTextLatencyTracker(baseline: baseline.bytes)
+        latencyTracker = RuntimeRenderedTextAssociationTracker(baseline: baseline.bytes)
     }
 
     func refreshBaseline() -> String? {
@@ -40,7 +40,7 @@ final class RuntimeRenderedTextObserver {
             baseline = try captureSession.captureRGBA()
             baselineError = nil
             latencyTracker = baseline.map {
-                RuntimeRenderedTextLatencyTracker(baseline: $0.bytes)
+                RuntimeRenderedTextAssociationTracker(baseline: $0.bytes)
             }
             lastSample = nil
         } catch {
@@ -56,12 +56,22 @@ final class RuntimeRenderedTextObserver {
         guard let baseline else {
             return baselineError ?? "Rendered-text baseline is unavailable"
         }
-        latencyTracker = RuntimeRenderedTextLatencyTracker(baseline: baseline.bytes)
+        latencyTracker = RuntimeRenderedTextAssociationTracker(baseline: baseline.bytes)
         lastSample = nil
         return nil
     }
 
-    func observeRenderedChange(
+    var associationError: String? { latencyTracker?.associationError }
+
+    func captureFrame() throws -> RuntimeCapturedTextFrame {
+        let frame = try captureSession.captureRGBA()
+        return RuntimeCapturedTextFrame(bytes: frame.bytes, atSystemUptime: ProcessInfo.processInfo.systemUptime)
+    }
+
+    func observeCapturedFrame(
+        _ current: RuntimeCapturedTextFrame,
+        accessibilityText: String?,
+        precedingAccessibilityText: String?,
         keyUpAtSystemUptime: TimeInterval
     ) throws -> RuntimeRenderedTextChangeResult? {
         guard var latencyTracker else {
@@ -69,15 +79,17 @@ final class RuntimeRenderedTextObserver {
                 baselineError ?? "Rendered-text baseline is unavailable"
             )
         }
-        let current = try captureSession.captureRGBA()
-        let observedAtSystemUptime = ProcessInfo.processInfo.systemUptime
-        guard let latencySample = latencyTracker.observe(
+        let latencySample = latencyTracker.observe(
             current: current.bytes,
-            atSystemUptime: observedAtSystemUptime
-        ) else {
-            throw RuntimeRenderedTextObserverError.incompatibleFrames
-        }
+            atSystemUptime: current.atSystemUptime,
+            accessibilityText: accessibilityText,
+            precedingAccessibilityText: precedingAccessibilityText
+        )
         self.latencyTracker = latencyTracker
+        guard let latencySample else {
+            lastSample = nil
+            return nil
+        }
         let sample = latencySample.stabilitySample
         lastSample = sample
         guard sample.stable,
@@ -110,6 +122,11 @@ final class RuntimeRenderedTextObserver {
         )
     }
 
+}
+
+struct RuntimeCapturedTextFrame {
+    let bytes: [UInt8]
+    let atSystemUptime: TimeInterval
 }
 
 private final class RuntimeScreenshotCaptureSession {

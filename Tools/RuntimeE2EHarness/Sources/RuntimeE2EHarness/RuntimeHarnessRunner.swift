@@ -451,7 +451,9 @@ enum RuntimeHarnessRunner {
         let voiceInkKeyUpToPipelineCompleteMilliseconds = latencyTrace?.keyUpToPipelineCompleteMilliseconds
         let voiceInkKeyUpToInteractionSettledMilliseconds = latencyTrace?.keyUpToInteractionSettledMilliseconds
         let pasteEventToVisibleMilliseconds = visibleText?.keyUpToVisibleMilliseconds.flatMap { visible in
-            voiceInkKeyUpToPasteEventMilliseconds.map { max(0, visible - $0) }
+            // Keep signed evidence: direct AX can precede completion, and an early pixel
+            // false positive must not masquerade as an instantaneous paste.
+            voiceInkKeyUpToPasteEventMilliseconds.map { visible - $0 }
         }
         return RuntimeCaseReport(
             id: runID,

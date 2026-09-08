@@ -15,9 +15,21 @@ VoiceInk or bypass CoreAudio, global shortcuts, transcription, clipboard paste,
 target-app focus, Accessibility observation, or rendered-screen verification.
 The report keeps Accessibility value arrival separate from first stable screen
 pixels so AX state is never presented as proof that a person could already see
-the text. Pixel sampling starts at key-up, independently of AX arrival, and a
-render is accepted only after two baseline-different frames are also mutually
-stable. AX may arrive later without moving the earlier rendered timestamp.
+the text. Pixel sampling starts at key-up. Each capture is bracketed by AX reads:
+matching confirmed empty text rolls the baseline forward
+to that captured frame, so persistent pre-insertion changes cannot become later
+text proof. Inserted text requires two mutually stable frames different from
+that baseline and matching nonempty AX reads on both sides of the capture.
+A painted frame keeps its capture timestamp, never the later confirmation time.
+A frame spanning an AX text transition is unassociated and cannot supply a
+backdated timestamp; subsequent matching reads may establish new pixel proof.
+Unreadable AX invalidates association until a confirmed empty frame establishes
+a new baseline. Replaced text must change pixels relative to the preceding frame.
+Captures continue through the existing final-text stability check, without an
+extra screenshot or artificial delay per iteration; the extra AX read is timed
+separately in the report. Unassociated pixels remain
+invalid evidence, not an AX-only latency. Paste-to-visible diagnostics retain
+signed differences rather than hiding impossible ordering behind zero.
 
 While routing fixture playback through BlackHole, the helper temporarily sets
 Roma's recording mute to Off and restores the prior preference afterward,

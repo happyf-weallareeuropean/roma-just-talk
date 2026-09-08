@@ -850,6 +850,107 @@ do {
     )
     print("PASS rendered-text policy rejects noise, requires stability, and remains AX-independent")
 
+    // D048AC: two stable nontext frames at22/61ms must not become later AX text proof.
+    var nontextPixels = stablePixels
+    for pixel in 0..<100 { nontextPixels[pixel * 4] = 0 }
+    var insertedPixels = nontextPixels
+    for pixel in 150..<270 { insertedPixels[pixel * 4] = 0 }
+    var association = RuntimeRenderedTextAssociationTracker(baseline: stablePixels)
+    try require(association.observe(current: nontextPixels, atSystemUptime: 0.022,
+                                    accessibilityText: "", precedingAccessibilityText: "") == nil, "empty AX cannot accept early pixels")
+    try require(association.observe(current: nontextPixels, atSystemUptime: 0.061,
+                                    accessibilityText: "", precedingAccessibilityText: "") == nil, "stable nontext pixels remain baseline")
+    try require(association.observe(current: nontextPixels, atSystemUptime: 0.182,
+                                    accessibilityText: "inserted", precedingAccessibilityText: "inserted")?.firstPersistentChangeAtSystemUptime == nil,
+                "first AX text with only the old pixels cannot prove rendering")
+    try require(association.observe(current: nontextPixels, atSystemUptime: 0.200,
+                                    accessibilityText: "inserted", precedingAccessibilityText: "inserted")?.firstPersistentChangeAtSystemUptime == nil,
+                "resetting to the original baseline must not resurrect old pixels")
+    _ = association.observe(current: insertedPixels, atSystemUptime: 0.220, accessibilityText: "inserted", precedingAccessibilityText: "inserted")
+    try require(association.observe(current: insertedPixels, atSystemUptime: 0.250,
+                                    accessibilityText: "inserted", precedingAccessibilityText: "inserted")?.firstPersistentChangeAtSystemUptime == 0.220,
+                "delayed paint reports the first genuine frame, not confirmation")
+
+    var caretAfterInsertion = insertedPixels
+    for pixel in 300..<310 { caretAfterInsertion[pixel * 4] = 0 }
+    try require(association.observe(current: caretAfterInsertion, atSystemUptime: 0.280,
+                                    accessibilityText: "inserted", precedingAccessibilityText: "inserted")?.firstPersistentChangeAtSystemUptime == 0.220,
+                "later caret changes must not move already proved unchanged-text timing")
+    try require(association.observe(current: nontextPixels, atSystemUptime: 0.310,
+                                    accessibilityText: "inserted", precedingAccessibilityText: "inserted")?.firstPersistentChangeAtSystemUptime == nil,
+                "disappeared glyphs must invalidate proof even if AX is stale")
+    _ = association.observe(current: insertedPixels, atSystemUptime: 0.340, accessibilityText: "inserted", precedingAccessibilityText: "inserted")
+    try require(association.observe(current: insertedPixels, atSystemUptime: 0.370,
+                                    accessibilityText: "inserted", precedingAccessibilityText: "inserted")?.firstPersistentChangeAtSystemUptime == 0.340,
+                "reappearing glyphs need new persistent proof")
+
+    var rerenderedPixels = insertedPixels
+    for pixel in 280..<380 { rerenderedPixels[pixel * 4] = 0 }
+    try require(association.observe(current: rerenderedPixels, atSystemUptime: 0.400,
+                                    accessibilityText: "inserted", precedingAccessibilityText: "inserted")?
+                    .firstPersistentChangeAtSystemUptime == nil,
+                "material re-render with stale AX requires fresh persistent pixels")
+
+    var paintFirst = RuntimeRenderedTextAssociationTracker(baseline: stablePixels)
+    _ = paintFirst.observe(current: nontextPixels, atSystemUptime: 0.061, accessibilityText: "", precedingAccessibilityText: "")
+    _ = paintFirst.observe(current: insertedPixels, atSystemUptime: 0.180, accessibilityText: "inserted", precedingAccessibilityText: "inserted")
+    try require(paintFirst.observe(current: insertedPixels, atSystemUptime: 0.210,
+                                  accessibilityText: "inserted", precedingAccessibilityText: "inserted")?.firstPersistentChangeAtSystemUptime == 0.180,
+                "paint after confirmed AX and before following AX read keeps its capture timestamp")
+    // Changed AX text needs new pixels, even after the old text already had valid proof.
+    _ = paintFirst.observe(current: insertedPixels, atSystemUptime: 0.240, accessibilityText: "replacement", precedingAccessibilityText: "replacement")
+    try require(paintFirst.observe(current: insertedPixels, atSystemUptime: 0.270,
+                                  accessibilityText: "replacement", precedingAccessibilityText: "replacement")?.firstPersistentChangeAtSystemUptime == nil,
+                "replacement text cannot reuse old glyphs")
+    var replacementPixels = insertedPixels
+    for pixel in 270..<390 { replacementPixels[pixel * 4] = 0 }
+    _ = paintFirst.observe(current: replacementPixels, atSystemUptime: 0.300, accessibilityText: "replacement", precedingAccessibilityText: "replacement")
+    try require(paintFirst.observe(current: replacementPixels, atSystemUptime: 0.330,
+                                  accessibilityText: "replacement", precedingAccessibilityText: "replacement")?.firstPersistentChangeAtSystemUptime == 0.300,
+                "replacement accepts its own persistent glyph change")
+
+    var unknown = RuntimeRenderedTextAssociationTracker(baseline: stablePixels)
+    _ = unknown.observe(current: nontextPixels, atSystemUptime: 0.020, accessibilityText: nil, precedingAccessibilityText: nil)
+    _ = unknown.observe(current: insertedPixels, atSystemUptime: 0.050, accessibilityText: "inserted", precedingAccessibilityText: "inserted")
+    try require(unknown.observe(current: insertedPixels, atSystemUptime: 0.080,
+                                accessibilityText: "inserted", precedingAccessibilityText: "inserted") == nil && unknown.associationError != nil,
+                "unknown AX cannot establish which pixels preceded insertion")
+    _ = unknown.observe(current: nontextPixels, atSystemUptime: 0.110, accessibilityText: "", precedingAccessibilityText: "")
+    _ = unknown.observe(current: insertedPixels, atSystemUptime: 0.140, accessibilityText: "inserted", precedingAccessibilityText: "inserted")
+    try require(unknown.observe(current: insertedPixels, atSystemUptime: 0.170,
+                                accessibilityText: "inserted", precedingAccessibilityText: "inserted")?.firstPersistentChangeAtSystemUptime == 0.140
+                && unknown.associationError == nil,
+                "a confirmed empty frame recovers association after AX rediscovery")
+    var malformed = RuntimeRenderedTextAssociationTracker(baseline: stablePixels)
+    let wrongSurfaceText = RuntimeTextScenario.existingText.insertedText(from: "unrelated text")
+    try require(wrongSurfaceText == nil, "missing existing-text markers are unknown, not empty")
+    _ = malformed.observe(current: nontextPixels, atSystemUptime: 0.020, accessibilityText: wrongSurfaceText, precedingAccessibilityText: wrongSurfaceText)
+    _ = malformed.observe(current: insertedPixels, atSystemUptime: 0.050, accessibilityText: "inserted", precedingAccessibilityText: "inserted")
+    try require(malformed.observe(current: insertedPixels, atSystemUptime: 0.080,
+                                  accessibilityText: "inserted", precedingAccessibilityText: "inserted") == nil,
+                "malformed scenario text must not establish a confirmed empty baseline")
+    var laggedAX = RuntimeRenderedTextAssociationTracker(baseline: stablePixels)
+    _ = laggedAX.observe(current: insertedPixels, atSystemUptime: 0.180, accessibilityText: "", precedingAccessibilityText: "")
+    _ = laggedAX.observe(current: insertedPixels, atSystemUptime: 0.210, accessibilityText: "inserted", precedingAccessibilityText: "inserted")
+    try require(laggedAX.observe(current: insertedPixels, atSystemUptime: 0.240,
+                                 accessibilityText: "inserted", precedingAccessibilityText: "inserted")?.firstPersistentChangeAtSystemUptime == nil,
+                "paint paired with empty AX cannot be backdated after AX catches up")
+    var spanningRead = RuntimeRenderedTextAssociationTracker(baseline: stablePixels)
+    _ = spanningRead.observe(current: nontextPixels, atSystemUptime: 0.022,
+                             accessibilityText: "", precedingAccessibilityText: "")
+    _ = spanningRead.observe(current: nontextPixels, atSystemUptime: 0.061,
+                             accessibilityText: "", precedingAccessibilityText: "")
+    try require(spanningRead.observe(current: insertedPixels, atSystemUptime: 0.150,
+                                     accessibilityText: "inserted", precedingAccessibilityText: "") == nil,
+                "a capture spanning an AX transition must not claim an ambiguous timestamp")
+    _ = spanningRead.observe(current: insertedPixels, atSystemUptime: 0.180,
+                             accessibilityText: "inserted", precedingAccessibilityText: "inserted")
+    try require(spanningRead.observe(current: insertedPixels, atSystemUptime: 0.210,
+                                     accessibilityText: "inserted", precedingAccessibilityText: "inserted")?
+                    .firstPersistentChangeAtSystemUptime == 0.180,
+                "matching AX bracket establishes a later genuine captured timestamp, not an AX timestamp")
+    print("PASS rendered association rejects pre-text/unknown/replaced pixels and preserves matched paint time")
+
     let latencies = [100.0, 200.0, 300.0, 400.0, 500.0]
     try require(RuntimeStatistics.percentile(50, values: latencies) ?? -1, equals: 300, "p50 latency")
     try require(RuntimeStatistics.percentile(95, values: latencies) ?? -1, equals: 500, "p95 latency")
