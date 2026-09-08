@@ -10,15 +10,20 @@ enum LanguageDisplayMode {
 struct LanguageSelectionView: View {
     @ObservedObject var transcriptionModelManager: TranscriptionModelManager
     @AppStorage(VoiceInkUserDefaultsKey.selectedTranscriptionLanguage)
-    private var selectedLanguage = VoiceInkDefaultSettings.macOS.selectedTranscriptionLanguage
+    private var preferredLanguage = VoiceInkDefaultSettings.macOS.selectedTranscriptionLanguage
+    @State private var settingsRevision = 0
     // Add display mode parameter with full as the default
     var displayMode: LanguageDisplayMode = .full
 
+    private var selectedLanguage: String {
+        languageSelectionFacts?.compatibleLanguage(preferredLanguage) ?? preferredLanguage
+    }
+
     private func updateLanguage(_ language: String) {
-        guard selectedLanguage != language else { return }
+        guard preferredLanguage != language else { return }
 
         // Update UI state - the UserDefaults updating is now automatic with @AppStorage
-        selectedLanguage = language
+        preferredLanguage = language
 
         VoiceInkTranscriptionPromptPreference.saveLocalWhisperPromptForSelectedLanguage()
         UserDefaults.standard.synchronize()
@@ -29,13 +34,8 @@ struct LanguageSelectionView: View {
     }
 
     private var languageSelectionFacts: VoiceInkTranscriptionLanguageSelectionFacts? {
-        transcriptionModelManager.currentTranscriptionModel?.transcriptionLanguageSelectionFacts
-    }
-
-    private func useCompatibleLanguageForCurrentModel() {
-        guard let facts = languageSelectionFacts else { return }
-        let plan = facts.repairPlan(for: selectedLanguage)
-        plan.applyRuntimeState(saveSelectedLanguage: updateLanguage)
+        _ = settingsRevision
+        return transcriptionModelManager.currentTranscriptionModel?.transcriptionLanguageSelectionFacts
     }
 
     private var nativeAppleAssetControl: some View {
@@ -65,14 +65,8 @@ struct LanguageSelectionView: View {
                 menuItemView
             }
         }
-        .onAppear {
-            useCompatibleLanguageForCurrentModel()
-        }
-        .onChange(of: transcriptionModelManager.currentTranscriptionModel?.name) { _, _ in
-            useCompatibleLanguageForCurrentModel()
-        }
         .onReceive(NotificationCenter.default.publisher(for: .AppSettingsDidChange)) { _ in
-            useCompatibleLanguageForCurrentModel()
+            settingsRevision &+= 1
         }
     }
 
@@ -131,7 +125,6 @@ struct LanguageSelectionView: View {
                         .foregroundColor(.secondary)
                     }
                 } else if facts.shouldShowDefaultLanguageOnly {
-                    // For English-only models, force set language to English
                     VStack(alignment: .leading, spacing: 8) {
                         Text(VoiceInkTranscriptionLanguagePresentation.englishOnlyLabel)
                             .font(.subheadline)
@@ -207,9 +200,6 @@ struct LanguageSelectionView: View {
                 }
             } else {
                 englishOnlyMenuButton
-                    .onAppear {
-                        updateLanguage(VoiceInkDefaultSettings.macOS.selectedTranscriptionLanguage)
-                    }
             }
         }
     }

@@ -269,59 +269,68 @@ final class LanguageCatalogTests: XCTestCase {
         XCTAssertEqual(whisperFacts.compatibleLanguage("fr"), "fr")
     }
 
-    func testTranscriptionLanguageSelectionFactsBuildRepairPlanOnlyWhenSelectionChanges() {
-        let facts = VoiceInkTranscriptionLanguageSelectionFacts(
-            source: .whisper,
-            isMultilingual: true,
-            languageOptions: VoiceInkLanguageCatalog.whisperLanguages()
-        )
-
-        XCTAssertEqual(
-            facts.repairPlan(for: "fr"),
-            VoiceInkTranscriptionLanguageRepairPlan(
-                selectedLanguage: "fr",
-                languageToSave: nil
-            )
-        )
-        XCTAssertEqual(
-            facts.repairPlan(for: "not-a-language"),
-            VoiceInkTranscriptionLanguageRepairPlan(
-                selectedLanguage: VoiceInkLanguageCatalog.autoDetectCode,
-                languageToSave: VoiceInkLanguageCatalog.autoDetectCode
-            )
-        )
+    func testModelEffectiveLanguagePreservesAutoAcrossEnglishOnlyAndBilingualModels() {
+        withLanguageDefaults { defaults in
+            let english = languageFacts(.fluidAudio, multilingual: false)
+            let bilingual = languageFacts(.qwen)
+            VoiceInkTranscriptionLanguagePreference.saveSelectedLanguage("auto", to: defaults)
+            XCTAssertEqual(VoiceInkTranscriptionLanguagePreference.effectiveLanguage(for: english, from: defaults), "en")
+            XCTAssertEqual(VoiceInkTranscriptionLanguagePreference.requestLanguage(for: english, from: defaults), "en")
+            XCTAssertEqual(VoiceInkTranscriptionLanguagePreference.effectiveLanguage(for: bilingual, from: defaults), "auto")
+            XCTAssertNil(VoiceInkTranscriptionLanguagePreference.requestLanguage(for: bilingual, from: defaults))
+            XCTAssertEqual(VoiceInkTranscriptionLanguagePreference.storedLanguage(from: defaults), "auto")
+        }
     }
 
-    func testTranscriptionLanguageSelectionFactsRepairPlanPreservesNativeAppleEnglishFallback() {
-        let facts = VoiceInkTranscriptionLanguageSelectionFacts(
-            source: .nativeApple,
-            isMultilingual: true,
-            languageOptions: VoiceInkLanguageCatalog.nativeApple
-        )
-
-        XCTAssertEqual(
-            facts.repairPlan(for: "bad-language"),
-            VoiceInkTranscriptionLanguageRepairPlan(
-                selectedLanguage: "en-US",
-                languageToSave: "en-US"
-            )
-        )
+    func testModelEffectiveLanguagePreservesExplicitEnglishAndLaterUserChoices() {
+        withLanguageDefaults { defaults in
+            let bilingual = languageFacts(.qwen)
+            VoiceInkTranscriptionLanguagePreference.saveSelectedLanguage("en", to: defaults)
+            XCTAssertEqual(VoiceInkTranscriptionLanguagePreference.requestLanguage(for: bilingual, from: defaults), "en")
+            XCTAssertEqual(VoiceInkTranscriptionLanguagePreference.storedLanguage(from: defaults), "en")
+            VoiceInkTranscriptionLanguagePreference.saveSelectedLanguage("zh", to: defaults)
+            XCTAssertEqual(VoiceInkTranscriptionLanguagePreference.requestLanguage(for: languageFacts(.whisper, multilingual: false), from: defaults), "en")
+            XCTAssertEqual(VoiceInkTranscriptionLanguagePreference.requestLanguage(for: bilingual, from: defaults), "zh")
+            VoiceInkTranscriptionLanguagePreference.saveSelectedLanguage("auto", to: defaults)
+            XCTAssertNil(VoiceInkTranscriptionLanguagePreference.requestLanguage(for: bilingual, from: defaults))
+        }
     }
 
-    func testTranscriptionLanguageRepairPlanAppliesOnlyWhenLanguageChanges() {
-        var savedLanguages: [String] = []
-        VoiceInkTranscriptionLanguageRepairPlan(
-            selectedLanguage: "fr",
-            languageToSave: nil
-        )
-        .applyRuntimeState { savedLanguages.append($0) }
-        VoiceInkTranscriptionLanguageRepairPlan(
-            selectedLanguage: "en-US",
-            languageToSave: "en-US"
-        )
-        .applyRuntimeState { savedLanguages.append($0) }
+    func testModelEffectiveLanguageResolvesUnsupportedPreferencesWithoutPersistingFallbacks() {
+        withLanguageDefaults { defaults in
+            XCTAssertNil(VoiceInkTranscriptionLanguagePreference.requestLanguage(for: languageFacts(.qwen), from: defaults))
+            XCTAssertNil(VoiceInkTranscriptionLanguagePreference.storedLanguage(from: defaults))
+            VoiceInkTranscriptionLanguagePreference.saveSelectedLanguage("fr-FR", to: defaults)
+            XCTAssertEqual(VoiceInkTranscriptionLanguagePreference.requestLanguage(for: languageFacts(.nativeApple), from: defaults), "fr-FR")
+            XCTAssertNil(VoiceInkTranscriptionLanguagePreference.requestLanguage(for: languageFacts(.qwen), from: defaults))
+            XCTAssertNil(VoiceInkTranscriptionLanguagePreference.requestLanguage(for: languageFacts(.provider(.groq)), from: defaults))
+            XCTAssertEqual(VoiceInkTranscriptionLanguagePreference.storedLanguage(from: defaults), "fr-FR")
+            VoiceInkTranscriptionPromptPreference.savePrompt("Saved French prompt", to: defaults)
+            VoiceInkLocalWhisperPromptCatalog.saveCustomPrompt("Edited auto prompt", for: "auto", to: defaults)
+            XCTAssertEqual(VoiceInkTranscriptionPromptPreference.requestPrompt(
+                forEffectiveLanguage: "auto", from: defaults
+            ), "Edited auto prompt")
+            XCTAssertEqual(VoiceInkTranscriptionPromptPreference.requestPrompt(
+                forEffectiveLanguage: "fr-FR", from: defaults
+            ), "Saved French prompt")
+            XCTAssertEqual(VoiceInkTranscriptionPromptPreference.storedPrompt(from: defaults), "Saved French prompt")
+            VoiceInkTranscriptionLanguagePreference.saveSelectedLanguage("auto", to: defaults)
+            XCTAssertEqual(VoiceInkTranscriptionLanguagePreference.requestLanguage(for: languageFacts(.nativeApple), from: defaults), "en-US")
+            XCTAssertEqual(VoiceInkTranscriptionLanguagePreference.requestLanguage(for: languageFacts(.provider(.cartesia)), from: defaults), "en")
+            XCTAssertEqual(VoiceInkTranscriptionLanguagePreference.storedLanguage(from: defaults), "auto")
+        }
+    }
 
-        XCTAssertEqual(savedLanguages, ["en-US"])
+    private func languageFacts(_ source: VoiceInkTranscriptionLanguageSource, multilingual: Bool = true) -> VoiceInkTranscriptionLanguageSelectionFacts {
+        VoiceInkTranscriptionLanguageSelectionFacts(source: source, isMultilingual: multilingual,
+            languageOptions: VoiceInkTranscriptionLanguageSupport.languages(for: source, isMultilingual: multilingual))
+    }
+
+    private func withLanguageDefaults(_ body: (UserDefaults) -> Void) {
+        let suite = "LanguageCatalogTests.\(UUID().uuidString)"
+        let defaults = UserDefaults(suiteName: suite)!
+        defer { defaults.removePersistentDomain(forName: suite) }
+        body(defaults)
     }
 
     func testNativeAppleLanguageAssetPresentationPreservesProgressAndIconStates() {

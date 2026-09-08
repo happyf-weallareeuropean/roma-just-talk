@@ -2,8 +2,9 @@ import SwiftUI
 import VoiceInkCore
 
 struct ModelSettingsView: View {
+    @EnvironmentObject private var transcriptionModelManager: TranscriptionModelManager
     @AppStorage(VoiceInkUserDefaultsKey.selectedTranscriptionLanguage)
-    private var selectedLanguage = VoiceInkDefaultSettings.macOS.selectedTranscriptionLanguage
+    private var preferredLanguage = VoiceInkDefaultSettings.macOS.selectedTranscriptionLanguage
     @AppStorage(VoiceInkVADPreference.userDefaultsKey)
     private var isVADEnabled = VoiceInkVADPreference.defaultIsEnabled
     @AppStorage(VoiceInkAppendTrailingSpacePreference.userDefaultsKey)
@@ -19,6 +20,11 @@ struct ModelSettingsView: View {
     private let cleanupPresentation = VoiceInkTranscriptionCleanupPresentation.macOS
     private let localWhisperPromptPresentation = VoiceInkLocalWhisperPromptCatalog.macOSSettingsPresentation
 
+    private var selectedLanguage: String {
+        transcriptionModelManager.currentTranscriptionModel?.transcriptionLanguageSelectionFacts
+            .compatibleLanguage(preferredLanguage) ?? preferredLanguage
+    }
+
     private func languagePrompt(for language: String) -> String {
         VoiceInkLocalWhisperPromptCatalog.prompt(
             for: language,
@@ -27,8 +33,7 @@ struct ModelSettingsView: View {
     }
 
     private func saveCustomPrompt(_ prompt: String, for language: String) {
-        VoiceInkLocalWhisperPromptCatalog.saveCustomPrompt(prompt, for: language)
-        VoiceInkTranscriptionPromptPreference.saveLocalWhisperPromptForSelectedLanguage()
+        VoiceInkTranscriptionPromptPreference.saveLocalWhisperCustomPrompt(prompt, for: language)
         UserDefaults.standard.synchronize()
     }
 

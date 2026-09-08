@@ -3210,8 +3210,32 @@ public enum VoiceInkTranscriptionPromptPreference {
         return prompt
     }
 
+    public static func saveLocalWhisperCustomPrompt(
+        _ prompt: String,
+        for language: String,
+        to defaults: UserDefaults = .standard
+    ) {
+        VoiceInkLocalWhisperPromptCatalog.saveCustomPrompt(prompt, for: language, to: defaults)
+        // Editing a model's fallback prompt must not replace the preferred language's prompt.
+        if language == VoiceInkTranscriptionLanguagePreference.selectedMacOSLanguage(from: defaults) {
+            saveLocalWhisperPromptForSelectedLanguage(from: defaults)
+        }
+    }
+
     public static func requestPrompt(from defaults: UserDefaults = .standard) -> String? {
         requestPrompt(storedPrompt(from: defaults))
+    }
+
+    public static func requestPrompt(
+        forEffectiveLanguage language: String,
+        from defaults: UserDefaults = .standard
+    ) -> String? {
+        guard language != VoiceInkTranscriptionLanguagePreference.selectedLanguage(from: defaults) else {
+            return requestPrompt(from: defaults)
+        }
+        return requestPrompt(VoiceInkLocalWhisperPromptCatalog.prompt(
+            for: language, customPrompts: VoiceInkLocalWhisperPromptCatalog.storedCustomPrompts(from: defaults)
+        ))
     }
 
     public static func requestPrompt(_ prompt: String?) -> String? {
@@ -3228,6 +3252,7 @@ public enum VoiceInkTranscriptionPromptPreference {
 }
 
 public enum VoiceInkTranscriptionLanguagePreference {
+    // SelectedLanguage stores user intent; model compatibility must never overwrite it.
     public static func storedLanguage(from defaults: UserDefaults = .standard) -> String? {
         defaults.string(forKey: VoiceInkUserDefaultsKey.selectedTranscriptionLanguage)
     }
@@ -3260,27 +3285,25 @@ public enum VoiceInkTranscriptionLanguagePreference {
         )
     }
 
+    public static func effectiveLanguage(
+        for model: VoiceInkTranscriptionLanguageSelectionFacts,
+        from defaults: UserDefaults = .standard
+    ) -> String {
+        model.compatibleLanguage(storedLanguage(from: defaults))
+    }
+
+    public static func requestLanguage(
+        for model: VoiceInkTranscriptionLanguageSelectionFacts,
+        from defaults: UserDefaults = .standard
+    ) -> String? {
+        VoiceInkTranscriptionLanguageSupport.requestLanguage(effectiveLanguage(for: model, from: defaults))
+    }
+
     public static func saveSelectedLanguage(
         _ language: String,
         to defaults: UserDefaults = .standard
     ) {
         defaults.set(language, forKey: VoiceInkUserDefaultsKey.selectedTranscriptionLanguage)
-    }
-
-    @discardableResult
-    public static func saveCompatibleLanguage(
-        _ language: String?,
-        languages: [String: String],
-        to defaults: UserDefaults = .standard,
-        prefersNativeAppleEnglish: Bool = false
-    ) -> String {
-        let compatibleLanguage = VoiceInkTranscriptionLanguageSupport.validLanguageOrFallback(
-            language,
-            languages: languages,
-            prefersNativeAppleEnglish: prefersNativeAppleEnglish
-        )
-        saveSelectedLanguage(compatibleLanguage, to: defaults)
-        return compatibleLanguage
     }
 
     public static func clearSelectedLanguage(from defaults: UserDefaults = .standard) {

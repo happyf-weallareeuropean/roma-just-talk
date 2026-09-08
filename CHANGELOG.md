@@ -2,6 +2,8 @@
 
 ## v1.95.1 - 2026-09-07
 
+- Preserve your transcription language when switching models: using an English-only model no longer replaces Auto-detect or Chinese before returning to Chinese + English. Explicit English choices remain unchanged.
+
 - Fixed Chinese + English model setup failing after the download completed; verify and install the pinned files directly without requiring a separate model cache.
 
 - Fit onboarding within the active Mac desktop, keep navigation visible while welcome, permission, and tutorial content scrolls, and preserve the main window’s frame when repeating setup.

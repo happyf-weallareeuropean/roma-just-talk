@@ -20,6 +20,45 @@ private final class ModelChangeNotificationRecorder: NSObject {
 
 @Suite(.serialized)
 struct TranscriptionModelManagerTests {
+    @Test @MainActor func modelSwitchesPreserveLanguageIntentAcrossReloadAndRefresh() {
+        assertLanguageIntentSurvivesModelSwitches(bilingualModelName: "ggml-tiny")
+    }
+
+    @Test(.enabled(if: !VoiceInkSystemArchitecture.isIntelMac && ProcessInfo.processInfo.isOperatingSystemAtLeast(
+        OperatingSystemVersion(majorVersion: 15, minorVersion: 0, patchVersion: 0)
+    )))
+    @MainActor func qwenModelSwitchesPreserveLanguageIntentAcrossReloadAndRefresh() {
+        assertLanguageIntentSurvivesModelSwitches(bilingualModelName: VoiceInkTranscriptionModelCatalog.localQwenModelName)
+    }
+
+    @MainActor private func assertLanguageIntentSurvivesModelSwitches(bilingualModelName: String) {
+        withFreshModelDefaults {
+            let whisper = makeWhisperManager()
+            let fluid = FluidAudioModelManager()
+            let manager = TranscriptionModelManager(whisperModelManager: whisper, fluidAudioModelManager: fluid)
+            let english = TranscriptionModelRegistry.defaultMacOSFluidAudioModel
+            guard let bilingual = manager.allAvailableModels.first(where: { $0.name == bilingualModelName }) else {
+                Issue.record("Missing bilingual model")
+                return
+            }
+            for preference in ["auto", "en", "zh"] {
+                VoiceInkTranscriptionLanguagePreference.saveSelectedLanguage(preference)
+                manager.setDefaultTranscriptionModel(english)
+                #expect(manager.currentTranscriptionModel?.name == english.name)
+                manager.refreshAllAvailableModels()
+                manager.loadCurrentTranscriptionModel()
+                #expect(english.transcriptionLanguageSelectionFacts.compatibleLanguage(VoiceInkTranscriptionLanguagePreference.storedLanguage()) == "en")
+                #expect(persistedPreference(VoiceInkUserDefaultsKey.selectedTranscriptionLanguage) == preference)
+                manager.setDefaultTranscriptionModel(bilingual)
+                #expect(manager.currentTranscriptionModel?.name == bilingual.name)
+                manager.refreshAllAvailableModels()
+                manager.loadCurrentTranscriptionModel()
+                #expect(bilingual.transcriptionLanguageSelectionFacts.compatibleLanguage(VoiceInkTranscriptionLanguagePreference.storedLanguage()) == preference)
+                #expect(persistedPreference(VoiceInkUserDefaultsKey.selectedTranscriptionLanguage) == preference)
+            }
+        }
+    }
+
     @Test @MainActor func refreshingRegisteredFallbackDoesNotPersistIt() {
         withFreshModelDefaults {
             let whisper = makeWhisperManager()
@@ -132,7 +171,7 @@ struct TranscriptionModelManagerTests {
         let domain = defaultsDomainName
         let previousDomain = defaults.persistentDomain(forName: domain) ?? [:]
         let previousRegistration = defaults.volatileDomain(forName: UserDefaults.registrationDomain)
-        let keys = [VoiceInkUserDefaultsKey.currentTranscriptionModel, VoiceInkUserDefaultsKey.selectedTranscriptionLanguage]
+        let keys = [VoiceInkUserDefaultsKey.currentTranscriptionModel, VoiceInkUserDefaultsKey.selectedTranscriptionLanguage, VoiceInkUserDefaultsKey.transcriptionPrompt]
         for key in keys { defaults.removeObject(forKey: key) }
         defaults.register(defaults: [
             VoiceInkUserDefaultsKey.currentTranscriptionModel: VoiceInkTranscriptionModelCatalog.defaultMacOSFluidAudioModelName,

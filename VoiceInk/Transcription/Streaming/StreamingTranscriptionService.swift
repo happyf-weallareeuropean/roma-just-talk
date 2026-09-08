@@ -177,7 +177,7 @@ class StreamingTranscriptionService {
         provider.setLatencyTraceToken(traceToken)
         self.provider = provider
 
-        let selectedLanguage = VoiceInkTranscriptionLanguagePreference.selectedLanguage()
+        let selectedLanguage = VoiceInkTranscriptionLanguagePreference.effectiveLanguage(for: model.transcriptionLanguageSelectionFacts)
         logger.notice("Streaming start requested model=\(model.displayName, privacy: .public) language=\(selectedLanguage, privacy: .public)")
 
         let providerConnectSpan = latencyTrace.begin("streaming_provider.connect", token: traceToken)

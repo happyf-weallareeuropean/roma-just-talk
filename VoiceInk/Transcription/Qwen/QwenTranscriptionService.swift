@@ -21,8 +21,7 @@ final class QwenTranscriptionService: TranscriptionService {
     func transcribe(audioURL: URL, model: any TranscriptionModel) async throws -> String {
         let samples = try await AudioProcessor().processAudioToSamples(audioURL)
         try Task.checkCancellation()
-        let selected = VoiceInkTranscriptionLanguagePreference.storedLanguage()
-        let language = selected == VoiceInkLanguageCatalog.autoDetectCode ? nil : selected
+        let language = VoiceInkTranscriptionLanguagePreference.requestLanguage(for: model.transcriptionLanguageSelectionFacts)
         return try await runtime().transcribe(samples: samples, language: language)
     }
 

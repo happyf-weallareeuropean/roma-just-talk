@@ -22,6 +22,21 @@ final class LocalWhisperTranscriptionFlowTests: XCTestCase {
                 mapsThrownAudioSampleErrors: false
             )
         )
+        let englishOnlyRequest = VoiceInkLocalWhisperTranscriptionRequest.macOS(
+            audioURL: audioURL, isMultilingual: false, defaults: defaults
+        )
+        XCTAssertEqual(englishOnlyRequest.language, "en")
+        XCTAssertEqual(englishOnlyRequest.prompt, VoiceInkLocalWhisperPromptCatalog.prompt(for: "en"))
+        XCTAssertEqual(VoiceInkTranscriptionLanguagePreference.storedLanguage(from: defaults), "fr")
+        XCTAssertEqual(VoiceInkTranscriptionPromptPreference.storedPrompt(from: defaults), "custom local prompt")
+        XCTAssertEqual(VoiceInkLocalWhisperTranscriptionRequest.macOS(audioURL: audioURL, defaults: defaults).language, "fr")
+        VoiceInkTranscriptionPromptPreference.saveLocalWhisperCustomPrompt("English prompt edit", for: "en", to: defaults)
+        XCTAssertEqual(VoiceInkLocalWhisperTranscriptionRequest.macOS(
+            audioURL: audioURL, isMultilingual: false, defaults: defaults
+        ).prompt, "English prompt edit")
+        XCTAssertEqual(VoiceInkTranscriptionPromptPreference.storedPrompt(from: defaults), "custom local prompt")
+        VoiceInkTranscriptionPromptPreference.saveLocalWhisperCustomPrompt("French prompt edit", for: "fr", to: defaults)
+        XCTAssertEqual(VoiceInkLocalWhisperTranscriptionRequest.macOS(audioURL: audioURL, defaults: defaults).prompt, "French prompt edit")
         XCTAssertEqual(
             VoiceInkLocalWhisperTranscriptionRequest.iOS(audioURL: audioURL, language: "de", prompt: nil),
             VoiceInkLocalWhisperTranscriptionRequest(

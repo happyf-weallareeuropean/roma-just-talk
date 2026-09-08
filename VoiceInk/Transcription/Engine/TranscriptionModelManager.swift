@@ -69,7 +69,6 @@ class TranscriptionModelManager: ObservableObject {
             restoreSavedModel: {
                 guard let savedModel else { return }
                 currentTranscriptionModel = savedModel
-                ensureSelectedLanguageIsSupported(by: savedModel)
                 notifyCurrentModelDidChange()
             }
         )
@@ -92,7 +91,6 @@ class TranscriptionModelManager: ObservableObject {
 
         self.currentTranscriptionModel = model
         VoiceInkCurrentTranscriptionModelPreference.saveModelName(model.name)
-        ensureSelectedLanguageIsSupported(by: model)
 
         let localWhisperRuntimeUpdate = model
             .transcriptionRuntimeResourcePlan
@@ -110,19 +108,6 @@ class TranscriptionModelManager: ObservableObject {
 
     func awaitQwenRecordingSelection() async {
         await qwenModelManager?.awaitRecordingSelection()
-    }
-
-    private func ensureSelectedLanguageIsSupported(by model: any TranscriptionModel) {
-        let plan = model.transcriptionLanguageSelectionFacts.repairPlan(
-            for: VoiceInkTranscriptionLanguagePreference.storedLanguage()
-        )
-
-        plan.applyRuntimeState { languageToSave in
-            VoiceInkTranscriptionLanguagePreference.saveSelectedLanguage(languageToSave)
-            VoiceInkTranscriptionPromptPreference.saveLocalWhisperPromptForSelectedLanguage()
-            UserDefaults.standard.synchronize()
-            NotificationCenter.default.post(name: .languageDidChange, object: nil)
-        }
     }
 
     private func availabilityFacts(for model: any TranscriptionModel) -> VoiceInkTranscriptionModelAvailabilityFacts {
@@ -184,7 +169,6 @@ class TranscriptionModelManager: ObservableObject {
            let updatedModel = allAvailableModels.first(where: { $0.name == currentName }) {
             // Refreshing metadata must not turn the registered fallback into a saved user choice.
             currentTranscriptionModel = updatedModel
-            ensureSelectedLanguageIsSupported(by: updatedModel)
             notifyCurrentModelDidChange()
         }
     }

@@ -1588,63 +1588,25 @@ public struct VoiceInkPowerModeLanguageApplicationPlan: Equatable, Sendable {
         postLanguageDidChange()
     }
 
-    public static func plan(
-        selectedLanguage: String?,
-        preferredModelName: String?,
-        currentModelName: String?,
-        availableModels: [VoiceInkPowerModeTranscriptionModelFacts]
-    ) -> Self {
-        guard let selectedLanguage else {
-            return Self(languageToSave: nil)
-        }
-
-        guard let model = modelForLanguageApplication(
-            preferredModelName: preferredModelName,
-            currentModelName: currentModelName,
-            availableModels: availableModels
-        ) else {
-            return Self(languageToSave: selectedLanguage)
-        }
-
-        return Self(
-            languageToSave: VoiceInkTranscriptionLanguageSupport.validLanguageOrFallback(
-                selectedLanguage,
-                languages: model.languageOptions,
-                prefersNativeAppleEnglish: model.prefersNativeAppleEnglish
-            )
-        )
+    public static func plan(selectedLanguage: String?) -> Self {
+        // Power Mode stores an explicit choice or restores a snapshot of user intent.
+        Self(languageToSave: selectedLanguage)
     }
 
-    private static func modelForLanguageApplication(
-        preferredModelName: String?,
-        currentModelName: String?,
-        availableModels: [VoiceInkPowerModeTranscriptionModelFacts]
-    ) -> VoiceInkPowerModeTranscriptionModelFacts? {
-        if let preferredModelName,
-           let preferredModel = availableModels.first(where: { $0.name == preferredModelName }) {
-            return preferredModel
-        }
-
-        guard let currentModelName else { return nil }
-        return availableModels.first { $0.name == currentModelName }
-    }
 }
 
 public struct VoiceInkPowerModeSessionApplicationFacts: Equatable, Sendable {
     public var currentModelName: String?
     public var availableModelResourceFacts: [VoiceInkPowerModeTranscriptionModelResourceFacts]
-    public var availableLanguageModelFacts: [VoiceInkPowerModeTranscriptionModelFacts]
     public var availableLocalModelNames: Set<String>
 
     public init(
         currentModelName: String?,
         availableModelResourceFacts: [VoiceInkPowerModeTranscriptionModelResourceFacts],
-        availableLanguageModelFacts: [VoiceInkPowerModeTranscriptionModelFacts],
         availableLocalModelNames: Set<String>
     ) {
         self.currentModelName = currentModelName
         self.availableModelResourceFacts = availableModelResourceFacts
-        self.availableLanguageModelFacts = availableLanguageModelFacts
         self.availableLocalModelNames = availableLocalModelNames
     }
 }
@@ -1724,10 +1686,7 @@ public struct VoiceInkPowerModeSessionApplicationPlan: Equatable, Sendable {
                 availableLocalModelNames: facts.availableLocalModelNames
             ),
             languageApplicationPlan: VoiceInkPowerModeLanguageApplicationPlan.plan(
-                selectedLanguage: selectedLanguage,
-                preferredModelName: selectedModelName,
-                currentModelName: facts.currentModelName,
-                availableModels: facts.availableLanguageModelFacts
+                selectedLanguage: selectedLanguage
             ),
             shouldPostConfigurationApplied: shouldPostConfigurationApplied
         )

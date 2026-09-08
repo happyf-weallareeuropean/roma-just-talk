@@ -46,27 +46,6 @@ enum VoiceInkTranscriptionLanguageSelectionControl: Equatable, Sendable {
     case hiddenDefault
 }
 
-public struct VoiceInkTranscriptionLanguageRepairPlan: Equatable, Sendable {
-    public let selectedLanguage: String
-    public let languageToSave: String?
-
-    public var shouldSaveSelectedLanguage: Bool {
-        languageToSave != nil
-    }
-
-    public init(selectedLanguage: String, languageToSave: String?) {
-        self.selectedLanguage = selectedLanguage
-        self.languageToSave = languageToSave
-    }
-
-    public func applyRuntimeState(
-        saveSelectedLanguage: (String) -> Void
-    ) {
-        guard let languageToSave else { return }
-        saveSelectedLanguage(languageToSave)
-    }
-}
-
 public struct VoiceInkTranscriptionLanguageSelectionFacts: Equatable, Sendable {
     public var source: VoiceInkTranscriptionLanguageSource
     public var isMultilingual: Bool
@@ -114,13 +93,6 @@ public struct VoiceInkTranscriptionLanguageSelectionFacts: Equatable, Sendable {
         )
     }
 
-    public func repairPlan(for selectedLanguage: String?) -> VoiceInkTranscriptionLanguageRepairPlan {
-        let compatibleLanguage = compatibleLanguage(selectedLanguage)
-        return VoiceInkTranscriptionLanguageRepairPlan(
-            selectedLanguage: compatibleLanguage,
-            languageToSave: selectedLanguage == compatibleLanguage ? nil : compatibleLanguage
-        )
-    }
 }
 
 public enum VoiceInkNativeAppleLanguageAssetState: Equatable, Sendable {

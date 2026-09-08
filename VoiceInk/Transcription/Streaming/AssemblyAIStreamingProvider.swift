@@ -39,7 +39,9 @@ final class AssemblyAIStreamingProvider: StreamingTranscriptionProvider {
                 model: model.streamingConnectionModelName,
                 language: language,
                 prompt: VoiceInkTranscriptionPromptUse.streamingTranscription(.assemblyAI).requestPrompt(
-                    VoiceInkTranscriptionPromptPreference.requestPrompt()
+                    VoiceInkTranscriptionPromptPreference.requestPrompt(
+                        forEffectiveLanguage: VoiceInkTranscriptionLanguagePreference.effectiveLanguage(for: model.transcriptionLanguageSelectionFacts)
+                    )
                 ),
                 customVocabulary: CustomVocabularyService.shared.getCustomVocabularyTerms(
                     from: modelContext,

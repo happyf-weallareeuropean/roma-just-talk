@@ -11,8 +11,10 @@ class CloudTranscriptionService: TranscriptionService {
 
     func transcribe(audioURL: URL, model: any TranscriptionModel) async throws -> String {
         let audioFile = try VoiceInkCloudTranscriptionAudioFile.load(from: audioURL)
-        let language = VoiceInkTranscriptionLanguagePreference.requestLanguage()
-        let prompt = VoiceInkTranscriptionPromptPreference.requestPrompt()
+        let language = VoiceInkTranscriptionLanguagePreference.requestLanguage(for: model.transcriptionLanguageSelectionFacts)
+        let prompt = VoiceInkTranscriptionPromptPreference.requestPrompt(
+            forEffectiveLanguage: VoiceInkTranscriptionLanguagePreference.effectiveLanguage(for: model.transcriptionLanguageSelectionFacts)
+        )
 
         if model.provider == .custom {
             guard let customModel = model as? CustomCloudModel else {

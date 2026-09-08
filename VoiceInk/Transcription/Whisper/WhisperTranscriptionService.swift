@@ -19,7 +19,7 @@ class WhisperTranscriptionService: TranscriptionService {
     }
 
     func transcribe(audioURL: URL, model: any TranscriptionModel) async throws -> String {
-        let request = VoiceInkLocalWhisperTranscriptionRequest.macOS(audioURL: audioURL)
+        let request = VoiceInkLocalWhisperTranscriptionRequest.macOS(audioURL: audioURL, isMultilingual: model.isMultilingualModel)
         guard model.provider == .whisper else {
             throw VoiceInkLocalWhisperFailurePolicy.error(for: .modelUnavailable, platform: request.failurePlatform)
         }

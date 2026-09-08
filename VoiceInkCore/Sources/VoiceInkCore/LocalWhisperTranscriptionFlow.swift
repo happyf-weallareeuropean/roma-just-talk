@@ -512,12 +512,22 @@ public struct VoiceInkLocalWhisperTranscriptionRequest: Equatable, Sendable {
 
     public static func macOS(
         audioURL: URL,
+        isMultilingual: Bool = true,
         defaults: UserDefaults = .standard
     ) -> VoiceInkLocalWhisperTranscriptionRequest {
-        VoiceInkLocalWhisperTranscriptionRequest(
+        let language = VoiceInkTranscriptionLanguagePreference.selectedLanguage(
+            source: .whisper, from: defaults, isMultilingual: isMultilingual
+        )
+        // A language fallback also needs its own prompt, without replacing the user's saved prompt.
+        let prompt = language == VoiceInkTranscriptionLanguagePreference.selectedLanguage(from: defaults)
+            ? VoiceInkTranscriptionPromptPreference.localWhisperPromptForSelectedLanguage(from: defaults)
+            : VoiceInkLocalWhisperPromptCatalog.prompt(
+                for: language, customPrompts: VoiceInkLocalWhisperPromptCatalog.storedCustomPrompts(from: defaults)
+            )
+        return VoiceInkLocalWhisperTranscriptionRequest(
             audioURL: audioURL,
-            language: VoiceInkTranscriptionLanguagePreference.selectedLanguage(from: defaults),
-            prompt: VoiceInkTranscriptionPromptPreference.localWhisperPromptForSelectedLanguage(from: defaults),
+            language: language,
+            prompt: prompt,
             failurePlatform: .macOS,
             mapsThrownAudioSampleErrors: false
         )

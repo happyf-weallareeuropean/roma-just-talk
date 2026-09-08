@@ -156,7 +156,6 @@ class PowerModeSessionManager {
         VoiceInkPowerModeSessionApplicationFacts(
             currentModelName: stateProvider.currentTranscriptionModel?.name,
             availableModelResourceFacts: stateProvider.allAvailableModels.map { $0.powerModeTranscriptionModelResourceFacts },
-            availableLanguageModelFacts: stateProvider.allAvailableModels.map { $0.powerModeTranscriptionModelFacts },
             availableLocalModelNames: Set(stateProvider.availableModels.map(\.name))
         )
     }

@@ -1180,19 +1180,6 @@ final class UserDefaultsPreferencesTests: XCTestCase {
         }
     }
 
-    func testTranscriptionLanguagePreferenceSavesCompatibleLanguage() {
-        withIsolatedDefaults { defaults in
-            let savedLanguage = VoiceInkTranscriptionLanguagePreference.saveCompatibleLanguage(
-                "fr",
-                languages: VoiceInkLanguageCatalog.englishOnly,
-                to: defaults
-            )
-
-            XCTAssertEqual(savedLanguage, "en")
-            XCTAssertEqual(VoiceInkTranscriptionLanguagePreference.selectedLanguage(from: defaults), "en")
-        }
-    }
-
     func testTranscriptionLanguagePreferenceClearsSelection() {
         withIsolatedDefaults { defaults in
             VoiceInkTranscriptionLanguagePreference.saveSelectedLanguage("fr", to: defaults)

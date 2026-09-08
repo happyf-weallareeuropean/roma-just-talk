@@ -10,8 +10,6 @@ struct CloudModelCardView: View {
     var setDefaultAction: () -> Void
 
     @EnvironmentObject private var transcriptionModelManager: TranscriptionModelManager
-    @AppStorage(VoiceInkUserDefaultsKey.selectedTranscriptionLanguage)
-    private var selectedLanguage = VoiceInkDefaultSettings.macOS.selectedTranscriptionLanguage
     @State private var isExpanded = false
     @State private var apiKeyFormState = VoiceInkProviderAPIKeyFormState()
     @State private var streamingEnabled: Bool
@@ -93,25 +91,10 @@ struct CloudModelCardView: View {
                 .onChange(of: streamingEnabled) { _, newValue in
                     if !streamingModePresentation.isStreamingToggleForcedOn {
                         VoiceInkTranscriptionStreamingPreference.saveIsEnabled(newValue, forModelName: model.name)
-                        ensureCurrentModelLanguageIsStillValid()
                         NotificationCenter.default.post(name: .AppSettingsDidChange, object: nil)
                     }
                 }
                 .help(streamingModePresentation.streamingToggleHelp)
-        }
-    }
-
-    private func ensureCurrentModelLanguageIsStillValid() {
-        guard transcriptionModelManager.currentTranscriptionModel?.name == model.name else {
-            return
-        }
-
-        let plan = model.transcriptionLanguageSelectionFacts.repairPlan(for: selectedLanguage)
-        plan.applyRuntimeState { languageToSave in
-            selectedLanguage = languageToSave
-            VoiceInkTranscriptionPromptPreference.saveLocalWhisperPromptForSelectedLanguage()
-            UserDefaults.standard.synchronize()
-            NotificationCenter.default.post(name: .languageDidChange, object: nil)
         }
     }
 
