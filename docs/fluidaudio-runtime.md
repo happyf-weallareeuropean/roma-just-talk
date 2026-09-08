@@ -39,7 +39,13 @@ is followed once to verify the public source URL. An archive of that exact commi
 is tested in a fresh `.local-build/fluidaudio-test-evidence/run.*/package` directory;
 the dependency checkout is never patched or used as the test build directory.
 
-The Release SwiftPM gate selects `RomaArrayResetTests` and requires five distinct
+The SwiftPM gate uses the package's Debug test configuration: SwiftPM compiles
+the whole upstream test target even with a filter, and its helper methods are
+guarded by `#if DEBUG`. The shipping app remains a Release build. The initial
+Release-configured test attempt failed during compilation before any semantic
+case ran; its failure evidence is retained.
+
+The gate selects `RomaArrayResetTests` and requires five distinct
 passing XCTest cases plus the successful five-test suite summary. A missing
 suite, zero selected tests, build error, or failing test fails the gate. The cases
 compare the complete backing allocation with scalar assignment, including prefix,

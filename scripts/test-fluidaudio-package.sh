@@ -63,7 +63,8 @@ CHECKOUT_CHANGES=$(git --no-optional-locks -C "$CHECKOUT" status --porcelain --u
 PACKAGE="$RUN/package"
 mkdir "$PACKAGE"
 git -C "$CHECKOUT" archive "$EXPECTED_REVISION" | tar -x -C "$PACKAGE"
-xcrun swift test --package-path "$PACKAGE" -c release --filter RomaArrayResetTests 2>&1 | tee "$RUN/swift-test.log"
+# SwiftPM compiles the whole test target; upstream test helpers require DEBUG.
+xcrun swift test --package-path "$PACKAGE" -c debug --filter RomaArrayResetTests 2>&1 | tee "$RUN/swift-test.log"
 
 # SwiftPM can exit successfully when a filter selects zero tests.
 python3 - "$RUN/swift-test.log" <<'PY'
