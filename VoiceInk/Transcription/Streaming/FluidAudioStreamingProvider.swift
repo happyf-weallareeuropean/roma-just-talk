@@ -32,6 +32,8 @@ final class FluidAudioStreamingProvider {
     private var isDisconnected = false
     private var isTranscribing = false
     private var isFinalizing = false
+    // This is narrower than isTranscribing: it brackets the manager await.
+    private var isLiveManagerCallInFlight = false
     private var inFlightSampleCount = 0
     private var lastTranscribedSampleCount = 0
     private var latestHypothesisText = ""
@@ -139,6 +141,7 @@ final class FluidAudioStreamingProvider {
         latestHypothesisSampleCount = 0
         isFinalizing = false
         isDisconnected = false
+        isLiveManagerCallInFlight = false
         inFlightSampleCount = 0
 
         startTranscriptionLoop()
@@ -161,11 +164,14 @@ final class FluidAudioStreamingProvider {
         let loopStopSpan = latencyTrace.begin("fluid_streaming.stop_background_loop", token: traceToken)
         let liveTask = currentLiveTask()
         liveTask?.cancel()
-        let canOverlapFinal = freezeLiveTranscription()
-        if !canOverlapFinal {
+        let liveStateAtCommit = freezeLiveTranscription()
+        if !liveStateAtCommit.canOverlapFinal {
             await liveTask?.value
         }
-        latencyTrace.end(loopStopSpan, details: "overlapFinal=\(canOverlapFinal)")
+        latencyTrace.end(
+            loopStopSpan,
+            details: "overlapFinal=\(liveStateAtCommit.canOverlapFinal) livePassInFlightAtCommit=\(liveStateAtCommit.livePassInFlight) liveManagerCallInFlightAtCommit=\(liveStateAtCommit.liveManagerCallInFlight)"
+        )
 
         let commitPlan = completeHypothesisCommitPlan()
         if let reusableText = commitPlan.reusableText {
@@ -318,7 +324,11 @@ final class FluidAudioStreamingProvider {
         }
     }
 
-    private func freezeLiveTranscription() -> Bool {
+    private func freezeLiveTranscription() -> (
+        canOverlapFinal: Bool,
+        livePassInFlight: Bool,
+        liveManagerCallInFlight: Bool
+    ) {
         bufferLock.lock()
         defer { bufferLock.unlock() }
         isFinalizing = true
@@ -331,8 +341,12 @@ final class FluidAudioStreamingProvider {
             seekSample: seek, trimmedSampleCount: trimmedSampleCount
         )
         // Long chunks share SDK progress sessions; keep those calls sequential.
-        return inFlightSampleCount <= ASRConstants.maxModelSamples &&
-            audioBuffer.count - relativeSeek <= ASRConstants.maxModelSamples
+        return (
+            canOverlapFinal: inFlightSampleCount <= ASRConstants.maxModelSamples &&
+                audioBuffer.count - relativeSeek <= ASRConstants.maxModelSamples,
+            livePassInFlight: isTranscribing,
+            liveManagerCallInFlight: isLiveManagerCallInFlight
+        )
     }
 
     private func beginLivePass() -> (samples: [Float], absoluteCount: Int, seek: Int)? {
@@ -371,6 +385,18 @@ final class FluidAudioStreamingProvider {
         bufferLock.unlock()
     }
 
+    private func setLiveManagerCallInFlight(_ inFlight: Bool) {
+        bufferLock.lock()
+        isLiveManagerCallInFlight = inFlight
+        bufferLock.unlock()
+    }
+
+    private func liveManagerCallInFlight() -> Bool {
+        bufferLock.lock()
+        defer { bufferLock.unlock() }
+        return isLiveManagerCallInFlight
+    }
+
     private func transcribe(
         _ samples: [Float], manager: AsrManager, state: inout TdtDecoderState
     ) async throws -> ASRResult {
@@ -385,11 +411,29 @@ final class FluidAudioStreamingProvider {
     private func runTranscriptionPass() async {
         guard let asrManager, let pass = beginLivePass() else { return }
         defer { endLivePass() }
+        var state = TdtDecoderState.make(decoderLayers: decoderLayerCount)
+        let latencyTrace = VoiceInkLatencyTrace.shared
+        let traceToken = latencyTraceToken
+        let inferenceSpan = latencyTrace.begin(
+            "fluid_streaming.live_transcribe_await",
+            details: "samples=\(pass.samples.count) absoluteSamples=\(pass.absoluteCount) cancellationRequested=\(Task.isCancelled)",
+            token: traceToken
+        )
         do {
-            var state = TdtDecoderState.make(decoderLayers: decoderLayerCount)
+            setLiveManagerCallInFlight(true)
             let result = try await transcribe(pass.samples, manager: asrManager, state: &state)
+            setLiveManagerCallInFlight(false)
+            latencyTrace.end(
+                inferenceSpan,
+                details: "result=success cancellationRequested=\(Task.isCancelled)"
+            )
             applyLiveResult(result, absoluteSampleCount: pass.absoluteCount, seekSample: pass.seek)
         } catch {
+            setLiveManagerCallInFlight(false)
+            latencyTrace.end(
+                inferenceSpan,
+                details: "result=failure cancellationRequested=\(Task.isCancelled)"
+            )
             guard !Task.isCancelled else { return }
             logger.error("Transcription pass failed: \(error.localizedDescription, privacy: .public)")
             eventsContinuation?.yield(.error(error))
@@ -484,7 +528,7 @@ final class FluidAudioStreamingProvider {
 
         let inferenceSpan = latencyTrace.begin(
             "fluid_streaming.final_transcribe_await",
-            details: "samples=\(samples.count) singleChunk=\(samples.count <= ASRConstants.maxModelSamples) priority=\(Task.currentPriority.rawValue)",
+            details: "samples=\(samples.count) singleChunk=\(samples.count <= ASRConstants.maxModelSamples) priority=\(Task.currentPriority.rawValue) liveManagerCallInFlightAtFinalStart=\(liveManagerCallInFlight())",
             token: traceToken
         )
         do {
@@ -492,7 +536,7 @@ final class FluidAudioStreamingProvider {
             // Single-chunk SDK timing ends before result formatting; this await also includes scheduling.
             latencyTrace.end(
                 inferenceSpan,
-                details: "result=success sdkProcessingMs=\(result.processingTime * 1_000) sdkAudioSeconds=\(result.duration) tokens=\(result.tokenTimings?.count ?? 0)"
+                details: "result=success cancellationRequested=\(Task.isCancelled) sdkProcessingMs=\(result.processingTime * 1_000) sdkAudioSeconds=\(result.duration) tokens=\(result.tokenTimings?.count ?? 0)"
             )
 
             let normalizationSpan = latencyTrace.begin("fluid_streaming.final_normalization", token: traceToken)
@@ -509,7 +553,10 @@ final class FluidAudioStreamingProvider {
             )
             return normalized
         } catch {
-            latencyTrace.end(inferenceSpan, details: "result=failure")
+            latencyTrace.end(
+                inferenceSpan,
+                details: "result=failure cancellationRequested=\(Task.isCancelled)"
+            )
             logger.error("Final transcription failed: \(error.localizedDescription, privacy: .public)")
             return nil
         }

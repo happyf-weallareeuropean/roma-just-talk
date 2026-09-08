@@ -318,6 +318,16 @@ boundary. It includes target rendering and any occlusion inside the sampled
 rectangle; the harness does not assign it to Roma, the target app, focus, or
 scheduling without further evidence.
 
+For FluidAudio streaming diagnostics, `fluid_streaming.live_transcribe_await`
+and `fluid_streaming.final_transcribe_await` bound Roma's respective awaits of
+the ASR manager. Their events retain the trace token and record call timing,
+sample counts, cancellation state, and final-call scheduling context.
+`livePassInFlightAtCommit`,
+`liveManagerCallInFlightAtCommit`, and
+`liveManagerCallInFlightAtFinalStart` are lock-consistent provider snapshots:
+the latter is narrower and brackets the live task's ASR-manager await. They do
+not establish Core ML, CPU, GPU, or Neural Engine occupancy.
+
 ## Safety and Restoration
 
 Before a run, the helper records:
