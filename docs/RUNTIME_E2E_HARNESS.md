@@ -26,6 +26,37 @@ also silences the simulated microphone after key-down. Check saved recordings
 for the fixture's speech throughout the hold before accepting runtime evidence;
 successful playback and nonempty opening text alone do not prove audio delivery.
 
+## Qwen finalization diagnostics
+
+Qwen sessions attach content-free phase events to the recording's existing
+`appLatencyTrace` token. The token is captured once at connect; late worker
+callbacks cannot attach to a later recording. Direct runtime clients default to
+no diagnostic callback. No transcript, PCM, prompt, language, or tensor data is
+logged; fields contain session/decode IDs, live/final flag, sample/token counts,
+fixed outcomes, and monotonic `uptime` seconds.
+
+The `qwen_streaming.*` markers are `finishRequested`,
+`cancellationRequested`, `decodeBegin`, `decodeEnd`, `decodeReceived`,
+`presentationBegin`, `presentationEnd`, and `finalEmitted`. Match session and
+decode IDs. `decodeBegin` is detached worker entry; `decodeEnd` follows return
+or throw from the existing decoder, including its actual Metal drain. A worker
+cancelled before model entry still emits a cancelled end. `decodeReceived`
+marks actor resumption; cancellation requests do not prove drain completion.
+`superseded` on cancellation/receipt identifies replacement intent, while the
+end event independently records EOS, token limit, cancellation, or native error.
+Presentation end closes the attempted presentation even on error;
+`finalEmitted` occurs only after yielding a final event, including a no-audio
+final that did not invoke decoding. It does not prove target-app rendering.
+
+Compare finish-to-live-end/receipt with final-begin-to-end and final presentation
+on each recording's monotonic clock. These intervals distinguish obsolete live
+work from final computation; they do not isolate encoder kernels, allocator
+cache clearing, or GPU-only time. No new evaluation, synchronization, cache
+operation, cancellation fence, or scheduling policy is introduced. Logging has
+finite overhead: retain the original failure and compare a matched build/run
+before attributing differences. Actual release-to-persistent-render remains the
+250ms acceptance boundary; a faster internal span alone cannot pass it.
+
 ## Default Matrix
 
 - Audio: every supported fixture under `~/Downloads/roma jt builds/audio/`

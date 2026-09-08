@@ -49,7 +49,18 @@ actor QwenStreamingProvider: StreamingTranscriptionProvider {
         let selectedLanguage = language == VoiceInkLanguageCatalog.autoDetectCode ? nil : language
         let span = VoiceInkLatencyTrace.shared.begin("qwen_streaming.prewarm", token: traceToken.withLock { $0 })
         defer { VoiceInkLatencyTrace.shared.end(span) }
-        let task = Task { try await runtime.startStreaming(language: selectedLanguage) }
+        // Capture this recording's token once; delayed callbacks cannot attach to a new recording.
+        let recordToken = traceToken.withLock { $0 }
+        let diagnostic: (@Sendable (QwenStreamingDiagnostic) -> Void)?
+        if let recordToken {
+            diagnostic = { event in
+                let details = "session=\(event.sessionID) decode=\(event.decodeID?.uuidString ?? "none") final=\(event.isFinal) samples=\(event.sampleCount.map(String.init) ?? "none") tokens=\(event.generationTokens.map(String.init) ?? "none") outcome=\(event.outcome?.rawValue ?? "none") uptime=\(event.uptime)"
+                VoiceInkLatencyTrace.shared.event("qwen_streaming.\(event.phase.rawValue)", details: details, token: recordToken)
+            }
+        } else {
+            diagnostic = nil
+        }
+        let task = Task { try await runtime.startStreaming(language: selectedLanguage, diagnostic: diagnostic) }
         connecting = task
         var prepared: QwenStreamingSession?
         do {

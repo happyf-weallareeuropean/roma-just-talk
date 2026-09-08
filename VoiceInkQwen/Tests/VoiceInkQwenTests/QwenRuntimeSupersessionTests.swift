@@ -206,6 +206,119 @@ func cancellationAtFinishMarkerMustNotLeaveAnOrphanStreamParent() async throws {
     #expect(drained < returned)
 }
 
+@Test(.timeLimit(.minutes(1)))
+func sessionDiagnosticsSeparateSupersededDrainFromFinalAndStayWithTheirSession() async throws {
+    let f = try SupersessionFixture(blocked: [1])
+    let firstLog = StreamingDiagnostics()
+    let first = try await f.runtime.startStreaming(language: "English", diagnostic: { firstLog.record($0) })
+    defer { f.cleanup(first.id) }
+    var text = first.events.makeAsyncIterator()
+    var life = f.lifecycle.makeAsyncIterator()
+    var calls = f.model.events.makeAsyncIterator()
+    try await f.runtime.appendAudio(Array(repeating: 0.1, count: 5_600), sessionID: first.id)
+    await entered(1, in: &calls)
+    let finish = Task { try await f.runtime.finishStreaming(sessionID: first.id) }
+    await marker(.finish, id: first.id, in: &life)
+    let held = firstLog.values
+    #expect(held.map(\.phase) == [.decodeBegin, .finishRequested, .cancellationRequested])
+    #expect(held.first?.sampleCount == 5_600)
+    #expect(held.last?.decodeID == held.first?.decodeID)
+    #expect(held.last?.outcome == .superseded)
+    #expect(!f.model.trace.exited.contains(1))
+    await f.model.release(1)
+    try await finish.value
+    try await onlyFinal(&text, expected: SupersessionModel.finalText)
+    let events = firstLog.values
+    #expect(events.map(\.phase) == [.decodeBegin, .finishRequested, .cancellationRequested,
+        .decodeEnd, .decodeReceived, .decodeBegin, .decodeEnd, .decodeReceived,
+        .presentationBegin, .presentationEnd, .finalEmitted])
+    #expect(events.allSatisfy { $0.sessionID == first.id })
+    #expect(zip(events, events.dropFirst()).allSatisfy { $0.uptime <= $1.uptime })
+    let liveEnd = try #require(events.first { $0.phase == .decodeEnd })
+    #expect(liveEnd.outcome == .cancelled)
+    #expect(liveEnd.decodeID == held.first?.decodeID)
+    let finalBegin = try #require(events.first { $0.phase == .decodeBegin && $0.isFinal })
+    let finalEnd = try #require(events.first { $0.phase == .decodeEnd && $0.isFinal })
+    #expect(finalBegin.decodeID != liveEnd.decodeID)
+    #expect(finalBegin.sampleCount == 5_600)
+    #expect(finalEnd.decodeID == finalBegin.decodeID)
+    #expect(finalEnd.outcome == .eos)
+    #expect(finalEnd.generationTokens == 3)
+    #expect(f.emissions.values.count == 1)
+
+    let secondLog = StreamingDiagnostics()
+    let second = try await f.runtime.startStreaming(diagnostic: { secondLog.record($0) })
+    try await f.runtime.finishStreaming(sessionID: second.id)
+    #expect(secondLog.values.map(\.phase) == [.finishRequested, .presentationBegin, .presentationEnd, .finalEmitted])
+    #expect(secondLog.values.allSatisfy { $0.sessionID == second.id })
+    #expect(firstLog.values.count == events.count)
+    let third = try await f.runtime.startStreaming()
+    try await f.runtime.finishStreaming(sessionID: third.id)
+    #expect(firstLog.values.count == events.count)
+    #expect(secondLog.values.count == 4)
+}
+
+@Test(.timeLimit(.minutes(1)), arguments: [SupersessionModel.Outcome.error, .limit])
+private func sessionDiagnosticsRetainTerminalOutcomeWithoutFinalEmission(outcome: SupersessionModel.Outcome) async throws {
+    let f = try SupersessionFixture(blocked: [1], firstOutcome: outcome)
+    let log = StreamingDiagnostics()
+    let session = try await f.runtime.startStreaming(diagnostic: { log.record($0) })
+    defer { f.cleanup(session.id) }
+    var life = f.lifecycle.makeAsyncIterator()
+    var calls = f.model.events.makeAsyncIterator()
+    try await f.runtime.appendAudio(Array(repeating: 0.1, count: 5_600), sessionID: session.id)
+    await entered(1, in: &calls)
+    let finish = Task { try await f.runtime.finishStreaming(sessionID: session.id) }
+    await marker(.finish, id: session.id, in: &life)
+    #expect(!log.values.contains { $0.phase == .decodeEnd })
+    await f.model.release(1)
+    await expectFailure(finish, outcome: outcome)
+    let end = try #require(log.values.first { $0.phase == .decodeEnd })
+    switch outcome { case .error: #expect(end.outcome == .error)
+    case .limit: #expect(end.outcome == .tokenLimit)
+    case .cooperative: Issue.record("Unexpected test outcome") }
+    #expect(!log.values.contains { $0.phase == .presentationBegin || $0.phase == .finalEmitted })
+    #expect(f.emissions.values.isEmpty)
+}
+
+@Test(.timeLimit(.minutes(1)))
+func finalDecodeCancellationDiagnosticKeepsItsIdentityUntilDrain() async throws {
+    let f = try SupersessionFixture(blocked: [1])
+    let log = StreamingDiagnostics()
+    let session = try await f.runtime.startStreaming(diagnostic: { log.record($0) })
+    defer { f.cleanup(session.id) }
+    var calls = f.model.events.makeAsyncIterator()
+    // Less than a live chunk: only finish can submit this final request.
+    try await f.runtime.appendAudio(Array(repeating: 0.1, count: 731), sessionID: session.id)
+    let finish = Task { try await f.runtime.finishStreaming(sessionID: session.id) }
+    await entered(1, in: &calls)
+    let cancel = Task { try await f.runtime.cancelStreaming(sessionID: session.id) }
+    while let event = await calls.next() { if case .cancelled(1) = event { break } }
+    let begin = try #require(log.values.first { $0.phase == .decodeBegin })
+    let requested = try #require(log.values.first { $0.phase == .cancellationRequested })
+    #expect(begin.isFinal && requested.isFinal)
+    #expect(requested.decodeID == begin.decodeID)
+    #expect(requested.outcome == .cancelled)
+    #expect(!log.values.contains { $0.phase == .decodeEnd })
+    #expect(!f.model.trace.exited.contains(1))
+    await f.model.release(1)
+    try await cancel.value
+    await expectCancellation(finish)
+    let end = try #require(log.values.first { $0.phase == .decodeEnd })
+    #expect(end.decodeID == begin.decodeID && end.isFinal)
+    #expect(end.outcome == .cancelled)
+    #expect(!log.values.contains { $0.phase == .finalEmitted })
+}
+
+private final class StreamingDiagnostics: @unchecked Sendable {
+    private let lock = NSLock()
+    private var storage: [QwenStreamingDiagnostic] = []
+    func record(_ event: QwenStreamingDiagnostic) {
+        lock.lock(); defer { lock.unlock() }; storage.append(event)
+    }
+    var values: [QwenStreamingDiagnostic] { lock.lock(); defer { lock.unlock() }; return storage }
+}
+
 private struct SupersessionFixture: Sendable {
     let model: SupersessionModel
     let runtime: QwenRuntime

@@ -12,6 +12,31 @@ public struct QwenStreamingSession: Sendable {
     public let events: AsyncThrowingStream<QwenStreamingEvent, Error>
 }
 
+/// Content-free session diagnostics. Callbacks must be brief and must not block inference.
+public struct QwenStreamingDiagnostic: Sendable {
+    public enum Phase: String, Sendable {
+        case finishRequested, cancellationRequested, decodeBegin, decodeEnd, decodeReceived
+        case presentationBegin, presentationEnd, finalEmitted
+    }
+    public enum Outcome: String, Sendable { case eos, tokenLimit, cancelled, error, superseded }
+    public let phase: Phase
+    public let sessionID: UUID
+    public let decodeID: UUID?
+    public let isFinal: Bool
+    public let sampleCount: Int?
+    public let generationTokens: Int?
+    public let outcome: Outcome?
+    public let uptime: TimeInterval
+
+    init(_ phase: Phase, sessionID: UUID, decodeID: UUID? = nil, isFinal: Bool = false,
+         sampleCount: Int? = nil, generationTokens: Int? = nil, outcome: Outcome? = nil) {
+        self.phase = phase; self.sessionID = sessionID; self.decodeID = decodeID
+        self.isFinal = isFinal; self.sampleCount = sampleCount
+        self.generationTokens = generationTokens; self.outcome = outcome
+        uptime = ProcessInfo.processInfo.systemUptime
+    }
+}
+
 // The runtime grants one caller access; native decode returns only after Metal drains.
 protocol QwenRuntimeModel: Sendable {
     func prefix(for policy: QwenStreamingPolicy, finalTail: Bool) throws -> String
@@ -63,17 +88,21 @@ public actor QwenRuntime {
     private final class LiveSession: @unchecked Sendable {
         let id = UUID()
         let language: String?
+        let diagnostic: (@Sendable (QwenStreamingDiagnostic) -> Void)?
         let continuation: AsyncThrowingStream<QwenStreamingEvent, Error>.Continuation
         var policy = QwenStreamingPolicy(chunkSamples: 5_600)
         var task: Task<Void, Never>?
         var finishing = false
         var liveDecode: (id: UUID, task: Task<QwenDecodeResult, Error>)?
         var supersededDecodeID: UUID?
+        var diagnosticDecode: (id: UUID, isFinal: Bool)?
         var needsFinalDecode = false
         var failure: Error?
 
-        init(language: String?, continuation: AsyncThrowingStream<QwenStreamingEvent, Error>.Continuation) {
+        init(language: String?, continuation: AsyncThrowingStream<QwenStreamingEvent, Error>.Continuation,
+             diagnostic: (@Sendable (QwenStreamingDiagnostic) -> Void)?) {
             self.language = language
+            self.diagnostic = diagnostic
             self.continuation = continuation
         }
     }
@@ -198,11 +227,14 @@ public actor QwenRuntime {
     }
 
     /// The app retains startup audio until this verified, warm session is ready.
-    public func startStreaming(language: String? = nil) async throws -> QwenStreamingSession {
+    public func startStreaming(
+        language: String? = nil,
+        diagnostic: (@Sendable (QwenStreamingDiagnostic) -> Void)? = nil
+    ) async throws -> QwenStreamingSession {
         lifecycle(.streamingRequested)
         guard !closing, generation == nil, streaming == nil, batchStarting == nil else { throw QwenRuntimeError.busy }
         let pair = AsyncThrowingStream<QwenStreamingEvent, Error>.makeStream(bufferingPolicy: .bufferingNewest(1))
-        let session = LiveSession(language: language, continuation: pair.continuation)
+        let session = LiveSession(language: language, continuation: pair.continuation, diagnostic: diagnostic)
         streaming = session
         lifecycle(.streamReserved(session.id))
         do {
@@ -232,8 +264,10 @@ public actor QwenRuntime {
         try Task.checkCancellation()
         guard !closing, model != nil, let session = streaming, session.id == sessionID else { throw QwenRuntimeError.busy }
         if let failure = session.failure { throw failure }
+        session.diagnostic?(.init(.finishRequested, sessionID: session.id, isFinal: true))
         session.finishing = true
         if let live = session.liveDecode {
+            session.diagnostic?(.init(.cancellationRequested, sessionID: session.id, decodeID: live.id, outcome: .superseded))
             session.supersededDecodeID = live.id
             live.task.cancel()
         }
@@ -261,6 +295,9 @@ public actor QwenRuntime {
         }
         guard let session = streaming, session.id == sessionID else { return }
         guard !closing else { throw QwenRuntimeError.busy }
+        session.diagnostic?(.init(.cancellationRequested, sessionID: session.id,
+                                  decodeID: session.diagnosticDecode?.id,
+                                  isFinal: session.diagnosticDecode?.isFinal ?? session.finishing, outcome: .cancelled))
         closing = true
         let task = Task { await self.completeStreamCancellation(session) }
         streamCancellation = (sessionID, task)
@@ -316,9 +353,25 @@ public actor QwenRuntime {
                 let prefix = try model.prefix(for: session.policy, finalTail: finalTail)
                 let language = session.language
                 let decodeID = UUID()
+                let diagnostic = session.diagnostic
+                if diagnostic != nil { session.diagnosticDecode = (decodeID, finalTail) }
                 let task = Task.detached {
-                    try Task.checkCancellation()
-                    return try await model.decode(samples: audio, prefix: prefix, language: language)
+                    diagnostic?(.init(.decodeBegin, sessionID: id, decodeID: decodeID,
+                                      isFinal: finalTail, sampleCount: audio.count))
+                    do {
+                        try Task.checkCancellation()
+                        let result = try await model.decode(samples: audio, prefix: prefix, language: language)
+                        // decode returns only after its existing Metal drain, including on error.
+                        let outcome: QwenStreamingDiagnostic.Outcome
+                        switch result.termination { case .eos: outcome = .eos; case .tokenLimit: outcome = .tokenLimit }
+                        diagnostic?(.init(.decodeEnd, sessionID: id, decodeID: decodeID,
+                                          isFinal: finalTail, generationTokens: result.generationTokens, outcome: outcome))
+                        return result
+                    } catch {
+                        diagnostic?(.init(.decodeEnd, sessionID: id, decodeID: decodeID,
+                                          isFinal: finalTail, outcome: error is CancellationError ? .cancelled : .error))
+                        throw error
+                    }
                 }
                 if !finalTail { session.liveDecode = (decodeID, task) }
                 let result: QwenDecodeResult
@@ -329,6 +382,9 @@ public actor QwenRuntime {
                         task.cancel()
                     }
                 } catch {
+                    session.diagnosticDecode = nil
+                    diagnostic?(.init(.decodeReceived, sessionID: id, decodeID: decodeID,
+                                      isFinal: finalTail, outcome: session.supersededDecodeID == decodeID ? .superseded : (error is CancellationError ? .cancelled : .error)))
                     if session.liveDecode?.id == decodeID { session.liveDecode = nil }
                     let wasSuperseded = session.supersededDecodeID == decodeID
                     if wasSuperseded { session.supersededDecodeID = nil }
@@ -342,6 +398,8 @@ public actor QwenRuntime {
                     }
                     throw error
                 }
+                session.diagnosticDecode = nil
+                diagnostic?(.init(.decodeReceived, sessionID: id, decodeID: decodeID, isFinal: finalTail))
                 if session.liveDecode?.id == decodeID { session.liveDecode = nil }
                 if session.supersededDecodeID == decodeID { session.supersededDecodeID = nil }
                 try Task.checkCancellation()
@@ -373,9 +431,12 @@ public actor QwenRuntime {
     private func emit(_ event: QwenStreamingEvent, for session: LiveSession) {
         lifecycle(.streamEvent(session.id, event))
         session.continuation.yield(event)
+        if case .final = event { session.diagnostic?(.init(.finalEmitted, sessionID: session.id, isFinal: true)) }
     }
 
     private func presentation(_ session: LiveSession, isFinal: Bool) throws -> String {
+        if isFinal { session.diagnostic?(.init(.presentationBegin, sessionID: session.id, isFinal: true)) }
+        defer { if isFinal { session.diagnostic?(.init(.presentationEnd, sessionID: session.id, isFinal: true)) } }
         let text = QwenTranscriptionText.parse(
             session.policy.rawDecoded, forcedLanguage: session.language,
             isFinal: isFinal, expectsHeader: session.language == nil
