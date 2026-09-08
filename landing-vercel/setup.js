@@ -6,7 +6,11 @@ Find the downloaded app and verify its version and archive checksum against the 
 
 Explain that removing com.apple.quarantine skips the downloaded-app Gatekeeper check for this app; it does not make it Apple-approved. After I choose to trust this download, remove only that attribute recursively from the exact app bundle, then open it. Do not disable Gatekeeper globally, re-sign the app, change its bundle ID, reset TCC, or ask for my password.
 
-Guide me through Roma's Permissions page: Microphone for speech, Input Monitoring for the shortcut, and Accessibility for inserting text. Leave optional Screen Recording and Automation off unless I need them. I will handle system authentication myself. Download and select Parakeet V2 for English, or help me select a supported model for my language. Keep AI Enhancement off for local-only transcription. Verify the required permissions in Roma, then test dictation into an empty TextEdit document. Report anything that is still blocked.`;
+Guide me through Roma's Permissions page: Microphone for speech, Input Monitoring for the shortcut, and Accessibility for inserting text. Leave optional Screen Recording and Automation off unless I need them. I will handle system authentication myself.
+
+Preserve my existing model and language settings unless I choose to change them. On Apple silicon with macOS 15 or later, offer local Chinese + English (Qwen) or English only (Parakeet V2). First setup uses approximate IP country to suggest Chinese + English in Taiwan, China, Hong Kong, Macao or Singapore; elsewhere or if the lookup fails, it suggests English only. I can choose English only instead of the bilingual suggestion. Download and select the model I choose; for other languages or older Macs, help me choose a supported model.
+
+Keep AI Enhancement off for local-only transcription. Configure Parakeet zh-TW (NVIDIA Cloud) on macOS 15 or later only if I explicitly choose it and provide my own API key; it sends audio to NVIDIA and is not an automatic fallback. Verify the required permissions in Roma, then test dictation into an empty TextEdit document. Report anything that is still blocked.`;
 
   const dialog = document.createElement('dialog');
   dialog.className = 'setup-dialog';
@@ -43,8 +47,9 @@ Guide me through Roma's Permissions page: Microphone for speech, Input Monitorin
       <p>If Open Anyway is unavailable on a managed Mac, contact its administrator.</p>
     </details>
     <h3>Finish inside Roma</h3>
-    <p>Use the Permissions page to enable Microphone, Input Monitoring, and Accessibility. Screen Recording and Automation are optional. Download a model for your language, select it, then try dictation in TextEdit. Parakeet V2, the default, is English-only.</p>
-    <p>A local model with AI Enhancement off keeps transcription local. Read the <a href="/#trust-release">current beta limitations</a> before granting permissions.</p>`;
+    <p>Use the Permissions page to enable Microphone, Input Monitoring, and Accessibility. Screen Recording and Automation are optional. On Apple silicon with macOS 15 or later, choose local Chinese + English (Qwen) or English only (Parakeet V2).</p>
+    <p>First setup may suggest Chinese + English from your approximate IP country: Taiwan, China, Hong Kong, Macao or Singapore. Elsewhere, or if the lookup fails, it suggests English only. You can choose English only instead; your choices and existing settings take priority. Download your selected model, then try dictation in TextEdit.</p>
+    <p>A local model with AI Enhancement off keeps transcription local. NVIDIA Cloud (macOS 15+) is optional and manually selected with your own API key; it sends audio to NVIDIA and is never an automatic fallback. Read the <a href="/#trust-release">current beta limitations</a> before granting permissions.</p>`;
   dialog.querySelector('#setup-command').textContent = command;
   dialog.querySelector('#setup-prompt').textContent = prompt;
   document.body.append(dialog);

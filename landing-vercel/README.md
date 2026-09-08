@@ -13,7 +13,8 @@ an explicit choice or existing model takes precedence, and lookup failure keeps 
 The onboarding explanation and Trust privacy disclosure identify this approximate IP-country
 lookup, Vercel hosting, and that no audio is sent. The app does not persist the country.
 TW/CN/HK/MO/SG suggest Chinese + English; all other/unknown countries suggest English.
-The bilingual choice uses the local Qwen model, about 1 GB to download; automatic language
+On Apple silicon with macOS 15 or later, the bilingual choice uses the local Qwen model,
+about 1 GB to download; automatic language
 detection handles mixed speech and Traditional Chinese output. Existing explicit language
 preferences remain intact. Its several-GB free-memory guidance reflects a larger runtime
 footprint than the English-only Parakeet model, not the model download size.
