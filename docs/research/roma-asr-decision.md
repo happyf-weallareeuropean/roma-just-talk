@@ -32,12 +32,30 @@ can safely be skipped. Even subtracting the entire observed cache-clear/drain
 cost would leave 9/12 workers above 250 ms before delivery. That arithmetic is
 an upper-bound exercise, not a predicted optimization.
 
-Finish the independently scoped process-observer repair before reusing that
-runner. Do not repeat the unchanged matrix looking for a favorable result.
+The independently scoped process-observer repair now passes 100 model-free
+tests and a real disposable-Mac child-process check. The old command-text
+identity check failed after the child's arguments changed; the native executable
+reader retained identity, detected foreign execution, and verified retirement
+and cleanup. This reproduces the failure class, not the app's literal
+parenthesized command fallback. A separately frozen runner remains unbound to
+any future app experiment; the invalid 18-case result stays invalid.
+
+Do not repeat the unchanged matrix looking for a favorable result.
 Any next optimization needs a specific compute or scheduling contract, preserved
 recognition quality and ownership, then actual app insertion proof. The 250 ms
 gate remains unchanged. Parakeet V2 remains the English option; NVIDIA zh-TW is
 an explicit cloud backup, not the primary local solution.
+
+A speech-gap screen found internal opportunities in the two longer mixed
+fixtures, but none of comparable length in the short fixture. A separate
+terminal-endpoint proposal failed its input-accounting preflight: all 15 retained
+recipes leave 128–3,712 samples outside complete 4,096-sample detector chunks at
+release. Under the proposal's rule that unclassified audio cannot support a
+completed cache hit, all 15 are ineligible regardless of detector output. No VAD
+or ASR inference was run for that proposal. This closes that specific design,
+not endpointing in general. A successor would need an explicit partial-buffer
+classification contract, preserved final speech, and timing that includes any
+work after release before it could justify app changes.
 
 Retained local evidence under `.local-build/asr-research/qwen-integration/`:
 
@@ -49,6 +67,10 @@ Retained local evidence under `.local-build/asr-research/qwen-integration/`:
   exact reuse saved about 20–24 ms on eligible ordinary native requests, but
   slowed no-hit requests and did not solve startup generation. Research-shader
   timings are separate from the app artifact.
+- `final-worker-partition-v1/acquisition/NATIVE-PATH-RUNTIME-SUPPLEMENT-2026-09-09.md`:
+  repaired observer's real process controls, source binding and limitations.
+- `terminal-endpoint-control-20260909/REPORT.md`:
+  fixed-recipe endpoint preflight and its structural rejection before inference.
 
 ## Recommendation
 
