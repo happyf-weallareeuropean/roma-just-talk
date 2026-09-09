@@ -62,7 +62,7 @@ public actor QwenRuntime {
                 // Reuse MLX's GPU stream; new streams retain a queue beyond this call.
                 // The runtime still owns the model until this stream actually drains.
                 defer { StreamOrDevice.default.stream.synchronize() }
-                return try QwenGreedyDecoder.decode(model: value, samples: samples, prefix: prefix, language: language)
+                return try QwenGreedyDecoder.decodeRetainingCache(model: value, samples: samples, prefix: prefix, language: language)
             }
         }
     }
@@ -77,8 +77,11 @@ public actor QwenRuntime {
         case selectionEnding
         case finishRequested(UUID)
         case streamEvent(UUID, QwenStreamingEvent)
+        case cacheCleanupWaitStarted
     }
     private let lifecycle: @Sendable (LifecycleEvent) -> Void
+    private let cacheCleanup: @Sendable () async -> Void
+    private var pendingCacheCleanup: (id: UUID, task: Task<Void, Never>)?
     private var model: (any QwenRuntimeModel)?
     private var loading: (id: UUID, task: Task<any QwenRuntimeModel, Error>)?
     private var generation: (id: UUID, task: Task<String, Error>)?
@@ -114,6 +117,7 @@ public actor QwenRuntime {
         let store = QwenModelStore(root: cacheDirectory, snapshot: try .bundled())
         self.store = store
         lifecycle = { _ in }
+        cacheCleanup = { Memory.clearCache() }
         modelLoader = {
             let directory = try await store.cachedDirectory()
             try Task.checkCancellation()
@@ -132,11 +136,13 @@ public actor QwenRuntime {
     init(
         cacheDirectory: URL,
         modelLoader: @escaping @Sendable () async throws -> any QwenRuntimeModel,
-        lifecycle: @escaping @Sendable (LifecycleEvent) -> Void
+        lifecycle: @escaping @Sendable (LifecycleEvent) -> Void,
+        cacheCleanup: @escaping @Sendable () async -> Void = { Memory.clearCache() }
     ) throws {
         store = QwenModelStore(root: cacheDirectory, snapshot: try .bundled())
         self.modelLoader = modelLoader
         self.lifecycle = lifecycle
+        self.cacheCleanup = cacheCleanup
     }
 
     deinit {
@@ -171,6 +177,9 @@ public actor QwenRuntime {
         try Task.checkCancellation()
         guard !closing else { throw QwenRuntimeError.busy }
         let startedEpoch = epoch
+        await waitForCacheCleanup()
+        try Task.checkCancellation()
+        guard !closing, epoch == startedEpoch else { throw CancellationError() }
         if model != nil { return }
         if let loading {
             lifecycle(.modelWaitStarted)
@@ -205,9 +214,16 @@ public actor QwenRuntime {
         if samples.isEmpty { return "" }
         let startedEpoch = epoch
         let id = UUID()
-        let task = Task.detached {
+        let task = Task.detached { [cacheCleanup] in
             try Task.checkCancellation()
-            let result = try await model.decode(samples: samples, prefix: "", language: language)
+            let result: QwenDecodeResult
+            do {
+                result = try await model.decode(samples: samples, prefix: "", language: language)
+            } catch {
+                await cacheCleanup()
+                throw error
+            }
+            await cacheCleanup()
             try Task.checkCancellation()
             guard case .eos = result.termination else { throw QwenRuntimeError.outputLimitReached }
             return try QwenTextPresentation.traditional(QwenTranscriptionText.parse(
@@ -329,7 +345,9 @@ public actor QwenRuntime {
     }
 
     private func processStream(id: UUID, startedEpoch: UInt64) async {
+        var needsCacheCleanup = false
         do {
+            await waitForCacheCleanup()
             while let session = streaming, session.id == id, epoch == startedEpoch, !closing {
                 try Task.checkCancellation()
                 guard let model else {
@@ -355,6 +373,7 @@ public actor QwenRuntime {
                 let decodeID = UUID()
                 let diagnostic = session.diagnostic
                 if diagnostic != nil { session.diagnosticDecode = (decodeID, finalTail) }
+                needsCacheCleanup = true
                 let task = Task.detached {
                     diagnostic?(.init(.decodeBegin, sessionID: id, decodeID: decodeID,
                                       isFinal: finalTail, sampleCount: audio.count))
@@ -382,6 +401,9 @@ public actor QwenRuntime {
                         task.cancel()
                     }
                 } catch {
+                    beginCacheCleanup()
+                    await waitForCacheCleanup()
+                    needsCacheCleanup = false
                     session.diagnosticDecode = nil
                     diagnostic?(.init(.decodeReceived, sessionID: id, decodeID: decodeID,
                                       isFinal: finalTail, outcome: session.supersededDecodeID == decodeID ? .superseded : (error is CancellationError ? .cancelled : .error)))
@@ -402,13 +424,21 @@ public actor QwenRuntime {
                 diagnostic?(.init(.decodeReceived, sessionID: id, decodeID: decodeID, isFinal: finalTail))
                 if session.liveDecode?.id == decodeID { session.liveDecode = nil }
                 if session.supersededDecodeID == decodeID { session.supersededDecodeID = nil }
+                if !finalTail {
+                    beginCacheCleanup()
+                    await waitForCacheCleanup()
+                    needsCacheCleanup = false
+                }
                 try Task.checkCancellation()
-                guard streaming?.id == id, epoch == startedEpoch, !closing else { return }
+                guard streaming?.id == id, epoch == startedEpoch, !closing else { throw CancellationError() }
                 guard case .eos = result.termination else { throw QwenRuntimeError.outputLimitReached }
                 session.policy.accept(prefix: prefix, generated: result.generatedText)
                 session.needsFinalDecode = false
                 if finalTail {
-                    emit(.final(try presentation(session, isFinal: true)), for: session)
+                    let text = try presentation(session, isFinal: true)
+                    beginCacheCleanup()
+                    needsCacheCleanup = false
+                    emit(.final(text), for: session)
                     session.continuation.finish()
                     streaming = nil
                     return
@@ -418,6 +448,10 @@ public actor QwenRuntime {
                 }
             }
         } catch {
+            if needsCacheCleanup {
+                beginCacheCleanup()
+                await waitForCacheCleanup()
+            }
             if let session = streaming, session.id == id {
                 session.failure = error
                 session.finishing = true
@@ -425,6 +459,29 @@ public actor QwenRuntime {
                 session.continuation.finish(throwing: error)
                 // Retain the terminal error until this lease disconnects; stop must report it.
             }
+        }
+    }
+
+    private func beginCacheCleanup() {
+        precondition(pendingCacheCleanup == nil)
+        let id = UUID()
+        // Retain this owner until disposal finishes; teardown and the next native
+        // operation join the handle, while completed recording disconnect stays cheap.
+        let task = Task.detached { [self, cacheCleanup] in
+            await cacheCleanup()
+            await cacheCleanupFinished(id: id)
+        }
+        pendingCacheCleanup = (id, task)
+    }
+
+    private func cacheCleanupFinished(id: UUID) {
+        if pendingCacheCleanup?.id == id { pendingCacheCleanup = nil }
+    }
+
+    private func waitForCacheCleanup() async {
+        while let cleanup = pendingCacheCleanup {
+            lifecycle(.cacheCleanupWaitStarted)
+            await cleanup.task.value
         }
     }
 
@@ -448,15 +505,18 @@ public actor QwenRuntime {
     public func endRecordingSelection() async throws {
         lifecycle(.selectionEnding)
         if let id = streaming?.id { try await cancelStreaming(sessionID: id) }
-        unloadIfIdle()
+        await unloadIfIdle()
     }
 
     /// Releases a warm model without disturbing another operation.
-    public func unloadIfIdle() {
+    public func unloadIfIdle() async {
         // Recording cleanup must not cancel an independent imported-file operation.
+        guard !closing, loading == nil, generation == nil, streaming == nil, batchStarting == nil else { return }
+        await waitForCacheCleanup()
         guard !closing, loading == nil, generation == nil, streaming == nil, batchStarting == nil, model != nil else { return }
         model = nil
-        Memory.clearCache()
+        beginCacheCleanup()
+        await waitForCacheCleanup()
     }
 
     /// Explicit model deletion/shutdown may cancel every operation owned by this runtime.
@@ -485,11 +545,13 @@ public actor QwenRuntime {
         if let loading { _ = await loading.task.result }
         if let generation { _ = await generation.task.result }
         if let task = streaming?.task { await task.value }
+        await waitForCacheCleanup()
         streaming?.continuation.finish(throwing: CancellationError())
         streaming = nil
         loading = nil
         generation = nil
         model = nil
-        Memory.clearCache()
+        beginCacheCleanup()
+        await waitForCacheCleanup()
     }
 }

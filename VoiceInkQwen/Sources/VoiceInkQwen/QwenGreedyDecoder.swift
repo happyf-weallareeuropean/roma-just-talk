@@ -30,6 +30,26 @@ public enum QwenGreedyDecoder {
         language: String? = nil,
         maxTokens: Int = 256
     ) throws -> QwenDecodeResult {
+        try decodeBody(model: model, samples: samples, prefix: prefix,
+                       language: language, maxTokens: maxTokens, disposeCache: { Memory.clearCache() })
+    }
+
+    // Runtime ownership extends through the GPU drain and the subsequent cache disposal.
+    static func decodeRetainingCache(
+        model: Qwen3ASRModel,
+        samples: [Float],
+        prefix: String = "",
+        language: String? = nil,
+        maxTokens: Int = 256
+    ) throws -> QwenDecodeResult {
+        try decodeBody(model: model, samples: samples, prefix: prefix,
+                       language: language, maxTokens: maxTokens, disposeCache: {})
+    }
+
+    private static func decodeBody(
+        model: Qwen3ASRModel, samples: [Float], prefix: String, language: String?,
+        maxTokens: Int, disposeCache: () -> Void
+    ) throws -> QwenDecodeResult {
         try Task.checkCancellation()
         // The centered frontend reflects 200 samples; reject unsupported tiny inputs.
         guard samples.count > 200, samples.allSatisfy(\.isFinite) else {
@@ -37,7 +57,7 @@ public enum QwenGreedyDecoder {
         }
         guard maxTokens > 0 else { throw QwenDecodeError.invalidTokenLimit }
         guard let tokenizer = model.tokenizer else { throw QwenDecodeError.tokenizerUnavailable }
-        defer { Memory.clearCache() }
+        defer { disposeCache() }
 
         let checkpoint: (String) throws -> Void = { _ in try Task.checkCancellation() }
         try Task.checkCancellation()

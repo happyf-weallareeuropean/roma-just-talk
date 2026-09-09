@@ -62,6 +62,16 @@ releasing the model or files. Recording startup retains audio in the app until
 the verified model session is connected. Session IDs prevent stale disconnects
 from cancelling a newer recording.
 
+Every native decode still drains its GPU stream before returning value text.
+Live passes, batch transcription, cancellation and failed final results also join
+allocator cache disposal before releasing their operation. A successful final EOS
+registers runtime-owned disposal and returns its final text without awaiting it;
+disconnecting that completed session remains a no-op. The next native operation,
+prewarm, unload and deletion join pending disposal and recheck ownership after
+waiting. This removes a delivery dependency, but is not a measured latency gain:
+allocator work may still contend with downstream paste/rendering. Public raw
+decoder callers retain the previous synchronous cache-disposal behavior.
+
 Decoding reuses MLX's default GPU stream instead of creating a stream for every
 live pass. In the pinned MLX implementation, creating a stream adds a command
 queue retained beyond the stream scope. Each runtime retains separate model and
