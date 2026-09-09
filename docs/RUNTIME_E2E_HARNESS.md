@@ -108,6 +108,11 @@ an initially running target if closing its last isolated surface exits it, and
 restores the previously frontmost app. Existing documents and pages are not used
 as test targets.
 
+An empty file on disk does not prove the editor has no unsaved changes after
+paste and clear. Cleanup skips Save only when the file is empty and the window
+explicitly reports that it is unmodified. Visibility calibration exercises this
+case with a real paste before clearing and closing each temporary document.
+
 Electron existing-text fixtures position the caret with actual Command-Left and
 Right-arrow events before recording. VS Code can accept an AX selected-range
 write and report offset `17` while the editor still inserts at offset `0`.
