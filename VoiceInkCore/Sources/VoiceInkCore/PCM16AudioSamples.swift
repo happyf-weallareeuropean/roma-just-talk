@@ -440,7 +440,7 @@ public enum VoiceInkPCM16Audio {
         data.append(UInt8(truncatingIfNeeded: littleEndian >> 24))
     }
 
-    private static func pcm16SampleFromScaledFloat(_ sample: Float32) -> Int16 {
+    fileprivate static func pcm16SampleFromScaledFloat(_ sample: Float32) -> Int16 {
         let scaled = sample * 32767.0
         let clipped = max(-32768.0, min(32767.0, scaled))
         return Int16(clipped)
@@ -500,4 +500,132 @@ public enum VoiceInkPCM16Audio {
         return Int16(clipped)
     }
 
+}
+
+/// One source clock across microphone callbacks. The owner serializes conversion, cuts and reset.
+public final class VoiceInkPCM16StreamConverter {
+    public let maximumOutputFrameCount: Int
+    private let ratio: Double
+    private let channelCount: Int
+    private let maximumInputFrameCount: Int
+    private let historyCapacity: Int
+    private var history: [Float32]
+    private var historyCount = 0
+    private var inputFrameCount = 0
+    private var outputFrameIndex = 0
+
+    public init?(
+        inputSampleRate: Double,
+        channelCount: Int,
+        maximumInputFrameCount: Int = 4096,
+        outputSampleRate: Double = VoiceInkPCM16Audio.mono16kSampleRate
+    ) {
+        guard inputSampleRate.isFinite, inputSampleRate > 0,
+              outputSampleRate.isFinite, outputSampleRate > 0,
+              channelCount > 0, maximumInputFrameCount > 0 else { return nil }
+        let ratio = outputSampleRate / inputSampleRate
+        let historyFrames = max(2, ceil(1 / ratio) + 1)
+        let outputFrames = ceil(Double(maximumInputFrameCount) * ratio) + ceil(ratio) + 1
+        guard historyFrames.isFinite, historyFrames < Double(Int.max / channelCount),
+              outputFrames.isFinite, outputFrames < Double(Int.max) else { return nil }
+        self.ratio = ratio
+        self.channelCount = channelCount
+        self.maximumInputFrameCount = maximumInputFrameCount
+        historyCapacity = Int(historyFrames)
+        history = Array(repeating: 0, count: Int(historyFrames) * channelCount)
+        maximumOutputFrameCount = Int(outputFrames)
+    }
+
+    public func reset() {
+        historyCount = 0
+        inputFrameCount = 0
+        outputFrameIndex = 0
+    }
+
+    /// Returns nil without consuming input if the caller's buffers cannot hold this conversion.
+    public func convert(
+        _ input: UnsafePointer<Float32>,
+        frameCount: Int,
+        to output: UnsafeMutablePointer<Int16>,
+        outputCapacity: Int
+    ) -> Int? {
+        guard frameCount >= 0, frameCount <= maximumInputFrameCount,
+              frameCount <= Int.max - inputFrameCount else { return nil }
+        let total = inputFrameCount + frameCount
+        guard let target = targetOutputCount(total),
+              outputCapacity >= target - outputFrameIndex else { return nil }
+        guard frameCount > 0 else { return 0 }
+
+        var written = 0
+        while outputFrameIndex < target {
+            let position = Double(outputFrameIndex) / ratio
+            let first = Int(position)
+            let fraction = Float32(position - Double(first))
+            let second = fraction == 0 ? first : first + 1
+            // Upsampling needs the next callback's first frame, not a clamped packet endpoint.
+            guard second < total else { break }
+            output[written] = sample(first: first, second: second, fraction: fraction, input: input)
+            written += 1
+            outputFrameIndex += 1
+        }
+
+        // A pending grid point can lie several frames before the last frame (512 at48k).
+        let retained = min(total, historyCapacity)
+        let start = total - retained
+        for frame in 0..<retained {
+            for channel in 0..<channelCount {
+                history[frame * channelCount + channel] = source(start + frame, channel: channel, input: input)
+            }
+        }
+        historyCount = retained
+        inputFrameCount = total
+        return written
+    }
+
+    /// Ends a recording segment without restarting the source clock. Repeated cuts emit no data.
+    public func finishSegment(to output: UnsafeMutablePointer<Int16>, outputCapacity: Int) -> Int? {
+        guard let target = targetOutputCount(inputFrameCount),
+              outputCapacity >= target - outputFrameIndex else { return nil }
+        var written = 0
+        while outputFrameIndex < target {
+            let position = Double(outputFrameIndex) / ratio
+            let first = min(Int(position), inputFrameCount - 1)
+            let fraction = Float32(position - Double(Int(position)))
+            output[written] = sample(
+                first: first, second: min(first + 1, inputFrameCount - 1),
+                fraction: fraction, input: nil
+            )
+            written += 1
+            outputFrameIndex += 1
+        }
+        return written
+    }
+
+    private func targetOutputCount(_ frames: Int) -> Int? {
+        let count = Double(frames) * ratio
+        guard count.isFinite, count < Double(Int.max) else { return nil }
+        return Int(count)
+    }
+
+    private func source(_ frame: Int, channel: Int, input: UnsafePointer<Float32>?) -> Float32 {
+        if frame >= inputFrameCount, let input {
+            return input[(frame - inputFrameCount) * channelCount + channel]
+        }
+        return history[(frame - (inputFrameCount - historyCount)) * channelCount + channel]
+    }
+
+    private func sample(
+        first: Int, second: Int, fraction: Float32, input: UnsafePointer<Float32>?
+    ) -> Int16 {
+        var value: Float32 = 0
+        for channel in 0..<channelCount {
+            let a = source(first, channel: channel, input: input)
+            if first == second {
+                value += a
+            } else {
+                value += a + fraction * (source(second, channel: channel, input: input) - a)
+            }
+        }
+        return VoiceInkPCM16Audio.pcm16SampleFromScaledFloat(value / Float32(channelCount))
+    }
 }

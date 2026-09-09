@@ -3,6 +3,137 @@ import Foundation
 
 final class PCM16AudioSamplesTests: XCTestCase {
 
+    func testStreamingResamplingPreservesWholeWaveformAcrossCallbackSizes() {
+        for rate in [48_000.0, 44_100, 16_000, 8_000] {
+            for channels in [1, 2] {
+                let frames = Int(rate) + 7
+                let input = (0..<(frames * channels)).map { sample -> Float32 in
+                    let frame = sample / channels
+                    return Float32(0.7 * sin(Double(frame) * 0.031 + Double(sample % channels)))
+                }
+                let expected = wholePCM(input, rate: rate, channels: channels)
+                for packets in [[512], [512, 257, 1024, 511], [1, 2, 7, 3], [510]] {
+                    XCTAssertEqual(streamPCM(input, rate: rate, channels: channels, packets: packets), expected)
+                }
+            }
+        }
+    }
+
+    func testStreamingResamplingKeepsTheSampleBeforeAnUnalignedCallbackBoundary() {
+        let input = (0..<1536).map { Float32($0) / 2000 }
+        let output = streamPCM(input, rate: 48_000, packets: [512])
+        XCTAssertEqual(output.count, 512)
+        XCTAssertEqual(Array(output[168...172]), [8257, 8306, 8355, 8404, 8453])
+    }
+
+    func testStreamingUpsamplingWaitsForFutureInputAndFlushesOnlyOnceAtRecordingCut() {
+        let converter = VoiceInkPCM16StreamConverter(inputSampleRate: 8_000, channelCount: 1)!
+        XCTAssertEqual(streamAppend([0, 1], converter: converter), [0, 16_383, 32_767])
+        XCTAssertEqual(streamAppend([0], converter: converter), [16_383, 0])
+        XCTAssertEqual(streamFinish(converter), [0])
+        XCTAssertEqual(streamFinish(converter), [])
+        // Capture continues at the next global output position, without repeating the cut tail.
+        XCTAssertEqual(streamAppend([1], converter: converter), [32_767])
+        XCTAssertEqual(streamFinish(converter), [32_767])
+    }
+
+    func testStreamingResetDoesNotInterpolateAcrossCaptureOrDeviceLifetimes() {
+        let converter = VoiceInkPCM16StreamConverter(inputSampleRate: 8_000, channelCount: 1)!
+        XCTAssertEqual(streamAppend([1], converter: converter), [32_767])
+        converter.reset()
+        XCTAssertEqual(streamAppend([-1], converter: converter), [-32_767])
+        XCTAssertEqual(streamFinish(converter), [-32_767])
+    }
+
+    func testStreamingRecordingCutsPreserveDownsamplePhaseForFollowingPreRoll() {
+        let converter = VoiceInkPCM16StreamConverter(inputSampleRate: 48_000, channelCount: 1)!
+        let input = (0..<1536).map { Float32($0) / 2000 }
+        var output: [Int16] = []
+        for offset in stride(from: 0, to: input.count, by: 512) {
+            output += streamAppend(Array(input[offset..<(offset + 512)]), converter: converter)
+            output += streamFinish(converter)
+        }
+        XCTAssertEqual(output, wholePCM(input, rate: 48_000))
+    }
+
+    func testStreamingInvalidBufferDoesNotConsumeInputOrDiscardPendingTail() {
+        let converter = VoiceInkPCM16StreamConverter(inputSampleRate: 8_000, channelCount: 1)!
+        var output = [Int16](repeating: 123, count: 8)
+        let rejected = [Float32(0), 1].withUnsafeBufferPointer { input in
+            output.withUnsafeMutableBufferPointer { destination in
+                converter.convert(input.baseAddress!, frameCount: 2, to: destination.baseAddress!, outputCapacity: 0)
+            }
+        }
+        XCTAssertNil(rejected)
+        XCTAssertEqual(streamAppend([0, 1], converter: converter), [0, 16_383, 32_767])
+        let rejectedFinish = output.withUnsafeMutableBufferPointer {
+            converter.finishSegment(to: $0.baseAddress!, outputCapacity: 0)
+        }
+        XCTAssertNil(rejectedFinish)
+        XCTAssertEqual(streamFinish(converter), [32_767])
+        XCTAssertNil(VoiceInkPCM16StreamConverter(inputSampleRate: .infinity, channelCount: 1))
+        XCTAssertNil(VoiceInkPCM16StreamConverter(inputSampleRate: 48_000, channelCount: 0))
+    }
+
+    func testStreamingChannelAverageAndClippingPreserveExistingPCMConvention() {
+        let input: [Float32] = [0.5, -0.5, 1, 1, -2, -2, 2, 2]
+        XCTAssertEqual(streamPCM(input, rate: 16_000, channels: 2, packets: [1]), [0, 32_767, -32_768, 32_767])
+    }
+
+    private func wholePCM(_ input: [Float32], rate: Double, channels: Int = 1) -> [Int16] {
+        var output = [Int16](repeating: 0, count: input.count * 2 + 8)
+        let written = input.withUnsafeBufferPointer { source in
+            output.withUnsafeMutableBufferPointer { destination in
+                VoiceInkPCM16Audio.writeMonoPCM16Samples(
+                    fromInterleavedFloat32Samples: source.baseAddress!, frameCount: input.count / channels,
+                    channelCount: channels, inputSampleRate: rate,
+                    to: destination.baseAddress!, outputCapacity: destination.count
+                )
+            }
+        }
+        return Array(output.prefix(written))
+    }
+
+    private func streamPCM(
+        _ input: [Float32], rate: Double, channels: Int = 1, packets: [Int]
+    ) -> [Int16] {
+        let converter = VoiceInkPCM16StreamConverter(inputSampleRate: rate, channelCount: channels)!
+        var output: [Int16] = []
+        var offset = 0
+        var packet = 0
+        while offset < input.count {
+            let end = min(input.count, offset + packets[packet % packets.count] * channels)
+            output += streamAppend(Array(input[offset..<end]), converter: converter, channels: channels)
+            offset = end
+            packet += 1
+        }
+        output += streamFinish(converter)
+        return output
+    }
+
+    private func streamAppend(
+        _ input: [Float32], converter: VoiceInkPCM16StreamConverter, channels: Int = 1
+    ) -> [Int16] {
+        var output = [Int16](repeating: 0, count: converter.maximumOutputFrameCount)
+        let written = input.withUnsafeBufferPointer { source in
+            output.withUnsafeMutableBufferPointer { destination in
+                converter.convert(source.baseAddress!, frameCount: input.count / channels,
+                                  to: destination.baseAddress!, outputCapacity: destination.count)
+            }
+        }
+        XCTAssertTrue(written != nil)
+        return Array(output.prefix(written ?? 0))
+    }
+
+    private func streamFinish(_ converter: VoiceInkPCM16StreamConverter) -> [Int16] {
+        var output = [Int16](repeating: 0, count: converter.maximumOutputFrameCount)
+        let written = output.withUnsafeMutableBufferPointer {
+            converter.finishSegment(to: $0.baseAddress!, outputCapacity: $0.count)
+        }
+        XCTAssertTrue(written != nil)
+        return Array(output.prefix(written ?? 0))
+    }
+
     func testFloatSamplesDecodeLittleEndianPCM16Data() {
         let data = pcm16Data(samples: [Int16.min, -16_384, 0, 16_384, Int16.max])
 

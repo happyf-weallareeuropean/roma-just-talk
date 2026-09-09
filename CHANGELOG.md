@@ -2,6 +2,8 @@
 
 ## v1.95.1 - 2026-09-07
 
+- Preserve recorded audio across microphone callback boundaries and recording stops, including queued streaming audio and the next recording’s pre-roll.
+
 - Preserve your transcription language when switching models: using an English-only model no longer replaces Auto-detect or Chinese before returning to Chinese + English. Explicit English choices remain unchanged.
 
 - Fixed Chinese + English model setup failing after the download completed; verify and install the pinned files directly without requiring a separate model cache.

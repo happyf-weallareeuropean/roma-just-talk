@@ -22,6 +22,10 @@ struct PreRollStreamingEmissionGate {
 
     mutating func finish() -> [Data] {
         isActive = false
+        return takeQueuedChunks()
+    }
+
+    mutating func takeQueuedChunks() -> [Data] {
         let queued = queuedLiveChunks
         queuedLiveChunks.removeAll(keepingCapacity: true)
         return queued
@@ -45,7 +49,41 @@ final class CoreAudioRecorder: @unchecked Sendable {
     private var audioUnit: AudioUnit?
     private var audioFile: ExtAudioFileRef?
 
-    private let fileAccessLock = NSLock()
+    private let fileAccessLock = NSCondition()
+    private var streamingDeliveriesInFlight = 0
+    private var captureInputFrames: Int64 = 0
+    private var captureOutputFrames: Int64 = 0
+    private var recordingPCM: RecordingPCMCounts?
+
+    private struct RecordingPCMCounts {
+        let nativeRate: Double
+        let nativeChannels: UInt32
+        let inputClockStart: Int64
+        let outputClockStart: Int64
+        let preRollPCMFrames: Int
+        var inputClockCut: Int64 = 0
+        var outputClockCut: Int64 = 0
+        var nativeFrames: Int64 = 0
+        var conversionCallbacks = 0
+        var minCallbackFrames: UInt32 = .max
+        var maxCallbackFrames: UInt32 = 0
+        var rejectedNativeFrames: Int64 = 0
+        var conversionRejects = 0
+        var tailConversionRejects = 0
+        var livePCMFrames: Int64 = 0
+        var tailPCMFrames: Int64 = 0
+        var mixedFormat = false
+        var streamingContinuous: Bool
+
+        var details: String {
+            "nativeRate=\(nativeRate) nativeChannels=\(nativeChannels) nativeFrames=\(nativeFrames) "
+                + "conversionCallbacks=\(conversionCallbacks) minCallbackFrames=\(conversionCallbacks == 0 ? 0 : minCallbackFrames) maxCallbackFrames=\(maxCallbackFrames) "
+                + "rejectedNativeFrames=\(rejectedNativeFrames) conversionRejects=\(conversionRejects) tailConversionRejects=\(tailConversionRejects) "
+                + "preRollPCMFrames=\(preRollPCMFrames) livePCMFrames=\(livePCMFrames) tailPCMFrames=\(tailPCMFrames) "
+                + "inputClockStart=\(inputClockStart) inputClockCut=\(inputClockCut) outputClockStart=\(outputClockStart) outputClockCut=\(outputClockCut) "
+                + "mixedFormat=\(mixedFormat) streamingContinuous=\(streamingContinuous)"
+        }
+    }
     private var isCapturing = false
     private var isRecording = false
     private var currentDeviceID: AudioDeviceID = 0
@@ -65,6 +103,7 @@ final class CoreAudioRecorder: @unchecked Sendable {
     // Conversion buffer
     private var conversionBuffer: UnsafeMutablePointer<Int16>?
     private var conversionBufferSize: UInt32 = 0
+    private var streamConverter: VoiceInkPCM16StreamConverter?
 
     // Audio metering (thread-safe)
     private let meterLock = NSLock()
@@ -88,7 +127,20 @@ final class CoreAudioRecorder: @unchecked Sendable {
     private var renderBufferSize: UInt32 = 0
 
     /// Called on the audio thread with raw PCM data (16-bit, 16kHz, mono) for streaming.
-    var onAudioChunk: ((_ data: Data) -> Void)?
+    private var audioChunkCallback: ((_ data: Data) -> Void)?
+    var onAudioChunk: ((_ data: Data) -> Void)? {
+        get {
+            fileAccessLock.lock()
+            defer { fileAccessLock.unlock() }
+            return audioChunkCallback
+        }
+        set {
+            fileAccessLock.lock()
+            if newValue == nil { recordingPCM?.streamingContinuous = false }
+            audioChunkCallback = newValue
+            fileAccessLock.unlock()
+        }
+    }
 
     // MARK: - Initialization
 
@@ -106,7 +158,7 @@ final class CoreAudioRecorder: @unchecked Sendable {
             return
         }
 
-        if isCapturing, currentDeviceID == deviceID {
+        if isCapturing, currentDeviceID == deviceID, inputFormatMatchesConfiguration() {
             return
         }
 
@@ -158,7 +210,7 @@ final class CoreAudioRecorder: @unchecked Sendable {
             finishRecording(latencyTraceToken: latencyTraceToken)
         }
 
-        if !isCapturing || currentDeviceID != deviceID {
+        if !isCapturing || currentDeviceID != deviceID || !inputFormatMatchesConfiguration() {
             try startPreBuffering(deviceID: deviceID)
         }
 
@@ -182,6 +234,7 @@ final class CoreAudioRecorder: @unchecked Sendable {
         }
 
         var preRollData = Data()
+        var preRollDeliveryInFlight = false
         let preRollSnapshotSpan = VoiceInkLatencyTrace.shared.begin(
             "core_audio.pre_roll.snapshot_and_write",
             token: latencyTraceToken
@@ -192,10 +245,13 @@ final class CoreAudioRecorder: @unchecked Sendable {
             preRollData = preRollBuffer.snapshotData()
             if !preRollData.isEmpty {
                 try writePCMDataToFile(preRollData)
-                if onAudioChunk != nil {
+                if audioChunkCallback != nil {
                     preRollStreamingGate.begin()
+                    streamingDeliveriesInFlight += 1
+                    preRollDeliveryInFlight = true
                 }
             }
+            beginRecordingPCMCountsLocked(preRollData: preRollData)
             isRecording = true
             fileAccessLock.unlock()
         } catch {
@@ -221,6 +277,7 @@ final class CoreAudioRecorder: @unchecked Sendable {
             )
             emitPreRollDataToStreaming(preRollData)
             finishPreRollStreamingEmission()
+            if preRollDeliveryInFlight { completeStreamingDelivery() }
             VoiceInkLatencyTrace.shared.end(
                 preRollEmitSpan,
                 details: "bytes=\(preRollData.count)"
@@ -234,8 +291,6 @@ final class CoreAudioRecorder: @unchecked Sendable {
         keepCapturing: Bool = true,
         latencyTraceToken: VoiceInkLatencyTrace.Token? = nil
     ) {
-        guard isRecording || audioFile != nil else { return }
-
         let latencySpan = VoiceInkLatencyTrace.shared.begin(
             "core_audio.finish_recording",
             token: latencyTraceToken
@@ -243,17 +298,44 @@ final class CoreAudioRecorder: @unchecked Sendable {
         let start = Date()
 
         fileAccessLock.lock()
+        guard isRecording || audioFile != nil else {
+            while streamingDeliveriesInFlight > 0 { fileAccessLock.wait() }
+            fileAccessLock.unlock()
+            VoiceInkLatencyTrace.shared.end(latencySpan)
+            return
+        }
+        let tail = finishConvertedSegmentLocked()
+        let ownedTailCount = tail == nil ? 0 : 1
+        streamingDeliveriesInFlight += ownedTailCount
         isRecording = false
         let file = audioFile
         audioFile = nil
+        preRollBuffer.clear()
+        recordingPCM?.inputClockCut = captureInputFrames
+        recordingPCM?.outputClockCut = captureOutputFrames
+        // Freeze before wait releases the lock and admits the next pre-roll callbacks.
+        let finishedPCM = recordingPCM
+        recordingPCM = nil
+        // Previously admitted audio must reach streaming before Recorder clears its callback.
+        while streamingDeliveriesInFlight > ownedTailCount { fileAccessLock.wait() }
         fileAccessLock.unlock()
+        if let tail {
+            tail.handler(tail.data)
+            completeStreamingDelivery()
+        }
 
         if let file {
             ExtAudioFileDispose(file)
         }
 
         recordingURL = nil
-        preRollBuffer.clear()
+        if let finishedPCM {
+            VoiceInkLatencyTrace.shared.event(
+                "core_audio.pcm_recording",
+                details: finishedPCM.details,
+                token: latencyTraceToken
+            )
+        }
         VoiceInkLatencyTrace.shared.end(
             latencySpan,
             details: "keepCapturing=\(keepCapturing)"
@@ -277,6 +359,9 @@ final class CoreAudioRecorder: @unchecked Sendable {
             AudioComponentInstanceDispose(unit)
             audioUnit = nil
         }
+        fileAccessLock.lock()
+        streamConverter = nil
+        fileAccessLock.unlock()
 
         // Close audio file
         if let file = audioFile {
@@ -324,7 +409,7 @@ final class CoreAudioRecorder: @unchecked Sendable {
         }
 
         // Don't switch if it's the same device
-        guard newDeviceID != currentDeviceID else { return }
+        guard newDeviceID != currentDeviceID || !inputFormatMatchesConfiguration() else { return }
 
         let oldDeviceID = currentDeviceID
         logger.notice("🎙️ Switching recording device from \(oldDeviceID, privacy: .public) to \(newDeviceID, privacy: .public)")
@@ -332,7 +417,19 @@ final class CoreAudioRecorder: @unchecked Sendable {
         // Step 1: Stop the AudioUnit (but keep file open)
         var status = AudioOutputUnitStop(unit)
         if status != noErr {
-            logger.warning("🎙️ Warning: AudioOutputUnitStop returned \(status, privacy: .public)")
+            throw CoreAudioRecorderError.failedToStop(status: status)
+        }
+        fileAccessLock.lock()
+        let tail = finishConvertedSegmentLocked()
+        let ownedTailCount = tail == nil ? 0 : 1
+        streamingDeliveriesInFlight += ownedTailCount
+        streamConverter?.reset()
+        resetCapturePCMClockLocked()
+        while streamingDeliveriesInFlight > ownedTailCount { fileAccessLock.wait() }
+        fileAccessLock.unlock()
+        if let tail {
+            tail.handler(tail.data)
+            completeStreamingDelivery()
         }
 
         // Step 2: Uninitialize to allow reconfiguration
@@ -414,12 +511,7 @@ final class CoreAudioRecorder: @unchecked Sendable {
         }
 
         // Reallocate conversion buffer if new sample rate requires more space
-        let maxOutputFrames = UInt32(Double(maxFrames) * (outputFormat.mSampleRate / newDeviceFormat.mSampleRate)) + 1
-        if maxOutputFrames > conversionBufferSize {
-            conversionBuffer?.deallocate()
-            conversionBuffer = UnsafeMutablePointer<Int16>.allocate(capacity: Int(maxOutputFrames))
-            conversionBufferSize = maxOutputFrames
-        }
+        try configureStreamConverter(for: newDeviceFormat)
 
         // Update stored format
         deviceFormat = newDeviceFormat
@@ -600,9 +692,35 @@ final class CoreAudioRecorder: @unchecked Sendable {
         renderBufferSize = bufferSamples
 
         // Pre-allocate conversion buffer (output is always smaller due to downsampling)
-        let maxOutputFrames = UInt32(Double(maxFrames) * (outputFormat.mSampleRate / deviceFormat.mSampleRate)) + 1
-        conversionBuffer = UnsafeMutablePointer<Int16>.allocate(capacity: Int(maxOutputFrames))
-        conversionBufferSize = maxOutputFrames
+        try configureStreamConverter(for: deviceFormat)
+    }
+
+    private func configureStreamConverter(for format: AudioStreamBasicDescription) throws {
+        guard let converter = VoiceInkPCM16StreamConverter(
+            inputSampleRate: format.mSampleRate,
+            channelCount: Int(format.mChannelsPerFrame)
+        ), converter.maximumOutputFrameCount <= Int(UInt32.max) else {
+            throw CoreAudioRecorderError.failedToSetFormat(status: kAudio_ParamError)
+        }
+        if converter.maximumOutputFrameCount > Int(conversionBufferSize) {
+            conversionBuffer?.deallocate()
+            conversionBuffer = .allocate(capacity: converter.maximumOutputFrameCount)
+            conversionBufferSize = UInt32(converter.maximumOutputFrameCount)
+        }
+        fileAccessLock.lock()
+        streamConverter = converter
+        resetCapturePCMClockLocked()
+        fileAccessLock.unlock()
+    }
+
+    private func inputFormatMatchesConfiguration() -> Bool {
+        guard let audioUnit else { return false }
+        var format = AudioStreamBasicDescription()
+        var size = UInt32(MemoryLayout<AudioStreamBasicDescription>.size)
+        guard AudioUnitGetProperty(audioUnit, kAudioUnitProperty_StreamFormat, kAudioUnitScope_Input,
+                                   1, &format, &size) == noErr else { return false }
+        return format.mSampleRate == deviceFormat.mSampleRate
+            && format.mChannelsPerFrame == deviceFormat.mChannelsPerFrame
     }
 
     private func setupInputCallback() throws {
@@ -798,39 +916,77 @@ final class CoreAudioRecorder: @unchecked Sendable {
         meterLock.unlock()
     }
 
+    private func beginRecordingPCMCountsLocked(preRollData: Data) {
+        recordingPCM = RecordingPCMCounts(
+            nativeRate: deviceFormat.mSampleRate,
+            nativeChannels: deviceFormat.mChannelsPerFrame,
+            inputClockStart: captureInputFrames,
+            outputClockStart: captureOutputFrames,
+            preRollPCMFrames: VoiceInkPCM16Audio.sampleCount(inData: preRollData),
+            streamingContinuous: audioChunkCallback != nil
+        )
+    }
+
+    private func resetCapturePCMClockLocked() {
+        captureInputFrames = 0
+        captureOutputFrames = 0
+        // A reset invalidates start/cut subtraction even when the new format is identical.
+        recordingPCM?.mixedFormat = true
+    }
+
     private func convertAndWriteToFile(inputBuffer: inout AudioBufferList, frameCount: UInt32) {
-        let inputChannels = deviceFormat.mChannelsPerFrame
-        let inputSampleRate = deviceFormat.mSampleRate
-        let outputSampleRate = outputFormat.mSampleRate
+        fileAccessLock.lock()
+        if recordingPCM != nil {
+            recordingPCM!.conversionCallbacks += 1
+            recordingPCM!.minCallbackFrames = min(recordingPCM!.minCallbackFrames, frameCount)
+            recordingPCM!.maxCallbackFrames = max(recordingPCM!.maxCallbackFrames, frameCount)
+        }
+        guard let inputData = inputBuffer.mBuffers.mData,
+              let streamConverter, let outputBuffer = conversionBuffer,
+              let written = streamConverter.convert(inputData.assumingMemoryBound(to: Float32.self), frameCount: Int(frameCount),
+                                                    to: outputBuffer, outputCapacity: Int(conversionBufferSize)) else {
+            recordingPCM?.conversionRejects += 1
+            recordingPCM?.rejectedNativeFrames += Int64(frameCount)
+            fileAccessLock.unlock()
+            return
+        }
+        captureInputFrames += Int64(frameCount)
+        captureOutputFrames += Int64(written)
+        recordingPCM?.nativeFrames += Int64(frameCount)
+        recordingPCM?.livePCMFrames += Int64(written)
+        let delivery = consumeConvertedSamplesLocked(written)
+        if delivery != nil { streamingDeliveriesInFlight += 1 }
+        fileAccessLock.unlock()
+        if let delivery {
+            delivery.handler(delivery.data)
+            completeStreamingDelivery()
+        }
+    }
 
-        // Get input samples
-        guard let inputData = inputBuffer.mBuffers.mData else { return }
-        let inputSamples = inputData.assumingMemoryBound(to: Float32.self)
+    private func completeStreamingDelivery() {
+        fileAccessLock.lock()
+        streamingDeliveriesInFlight -= 1
+        fileAccessLock.broadcast()
+        fileAccessLock.unlock()
+    }
 
-        let outputSampleCount = VoiceInkPCM16Audio.convertedMonoPCM16SampleCount(
-            frameCount: Int(frameCount),
-            inputSampleRate: inputSampleRate,
-            outputSampleRate: outputSampleRate
-        )
+    private typealias AudioDelivery = (data: Data, handler: (Data) -> Void)
 
-        guard outputSampleCount > 0,
-              let outputBuffer = conversionBuffer,
-              outputSampleCount <= conversionBufferSize else { return }
+    private func finishConvertedSegmentLocked() -> AudioDelivery? {
+        guard let streamConverter, let conversionBuffer,
+              let written = streamConverter.finishSegment(to: conversionBuffer,
+                                                          outputCapacity: Int(conversionBufferSize)) else {
+            recordingPCM?.tailConversionRejects += 1
+            return nil
+        }
+        captureOutputFrames += Int64(written)
+        recordingPCM?.tailPCMFrames += Int64(written)
+        return consumeConvertedSamplesLocked(written)
+    }
 
-        let writtenSampleCount = VoiceInkPCM16Audio.writeMonoPCM16Samples(
-            fromInterleavedFloat32Samples: inputSamples,
-            frameCount: Int(frameCount),
-            channelCount: Int(inputChannels),
-            inputSampleRate: inputSampleRate,
-            outputSampleRate: outputSampleRate,
-            to: outputBuffer,
-            outputCapacity: Int(conversionBufferSize)
-        )
-        guard writtenSampleCount > 0 else { return }
-
-        let outputFrameCount = UInt32(writtenSampleCount)
-
-        // Write to file
+    private func consumeConvertedSamplesLocked(_ frameCount: Int) -> AudioDelivery? {
+        guard frameCount > 0, let outputBuffer = conversionBuffer else { return nil }
+        let outputFrameCount = UInt32(frameCount)
         var outputBufferList = AudioBufferList(
             mNumberBuffers: 1,
             mBuffers: AudioBuffer(
@@ -841,35 +997,20 @@ final class CoreAudioRecorder: @unchecked Sendable {
         )
 
         preRollBuffer.append(outputBuffer, sampleCount: Int(outputFrameCount))
-        var audioChunkData: Data?
-        var audioChunkHandler: ((_ data: Data) -> Void)?
-        var queuedForPreRollStreaming = false
-
-        fileAccessLock.lock()
         if isRecording, let file = audioFile {
             let writeStatus = ExtAudioFileWrite(file, outputFrameCount, &outputBufferList)
             if writeStatus != noErr {
                 logger.error("🎙️ ExtAudioFileWrite failed with status: \(writeStatus, privacy: .public)")
             }
         }
-        if isRecording, let onAudioChunk {
+        if isRecording, let audioChunkCallback {
             let byteCount = Int(outputFrameCount) * VoiceInkPCM16Audio.bytesPerSample
             let data = Data(bytes: outputBuffer, count: byteCount)
-            if preRollStreamingGate.queueLiveChunkIfNeeded(data) {
-                queuedForPreRollStreaming = true
-            } else {
-                audioChunkHandler = onAudioChunk
-            }
-            audioChunkData = data
-        }
-        fileAccessLock.unlock()
-
-        // Send the same PCM data to the streaming callback if set
-        if let audioChunkData {
-            if !queuedForPreRollStreaming {
-                audioChunkHandler?(audioChunkData)
+            if !preRollStreamingGate.queueLiveChunkIfNeeded(data) {
+                return (data, audioChunkCallback)
             }
         }
+        return nil
     }
 
     private func writePCMDataToFile(_ data: Data) throws {
@@ -905,13 +1046,17 @@ final class CoreAudioRecorder: @unchecked Sendable {
     }
 
     private func finishPreRollStreamingEmission() {
-        fileAccessLock.lock()
-        let queuedLiveChunks = preRollStreamingGate.finish()
-        let audioChunkHandler = onAudioChunk
-        fileAccessLock.unlock()
-
-        for chunk in queuedLiveChunks {
-            audioChunkHandler?(chunk)
+        while true {
+            fileAccessLock.lock()
+            let queuedLiveChunks = preRollStreamingGate.takeQueuedChunks()
+            let audioChunkHandler = audioChunkCallback
+            if queuedLiveChunks.isEmpty {
+                _ = preRollStreamingGate.finish()
+                fileAccessLock.unlock()
+                return
+            }
+            fileAccessLock.unlock()
+            for chunk in queuedLiveChunks { audioChunkHandler?(chunk) }
         }
     }
 
@@ -1090,6 +1235,7 @@ enum CoreAudioRecorderError: LocalizedError {
     case failedToWriteFile(status: OSStatus)
     case failedToInitialize(status: OSStatus)
     case failedToStart(status: OSStatus)
+    case failedToStop(status: OSStatus)
 
     var errorDescription: String? {
         switch self {
@@ -1109,6 +1255,8 @@ enum CoreAudioRecorderError: LocalizedError {
             return "Failed to set input device: \(status)"
         case .failedToGetDeviceFormat(let status):
             return "Failed to get device format: \(status)"
+        case .failedToStop(let status):
+            return "Failed to stop AudioUnit: \(status)"
         case .failedToSetFormat(let status):
             return "Failed to set audio format: \(status)"
         case .failedToSetCallback(let status):
