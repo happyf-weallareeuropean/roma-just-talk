@@ -1,8 +1,54 @@
-# Roma local ASR investigation — 2026-09-08
+# Roma local ASR investigation — 2026-09-09
 
 Status: native eight-bit Qwen is the local bilingual integration lead, with app
 acceptance still pending. Parakeet V2 remains the current English choice.
 No v1.95.1 release or landing deployment is implied by this work.
+
+## Current app result
+
+The fixed 48-case cancellation comparison on September 8 completed against
+baseline `09ed6015` and candidate `9dc47caf`, on one disposable Apple Silicon
+Mac running macOS 26.3.1. It repeated three public fixtures across TextEdit and
+Code, empty/existing text, and ABBA blocks. This is a narrow diagnostic matrix,
+not 48 independent recordings or a public-download acceptance test.
+
+The unchanged render audit qualified 42 observations and 19 matched pairs.
+Qualified visible arm medians were **434.30 ms → 329.11 ms** (21 observations
+per arm); the median paired improvement was **117.90 ms** (19 pairs). All 42
+qualified observations exceeded 250 ms; six observations remain unqualified.
+Both arms scored 8 substitutions over 608 mixed reference units, with no empty
+outputs. The candidate's final worker alone exceeded 250 ms in 13/24 cases
+(median 252.24 ms), before text delivery. Cancellation helps, but does not meet
+the insertion requirement. Different captured sample counts and playback timing
+prevent treating this as an identical-input compute comparison.
+
+A subsequent on/off instrumentation experiment recorded 18/24 cases before a
+process-identity observer failure interrupted A2 startup. The whole experiment
+is invalid: missing cases, a paired score difference, different recording and
+cancellation trajectories, and an unqualified render prevent an accepted
+instrumentation comparison. Its 12 instrumented timelines locate expensive
+encoder, prefill, and sequential generation work; they do not prove any of it
+can safely be skipped. Even subtracting the entire observed cache-clear/drain
+cost would leave 9/12 workers above 250 ms before delivery. That arithmetic is
+an upper-bound exercise, not a predicted optimization.
+
+Finish the independently scoped process-observer repair before reusing that
+runner. Do not repeat the unchanged matrix looking for a favorable result.
+Any next optimization needs a specific compute or scheduling contract, preserved
+recognition quality and ownership, then actual app insertion proof. The 250 ms
+gate remains unchanged. Parakeet V2 remains the English option; NVIDIA zh-TW is
+an explicit cloud backup, not the primary local solution.
+
+Retained local evidence under `.local-build/asr-research/qwen-integration/`:
+
+- `cancellation-shipping-v1/app-comparison-v2/analysis-416mddbkt9hsg/REPORT.md`:
+  completed comparison, all cases and qualification reasons.
+- `final-worker-partition-v1/actual-kb32jrvtbidek/native-path-analysis/REPORT.md`:
+  incomplete experiment and limits of the observed component costs.
+- `exact-transformer-batch-timing-v1/physical-timing-v1/REPORT.md`:
+  exact reuse saved about 20–24 ms on eligible ordinary native requests, but
+  slowed no-hit requests and did not solve startup generation. Research-shader
+  timings are separate from the app artifact.
 
 ## Recommendation
 
@@ -24,7 +70,8 @@ insertion gate. On the same model and recordings at 350 ms cadence, cumulative
 decoding scored 27/662 versus the older window policy's 76/662. The two-second
 cumulative control scored 25/662. Context and prefix handling also change, so
 these comparisons do not isolate a single cause. Shared production-module compilation is
-complete; actual helper replay, lifecycle, and full app acceptance remain pending.
+complete; the later app comparison above exercises actual helper delivery and
+cancellation. Broader lifecycle coverage and full app acceptance remain pending.
 
 A separate physical resource pass sampled MLX process footprint up to 1,446 MiB,
 with a kernel-reported lifetime peak of 2,121 MiB. Its zero neural-ledger tags

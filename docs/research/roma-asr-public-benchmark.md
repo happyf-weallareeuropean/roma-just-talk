@@ -1,4 +1,4 @@
-# Roma public human-reference benchmark — 2026-09-08
+# Roma public human-reference benchmark — 2026-09-09
 
 This report concerns local bilingual model selection for v1.95.1. NVIDIA zh-TW
 is a separate, manually selected cloud backup. No model in this report has passed
@@ -15,7 +15,12 @@ three early-EOS failures persist after the encoder-length correction.
 This is a model/runtime recommendation, not shipping approval. Isolated English
 language choice, Traditional output, usable partials, memory, lifecycle, and the
 actual app's 250 ms insertion gate remain open. The shared production module has
-compiled; its actual helper replay and app lifecycle gates are pending. Breeze
+compiled, and a later 48-case app cancellation comparison completed. Its 42
+qualified render observations all exceeded 250 ms; six remain unqualified.
+Recognition scores matched across the two arms on three repeated fixtures.
+See the [current app result](roma-asr-decision.md#current-app-result) for timings,
+artifact identities, and the separate invalid 18-case instrumentation experiment.
+These app diagnostics add no new independent corpus coverage. Breeze
 Q8 retains stronger measured bilingual scores but lacks Apple streaming/resource
 acceptance. Corrected CoreML Qwen is a measured alternative with 360 MiB active neural
 allocation, different attention context and weaker accuracy in this subset.
@@ -285,8 +290,9 @@ canonical reference units in a live prefix on 18/20 clips, median 1.238 s /
 p95 2.488 s among those 18. Suffixes could still be wrong; references were used
 only after decoding. There are no labeled speech onsets or human usability/stability
 judgments. Release-to-final p95 remains above 250 ms before app insertion overhead.
-Actual shared-module helper replay, model lifecycle, and end-to-end app insertion
-are still required; probe acceptance does not establish those boundaries.
+The later app comparison exercises actual helper delivery and cancellation;
+broader model lifecycle coverage and 250 ms insertion acceptance remain open.
+These headless probe timings do not establish those app boundaries.
 
 ## Historical four-bit window-stream findings
 
@@ -350,13 +356,13 @@ text. Peak RSS was 877,854,720 bytes; MLX peak was 1,371,771,332 bytes.
 | 10–12. Fast speech, noise, microphone variation | Not controlled or annotated |
 | 13. Insertions/deletions/substitutions | Recorded in scorer JSON per clip and aggregate |
 | 14. Hallucination rate | Not a labeled silence/non-speech benchmark yet |
-| 15–18. First token, partial delay, finalization, stability | 350 ms control measured nonempty partials and release tail; speech-onset, usable partial/stability and app insertion proof pending |
+| 15–18. First token, partial delay, finalization, stability | 350 ms control measured nonempty partials and release tail; later app comparison has 42 qualified observations above 250 ms and six unqualified; speech-onset and usable partial/stability remain unproven |
 | 19. RTF | Native batch and CPU controls measured separately |
 | 20–23. Neural/process/idle memory | Physical MLX and corrected CoreML own-process samples above; sustained/pressure behavior and app process delta pending |
 | 24–26. CPU, GPU/ANE, energy | MLX GPU route and CoreML sampled process CPU; zero MLX neural tags are accounting, not energy proof; controlled silent-hold/power and CoreML placement pending |
 | 27. Cold start/load | Warm-cache load measured; fresh-install cold start pending |
 | 28. Download size | Pinned file bytes above; not RAM |
-| 29–30. Apple runtime and macOS integration | Native batch/stream probes and shared production-module compile complete; actual helper replay, lifecycle and app gate pending |
+| 29–30. Apple runtime and macOS integration | Native batch/stream probes, production-module compile and actual 48-case app cancellation comparison complete; broader lifecycle coverage and app 250 ms acceptance remain open |
 | 31. iOS viability | Package deployment declaration only; native device/runtime validation pending |
 | 32. Commercial shipping | Code/model licenses identified; retain notices, conversion provenance and pinned artifacts; no broad training-data clearance claim |
 
