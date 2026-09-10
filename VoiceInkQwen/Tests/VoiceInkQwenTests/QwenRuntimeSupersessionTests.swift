@@ -32,6 +32,9 @@ func supersededLivePassReplaysAllPCMFromLastCompletedPrefix(tail: Int) async thr
     #expect(requests.last?.samples == pcm)
     #expect(requests.last?.prefix == String(SupersessionModel.liveText.dropLast(5)))
     #expect(requests.last?.language == "English")
+    #expect(requests.last?.draft?.rawText == SupersessionModel.liveText)
+    #expect(requests.last?.draft?.eosToken == 151645)
+    #expect(requests.dropLast().allSatisfy { $0.draft == nil })
     #expect(requests.last?.encoderContext?.acceptedPredecessorID == requests[1].encoderContext?.decodeID)
     #expect(requests.last?.encoderContext?.acceptedPredecessorID != requests[2].encoderContext?.decodeID)
     #expect(requests.allSatisfy { $0.encoderContext?.sessionID == s.id })
@@ -66,6 +69,7 @@ func duplicateFinishDoesNotCancelTheReplacementFinal() async throws {
     #expect(await f.model.requests.count == 2)
     #expect(await f.model.requests.last?.samples == Array(repeating: Float(0.1), count: 5_600))
     #expect(await f.model.requests.last?.prefix == "")
+    #expect(await f.model.requests.last?.draft == nil)
     await f.model.release(2)
     try await first.value; try await second.value
     try await onlyFinal(&text, expected: SupersessionModel.finalText)
@@ -368,7 +372,7 @@ private actor SupersessionModel: QwenRuntimeModel {
     static let finalText = "repeat repeat repeat. Earlier words. Full captured ending."
     enum Outcome: Sendable { case cooperative, error, limit, lateEOS }
     enum Failure: Error { case decoder }
-    struct Request: Sendable { let samples: [Float]; let prefix: String; let language: String?; let encoderContext: QwenEncoderContext? }
+    struct Request: Sendable { let samples: [Float]; let prefix: String; let language: String?; let encoderContext: QwenEncoderContext?; let draft: QwenDecodeDraft? }
     enum Event: Sendable { case entered(Int), cancelled(Int) }
     nonisolated let events: AsyncStream<Event>
     nonisolated let trace = SupersessionTrace()
@@ -388,8 +392,8 @@ private actor SupersessionModel: QwenRuntimeModel {
     }
     nonisolated func discardEncoderReuse() { trace.append("encoder-discard") }
 
-    func decode(samples: [Float], prefix: String, language: String?, encoderContext: QwenEncoderContext?) async throws -> QwenDecodeResult {
-        requests.append(Request(samples: samples, prefix: prefix, language: language, encoderContext: encoderContext))
+    func decode(samples: [Float], prefix: String, language: String?, encoderContext: QwenEncoderContext?, draft: QwenDecodeDraft?) async throws -> QwenDecodeResult {
+        requests.append(Request(samples: samples, prefix: prefix, language: language, encoderContext: encoderContext, draft: draft))
         let pass = requests.count
         defer { trace.append("exit:\(pass)") }
         return try await withTaskCancellationHandler {

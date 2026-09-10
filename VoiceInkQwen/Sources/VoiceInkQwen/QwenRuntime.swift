@@ -45,7 +45,7 @@ public struct QwenStreamingDiagnostic: Sendable {
 protocol QwenRuntimeModel: Sendable {
     func prefix(for policy: QwenStreamingPolicy, finalTail: Bool) throws -> String
     func discardEncoderReuse()
-    func decode(samples: [Float], prefix: String, language: String?, encoderContext: QwenEncoderContext?) async throws -> QwenDecodeResult
+    func decode(samples: [Float], prefix: String, language: String?, encoderContext: QwenEncoderContext?, draft: QwenDecodeDraft?) async throws -> QwenDecodeResult
 }
 
 /// One local model owner shared by file transcription and the streaming adapter.
@@ -65,7 +65,7 @@ public actor QwenRuntime {
 
         func discardEncoderReuse() { encoderReuse.discard() }
 
-        func decode(samples: [Float], prefix: String, language: String?, encoderContext: QwenEncoderContext?) async throws -> QwenDecodeResult {
+        func decode(samples: [Float], prefix: String, language: String?, encoderContext: QwenEncoderContext?, draft: QwenDecodeDraft?) async throws -> QwenDecodeResult {
             try Device.withDefaultDevice(.gpu) {
                 // Reuse MLX's GPU stream; new streams retain a queue beyond this call.
                 // The runtime still owns the model until this stream actually drains.
@@ -75,7 +75,7 @@ public actor QwenRuntime {
                     StreamOrDevice.default.stream.synchronize()
                     encoderReuse.complete(result)
                 }
-                let decoded = try QwenGreedyDecoder.decodeRetainingCache(model: value, samples: samples, prefix: prefix, language: language, encoderReuse: encoderReuse)
+                let decoded = try QwenGreedyDecoder.decodeRetainingCache(model: value, samples: samples, prefix: prefix, language: language, encoderReuse: encoderReuse, draft: draft)
                 result = decoded
                 return decoded
             }
@@ -115,6 +115,7 @@ public actor QwenRuntime {
         var supersededDecodeID: UUID?
         var diagnosticDecode: (id: UUID, isFinal: Bool)?
         var needsFinalDecode = false
+        var lastCompletedDraft: QwenDecodeDraft?
         var acceptedDecodeID: UUID?
         var failure: Error?
 
@@ -234,7 +235,7 @@ public actor QwenRuntime {
             try Task.checkCancellation()
             let result: QwenDecodeResult
             do {
-                result = try await model.decode(samples: samples, prefix: "", language: language, encoderContext: nil)
+                result = try await model.decode(samples: samples, prefix: "", language: language, encoderContext: nil, draft: nil)
             } catch {
                 await cacheCleanup()
                 throw error
@@ -388,6 +389,7 @@ public actor QwenRuntime {
                 }
                 let prefix = try model.prefix(for: session.policy, finalTail: finalTail)
                 let language = session.language
+                let draft = finalTail ? session.lastCompletedDraft : nil
                 let decodeID = UUID()
                 let encoderContext = QwenEncoderContext(sessionID: id, decodeID: decodeID,
                     acceptedPredecessorID: session.acceptedDecodeID, isFinal: finalTail)
@@ -399,7 +401,7 @@ public actor QwenRuntime {
                                       isFinal: finalTail, sampleCount: audio.count))
                     do {
                         try Task.checkCancellation()
-                        let result = try await model.decode(samples: audio, prefix: prefix, language: language, encoderContext: encoderContext)
+                        let result = try await model.decode(samples: audio, prefix: prefix, language: language, encoderContext: encoderContext, draft: draft)
                         // decode returns only after its existing Metal drain, including on error.
                         let outcome: QwenStreamingDiagnostic.Outcome
                         switch result.termination { case .eos: outcome = .eos; case .tokenLimit: outcome = .tokenLimit }
@@ -451,8 +453,11 @@ public actor QwenRuntime {
                 }
                 try Task.checkCancellation()
                 guard streaming?.id == id, epoch == startedEpoch, !closing else { throw CancellationError() }
-                guard case .eos = result.termination else { throw QwenRuntimeError.outputLimitReached }
+                guard case .eos(let eosToken) = result.termination else { throw QwenRuntimeError.outputLimitReached }
                 session.policy.accept(prefix: prefix, generated: result.generatedText)
+                if !finalTail {
+                    session.lastCompletedDraft = QwenDecodeDraft(rawText: session.policy.rawDecoded, eosToken: eosToken)
+                }
                 session.acceptedDecodeID = decodeID
                 session.needsFinalDecode = false
                 if finalTail {
