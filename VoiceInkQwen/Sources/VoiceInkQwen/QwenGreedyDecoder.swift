@@ -12,6 +12,7 @@ public struct QwenDecodeResult: Sendable {
     public let generationTokens: Int
     public let termination: QwenDecodeTermination
     var reusedEncoderBatches = 0
+    var nativePhases: [String: Double] = [:]
 }
 
 public enum QwenDecodeError: Error, Sendable {
@@ -61,9 +62,20 @@ public enum QwenGreedyDecoder {
         guard let tokenizer = model.tokenizer else { throw QwenDecodeError.tokenizerUnavailable }
         defer { model.setTransformerBatchReuse(lookup: nil, store: nil); disposeCache() }
 
-        let checkpoint: (String) throws -> Void = { _ in try Task.checkCancellation() }
+        // Diagnostic CI snapshot only: aggregate content-free phase costs after decode.
+        var phaseStarted = ProcessInfo.processInfo.systemUptime
+        var phaseName = "validation"
+        var nativePhases: [String: Double] = [:]
+        func mark(_ name: String) {
+            let now = ProcessInfo.processInfo.systemUptime
+            nativePhases[phaseName, default: 0] += (now - phaseStarted) * 1000
+            phaseName = name; phaseStarted = now
+        }
+        let checkpoint: (String) throws -> Void = { name in mark(name); try Task.checkCancellation() }
         try Task.checkCancellation()
+        mark("preprocess")
         let (features, mask, count) = model.preprocessAudio(MLXArray(samples))
+        mark("prompt_and_reuse")
         encoderReuse?.install(model: model, features: features, samples: samples.count)
         try Task.checkCancellation()
         let base = model.buildPrompt(numAudioTokens: count, language: language)
@@ -80,7 +92,9 @@ public enum QwenGreedyDecoder {
         var logits = try model(inputIds: ids, inputFeatures: features, featureAttentionMask: mask,
             cache: cache, checkpoint: checkpoint)
         try Task.checkCancellation()
+        mark("logits_eval")
         eval(logits)
+        mark("argmax_and_dispatch")
         try Task.checkCancellation()
         var generated: [Int] = []
         var termination = QwenDecodeTermination.tokenLimit
@@ -96,13 +110,17 @@ public enum QwenGreedyDecoder {
             logits = try model(inputIds: MLXArray([Int32(token)]).expandedDimensions(axis: 0),
                 cache: cache, checkpoint: checkpoint)
             try Task.checkCancellation()
+            mark("logits_eval")
             eval(logits)
+            mark("argmax_and_dispatch")
             try Task.checkCancellation()
         }
         // A reached output cap is terminal, even if release supersedes this pass.
         // Cancellation before reaching the cap is still checked inside the loop.
         if case .eos = termination { try Task.checkCancellation() }
-        return QwenDecodeResult(generatedText: tokenizer.decode(tokens: generated),
-            generationTokens: generated.count, termination: termination, reusedEncoderBatches: encoderReuse?.hits ?? 0)
+        let text = tokenizer.decode(tokens: generated)
+        mark("complete")
+        return QwenDecodeResult(generatedText: text,
+            generationTokens: generated.count, termination: termination, reusedEncoderBatches: encoderReuse?.hits ?? 0, nativePhases: nativePhases)
     }
 }

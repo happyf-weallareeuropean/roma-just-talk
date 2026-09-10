@@ -27,14 +27,16 @@ public struct QwenStreamingDiagnostic: Sendable {
     public let generationTokens: Int?
     public let outcome: Outcome?
     public let reusedEncoderBatches: Int?
+    public let nativePhases: [String: Double]?
     public let uptime: TimeInterval
 
     init(_ phase: Phase, sessionID: UUID, decodeID: UUID? = nil, isFinal: Bool = false,
-         sampleCount: Int? = nil, generationTokens: Int? = nil, outcome: Outcome? = nil, reusedEncoderBatches: Int? = nil) {
+         sampleCount: Int? = nil, generationTokens: Int? = nil, outcome: Outcome? = nil, reusedEncoderBatches: Int? = nil, nativePhases: [String: Double]? = nil) {
         self.phase = phase; self.sessionID = sessionID; self.decodeID = decodeID
         self.isFinal = isFinal; self.sampleCount = sampleCount
         self.generationTokens = generationTokens; self.outcome = outcome
         self.reusedEncoderBatches = reusedEncoderBatches
+        self.nativePhases = nativePhases
         uptime = ProcessInfo.processInfo.systemUptime
     }
 }
@@ -402,7 +404,7 @@ public actor QwenRuntime {
                         let outcome: QwenStreamingDiagnostic.Outcome
                         switch result.termination { case .eos: outcome = .eos; case .tokenLimit: outcome = .tokenLimit }
                         diagnostic?(.init(.decodeEnd, sessionID: id, decodeID: decodeID,
-                                          isFinal: finalTail, generationTokens: result.generationTokens, outcome: outcome, reusedEncoderBatches: result.reusedEncoderBatches))
+                                          isFinal: finalTail, generationTokens: result.generationTokens, outcome: outcome, reusedEncoderBatches: result.reusedEncoderBatches, nativePhases: finalTail ? result.nativePhases : nil))
                         return result
                     } catch {
                         diagnostic?(.init(.decodeEnd, sessionID: id, decodeID: decodeID,
