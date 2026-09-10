@@ -2,6 +2,8 @@
 
 ## v1.95.1 - 2026-09-07
 
+- Explain rejected NVIDIA API keys, missing access, and connection failures instead of showing an internal gRPC error.
+
 - Show a canceled model download as canceled and remove inactive progress indicators, so Retry clearly starts a new attempt.
 
 - Let the main window keep the desktop-fitting height when setup finishes on a smaller display.

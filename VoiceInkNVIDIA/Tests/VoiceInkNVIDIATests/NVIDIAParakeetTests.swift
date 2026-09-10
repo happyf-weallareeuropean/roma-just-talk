@@ -4,6 +4,18 @@ import GRPCCore
 
 @available(macOS 15, iOS 18, *)
 final class NVIDIAParakeetTests: XCTestCase {
+    func testTransportErrorsPreserveCancellationAndDoNotExposeServerDetails() {
+        let privateDetail = "server detail containing a synthetic credential"
+        let statuses: [RPCError.Code] = [.unauthenticated, .permissionDenied, .deadlineExceeded, .unavailable, .unknown]
+        let messages = statuses.map { code in
+            NVIDIAParakeetClient.transportError(RPCError(code: code, message: privateDetail)).localizedDescription
+        }
+        XCTAssertEqual(Set(messages).count, statuses.count, "Authentication, permissions and connectivity need distinct guidance")
+        XCTAssertTrue(messages.allSatisfy { !$0.contains(privateDetail) && !$0.contains("RPCError") && $0.contains("NVIDIA") })
+        XCTAssertTrue(messages[0].contains("API key"))
+        XCTAssertTrue(NVIDIAParakeetClient.transportError(RPCError(code: .cancelled, message: privateDetail)) is CancellationError)
+    }
+
     func testRequestMatchesRivaWireContractAndKeepsPCMUnchanged() throws {
         let request = try NVIDIAParakeetClient.recognitionRequest(
             pcm16Data: Data([0, 0, 1, 0]), apiKey: " test-key "
