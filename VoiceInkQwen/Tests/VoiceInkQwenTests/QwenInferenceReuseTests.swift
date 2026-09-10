@@ -40,8 +40,9 @@ struct QwenInferenceReuseTests {
             reuse.begin(.init(sessionID: session, decodeID: UUID(),
                               acceptedPredecessorID: decode, isFinal: true), samples: samples + 5600)
             var changed = values; changed[4 * 5] += 1
-            let prepared = try #require(reuse.prepareDecoderCache(ids: ids,
-                embeddings: embeddings(changed), promptCount: ids.count))
+            let candidate = try reuse.prepareDecoderCache(ids: ids,
+                embeddings: embeddings(changed), promptCount: ids.count)
+            let prepared = try #require(candidate)
             #expect(prepared.reused == 5)
             #expect(reuse.reusedDecoderTokens == 5)
             for (layer, entry) in prepared.cache.enumerated() {
@@ -54,7 +55,8 @@ struct QwenInferenceReuseTests {
                 #expect(entry.offset == 7)
                 #expect(Array(keys.asArray(Float.self).suffix(8)) == Array(repeating: -1, count: 8))
             }
-            #expect(try reuse.prepareDecoderCache(ids: ids, embeddings: embeddings(changed), promptCount: 8) == nil)
+            let consumed = try reuse.prepareDecoderCache(ids: ids, embeddings: embeddings(changed), promptCount: 8)
+            #expect(consumed == nil)
         }
     }
 
@@ -70,8 +72,9 @@ struct QwenInferenceReuseTests {
             reuse.complete(capped ? result(.tokenLimit) : nil)
             reuse.begin(.init(sessionID: session, decodeID: UUID(),
                               acceptedPredecessorID: accepted, isFinal: true), samples: samples + 5700)
-            let prepared = try #require(reuse.prepareDecoderCache(ids: ids,
-                embeddings: embeddings(values), promptCount: 8))
+            let candidate = try reuse.prepareDecoderCache(ids: ids,
+                embeddings: embeddings(values), promptCount: 8)
+            let prepared = try #require(candidate)
             #expect(prepared.reused == 7)
             #expect(prepared.cache.allSatisfy { $0.offset == 7 })
         }
@@ -92,7 +95,8 @@ struct QwenInferenceReuseTests {
                               acceptedPredecessorID: reason == "predecessor" ? UUID() : decode,
                               isFinal: true), samples: samples + 5600)
             #expect(!reuse.shouldPrepareDecoderInput)
-            #expect(try reuse.prepareDecoderCache(ids: ids, embeddings: embeddings(values), promptCount: 8) == nil)
+            let candidate = try reuse.prepareDecoderCache(ids: ids, embeddings: embeddings(values), promptCount: 8)
+            #expect(candidate == nil)
         }
     }
 
