@@ -270,6 +270,37 @@ jobs:
         timeout-minutes: 15
         run: bash scripts/test-qwen-package.sh "$HOME/Applications/roma just talk.app"
 
+      - name: Prove recording cache cleanup regression red and green
+        timeout-minutes: 6
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+          import subprocess,hashlib,json
+          root=Path.cwd();source=root/'VoiceInkQwen/Sources/VoiceInkQwen/QwenRuntime.swift';candidate=source.read_bytes();digest=hashlib.sha256(candidate).hexdigest();out=root/'.local-build/recording-cache-regression';out.mkdir()
+          base='238516c5cd6022eed161aead00db6fa588e778e1'
+          subprocess.run(['git','fetch','--no-tags','--depth=1','origin',base],check=True)
+          bad=subprocess.check_output(['git','show',base+':VoiceInkQwen/Sources/VoiceInkQwen/QwenRuntime.swift'])
+          cmd=['swift','test','--package-path','VoiceInkQwen','-c','release','--force-resolved-versions','-Xswiftc','-enable-testing','--filter','acceptedLivePassesRetainBuffersUntilFinishOrIdleCancellation']
+          try:
+           source.write_bytes(bad)
+           r=subprocess.run(cmd,text=True,stdout=subprocess.PIPE,stderr=subprocess.STDOUT,timeout=150);(out/'known-bad.log').write_text(r.stdout)
+           print(r.stdout)
+           assert r.returncode!=0 and 'A continuing live pass must retain its reusable buffers' in r.stdout and 'Build complete!' in r.stdout,'Known bad must fail the behavioral assertion after a successful build'
+          finally:
+           source.write_bytes(candidate)
+           assert hashlib.sha256(source.read_bytes()).hexdigest()==digest
+          r=subprocess.run(cmd,text=True,stdout=subprocess.PIPE,stderr=subprocess.STDOUT,timeout=150);(out/'candidate.log').write_text(r.stdout);print(r.stdout);assert r.returncode==0
+          (out/'receipt.json').write_text(json.dumps({'knownBad':base,'candidateSourceSHA256':digest,'behavioralRed':True,'candidateGreen':True},indent=2))
+          PY
+
+      - name: Upload recording cache regression evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: roma.recording-cache-regression
+          path: .local-build/recording-cache-regression
+          if-no-files-found: error
+
       - name: Run Debug unit tests
         if: ${{ !cancelled() && steps.release_app.outcome == 'success' }}
         timeout-minutes: 15

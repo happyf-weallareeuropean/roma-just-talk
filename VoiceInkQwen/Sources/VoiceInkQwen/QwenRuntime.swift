@@ -52,6 +52,12 @@ protocol QwenRuntimeModel: Sendable {
 
 /// One local model owner shared by file transcription and the streaming adapter.
 public actor QwenRuntime {
+    // Roma has one MLX backend. Set its process-wide recycling budget once,
+    // preserving a lower budget already chosen by the application.
+    private static let configureAllocatorCache: Void = {
+        Memory.cacheLimit = min(Memory.cacheLimit, 1_024 * 1_024 * 1_024)
+    }()
+
     // MLX modules are not Sendable. Only this actor grants access, one operation at a time;
     // a task retains the model until its Metal stream has actually drained.
     final class LoadedModel: QwenRuntimeModel, @unchecked Sendable {
@@ -117,6 +123,7 @@ public actor QwenRuntime {
         var supersededDecodeID: UUID?
         var diagnosticDecode: (id: UUID, isFinal: Bool)?
         var needsFinalDecode = false
+        var needsCacheCleanup = false
         var lastCompletedDraft: QwenDecodeDraft?
         var acceptedDecodeID: UUID?
         var failure: Error?
@@ -138,6 +145,7 @@ public actor QwenRuntime {
         lifecycle = { _ in }
         cacheCleanup = { Memory.clearCache() }
         modelLoader = {
+            _ = Self.configureAllocatorCache
             let directory = try await store.cachedDirectory()
             try Task.checkCancellation()
             return try await Device.withDefaultDevice(.gpu) {
@@ -347,6 +355,8 @@ public actor QwenRuntime {
         session.task?.cancel()
         if let task = session.task { await task.value }
         model?.discardInferenceReuse()
+        beginCacheCleanup(for: session)
+        await waitForCacheCleanup()
         if let loading { _ = await loading.task.result }
         self.loading = nil
         session.failure = CancellationError()
@@ -365,7 +375,6 @@ public actor QwenRuntime {
     }
 
     private func processStream(id: UUID, startedEpoch: UInt64) async {
-        var needsCacheCleanup = false
         do {
             await waitForCacheCleanup()
             while let session = streaming, session.id == id, epoch == startedEpoch, !closing {
@@ -384,6 +393,7 @@ public actor QwenRuntime {
                 guard let audio else {
                     model.discardInferenceReuse()
                     let text = try presentation(session, isFinal: true)
+                    beginCacheCleanup(for: session)
                     emit(.final(text), for: session)
                     session.continuation.finish()
                     streaming = nil
@@ -397,7 +407,7 @@ public actor QwenRuntime {
                     acceptedPredecessorID: session.acceptedDecodeID, isFinal: finalTail)
                 let diagnostic = session.diagnostic
                 if diagnostic != nil { session.diagnosticDecode = (decodeID, finalTail) }
-                needsCacheCleanup = true
+                session.needsCacheCleanup = true
                 let task = Task.detached {
                     diagnostic?(.init(.decodeBegin, sessionID: id, decodeID: decodeID,
                                       isFinal: finalTail, sampleCount: audio.count))
@@ -425,9 +435,6 @@ public actor QwenRuntime {
                         task.cancel()
                     }
                 } catch {
-                    beginCacheCleanup()
-                    await waitForCacheCleanup()
-                    needsCacheCleanup = false
                     session.diagnosticDecode = nil
                     diagnostic?(.init(.decodeReceived, sessionID: id, decodeID: decodeID,
                                       isFinal: finalTail, outcome: session.supersededDecodeID == decodeID ? .superseded : (error is CancellationError ? .cancelled : .error)))
@@ -448,11 +455,6 @@ public actor QwenRuntime {
                 diagnostic?(.init(.decodeReceived, sessionID: id, decodeID: decodeID, isFinal: finalTail))
                 if session.liveDecode?.id == decodeID { session.liveDecode = nil }
                 if session.supersededDecodeID == decodeID { session.supersededDecodeID = nil }
-                if !finalTail {
-                    beginCacheCleanup()
-                    await waitForCacheCleanup()
-                    needsCacheCleanup = false
-                }
                 try Task.checkCancellation()
                 guard streaming?.id == id, epoch == startedEpoch, !closing else { throw CancellationError() }
                 guard case .eos(let eosToken) = result.termination else { throw QwenRuntimeError.outputLimitReached }
@@ -464,8 +466,7 @@ public actor QwenRuntime {
                 session.needsFinalDecode = false
                 if finalTail {
                     let text = try presentation(session, isFinal: true)
-                    beginCacheCleanup()
-                    needsCacheCleanup = false
+                    beginCacheCleanup(for: session)
                     emit(.final(text), for: session)
                     session.continuation.finish()
                     streaming = nil
@@ -476,11 +477,9 @@ public actor QwenRuntime {
                 }
             }
         } catch {
-            if needsCacheCleanup {
-                beginCacheCleanup()
-                await waitForCacheCleanup()
-            }
             if let session = streaming, session.id == id {
+                beginCacheCleanup(for: session)
+                await waitForCacheCleanup()
                 session.failure = error
                 session.finishing = true
                 session.task = nil
@@ -488,6 +487,12 @@ public actor QwenRuntime {
                 // Retain the terminal error until this lease disconnects; stop must report it.
             }
         }
+    }
+
+    private func beginCacheCleanup(for session: LiveSession) {
+        guard session.needsCacheCleanup else { return }
+        session.needsCacheCleanup = false
+        beginCacheCleanup()
     }
 
     private func beginCacheCleanup() {
