@@ -340,9 +340,9 @@ private actor CleanupModel: QwenRuntimeModel {
         self.barrier = barrier
     }
     nonisolated func prefix(for policy: QwenStreamingPolicy, finalTail: Bool) throws -> String { "" }
-    nonisolated func discardEncoderReuse() {}
+    nonisolated func discardInferenceReuse() {}
 
-    func decode(samples: [Float], prefix: String, language: String?, encoderContext: QwenEncoderContext?, draft: QwenDecodeDraft?) async throws -> QwenDecodeResult {
+    func decode(samples: [Float], prefix: String, language: String?, inferenceContext: QwenInferenceContext?, draft: QwenDecodeDraft?) async throws -> QwenDecodeResult {
         decodes += 1
         if let barrier { await barrier.run() }
         try Task.checkCancellation()

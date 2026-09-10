@@ -1,6 +1,7 @@
 import Foundation
 import MLX
 import MLXAudioSTT
+import MLXLMCommon
 
 public enum QwenDecodeTermination: Equatable, Sendable {
     case eos(Int)
@@ -12,10 +13,12 @@ public struct QwenDecodeResult: Sendable {
     public let generationTokens: Int
     public let termination: QwenDecodeTermination
     var reusedEncoderBatches = 0
+    var reusedDecoderTokens = 0
     var nativePhases: [String: Double] = [:]
 }
 
 public enum QwenDecodeError: Error, Sendable {
+    case invalidDecoderCache
     case invalidDraftCache
     case invalidAudio
     case invalidTokenLimit
@@ -60,16 +63,16 @@ public enum QwenGreedyDecoder {
         prefix: String = "",
         language: String? = nil,
         maxTokens: Int = 256,
-        encoderReuse: QwenEncoderReuse? = nil,
+        inferenceReuse: QwenInferenceReuse? = nil,
         draft: QwenDecodeDraft? = nil
     ) throws -> QwenDecodeResult {
         try decodeBody(model: model, samples: samples, prefix: prefix,
-                       language: language, maxTokens: maxTokens, encoderReuse: encoderReuse, draft: draft, disposeCache: {})
+                       language: language, maxTokens: maxTokens, inferenceReuse: inferenceReuse, draft: draft, disposeCache: {})
     }
 
     private static func decodeBody(
         model: Qwen3ASRModel, samples: [Float], prefix: String, language: String?,
-        maxTokens: Int, encoderReuse: QwenEncoderReuse? = nil, draft: QwenDecodeDraft? = nil, disposeCache: () -> Void
+        maxTokens: Int, inferenceReuse: QwenInferenceReuse? = nil, draft: QwenDecodeDraft? = nil, disposeCache: () -> Void
     ) throws -> QwenDecodeResult {
         try Task.checkCancellation()
         // The centered frontend reflects 200 samples; reject unsupported tiny inputs.
@@ -94,7 +97,7 @@ public enum QwenGreedyDecoder {
         mark("preprocess")
         let (features, mask, count) = model.preprocessAudio(MLXArray(samples))
         mark("prompt_and_reuse")
-        encoderReuse?.install(model: model, features: features, samples: samples.count)
+        inferenceReuse?.install(model: model, features: features, samples: samples.count)
         try Task.checkCancellation()
         let base = model.buildPrompt(numAudioTokens: count, language: language)
             .asArray(Int32.self).map(Int.init)
@@ -106,15 +109,37 @@ public enum QwenGreedyDecoder {
         let promptIDs = tokenizer.encode(text: prompt + prefix)
         let proposed = draft?.tokens(basePrompt: prompt, promptIDs: promptIDs,
             maxTokens: maxTokens, encode: { tokenizer.encode(text: $0) }) ?? []
-        let ids = MLXArray((promptIDs + proposed).map(Int32.init)).expandedDimensions(axis: 0)
+        let allIDs = promptIDs + proposed
+        let ids = MLXArray(allIDs.map(Int32.init)).expandedDimensions(axis: 0)
         try Task.checkCancellation()
-        let cache = model.makeCache()
+        let cache: [KVCache]
+        var preparedEmbeddings: MLXArray?
+        var retained = 0
+        if inferenceReuse?.shouldPrepareDecoderInput == true {
+            let embeddings = try model.prepareInputEmbeddings(inputIds: ids,
+                inputFeatures: features, featureAttentionMask: mask, checkpoint: checkpoint)
+            let prepared = try inferenceReuse?.prepareDecoderCache(ids: allIDs,
+                embeddings: embeddings, promptCount: promptIDs.count)
+            cache = prepared?.cache ?? model.makeCache()
+            retained = prepared?.reused ?? 0
+            preparedEmbeddings = embeddings
+        } else {
+            cache = model.makeCache()
+        }
         if !proposed.isEmpty, !cache.allSatisfy(\.isTrimmable) {
             throw QwenDecodeError.invalidDraftCache
         }
-        let batch = try model.verificationLogits(inputIds: ids, inputFeatures: features,
-            featureAttentionMask: mask, cache: cache, proposedTokens: proposed.count,
-            checkpoint: checkpoint)
+        let batch: MLXArray
+        if let preparedEmbeddings {
+            batch = try model.verificationLogits(inputIds: ids[0..., retained..<allIDs.count],
+                inputEmbeddings: preparedEmbeddings[0..., retained..<allIDs.count, 0...],
+                cache: cache, proposedTokens: proposed.count, checkpoint: checkpoint)
+            inferenceReuse?.recordDecoderInput(ids: allIDs, embeddings: preparedEmbeddings, cache: cache)
+        } else {
+            batch = try model.verificationLogits(inputIds: ids, inputFeatures: features,
+                featureAttentionMask: mask, cache: cache, proposedTokens: proposed.count,
+                checkpoint: checkpoint)
+        }
         try Task.checkCancellation()
         mark("logits_eval")
         eval(batch)
@@ -169,6 +194,8 @@ public enum QwenGreedyDecoder {
         let text = tokenizer.decode(tokens: generated)
         mark("complete")
         return QwenDecodeResult(generatedText: text,
-            generationTokens: generated.count, termination: termination, reusedEncoderBatches: encoderReuse?.hits ?? 0, nativePhases: nativePhases)
+            generationTokens: generated.count, termination: termination,
+            reusedEncoderBatches: inferenceReuse?.hits ?? 0,
+            reusedDecoderTokens: inferenceReuse?.reusedDecoderTokens ?? 0, nativePhases: nativePhases)
     }
 }

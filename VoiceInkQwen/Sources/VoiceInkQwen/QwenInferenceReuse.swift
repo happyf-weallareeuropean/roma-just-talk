@@ -1,8 +1,9 @@
 import Foundation
 import MLX
 import MLXAudioSTT
+import MLXLMCommon
 
-struct QwenEncoderContext: Sendable {
+struct QwenInferenceContext: Sendable {
     let sessionID: UUID
     let decodeID: UUID
     let acceptedPredecessorID: UUID?
@@ -10,7 +11,7 @@ struct QwenEncoderContext: Sendable {
 }
 
 // Access follows the runtime's single native owner; no tensor crosses the actor boundary.
-final class QwenEncoderReuse {
+final class QwenInferenceReuse {
     private struct Identity: Equatable {
         let indices: [Int]
         let shape: [Int]
@@ -30,17 +31,36 @@ final class QwenEncoderReuse {
         let sessionID: UUID
         let decodeID: UUID
         var groups: [Group]
+        var decoder: DecoderSeed? = nil
+    }
+    private struct PendingDecoder {
+        let ids: [Int]
+        let embeddings: MLXArray
+        let cache: [KVCache]
+    }
+    private struct DecoderSeed {
+        let ids: [Int]
+        let width: Int
+        let dtype: String
+        let inputBits: [UInt32]
+        let cache: [KVCache]
     }
     private var accepted: Seed?
     private var provisional: Seed?
     private var current: Seed?
-    private var context: QwenEncoderContext?
+    private var context: QwenInferenceContext?
+    private var pendingDecoder: PendingDecoder?
+    private var decoderEligible = false
     private(set) var hits = 0
+    private(set) var reusedDecoderTokens = 0
 
-    func begin(_ context: QwenEncoderContext?) {
+    func begin(_ context: QwenInferenceContext?, samples: Int) {
         self.context = context
         current = nil
+        pendingDecoder = nil
+        decoderEligible = samples >= 128_040
         hits = 0
+        reusedDecoderTokens = 0
         guard let context else { discard(); return }
         if let provisional, provisional.sessionID == context.sessionID,
            provisional.decodeID == context.acceptedPredecessorID {
@@ -57,14 +77,68 @@ final class QwenEncoderReuse {
 
     // Called after the actual stream drain, even when decoding throws.
     func complete(_ result: QwenDecodeResult?) {
-        defer { current = nil; context = nil }
+        defer { current = nil; context = nil; pendingDecoder = nil; decoderEligible = false }
         guard let context else { return }
         if context.isFinal { accepted = nil; provisional = nil; return }
-        if let result, case .eos = result.termination { provisional = current }
+        if let result, case .eos = result.termination {
+            if let pendingDecoder, let input = bits(pendingDecoder.embeddings) {
+                current?.decoder = DecoderSeed(ids: pendingDecoder.ids,
+                    width: pendingDecoder.embeddings.dim(2),
+                    dtype: String(describing: pendingDecoder.embeddings.dtype),
+                    inputBits: input, cache: pendingDecoder.cache)
+            }
+            provisional = current
+        }
     }
 
     func discard() {
         accepted = nil; provisional = nil; current = nil; context = nil
+        pendingDecoder = nil; decoderEligible = false
+    }
+
+    var shouldPrepareDecoderInput: Bool {
+        guard let context else { return false }
+        return context.isFinal ? accepted?.decoder != nil : decoderEligible
+    }
+
+    // The existing owner captures bits only after the live inference has drained.
+    func recordDecoderInput(ids: [Int], embeddings: MLXArray, cache: [KVCache]) {
+        guard decoderEligible, current != nil, embeddings.ndim == 3,
+              embeddings.dim(0) == 1, embeddings.dim(1) == ids.count,
+              embeddings.dim(2) > 0 else { return }
+        pendingDecoder = PendingDecoder(ids: ids, embeddings: embeddings, cache: cache)
+    }
+
+    func prepareDecoderCache(ids: [Int], embeddings: MLXArray, promptCount: Int) throws
+        -> (cache: [KVCache], reused: Int)? {
+        guard context?.isFinal == true, let seed = accepted?.decoder else { return nil }
+        accepted?.decoder = nil
+        guard embeddings.ndim == 3, embeddings.dim(0) == 1,
+              embeddings.dim(1) == ids.count, embeddings.dim(2) == seed.width,
+              String(describing: embeddings.dtype) == seed.dtype,
+              promptCount > 0, promptCount <= ids.count,
+              let input = bits(embeddings) else { return nil }
+        let limit = min(seed.ids.count, promptCount - 1)
+        var retained = 0
+        for row in 0..<limit {
+            let range = (row * seed.width)..<((row + 1) * seed.width)
+            guard ids[row] == seed.ids[row],
+                  input[range].elementsEqual(seed.inputBits[range]) else { break }
+            retained += 1
+        }
+        guard retained > 0 else { return nil }
+        // Never carry generated text or changed audio positions into the final suffix.
+        guard !seed.cache.isEmpty, seed.cache.allSatisfy({
+            $0.isTrimmable && $0.offset >= seed.ids.count
+        }) else { throw QwenDecodeError.invalidDecoderCache }
+        for entry in seed.cache {
+            let remove = entry.offset - retained
+            guard entry.trim(remove) == remove, entry.offset == retained else {
+                throw QwenDecodeError.invalidDecoderCache
+            }
+        }
+        reusedDecoderTokens = retained
+        return (seed.cache, retained)
     }
 
     func install(model: Qwen3ASRModel, features: MLXArray, samples: Int) {

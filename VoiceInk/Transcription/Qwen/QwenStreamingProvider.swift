@@ -55,7 +55,7 @@ actor QwenStreamingProvider: StreamingTranscriptionProvider {
         if let recordToken {
             diagnostic = { event in
                 let phases = event.nativePhases.map { values in values.sorted { $0.key < $1.key }.map { "\($0.key):\($0.value)" }.joined(separator: ",") } ?? "none"
-                let details = "session=\(event.sessionID) decode=\(event.decodeID?.uuidString ?? "none") final=\(event.isFinal) samples=\(event.sampleCount.map(String.init) ?? "none") tokens=\(event.generationTokens.map(String.init) ?? "none") reusedEncoderBatches=\(event.reusedEncoderBatches.map(String.init) ?? "none") outcome=\(event.outcome?.rawValue ?? "none") uptime=\(event.uptime) nativePhases=\(phases)"
+                let details = "session=\(event.sessionID) decode=\(event.decodeID?.uuidString ?? "none") final=\(event.isFinal) samples=\(event.sampleCount.map(String.init) ?? "none") tokens=\(event.generationTokens.map(String.init) ?? "none") reusedEncoderBatches=\(event.reusedEncoderBatches.map(String.init) ?? "none") outcome=\(event.outcome?.rawValue ?? "none") uptime=\(event.uptime) nativePhases=\(phases) reusedDecoderTokens=\(event.reusedDecoderTokens.map(String.init) ?? "none")"
                 VoiceInkLatencyTrace.shared.event("qwen_streaming.\(event.phase.rawValue)", details: details, token: recordToken)
             }
         } else {

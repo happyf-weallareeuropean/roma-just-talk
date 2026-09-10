@@ -23,7 +23,7 @@ func queuedLiveAudioCatchesUpAfterSlowInference(backlog: Int) async throws {
     #expect(requests.count == 2)
     #expect(requests[1].samples == Array(pcm.dropLast(137)))
     #expect(requests[1].prefix.isEmpty)
-    #expect(requests[1].encoderContext?.acceptedPredecessorID == requests[0].encoderContext?.decodeID)
+    #expect(requests[1].inferenceContext?.acceptedPredecessorID == requests[0].inferenceContext?.decodeID)
     guard case .partial? = try await text.next() else { Issue.record("Missing accepted first pass"); return }
     let finish = Task { try await f.runtime.finishStreaming(sessionID: s.id) }
     await marker(.finish, id: s.id, in: &life)
@@ -37,7 +37,7 @@ func queuedLiveAudioCatchesUpAfterSlowInference(backlog: Int) async throws {
     #expect(completed.last?.samples == pcm)
     #expect(completed.last?.prefix == "")
     #expect(completed.last?.language == "English")
-    #expect(completed.last?.encoderContext?.acceptedPredecessorID == requests[0].encoderContext?.decodeID)
+    #expect(completed.last?.inferenceContext?.acceptedPredecessorID == requests[0].inferenceContext?.decodeID)
 }
 
 @Test(.timeLimit(.minutes(1)))
@@ -59,7 +59,7 @@ func startupPacketUsesLatestWholeChunkWithoutLosingFinalRemainder() async throws
     try await onlyFinal(&text, expected: SupersessionModel.finalText)
     #expect(await f.model.requests.count == 2)
     #expect(await f.model.requests.last?.samples == pcm)
-    #expect(await f.model.requests.last?.encoderContext?.acceptedPredecessorID == nil)
+    #expect(await f.model.requests.last?.inferenceContext?.acceptedPredecessorID == nil)
 }
 
 @Test(.timeLimit(.minutes(1)), arguments: [0, 731, 11_931])
@@ -95,11 +95,11 @@ func supersededLivePassReplaysAllPCMFromLastCompletedPrefix(tail: Int) async thr
     #expect(requests.last?.draft?.rawText == SupersessionModel.liveText)
     #expect(requests.last?.draft?.eosToken == 151645)
     #expect(requests.dropLast().allSatisfy { $0.draft == nil })
-    #expect(requests.last?.encoderContext?.acceptedPredecessorID == requests[1].encoderContext?.decodeID)
-    #expect(requests.last?.encoderContext?.acceptedPredecessorID != requests[2].encoderContext?.decodeID)
-    #expect(requests.allSatisfy { $0.encoderContext?.sessionID == s.id })
-    #expect(requests.last?.encoderContext?.isFinal == true)
-    #expect(requests[2].encoderContext?.isFinal == false)
+    #expect(requests.last?.inferenceContext?.acceptedPredecessorID == requests[1].inferenceContext?.decodeID)
+    #expect(requests.last?.inferenceContext?.acceptedPredecessorID != requests[2].inferenceContext?.decodeID)
+    #expect(requests.allSatisfy { $0.inferenceContext?.sessionID == s.id })
+    #expect(requests.last?.inferenceContext?.isFinal == true)
+    #expect(requests[2].inferenceContext?.isFinal == false)
     let exited = try #require(f.model.trace.order.firstIndex(of: "exit:3"))
     let finalEntered = try #require(f.model.trace.order.firstIndex(of: "enter:4"))
     #expect(exited < finalEntered)
@@ -432,7 +432,7 @@ private actor SupersessionModel: QwenRuntimeModel {
     static let finalText = "repeat repeat repeat. Earlier words. Full captured ending."
     enum Outcome: Sendable { case cooperative, error, limit, lateEOS }
     enum Failure: Error { case decoder }
-    struct Request: Sendable { let samples: [Float]; let prefix: String; let language: String?; let encoderContext: QwenEncoderContext?; let draft: QwenDecodeDraft? }
+    struct Request: Sendable { let samples: [Float]; let prefix: String; let language: String?; let inferenceContext: QwenInferenceContext?; let draft: QwenDecodeDraft? }
     enum Event: Sendable { case entered(Int), cancelled(Int) }
     nonisolated let events: AsyncStream<Event>
     nonisolated let trace = SupersessionTrace()
@@ -450,10 +450,10 @@ private actor SupersessionModel: QwenRuntimeModel {
         policy.prefix(finalTail: finalTail, encode: { $0.unicodeScalars.map { Int($0.value) } },
             decode: { String(String.UnicodeScalarView($0.compactMap(UnicodeScalar.init))) })
     }
-    nonisolated func discardEncoderReuse() { trace.append("encoder-discard") }
+    nonisolated func discardInferenceReuse() { trace.append("encoder-discard") }
 
-    func decode(samples: [Float], prefix: String, language: String?, encoderContext: QwenEncoderContext?, draft: QwenDecodeDraft?) async throws -> QwenDecodeResult {
-        requests.append(Request(samples: samples, prefix: prefix, language: language, encoderContext: encoderContext, draft: draft))
+    func decode(samples: [Float], prefix: String, language: String?, inferenceContext: QwenInferenceContext?, draft: QwenDecodeDraft?) async throws -> QwenDecodeResult {
+        requests.append(Request(samples: samples, prefix: prefix, language: language, inferenceContext: inferenceContext, draft: draft))
         let pass = requests.count
         defer { trace.append("exit:\(pass)") }
         return try await withTaskCancellationHandler {
@@ -568,7 +568,7 @@ private func lateEOSAfterSupersessionPreservesCurrentTextAcceptance(tail: Int) a
     #expect(requests.count == (tail == 0 ? 1 : 2))
     if tail > 0 {
         #expect(requests[1].prefix == "")
-        #expect(requests[1].encoderContext?.acceptedPredecessorID == requests[0].encoderContext?.decodeID)
+        #expect(requests[1].inferenceContext?.acceptedPredecessorID == requests[0].inferenceContext?.decodeID)
         let exited = try #require(f.model.trace.order.firstIndex(of: "exit:1"))
         let finalEntered = try #require(f.model.trace.order.firstIndex(of: "enter:2"))
         #expect(exited < finalEntered)
