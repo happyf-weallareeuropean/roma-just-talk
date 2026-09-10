@@ -17,6 +17,7 @@ on:
       - "scripts/check-find-reusable-ci-run.sh"
       - "scripts/find-reusable-ci-run.sh"
       - "scripts/run-macos-ci-unit-tests.sh"
+      - "scripts/verify-macos-release-instrumentation.sh"
       - "scripts/test-qwen-package.sh"
       - "scripts/test-fluidaudio-package.sh"
       - "scripts/tests/verify-adhoc-library-validation.test.sh"
@@ -57,6 +58,7 @@ on:
       - "scripts/check-find-reusable-ci-run.sh"
       - "scripts/find-reusable-ci-run.sh"
       - "scripts/run-macos-ci-unit-tests.sh"
+      - "scripts/verify-macos-release-instrumentation.sh"
       - "scripts/test-qwen-package.sh"
       - "scripts/test-fluidaudio-package.sh"
       - "scripts/tests/verify-adhoc-library-validation.test.sh"
@@ -295,6 +297,9 @@ jobs:
           APP="$HOME/Applications/roma just talk.app"
           BUNDLE_ID=$(plutil -extract CFBundleIdentifier raw -o - "$APP/Contents/Info.plist")
           test "$BUNDLE_ID" = "com.negentropi.RomaJustTalk"
+
+      - name: Reject test-coverage instrumentation in release app
+        run: bash scripts/verify-macos-release-instrumentation.sh "$HOME/Applications/roma just talk.app"
 
       - name: Package app
         run: ditto -c -k --keepParent "$HOME/Applications/roma just talk.app" "roma.just.talk.app.zip"
