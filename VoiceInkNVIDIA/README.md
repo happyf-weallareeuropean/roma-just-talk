@@ -4,6 +4,8 @@ Optional `parakeet-ctc-0.6b-zh-tw` through NVIDIA's hosted Riva gRPC service. Au
 
 The initial integration transcribes the complete recording with `Recognize`; it does not advertise streaming. API-key verification calls `GetRivaSpeechRecognitionConfig` and sends no audio. Each request has a deadline and closes its transport afterward. Recorded audio is checked as mono 16 kHz PCM16 WAV by VoiceInkCore, then the header is removed before sending raw PCM. The dedicated function always receives `zh-TW`, including mixed English speech.
 
+Verification and transcription translate gRPC statuses into user-facing guidance for rejected keys, missing permissions, timeouts, and connection failures. Server error details are not displayed; cancellation remains cancellation.
+
 Hosted contract: https://build.nvidia.com/nvidia/parakeet-ctc-0_6b-zh-tw/api
 
 NVIDIA documents separate gRPC and HTTP invocation routes: https://docs.nvidia.com/nvcf/g-rpc-function-invocation . Generic NIM REST documentation does not establish REST support for this hosted function. Do not substitute an inferred REST URL.
