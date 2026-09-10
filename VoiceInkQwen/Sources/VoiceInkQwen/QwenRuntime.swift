@@ -373,7 +373,7 @@ public actor QwenRuntime {
                 }
                 // Superseded inference drains before one final pass over all PCM.
                 let finalTail = session.finishing
-                let audio = session.policy.takeAudio(finalTail: finalTail)
+                let audio = (finalTail ? session.policy.takeAudio(finalTail: true) : session.policy.takeLatestAudio())
                     ?? (finalTail && session.needsFinalDecode ? session.policy.accumulatedAudio : nil)
                 if audio == nil, !finalTail {
                     session.task = nil

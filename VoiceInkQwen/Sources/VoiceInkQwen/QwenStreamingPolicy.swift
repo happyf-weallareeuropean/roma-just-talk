@@ -28,6 +28,17 @@ public struct QwenStreamingPolicy {
             guard pendingAudio.count >= chunkSamples else { return nil }
             count = chunkSamples
         }
+        return consume(count)
+    }
+
+    // Live inference catches up after slow work; keep the fractional chunk for the tail.
+    mutating func takeLatestAudio() -> [Float]? {
+        let count = pendingAudio.count / chunkSamples * chunkSamples
+        guard count > 0 else { return nil }
+        return consume(count)
+    }
+
+    private mutating func consume(_ count: Int) -> [Float] {
         accumulatedAudio.append(contentsOf: pendingAudio.prefix(count))
         pendingAudio.removeFirst(count)
         return accumulatedAudio

@@ -2,6 +2,66 @@ import Foundation
 import Testing
 @testable import VoiceInkQwen
 
+@Test(.timeLimit(.minutes(1)), arguments: [5_600, 16_800, 50_400])
+func queuedLiveAudioCatchesUpAfterSlowInference(backlog: Int) async throws {
+    let f = try SupersessionFixture(blocked: [1, 2])
+    let s = try await f.runtime.startStreaming(language: "English")
+    defer { f.cleanup(s.id) }
+    var calls = f.model.events.makeAsyncIterator()
+    var text = s.events.makeAsyncIterator()
+    var life = f.lifecycle.makeAsyncIterator()
+    let pcm = (0..<(5_600 + backlog + 137)).map { Float($0) / 100_000 }
+    try await f.runtime.appendAudio(Array(pcm.prefix(5_600)), sessionID: s.id)
+    await entered(1, in: &calls)
+    // Packets arriving during native work must join the next cumulative request.
+    for start in stride(from: 5_600, to: pcm.count, by: 731) {
+        try await f.runtime.appendAudio(Array(pcm[start..<min(start + 731, pcm.count)]), sessionID: s.id)
+    }
+    await f.model.release(1)
+    await entered(2, in: &calls)
+    let requests = await f.model.requests
+    #expect(requests.count == 2)
+    #expect(requests[1].samples == Array(pcm.dropLast(137)))
+    #expect(requests[1].prefix.isEmpty)
+    #expect(requests[1].encoderContext?.acceptedPredecessorID == requests[0].encoderContext?.decodeID)
+    guard case .partial? = try await text.next() else { Issue.record("Missing accepted first pass"); return }
+    let finish = Task { try await f.runtime.finishStreaming(sessionID: s.id) }
+    await marker(.finish, id: s.id, in: &life)
+    #expect(f.model.trace.cancelled.contains(2))
+    #expect(await f.model.requests.count == 2)
+    await f.model.release(2)
+    try await finish.value
+    try await onlyFinal(&text, expected: SupersessionModel.finalText)
+    let completed = await f.model.requests
+    #expect(completed.count == 3)
+    #expect(completed.last?.samples == pcm)
+    #expect(completed.last?.prefix == "")
+    #expect(completed.last?.language == "English")
+    #expect(completed.last?.encoderContext?.acceptedPredecessorID == requests[0].encoderContext?.decodeID)
+}
+
+@Test(.timeLimit(.minutes(1)))
+func startupPacketUsesLatestWholeChunkWithoutLosingFinalRemainder() async throws {
+    let f = try SupersessionFixture(blocked: [1])
+    let s = try await f.runtime.startStreaming()
+    defer { f.cleanup(s.id) }
+    var calls = f.model.events.makeAsyncIterator()
+    var text = s.events.makeAsyncIterator()
+    var life = f.lifecycle.makeAsyncIterator()
+    let pcm = (0..<22_537).map { Float($0) / 100_000 }
+    try await f.runtime.appendAudio(pcm, sessionID: s.id)
+    await entered(1, in: &calls)
+    #expect(await f.model.requests.first?.samples == Array(pcm.prefix(22_400)))
+    let finish = Task { try await f.runtime.finishStreaming(sessionID: s.id) }
+    await marker(.finish, id: s.id, in: &life)
+    await f.model.release(1)
+    try await finish.value
+    try await onlyFinal(&text, expected: SupersessionModel.finalText)
+    #expect(await f.model.requests.count == 2)
+    #expect(await f.model.requests.last?.samples == pcm)
+    #expect(await f.model.requests.last?.encoderContext?.acceptedPredecessorID == nil)
+}
+
 @Test(.timeLimit(.minutes(1)), arguments: [0, 731, 11_931])
 func supersededLivePassReplaysAllPCMFromLastCompletedPrefix(tail: Int) async throws {
     let f = try SupersessionFixture(blocked: [3])
