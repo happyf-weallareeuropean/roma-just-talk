@@ -89,7 +89,7 @@ public enum QwenGreedyDecoder {
             .expandedDimensions(axis: 0)
         try Task.checkCancellation()
         let cache = model.makeCache()
-        var logits = try model(inputIds: ids, inputFeatures: features, featureAttentionMask: mask,
+        var logits = try model.nextTokenLogits(inputIds: ids, inputFeatures: features, featureAttentionMask: mask,
             cache: cache, checkpoint: checkpoint)
         try Task.checkCancellation()
         mark("logits_eval")
@@ -107,7 +107,7 @@ public enum QwenGreedyDecoder {
             }
             generated.append(token)
             if generated.count == maxTokens { break }
-            logits = try model(inputIds: MLXArray([Int32(token)]).expandedDimensions(axis: 0),
+            logits = try model.nextTokenLogits(inputIds: MLXArray([Int32(token)]).expandedDimensions(axis: 0),
                 cache: cache, checkpoint: checkpoint)
             try Task.checkCancellation()
             mark("logits_eval")
