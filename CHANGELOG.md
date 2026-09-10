@@ -2,6 +2,8 @@
 
 ## v1.95.1 - 2026-09-07
 
+- Show a canceled model download as canceled and remove inactive progress indicators, so Retry clearly starts a new attempt.
+
 - Preserve recorded audio across microphone callback boundaries and recording stops, including queued streaming audio and the next recording’s pre-roll.
 
 - Let successful Chinese + English dictation deliver its text while temporary model memory is cleared; the next model operation still waits for cleanup.

@@ -292,7 +292,8 @@ class FluidAudioModelManager: ObservableObject {
                 throw FluidAudioModelManagerError.completedWithoutModels
             }
             finishDownload(modelName: modelName, downloadID: downloadID, result: .success(()))
-        } catch is CancellationError {
+        } catch where Task.isCancelled || error is CancellationError {
+            // URLSession may report URLError.cancelled after the owning task is canceled.
             let result: Result<Void, Error> = client.modelsExist(version)
                 ? .success(())
                 : .failure(CancellationError())
@@ -346,6 +347,7 @@ class FluidAudioModelManager: ObservableObject {
             logger.error(
                 "FluidAudio download failed: \(modelName, privacy: .public), downloadID=\(downloadID.uuidString, privacy: .public), elapsedSeconds=\(elapsed, privacy: .public), error=\(error.localizedDescription, privacy: .public)"
             )
+            downloadStatuses[modelName] = nil
             downloadIssues[modelName] = .failed(error.localizedDescription)
             clearDownloadLogState(for: modelName)
         }

@@ -34,10 +34,15 @@ private final class TestDateBox {
 }
 
 private actor SuspendedFluidAudioDownload {
+    private let usesURLCancellation: Bool
     private var continuation: CheckedContinuation<Void, Error>?
     private var progressHandler: FluidAudioModelDownloadClient.ProgressHandler?
     private var startWaiters: [CheckedContinuation<Void, Never>] = []
     private(set) var startCount = 0
+
+    init(usesURLCancellation: Bool = false) {
+        self.usesURLCancellation = usesURLCancellation
+    }
 
     func run(
         force: Bool,
@@ -75,7 +80,8 @@ private actor SuspendedFluidAudioDownload {
     }
 
     private func cancel() {
-        continuation?.resume(throwing: CancellationError())
+        let error: any Error = usesURLCancellation ? URLError(.cancelled) : CancellationError()
+        continuation?.resume(throwing: error)
         continuation = nil
     }
 }
@@ -169,10 +175,10 @@ struct FluidAudioModelManagerTests {
         #expect(startCount == 1)
     }
 
-    @Test @MainActor
-    func secondCallerJoinsActiveDownloadAndCancellationLeavesRetryState() async {
+    @Test(arguments: [false, true]) @MainActor
+    func secondCallerJoinsActiveDownloadAndCancellationLeavesRetryState(usesURLCancellation: Bool) async {
         let model = TranscriptionModelRegistry.defaultMacOSFluidAudioModel
-        let download = SuspendedFluidAudioDownload()
+        let download = SuspendedFluidAudioDownload(usesURLCancellation: usesURLCancellation)
         let manager = FluidAudioModelManager(
             client: FluidAudioModelDownloadClient(
                 modelsExist: { _ in false },
@@ -201,6 +207,7 @@ struct FluidAudioModelManagerTests {
         #expect(startCount == 1)
         #expect(!manager.isFluidAudioModelDownloading(model))
         #expect(manager.downloadIssue(for: model) == .cancelled)
+        #expect(manager.downloadStatus(for: model) == nil)
     }
 
     @Test @MainActor
@@ -223,6 +230,7 @@ struct FluidAudioModelManagerTests {
 
         await manager.downloadFluidAudioModel(model)
         #expect(manager.downloadIssue(for: model) == .failed("Test download failed"))
+        #expect(manager.downloadStatus(for: model) == nil)
 
         await manager.retryFluidAudioModelDownload(model)
 
