@@ -54,7 +54,7 @@ actor QwenStreamingProvider: StreamingTranscriptionProvider {
         let diagnostic: (@Sendable (QwenStreamingDiagnostic) -> Void)?
         if let recordToken {
             diagnostic = { event in
-                let details = "session=\(event.sessionID) decode=\(event.decodeID?.uuidString ?? "none") final=\(event.isFinal) samples=\(event.sampleCount.map(String.init) ?? "none") tokens=\(event.generationTokens.map(String.init) ?? "none") outcome=\(event.outcome?.rawValue ?? "none") uptime=\(event.uptime)"
+                let details = "session=\(event.sessionID) decode=\(event.decodeID?.uuidString ?? "none") final=\(event.isFinal) samples=\(event.sampleCount.map(String.init) ?? "none") tokens=\(event.generationTokens.map(String.init) ?? "none") reusedEncoderBatches=\(event.reusedEncoderBatches.map(String.init) ?? "none") outcome=\(event.outcome?.rawValue ?? "none") uptime=\(event.uptime)"
                 VoiceInkLatencyTrace.shared.event("qwen_streaming.\(event.phase.rawValue)", details: details, token: recordToken)
             }
         } else {

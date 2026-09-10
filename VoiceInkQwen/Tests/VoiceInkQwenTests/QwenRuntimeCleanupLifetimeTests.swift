@@ -56,7 +56,9 @@ private final class LifetimeModel: QwenRuntimeModel, Sendable {
     init(lifetime: CleanupModelLifetime) { self.lifetime = lifetime }
     deinit { lifetime.released() }
     func prefix(for policy: QwenStreamingPolicy, finalTail: Bool) throws -> String { "" }
-    func decode(samples: [Float], prefix: String, language: String?) async throws -> QwenDecodeResult {
+    nonisolated func discardEncoderReuse() {}
+
+    func decode(samples: [Float], prefix: String, language: String?, encoderContext: QwenEncoderContext?) async throws -> QwenDecodeResult {
         .init(generatedText: "Spoken words.", generationTokens: 3, termination: .eos(151645))
     }
 }

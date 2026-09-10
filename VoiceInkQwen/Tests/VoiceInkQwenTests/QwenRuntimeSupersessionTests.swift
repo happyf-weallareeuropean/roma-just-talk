@@ -32,6 +32,11 @@ func supersededLivePassReplaysAllPCMFromLastCompletedPrefix(tail: Int) async thr
     #expect(requests.last?.samples == pcm)
     #expect(requests.last?.prefix == String(SupersessionModel.liveText.dropLast(5)))
     #expect(requests.last?.language == "English")
+    #expect(requests.last?.encoderContext?.acceptedPredecessorID == requests[1].encoderContext?.decodeID)
+    #expect(requests.last?.encoderContext?.acceptedPredecessorID != requests[2].encoderContext?.decodeID)
+    #expect(requests.allSatisfy { $0.encoderContext?.sessionID == s.id })
+    #expect(requests.last?.encoderContext?.isFinal == true)
+    #expect(requests[2].encoderContext?.isFinal == false)
     let exited = try #require(f.model.trace.order.firstIndex(of: "exit:3"))
     let finalEntered = try #require(f.model.trace.order.firstIndex(of: "enter:4"))
     #expect(exited < finalEntered)
@@ -112,6 +117,9 @@ func userCancellationWhileSupersededChildDrainsIsTerminal() async throws {
     try await cancelledStream(&text)
     #expect(await f.model.requests.count == 1)
     #expect(f.emissions.values.isEmpty)
+    let ended = try #require(f.model.trace.order.firstIndex(of: "exit:1"))
+    let discarded = try #require(f.model.trace.order.firstIndex(of: "encoder-discard"))
+    #expect(ended < discarded)
     let next = try await f.runtime.startStreaming()
     try await f.runtime.cancelStreaming(sessionID: next.id)
 }
@@ -360,7 +368,7 @@ private actor SupersessionModel: QwenRuntimeModel {
     static let finalText = "repeat repeat repeat. Earlier words. Full captured ending."
     enum Outcome: Sendable { case cooperative, error, limit, lateEOS }
     enum Failure: Error { case decoder }
-    struct Request: Sendable { let samples: [Float]; let prefix: String; let language: String? }
+    struct Request: Sendable { let samples: [Float]; let prefix: String; let language: String?; let encoderContext: QwenEncoderContext? }
     enum Event: Sendable { case entered(Int), cancelled(Int) }
     nonisolated let events: AsyncStream<Event>
     nonisolated let trace = SupersessionTrace()
@@ -378,8 +386,10 @@ private actor SupersessionModel: QwenRuntimeModel {
         policy.prefix(finalTail: finalTail, encode: { $0.unicodeScalars.map { Int($0.value) } },
             decode: { String(String.UnicodeScalarView($0.compactMap(UnicodeScalar.init))) })
     }
-    func decode(samples: [Float], prefix: String, language: String?) async throws -> QwenDecodeResult {
-        requests.append(Request(samples: samples, prefix: prefix, language: language))
+    nonisolated func discardEncoderReuse() { trace.append("encoder-discard") }
+
+    func decode(samples: [Float], prefix: String, language: String?, encoderContext: QwenEncoderContext?) async throws -> QwenDecodeResult {
+        requests.append(Request(samples: samples, prefix: prefix, language: language, encoderContext: encoderContext))
         let pass = requests.count
         defer { trace.append("exit:\(pass)") }
         return try await withTaskCancellationHandler {
@@ -494,6 +504,7 @@ private func lateEOSAfterSupersessionPreservesCurrentTextAcceptance(tail: Int) a
     #expect(requests.count == (tail == 0 ? 1 : 2))
     if tail > 0 {
         #expect(requests[1].prefix == "")
+        #expect(requests[1].encoderContext?.acceptedPredecessorID == requests[0].encoderContext?.decodeID)
         let exited = try #require(f.model.trace.order.firstIndex(of: "exit:1"))
         let finalEntered = try #require(f.model.trace.order.firstIndex(of: "enter:2"))
         #expect(exited < finalEntered)

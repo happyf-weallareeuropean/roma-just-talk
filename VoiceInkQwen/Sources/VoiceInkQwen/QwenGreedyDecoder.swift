@@ -11,6 +11,7 @@ public struct QwenDecodeResult: Sendable {
     public let generatedText: String
     public let generationTokens: Int
     public let termination: QwenDecodeTermination
+    var reusedEncoderBatches = 0
 }
 
 public enum QwenDecodeError: Error, Sendable {
@@ -40,15 +41,16 @@ public enum QwenGreedyDecoder {
         samples: [Float],
         prefix: String = "",
         language: String? = nil,
-        maxTokens: Int = 256
+        maxTokens: Int = 256,
+        encoderReuse: QwenEncoderReuse? = nil
     ) throws -> QwenDecodeResult {
         try decodeBody(model: model, samples: samples, prefix: prefix,
-                       language: language, maxTokens: maxTokens, disposeCache: {})
+                       language: language, maxTokens: maxTokens, encoderReuse: encoderReuse, disposeCache: {})
     }
 
     private static func decodeBody(
         model: Qwen3ASRModel, samples: [Float], prefix: String, language: String?,
-        maxTokens: Int, disposeCache: () -> Void
+        maxTokens: Int, encoderReuse: QwenEncoderReuse? = nil, disposeCache: () -> Void
     ) throws -> QwenDecodeResult {
         try Task.checkCancellation()
         // The centered frontend reflects 200 samples; reject unsupported tiny inputs.
@@ -57,11 +59,12 @@ public enum QwenGreedyDecoder {
         }
         guard maxTokens > 0 else { throw QwenDecodeError.invalidTokenLimit }
         guard let tokenizer = model.tokenizer else { throw QwenDecodeError.tokenizerUnavailable }
-        defer { disposeCache() }
+        defer { model.setTransformerBatchReuse(lookup: nil, store: nil); disposeCache() }
 
         let checkpoint: (String) throws -> Void = { _ in try Task.checkCancellation() }
         try Task.checkCancellation()
         let (features, mask, count) = model.preprocessAudio(MLXArray(samples))
+        encoderReuse?.install(model: model, features: features, samples: samples.count)
         try Task.checkCancellation()
         let base = model.buildPrompt(numAudioTokens: count, language: language)
             .asArray(Int32.self).map(Int.init)
@@ -100,6 +103,6 @@ public enum QwenGreedyDecoder {
         // Cancellation before reaching the cap is still checked inside the loop.
         if case .eos = termination { try Task.checkCancellation() }
         return QwenDecodeResult(generatedText: tokenizer.decode(tokens: generated),
-            generationTokens: generated.count, termination: termination)
+            generationTokens: generated.count, termination: termination, reusedEncoderBatches: encoderReuse?.hits ?? 0)
     }
 }

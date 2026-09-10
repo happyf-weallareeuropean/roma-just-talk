@@ -164,7 +164,9 @@ private actor FinishModel: QwenRuntimeModel {
             decode: { String(String.UnicodeScalarView($0.compactMap(UnicodeScalar.init))) })
     }
 
-    func decode(samples: [Float], prefix: String, language: String?) async throws -> QwenDecodeResult {
+    nonisolated func discardEncoderReuse() {}
+
+    func decode(samples: [Float], prefix: String, language: String?, encoderContext: QwenEncoderContext?) async throws -> QwenDecodeResult {
         requests.append(Request(samples: samples, prefix: prefix, language: language))
         let pass = requests.count
         continuation.yield(.entered(pass))
