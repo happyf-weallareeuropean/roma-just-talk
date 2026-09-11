@@ -220,30 +220,44 @@ func nextBatchReservesStartupWhilePreviousFinalCleanupRuns() async throws {
     try await fixture.runtime.unload()
 }
 
-@Test(.timeLimit(.minutes(1)))
-func releaseDuringLiveCleanupReusesOnlyTheDrainedAcceptedResult() async throws {
+@Test(.timeLimit(.minutes(1)), arguments: [false, true])
+func acceptedLivePassesRetainBuffersUntilFinishOrIdleCancellation(cancel: Bool) async throws {
     let fixture = try CleanupFixture()
     let session = try await fixture.runtime.startStreaming(language: "English")
-    try await fixture.runtime.appendAudio(Array(repeating: 0.1, count: 5_600), sessionID: session.id)
-    await fixture.cleanup.waitUntilEntered()
     defer { Task { await fixture.cleanup.release() } }
     var lifecycle = fixture.events.makeAsyncIterator()
-    let finish = Task { try await fixture.runtime.finishStreaming(sessionID: session.id) }
-    while let event = await lifecycle.next() {
-        if case .finishRequested(session.id) = event { break }
+    for _ in 0..<2 {
+        try await fixture.runtime.appendAudio(Array(repeating: 0.1, count: 5_600), sessionID: session.id)
+        while let event = await lifecycle.next() {
+            if case .cacheCleanupWaitStarted = event {
+                Issue.record("A continuing live pass must retain its reusable buffers")
+                await fixture.cleanup.release()
+            }
+            if case .streamEvent(session.id, .partial) = event { break }
+        }
     }
-    #expect(await fixture.model.decodes == 1)
-    await fixture.cleanup.release()
-    try await finish.value
-    var text = session.events.makeAsyncIterator()
-    guard case .final(let value)? = try await text.next() else {
-        Issue.record("Release must finalize the already drained result after its cleanup")
-        return
+    #expect(await fixture.model.decodes == 2)
+    #expect(await fixture.cleanup.entries == 0)
+    if cancel {
+        // Both accepted workers have returned; idle disconnect still owns cleanup.
+        let cancellation = Task { try await fixture.runtime.cancelStreaming(sessionID: session.id) }
+        await fixture.cleanup.waitUntilEntered()
+        do {
+            _ = try await fixture.runtime.startStreaming()
+            Issue.record("Idle cancellation retains ownership until cache disposal drains")
+        } catch QwenRuntimeError.busy {}
+        await fixture.cleanup.release()
+        try await cancellation.value
+    } else {
+        // No new PCM: the accepted result becomes final without another decode.
+        try await fixture.finishBeforeCleanup(session.id)
+        try await fixture.completedDisconnectBeforeCleanup(session.id)
+        await fixture.cleanup.waitUntilEntered()
+        #expect(await fixture.cleanup.exited == false)
+        await fixture.cleanup.release()
     }
-    #expect(value == "Spoken words.")
-    #expect(await fixture.model.decodes == 1)
+    #expect(await fixture.model.decodes == 2)
     #expect(await fixture.cleanup.entries == 1)
-    try await fixture.runtime.cancelStreaming(sessionID: session.id)
     try await fixture.runtime.unload()
 }
 
@@ -340,7 +354,9 @@ private actor CleanupModel: QwenRuntimeModel {
         self.barrier = barrier
     }
     nonisolated func prefix(for policy: QwenStreamingPolicy, finalTail: Bool) throws -> String { "" }
-    func decode(samples: [Float], prefix: String, language: String?) async throws -> QwenDecodeResult {
+    nonisolated func discardInferenceReuse() {}
+
+    func decode(samples: [Float], prefix: String, language: String?, inferenceContext: QwenInferenceContext?, draft: QwenDecodeDraft?) async throws -> QwenDecodeResult {
         decodes += 1
         if let barrier { await barrier.run() }
         try Task.checkCancellation()

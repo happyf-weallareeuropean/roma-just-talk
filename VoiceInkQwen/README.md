@@ -63,8 +63,14 @@ the verified model session is connected. Session IDs prevent stale disconnects
 from cancelling a newer recording.
 
 Every native decode still drains its GPU stream before returning value text.
-Live passes, batch transcription, cancellation and failed final results also join
-allocator cache disposal before releasing their operation. A successful final EOS
+Live passes retain reusable buffers until their recording ends, including a
+superseded live pass that drains before final inference. At the first real model
+load, Roma sets the process-wide MLX cache threshold to 1 GiB or an existing lower
+limit. MLX enforces this on subsequent allocation, so it is not an instantaneous
+hard ceiling; active model memory is additional. The app has one MLX backend.
+Batch transcription, cancellation and failed final results join allocator cache
+disposal before releasing their operation. Idle cancellation and a final result
+with no new PCM also dispose buffers retained by earlier live passes. A successful final EOS
 registers runtime-owned disposal and returns its final text without awaiting it;
 disconnecting that completed session remains a no-op. The next native operation,
 prewarm, unload and deletion join pending disposal and recheck ownership after

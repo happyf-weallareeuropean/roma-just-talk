@@ -2,6 +2,66 @@ import Foundation
 import Testing
 @testable import VoiceInkQwen
 
+@Test(.timeLimit(.minutes(1)), arguments: [5_600, 16_800, 50_400])
+func queuedLiveAudioCatchesUpAfterSlowInference(backlog: Int) async throws {
+    let f = try SupersessionFixture(blocked: [1, 2])
+    let s = try await f.runtime.startStreaming(language: "English")
+    defer { f.cleanup(s.id) }
+    var calls = f.model.events.makeAsyncIterator()
+    var text = s.events.makeAsyncIterator()
+    var life = f.lifecycle.makeAsyncIterator()
+    let pcm = (0..<(5_600 + backlog + 137)).map { Float($0) / 100_000 }
+    try await f.runtime.appendAudio(Array(pcm.prefix(5_600)), sessionID: s.id)
+    await entered(1, in: &calls)
+    // Packets arriving during native work must join the next cumulative request.
+    for start in stride(from: 5_600, to: pcm.count, by: 731) {
+        try await f.runtime.appendAudio(Array(pcm[start..<min(start + 731, pcm.count)]), sessionID: s.id)
+    }
+    await f.model.release(1)
+    await entered(2, in: &calls)
+    let requests = await f.model.requests
+    #expect(requests.count == 2)
+    #expect(requests[1].samples == Array(pcm.dropLast(137)))
+    #expect(requests[1].prefix.isEmpty)
+    #expect(requests[1].inferenceContext?.acceptedPredecessorID == requests[0].inferenceContext?.decodeID)
+    guard case .partial? = try await text.next() else { Issue.record("Missing accepted first pass"); return }
+    let finish = Task { try await f.runtime.finishStreaming(sessionID: s.id) }
+    await marker(.finish, id: s.id, in: &life)
+    #expect(f.model.trace.cancelled.contains(2))
+    #expect(await f.model.requests.count == 2)
+    await f.model.release(2)
+    try await finish.value
+    try await onlyFinal(&text, expected: SupersessionModel.finalText)
+    let completed = await f.model.requests
+    #expect(completed.count == 3)
+    #expect(completed.last?.samples == pcm)
+    #expect(completed.last?.prefix == "")
+    #expect(completed.last?.language == "English")
+    #expect(completed.last?.inferenceContext?.acceptedPredecessorID == requests[0].inferenceContext?.decodeID)
+}
+
+@Test(.timeLimit(.minutes(1)))
+func startupPacketUsesLatestWholeChunkWithoutLosingFinalRemainder() async throws {
+    let f = try SupersessionFixture(blocked: [1])
+    let s = try await f.runtime.startStreaming()
+    defer { f.cleanup(s.id) }
+    var calls = f.model.events.makeAsyncIterator()
+    var text = s.events.makeAsyncIterator()
+    var life = f.lifecycle.makeAsyncIterator()
+    let pcm = (0..<22_537).map { Float($0) / 100_000 }
+    try await f.runtime.appendAudio(pcm, sessionID: s.id)
+    await entered(1, in: &calls)
+    #expect(await f.model.requests.first?.samples == Array(pcm.prefix(22_400)))
+    let finish = Task { try await f.runtime.finishStreaming(sessionID: s.id) }
+    await marker(.finish, id: s.id, in: &life)
+    await f.model.release(1)
+    try await finish.value
+    try await onlyFinal(&text, expected: SupersessionModel.finalText)
+    #expect(await f.model.requests.count == 2)
+    #expect(await f.model.requests.last?.samples == pcm)
+    #expect(await f.model.requests.last?.inferenceContext?.acceptedPredecessorID == nil)
+}
+
 @Test(.timeLimit(.minutes(1)), arguments: [0, 731, 11_931])
 func supersededLivePassReplaysAllPCMFromLastCompletedPrefix(tail: Int) async throws {
     let f = try SupersessionFixture(blocked: [3])
@@ -32,6 +92,14 @@ func supersededLivePassReplaysAllPCMFromLastCompletedPrefix(tail: Int) async thr
     #expect(requests.last?.samples == pcm)
     #expect(requests.last?.prefix == String(SupersessionModel.liveText.dropLast(5)))
     #expect(requests.last?.language == "English")
+    #expect(requests.last?.draft?.rawText == SupersessionModel.liveText)
+    #expect(requests.last?.draft?.eosToken == 151645)
+    #expect(requests.dropLast().allSatisfy { $0.draft == nil })
+    #expect(requests.last?.inferenceContext?.acceptedPredecessorID == requests[1].inferenceContext?.decodeID)
+    #expect(requests.last?.inferenceContext?.acceptedPredecessorID != requests[2].inferenceContext?.decodeID)
+    #expect(requests.allSatisfy { $0.inferenceContext?.sessionID == s.id })
+    #expect(requests.last?.inferenceContext?.isFinal == true)
+    #expect(requests[2].inferenceContext?.isFinal == false)
     let exited = try #require(f.model.trace.order.firstIndex(of: "exit:3"))
     let finalEntered = try #require(f.model.trace.order.firstIndex(of: "enter:4"))
     #expect(exited < finalEntered)
@@ -61,6 +129,7 @@ func duplicateFinishDoesNotCancelTheReplacementFinal() async throws {
     #expect(await f.model.requests.count == 2)
     #expect(await f.model.requests.last?.samples == Array(repeating: Float(0.1), count: 5_600))
     #expect(await f.model.requests.last?.prefix == "")
+    #expect(await f.model.requests.last?.draft == nil)
     await f.model.release(2)
     try await first.value; try await second.value
     try await onlyFinal(&text, expected: SupersessionModel.finalText)
@@ -112,6 +181,9 @@ func userCancellationWhileSupersededChildDrainsIsTerminal() async throws {
     try await cancelledStream(&text)
     #expect(await f.model.requests.count == 1)
     #expect(f.emissions.values.isEmpty)
+    let ended = try #require(f.model.trace.order.firstIndex(of: "exit:1"))
+    let discarded = try #require(f.model.trace.order.firstIndex(of: "encoder-discard"))
+    #expect(ended < discarded)
     let next = try await f.runtime.startStreaming()
     try await f.runtime.cancelStreaming(sessionID: next.id)
 }
@@ -360,7 +432,7 @@ private actor SupersessionModel: QwenRuntimeModel {
     static let finalText = "repeat repeat repeat. Earlier words. Full captured ending."
     enum Outcome: Sendable { case cooperative, error, limit, lateEOS }
     enum Failure: Error { case decoder }
-    struct Request: Sendable { let samples: [Float]; let prefix: String; let language: String? }
+    struct Request: Sendable { let samples: [Float]; let prefix: String; let language: String?; let inferenceContext: QwenInferenceContext?; let draft: QwenDecodeDraft? }
     enum Event: Sendable { case entered(Int), cancelled(Int) }
     nonisolated let events: AsyncStream<Event>
     nonisolated let trace = SupersessionTrace()
@@ -378,8 +450,10 @@ private actor SupersessionModel: QwenRuntimeModel {
         policy.prefix(finalTail: finalTail, encode: { $0.unicodeScalars.map { Int($0.value) } },
             decode: { String(String.UnicodeScalarView($0.compactMap(UnicodeScalar.init))) })
     }
-    func decode(samples: [Float], prefix: String, language: String?) async throws -> QwenDecodeResult {
-        requests.append(Request(samples: samples, prefix: prefix, language: language))
+    nonisolated func discardInferenceReuse() { trace.append("encoder-discard") }
+
+    func decode(samples: [Float], prefix: String, language: String?, inferenceContext: QwenInferenceContext?, draft: QwenDecodeDraft?) async throws -> QwenDecodeResult {
+        requests.append(Request(samples: samples, prefix: prefix, language: language, inferenceContext: inferenceContext, draft: draft))
         let pass = requests.count
         defer { trace.append("exit:\(pass)") }
         return try await withTaskCancellationHandler {
@@ -494,6 +568,7 @@ private func lateEOSAfterSupersessionPreservesCurrentTextAcceptance(tail: Int) a
     #expect(requests.count == (tail == 0 ? 1 : 2))
     if tail > 0 {
         #expect(requests[1].prefix == "")
+        #expect(requests[1].inferenceContext?.acceptedPredecessorID == requests[0].inferenceContext?.decodeID)
         let exited = try #require(f.model.trace.order.firstIndex(of: "exit:1"))
         let finalEntered = try #require(f.model.trace.order.firstIndex(of: "enter:2"))
         #expect(exited < finalEntered)

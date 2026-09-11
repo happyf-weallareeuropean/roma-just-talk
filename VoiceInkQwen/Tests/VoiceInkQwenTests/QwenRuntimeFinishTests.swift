@@ -38,6 +38,9 @@ func releaseCoalescesQueuedPCMAndKeepsCompletedPrefix(eosToken: Int) async throw
     #expect(requests.last?.samples == samples)
     #expect(requests.last?.prefix == String(FinishModel.completedText.dropLast(5)))
     #expect(requests.last?.language == "English")
+    #expect(requests.last?.draft?.rawText == FinishModel.completedText)
+    #expect(requests.last?.draft?.eosToken == eosToken)
+    #expect(requests.dropLast().allSatisfy { $0.draft == nil })
     #expect(fixture.model.prefixCalls.values.last == true)
 }
 
@@ -135,6 +138,7 @@ private actor FinishModel: QwenRuntimeModel {
         let samples: [Float]
         let prefix: String
         let language: String?
+        let draft: QwenDecodeDraft?
     }
     enum Event: Sendable { case entered(Int), cancelled(Int) }
     nonisolated let events: AsyncStream<Event>
@@ -164,8 +168,10 @@ private actor FinishModel: QwenRuntimeModel {
             decode: { String(String.UnicodeScalarView($0.compactMap(UnicodeScalar.init))) })
     }
 
-    func decode(samples: [Float], prefix: String, language: String?) async throws -> QwenDecodeResult {
-        requests.append(Request(samples: samples, prefix: prefix, language: language))
+    nonisolated func discardInferenceReuse() {}
+
+    func decode(samples: [Float], prefix: String, language: String?, inferenceContext: QwenInferenceContext?, draft: QwenDecodeDraft?) async throws -> QwenDecodeResult {
+        requests.append(Request(samples: samples, prefix: prefix, language: language, draft: draft))
         let pass = requests.count
         continuation.yield(.entered(pass))
         if pass == blockedPass {
