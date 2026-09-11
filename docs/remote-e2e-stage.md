@@ -113,7 +113,8 @@ Omit the run ID only when one remote E2E stage is running. The helper then selec
 
 Depending on `target` and scenario, the remote Mac contains:
 
-- ordinary macOS stage: `~/Applications/roma just talk.app`, launched with onboarding state reset;
+- ordinary macOS stage without a scripted scenario: `~/Applications/roma just talk.app`, launched with onboarding state reset;
+- runtime smoke/full stage: `/Applications/roma just talk.app`, after exercising the landing page's app-only quarantine removal and launch command;
 - macOS distribution E2E: the untouched app below a newly mounted APFS volume under `/Volumes`, where Finder extracted it;
 - iOS: a booted iPhone Simulator with `roma just talk` installed and launched.
 - `~/Desktop/REMOTE E2E STAGE READY.txt`: human-readable handoff.

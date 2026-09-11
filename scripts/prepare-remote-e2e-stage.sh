@@ -714,7 +714,11 @@ prepare_macos() {
       "$baseline_artifact_archive_sha256" \
       "$evidence/paired-known-bad-artifact-archive.sha256"
   fi
-  mkdir -p "$HOME/Applications" "$stage_root/macos"
+  if [ "$macos_scenario" = "runtime-smoke" ] \
+    || [ "$macos_scenario" = "runtime-e2e" ]; then
+    app="/Applications/roma just talk.app"
+  fi
+  mkdir -p "$(dirname "$app")" "$stage_root/macos"
 
   /usr/bin/log stream \
     --style compact \
@@ -771,8 +775,88 @@ prepare_macos() {
 
   ditto -x -k "$archive" "$stage_root/macos"
   test -d "$stage_root/macos/roma just talk.app"
+  test ! -e "$app"
   ditto "$stage_root/macos/roma just talk.app" "$app"
-  xattr -cr "$app"
+
+  if [ "$macos_scenario" = "runtime-smoke" ] \
+    || [ "$macos_scenario" = "runtime-e2e" ]; then
+    local fallback_receipt="$evidence/landing-quarantine-fallback.txt"
+    local quarantine_value=""
+    local fallback_pid=""
+    local fallback_deadline=0
+    local executable="$app/Contents/MacOS/roma just talk"
+    quarantine_value="0081;$(printf '%x' "$(date +%s)");Safari;"
+    xattr -w com.apple.quarantine "$quarantine_value" "$app"
+    xattr -w com.roma.runtime-e2e-preserved true "$executable"
+    test "$(xattr -p com.apple.quarantine "$app")" = "$quarantine_value"
+    shasum -a 256 "$executable" > "$evidence/landing-fallback-executable-before.sha256"
+
+    /usr/bin/xattr -dr com.apple.quarantine "/Applications/roma just talk.app" \
+      && /usr/bin/open "/Applications/roma just talk.app"
+
+    if xattr -pr com.apple.quarantine "$app" > "$evidence/landing-fallback-quarantine-after.txt" 2>&1; then
+      echo "Landing fallback left quarantine attributes in the app bundle" >&2
+      exit 2
+    fi
+    test "$(xattr -p com.roma.runtime-e2e-preserved "$executable")" = true
+    shasum -a 256 "$executable" > "$evidence/landing-fallback-executable-after.sha256"
+    cmp -s \
+      "$evidence/landing-fallback-executable-before.sha256" \
+      "$evidence/landing-fallback-executable-after.sha256"
+
+    fallback_deadline=$((SECONDS + 30))
+    while (( SECONDS < fallback_deadline )); do
+      fallback_pid="$(pgrep -x "roma just talk" 2>/dev/null || true)"
+      if [[ "$fallback_pid" =~ ^[0-9]+$ ]] \
+        && RUNTIME_E2E_FALLBACK_PID="$fallback_pid" \
+          /usr/bin/osascript -l JavaScript -e '
+          ObjC.import("AppKit")
+          const pid = Number(ObjC.unwrap(
+            $.NSProcessInfo.processInfo.environment.objectForKey(
+              "RUNTIME_E2E_FALLBACK_PID"
+            )
+          ))
+          const app = $.NSRunningApplication.runningApplicationWithProcessIdentifier(pid)
+          app ? ObjC.unwrap(app.finishedLaunching) : false
+        ' >/dev/null 2>&1; then
+        break
+      fi
+      sleep 0.25
+    done
+    [[ "$fallback_pid" =~ ^[0-9]+$ ]]
+    RUNTIME_E2E_FALLBACK_PID="$fallback_pid" \
+      /usr/bin/osascript -l JavaScript -e '
+      ObjC.import("AppKit")
+      const pid = Number(ObjC.unwrap(
+        $.NSProcessInfo.processInfo.environment.objectForKey(
+          "RUNTIME_E2E_FALLBACK_PID"
+        )
+      ))
+      const app = $.NSRunningApplication.runningApplicationWithProcessIdentifier(pid)
+      app && ObjC.unwrap(app.finishedLaunching) ? ObjC.unwrap(app.terminate) : false
+    ' | grep -Fx true
+    fallback_deadline=$((SECONDS + 30))
+    while pgrep -x "roma just talk" >/dev/null 2>&1; do
+      if (( SECONDS >= fallback_deadline )); then
+        echo "Roma did not terminate after the landing fallback launch" >&2
+        exit 2
+      fi
+      sleep 0.25
+    done
+    {
+      printf 'verdict=passed\n'
+      printf 'app_path=%s\n' "$app"
+      printf 'quarantine_before=%s\n' "$quarantine_value"
+      printf 'quarantine_after=absent\n'
+      printf 'unrelated_nested_xattr_after=true\n'
+      printf 'launch_pid=%s\n' "$fallback_pid"
+      printf 'application_finished_launching=true\n'
+      printf 'termination=normal\n'
+      printf 'command=/usr/bin/xattr -dr com.apple.quarantine "/Applications/roma just talk.app" && /usr/bin/open "/Applications/roma just talk.app"\n'
+    } > "$fallback_receipt"
+  else
+    xattr -cr "$app"
+  fi
 
   if [ -f "$preferences" ] && [ ! -f "$preferences_backup" ]; then
     mv "$preferences" "$preferences_backup"
@@ -1085,7 +1169,7 @@ elif [ "$macos_scenario" != "none" ]; then
   RUNTIME_E2E_EMPTY_FINAL_EXPECTATION="$runtime_empty_final_expectation" \
   RUNTIME_E2E_EMPTY_FINAL_BASELINE_EVIDENCE="$runtime_empty_final_baseline_evidence" \
     bash "$(dirname "$0")/run-macos-runtime-e2e.sh" \
-    "$HOME/Applications/roma just talk.app" \
+    "/Applications/roma just talk.app" \
     "$macos_audio_artifact" \
     "$evidence" \
     "$macos_repetitions" \
