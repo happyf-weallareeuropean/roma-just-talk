@@ -333,6 +333,7 @@ require_text "$PREPARER" '&& /usr/bin/open "/Applications/roma just talk.app"'
 require_text "$PREPARER" 'landing-quarantine-fallback.txt'
 require_text "$PREPARER" 'unrelated_nested_xattr_after=true'
 require_text "$PREPARER" 'application_finished_launching=true'
+require_text "$PREPARER" "' 2>/dev/null | grep -Fx true; then"
 require_text "$PREPARER" 'macos_expected_version'
 require_text "$PREPARER" 'runtime-helper/roma.runtime-e2e-harness.macos.zip'
 require_text "$PREPARER" 'runtime-helper-run-metadata.json'

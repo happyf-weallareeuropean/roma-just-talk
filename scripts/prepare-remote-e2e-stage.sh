@@ -794,10 +794,12 @@ prepare_macos() {
     /usr/bin/xattr -dr com.apple.quarantine "/Applications/roma just talk.app" \
       && /usr/bin/open "/Applications/roma just talk.app"
 
-    if xattr -pr com.apple.quarantine "$app" > "$evidence/landing-fallback-quarantine-after.txt" 2>&1; then
+    if xattr -lr "$app" 2>/dev/null | grep -Fq 'com.apple.quarantine:'; then
       echo "Landing fallback left quarantine attributes in the app bundle" >&2
       exit 2
     fi
+    printf 'quarantine_after=absent\n' \
+      > "$evidence/landing-fallback-quarantine-after.txt"
     test "$(xattr -p com.roma.runtime-e2e-preserved "$executable")" = true
     shasum -a 256 "$executable" > "$evidence/landing-fallback-executable-after.sha256"
     cmp -s \
@@ -818,7 +820,7 @@ prepare_macos() {
           ))
           const app = $.NSRunningApplication.runningApplicationWithProcessIdentifier(pid)
           app ? ObjC.unwrap(app.finishedLaunching) : false
-        ' >/dev/null 2>&1; then
+        ' 2>/dev/null | grep -Fx true; then
         break
       fi
       sleep 0.25
