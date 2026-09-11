@@ -1,6 +1,8 @@
 # Changelog
 
-## v1.95.1 - 2026-09-07
+## v1.95.2 - Unreleased
+
+## v1.95.1 - 2026-09-11
 
 - Explain rejected NVIDIA API keys, missing access, and connection failures instead of showing an internal gRPC error.
 
@@ -24,7 +26,7 @@
 
 - Add local Chinese + English dictation on Apple silicon Macs running macOS 15+, with an English-only setup choice, a country-based suggestion that respects your selection, and download controls. Continuing setup saves your model choice for future onboarding visits. Startup prewarm only loads installed models, so it cannot download the English fallback before you choose. On release, queued bilingual audio is finalized together instead of replaying every live-update chunk. Reuse the GPU stream across bilingual decoding passes to reduce completion delays. Cancel obsolete bilingual live decoding on release, then finalize all captured audio after it drains; cancelling completion also drains the recording.
 - Start final local dictation recognition while a cancelled live pass finishes, reducing release delays without dropping audio or publishing stale live text.
-- Stop superseded Chinese + English decoding between existing model evaluation batches, so it can skip work that has not started. Finalization still waits for running GPU work to finish; the app latency gate remains pending.
+- Stop superseded Chinese + English decoding between existing model evaluation batches, so it can skip work that has not started. Finalization still waits for running GPU work to finish.
 - Keep automatic model-list refreshes from saving the fallback model as your chosen default.
 - Added NVIDIA Parakeet zh-TW as an optional cloud model using your own NVIDIA API key on macOS 15+ and iOS 18+; local transcription never switches to it automatically.
 - Restrict Homebrew installation to Apple Silicon, matching the architecture of the released Mac app.
@@ -38,7 +40,7 @@
 - Added a local-only Hardened Runtime exception for ad-hoc macOS builds that load bundled MediaRemoteAdapter and Sparkle frameworks, while keeping Library Validation enabled for certificate-signed releases.
 - Added a fresh-Mac distribution E2E that follows the exact GitHub Actions outer ZIP through Safari quarantine, Archive Utility's real recursive or separate Finder extraction path, Gatekeeper Open Anyway, App Translocation, generic mapped-code verification, and a real transcription smoke.
 - Fixed the first cold FluidAudio streaming dictation sometimes pasting nothing when live recognition had text but final ASR returned empty.
-- Reduced Parakeet array-clearing work with an exactly pinned FluidAudio patch, preserving scalar reset behavior for other values, types, and layouts; app latency acceptance remains pending.
+- Reduced Parakeet array-clearing work with an exactly pinned FluidAudio patch, preserving scalar reset behavior for other values, types, and layouts.
 - Linked whisper.cpp statically into the macOS and iOS apps so ad-hoc builds no longer depend on a separately signed `whisper.framework` at launch.
 - Rebuilt `/demo` as a full-screen, zero-download browser dictation experience with a three-second rolling speech pre-roll, Left Shift release insertion, automatic writing-environment changes, microphone recovery, a narrated no-mic preview, and site navigation revealed only at the top edge.
 - Added a real-audio `/demo` E2E lane that routes a fixed WAV through BlackHole, starts the player 1.1 seconds before Left Shift, releases after playback, and gates the pre-trigger opening word, transcript accuracy, and key-up completion latency in Chrome's real speech service.
