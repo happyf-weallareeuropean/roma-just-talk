@@ -25,6 +25,7 @@ if [[ ! -x "$sign_update" ]]; then
 fi
 
 work_dir="$(mktemp -d "$derived_data/updater-e2e.XXXXXX")"
+test_derived_data="$work_dir/DerivedData"
 secret_dir="$(mktemp -d "${RUNNER_TEMP:-/tmp}/roma-updater-e2e-key.XXXXXX")"
 serve_dir="$work_dir/serve"
 server_log="$work_dir/server.log"
@@ -123,7 +124,7 @@ test_selector='VoiceInkUITests/UpdaterE2ETests/testSeamlessBackgroundUpdateInsta
 build_arguments=(
   -project VoiceInk.xcodeproj -scheme VoiceInk -configuration Release
   -destination 'platform=macOS' -parallel-testing-enabled NO
-  -derivedDataPath "$derived_data" -xcconfig LocalBuild.xcconfig
+  -derivedDataPath "$test_derived_data" -xcconfig LocalBuild.xcconfig
   CODE_SIGN_IDENTITY=- CODE_SIGNING_REQUIRED=NO CODE_SIGNING_ALLOWED=YES
   DEVELOPMENT_TEAM= CODE_SIGN_ENTITLEMENTS="$repo_root/VoiceInk/VoiceInk.local.entitlements"
   CURRENT_PROJECT_VERSION=1 MARKETING_VERSION=0.0.0
@@ -133,7 +134,7 @@ build_arguments=(
 )
 xcodebuild build-for-testing "${build_arguments[@]}" | tee "$build_log"
 
-installed_app="$derived_data/Build/Products/Release/roma just talk.app"
+installed_app="$test_derived_data/Build/Products/Release/roma just talk.app"
 test "$(plutil -extract CFBundleVersion raw -o - "$installed_app/Contents/Info.plist")" = 1
 test "$(plutil -extract SUPublicEDKey raw -o - "$installed_app/Contents/Info.plist")" = "$public_key"
 codesign --verify --deep --strict "$installed_app"
