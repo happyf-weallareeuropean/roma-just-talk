@@ -134,7 +134,7 @@ extension UpdaterViewModel: SPUUpdaterDelegate {
 }
 
 extension UpdaterViewModel: SPUUserDriver {
-    func showUpdatePermissionRequest(
+    func show(
         _ request: SPUUpdatePermissionRequest,
         reply: @escaping (SUUpdatePermissionResponse) -> Void
     ) {
