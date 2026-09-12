@@ -284,6 +284,7 @@ jobs:
           name: roma.updater-e2e-evidence
           path: .local-build/updater-e2e.*/**
           if-no-files-found: warn
+          include-hidden-files: true
 
       - name: Verify FluidAudio array reset semantics
         id: fluidaudio_test

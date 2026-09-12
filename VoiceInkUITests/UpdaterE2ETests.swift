@@ -15,6 +15,7 @@ final class UpdaterE2ETests: XCTestCase {
         let expectedBuild = try XCTUnwrap(environment["ROMA_UPDATE_EXPECTED_BUILD"])
         let expectedVersion = try XCTUnwrap(environment["ROMA_UPDATE_EXPECTED_VERSION"])
         let installedAppPath = try XCTUnwrap(environment["ROMA_UPDATE_INSTALL_APP_PATH"])
+        let expectedBundleURL = normalizedBundleURL(URL(fileURLWithPath: installedAppPath))
 
         XCTAssertEqual(buildVersion(at: installedAppPath), "1")
 
@@ -45,8 +46,11 @@ final class UpdaterE2ETests: XCTestCase {
         assertNoUpdaterPopup(in: app)
         attachScreenshot(of: app, named: "Embedded update ready")
 
-        let originalPID = app.processIdentifier
-        XCTAssertGreaterThan(originalPID, 0)
+        let originalApplication = try XCTUnwrap(runningApplications().first(where: {
+            guard let bundleURL = $0.bundleURL else { return false }
+            return normalizedBundleURL(bundleURL) == expectedBundleURL
+        }))
+        let originalPID = originalApplication.processIdentifier
         relaunch.click()
 
         XCTAssertTrue(
@@ -60,7 +64,6 @@ final class UpdaterE2ETests: XCTestCase {
             "The original Roma process did not terminate."
         )
 
-        let expectedBundleURL = normalizedBundleURL(URL(fileURLWithPath: installedAppPath))
         var relaunchedPID: pid_t?
         XCTAssertTrue(
             waitUntil(timeout: 60) {
