@@ -16,6 +16,10 @@ HANDOFF_HELPER="$ROOT/scripts/macos-distribution-runtime-handoff.sh"
 HANDOFF_TEST="$ROOT/scripts/tests/macos-distribution-runtime-handoff.test.sh"
 EMPTY_FINAL_VERIFIER="$ROOT/scripts/verify-runtime-empty-final-regression.sh"
 EMPTY_FINAL_VERIFIER_TEST="$ROOT/scripts/tests/verify-runtime-empty-final-regression.test.sh"
+APFS_OWNER_VERIFIER="$ROOT/scripts/macos-apfs-volume-owner.sh"
+APFS_OWNER_VERIFIER_TEST="$ROOT/scripts/tests/macos-apfs-volume-owner.test.sh"
+OPERATOR_CLEANER="$ROOT/scripts/cleanup-macos-gatekeeper-operator.sh"
+OPERATOR_CLEANER_TEST="$ROOT/scripts/tests/cleanup-macos-gatekeeper-operator.test.sh"
 
 require_text() {
   local file="$1"
@@ -55,6 +59,12 @@ test -x "$ROOT/scripts/verify-macos-distribution-launch.sh"
 test -x "$HANDOFF_TEST"
 test -x "$EMPTY_FINAL_VERIFIER"
 test -x "$EMPTY_FINAL_VERIFIER_TEST"
+test -x "$APFS_OWNER_VERIFIER"
+test -x "$APFS_OWNER_VERIFIER_TEST"
+test -x "$OPERATOR_CLEANER"
+test -x "$OPERATOR_CLEANER_TEST"
+bash "$APFS_OWNER_VERIFIER_TEST"
+bash "$OPERATOR_CLEANER_TEST"
 
 EMPTY_FINAL_POLICY_ROOT="$(
   mktemp -d "${TMPDIR:-/tmp}/roma-empty-final-policy.XXXXXX"
@@ -234,21 +244,29 @@ require_text "$WORKFLOW" "sed -E 's/^\\{ sec = ([0-9]+),.*/\\1/'"
 require_text "$WORKFLOW" "startsWith(inputs.macos_runner, 'namespace-profile-')"
 require_text "$WORKFLOW" "startsWith(inputs.macos_runner, 'nscloud-macos-')"
 require_text "$WORKFLOW" 'provisioning-context.txt'
-require_text "$WORKFLOW" 'Provision disposable distribution E2E administrator'
+require_text "$WORKFLOW" 'Verify distribution E2E Gatekeeper administrator'
+require_text "$WORKFLOW" 'Prepare distribution E2E Gatekeeper credential'
 require_text "$WORKFLOW" 'STAGE_RUNNER_VERIFIED_FRESH=true'
 require_text "$WORKFLOW" 'sudo -n -v'
 require_text "$WORKFLOW" '/usr/sbin/sysadminctl'
-require_text "$WORKFLOW" '-addUser $username'
 require_text "$WORKFLOW" 'dseditgroup -o checkmember'
 require_text "$WORKFLOW" 'dscl . -authonly'
 require_text "$WORKFLOW" '/usr/bin/expect -c'
-require_text "$WORKFLOW" '-password - -admin'
 require_text "$WORKFLOW" 'log_user 0'
-require_text "$WORKFLOW" 'User password:'
-require_text "$WORKFLOW" 'create_prompt_count != 1'
 require_text "$WORKFLOW" 'auth_prompt_count != 1'
-require_text "$WORKFLOW" 'file delete -force -- $password_file'
-require_text "$WORKFLOW" 'chmod 600 "$OPERATOR_CREDENTIAL_FILE"'
+require_text "$WORKFLOW" 'OPERATOR_USERNAME="runner"'
+require_text "$WORKFLOW" 'account_generated_uid=%s'
+require_text "$WORKFLOW" 'NAMESPACE_RUNNER_PASSWORD: ${{ secrets.NAMESPACE_MACOS_RUNNER_PASSWORD }}'
+require_text "$WORKFLOW" 'ROMA_OPERATOR_PASSWORD_FILE="$OPERATOR_PASSWORD_FILE"'
+require_text "$WORKFLOW" 'unset NAMESPACE_RUNNER_PASSWORD'
+require_text "$WORKFLOW" 'stat -f '\''%Su'\'' /dev/console'
+require_text "$WORKFLOW" '-secureTokenStatus "$OPERATOR_USERNAME"'
+require_text "$WORKFLOW" 'Secure token is ENABLED'
+require_text "$WORKFLOW" 'diskutil apfs listUsers /'
+require_text "$WORKFLOW" 'scripts/macos-apfs-volume-owner.sh'
+require_text "$WORKFLOW" 'chmod 600 "$OPERATOR_PASSWORD_FILE" "$OPERATOR_CREDENTIAL_FILE"'
+require_text "$WORKFLOW" 'refusing to overwrite a Gatekeeper credential target'
+require_text "$WORKFLOW" 'sudo -n /bin/test -L "$isolated_target"'
 require_text "$WORKFLOW" 'distribution-operator-setup.txt'
 require_text "$WORKFLOW" 'DISTRIBUTION_E2E_EXPECTATION: ${{ env.STAGE_MACOS_DISTRIBUTION_EXPECTATION }}'
 require_text "$WORKFLOW" 'Download matched known-bad framework-signature evidence'
@@ -265,13 +283,10 @@ require_text "$WORKFLOW" 'approval-window-dyld-pid-correlation.txt'
 require_text "$WORKFLOW" 'expected-negative-control-identities.txt'
 require_text "$WORKFLOW" 'source-artifact.txt'
 require_text "$WORKFLOW" 'DISTRIBUTION_E2E_FRAMEWORK_SIGNATURE_BASELINE_EVIDENCE'
-require_text "$WORKFLOW" 'Remove disposable distribution E2E administrator'
+require_text "$WORKFLOW" 'Remove distribution E2E credential file'
 require_text "$WORKFLOW" "if: always() && env.STAGE_MACOS_SCENARIO == 'distribution-e2e'"
-require_text "$WORKFLOW" '^roma-e2e-[0-9]+-[0-9]+$'
-require_text "$WORKFLOW" '-deleteUser "$OPERATOR_USERNAME"'
-require_text "$WORKFLOW" '-secure'
-require_text "$WORKFLOW" 'directory_service_record_removed=true'
-require_text "$WORKFLOW" 'home_directory_removed=true'
+require_text "$WORKFLOW" 'scripts/cleanup-macos-gatekeeper-operator.sh'
+reject_text "$WORKFLOW" 'test-unprivileged'
 require_text "$WORKFLOW" '$RUNNER_TEMP/roma-runtime-e2e-cold-model-cache'
 require_text "$WORKFLOW" 'test ! -e "$COLD_CACHE"'
 require_text "$WORKFLOW" 'test ! -L "$COLD_CACHE"'
@@ -484,10 +499,47 @@ require_text "$RUNNER" 'Open the Desktop credential file'
 
 reject_text "$WORKFLOW" 'sudo[[:space:]].*passwd'
 reject_text "$WORKFLOW" 'sudo[[:space:]].*dscl[[:space:]].*-passwd'
+reject_text "$WORKFLOW" 'sysadminctl[[:space:]].*-addUser'
+reject_text "$WORKFLOW" 'sysadminctl[[:space:]].*-deleteUser'
+reject_text "$WORKFLOW" 'OPERATOR_PASSWORD="runner"'
+reject_text "$WORKFLOW" 'ROMA_OPERATOR_PASSWORD="\$OPERATOR_PASSWORD"'
 reject_text "$WORKFLOW" '-password[[:space:]]+"\$OPERATOR_PASSWORD"'
 reject_text "$WORKFLOW" 'dscl[[:space:]].*-authonly[^\n]*"\$OPERATOR_PASSWORD"'
 reject_text "$WORKFLOW" 'cat[[:space:]]+"\$OPERATOR_CREDENTIAL_FILE"'
 reject_text "$WORKFLOW" 'upload.*operator.*credential'
+reject_text "$WORKFLOW" 'file delete -force -- \$password_file'
+
+secret_unset_line="$(grep -nF 'unset NAMESPACE_RUNNER_PASSWORD' "$WORKFLOW" | cut -d: -f1)"
+cleanup_trap_line="$(grep -nF 'trap cleanup_created_credential_targets EXIT' "$WORKFLOW" | cut -d: -f1)"
+identity_stat_line="$(grep -nF 'PASSWORD_FILE_IDENTITY="$(stat' "$WORKFLOW" | cut -d: -f1)"
+password_write_line="$(grep -nF 'printf '\''%s'\'' "$CREDENTIAL_PASSWORD" >&7' "$WORKFLOW" | cut -d: -f1)"
+credential_identity_line="$(grep -nF 'CREDENTIAL_FILE_IDENTITY="$(stat' "$WORKFLOW" | cut -d: -f1)"
+credential_write_line="$(grep -nF 'printf '\''Password: %s\n'\'' "$CREDENTIAL_PASSWORD"' "$WORKFLOW" | cut -d: -f1)"
+expect_auth_line="$(grep -nF 'ROMA_OPERATOR_PASSWORD_FILE="$OPERATOR_PASSWORD_FILE" /usr/bin/expect' "$WORKFLOW" | cut -d: -f1)"
+password_cleanup_line="$(grep -nF '"$OPERATOR_PASSWORD_FILE" "$PASSWORD_FILE_IDENTITY" operator-password' "$WORKFLOW" | tail -n 1 | cut -d: -f1)"
+password_absent_line="$(grep -nF 'test ! -e "$OPERATOR_PASSWORD_FILE"' "$WORKFLOW" | cut -d: -f1)"
+trap_disarm_line="$(grep -nF 'trap - EXIT' "$WORKFLOW" | cut -d: -f1)"
+if ! [[ "$secret_unset_line" =~ ^[0-9]+$ \
+  && "$cleanup_trap_line" =~ ^[0-9]+$ \
+  && "$identity_stat_line" =~ ^[0-9]+$ \
+  && "$password_write_line" =~ ^[0-9]+$ \
+  && "$credential_identity_line" =~ ^[0-9]+$ \
+  && "$credential_write_line" =~ ^[0-9]+$ \
+  && "$expect_auth_line" =~ ^[0-9]+$ \
+  && "$password_cleanup_line" =~ ^[0-9]+$ \
+  && "$password_absent_line" =~ ^[0-9]+$ \
+  && "$trap_disarm_line" =~ ^[0-9]+$ ]] \
+  || (( secret_unset_line >= cleanup_trap_line )) \
+  || (( secret_unset_line >= identity_stat_line )) \
+  || (( secret_unset_line >= expect_auth_line )) \
+  || (( identity_stat_line >= password_write_line )) \
+  || (( credential_identity_line >= credential_write_line )) \
+  || (( password_cleanup_line <= expect_auth_line )) \
+  || (( password_cleanup_line >= password_absent_line )) \
+  || (( trap_disarm_line <= password_absent_line )); then
+  echo "Namespace password setup or cleanup ordering is unsafe" >&2
+  exit 1
+fi
 
 reject_text "$RUNNER" 'xattr[[:space:]]+-(c|d|cr|dr)'
 reject_text "$RUNNER" 'codesign[[:space:]].*--(force|sign)'

@@ -1129,7 +1129,7 @@ Current step: GATEKEEPER ACTION REQUIRED
 3. Confirm Open. Authenticate if macOS asks.
 
 $(if [[ -n "$operator_credential_file" ]]; then
-  printf 'Open the Desktop credential file "%s" and use those disposable administrator credentials only if macOS asks.\n' \
+  printf 'Open the Desktop credential file "%s" and use those image-account administrator credentials only if macOS asks.\n' \
     "$(basename "$operator_credential_file")"
 else
   printf 'Use the authorized administrator credentials if macOS asks.\n'

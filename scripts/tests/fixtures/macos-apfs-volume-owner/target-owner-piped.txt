@@ -1,0 +1,9 @@
+Cryptographic users for disk3s3s1 (2 found)
+|
++-- A1B245F6-017B-4D48-86BB-B65281471D51
+|   Type: Local Open Directory User
+|   Volume Owner: Yes
+|
++-- BBBD8E46-C5B7-41B1-84B0-A5CED03927AE
+    Type: Personal Recovery User
+    Volume Owner: Yes

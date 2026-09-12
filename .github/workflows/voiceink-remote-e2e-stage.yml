@@ -138,9 +138,14 @@ on:
       - "scripts/macos-distribution-runtime-handoff.sh"
       - "scripts/macos-finder-extraction-state.sh"
       - "scripts/macos-bundle-manifest.sh"
+      - "scripts/macos-apfs-volume-owner.sh"
+      - "scripts/cleanup-macos-gatekeeper-operator.sh"
       - "scripts/verify-macos-distribution-launch.sh"
       - "scripts/verify-macos-framework-signature-crash.sh"
       - "scripts/tests/macos-distribution-e2e-contract.test.sh"
+      - "scripts/tests/macos-apfs-volume-owner.test.sh"
+      - "scripts/tests/cleanup-macos-gatekeeper-operator.test.sh"
+      - "scripts/tests/fixtures/macos-apfs-volume-owner/**"
       - "scripts/tests/macos-distribution-runtime-handoff.test.sh"
       - "scripts/tests/macos-finder-extraction-state.test.sh"
       - "scripts/tests/verify-macos-distribution-launch.test.sh"
@@ -279,7 +284,7 @@ jobs:
             printf 'framework_signature_baseline_run_id=%s\n' "$STAGE_MACOS_FRAMEWORK_SIGNATURE_BASELINE_RUN_ID"
           } > "$EVIDENCE/provisioning-context.txt"
 
-      - name: Provision disposable distribution E2E administrator
+      - name: Verify distribution E2E Gatekeeper administrator
         if: env.STAGE_MACOS_SCENARIO == 'distribution-e2e'
         run: |
           test "$STAGE_RUNNER_VERIFIED_FRESH" = true
@@ -299,24 +304,139 @@ jobs:
           esac
           sudo -n -v
 
-          OPERATOR_USERNAME="roma-e2e-${GITHUB_RUN_ID}-${GITHUB_RUN_ATTEMPT}"
-          OPERATOR_PASSWORD="Rjt!$(/usr/bin/openssl rand -hex 24)"
+          OPERATOR_USERNAME="runner"
+          SETUP_FACTS="$RUNNER_TEMP/voiceink-remote-e2e-stage/evidence/distribution-operator-setup.txt"
+          TOKEN_STATUS="$RUNNER_TEMP/voiceink-remote-e2e-stage/evidence/distribution-operator-secure-token-status.txt"
+          VOLUME_OWNERS="$RUNNER_TEMP/voiceink-remote-e2e-stage/evidence/distribution-operator-volume-owners.txt"
+
+          test "$(stat -f '%Su' /dev/console)" = "$OPERATOR_USERNAME"
+          if ! sudo -n /usr/sbin/dseditgroup -o checkmember \
+            -m "$OPERATOR_USERNAME" admin | grep -Fq 'yes'; then
+            echo "distribution E2E runner account is not an administrator" >&2
+            exit 2
+          fi
+          /usr/sbin/sysadminctl -secureTokenStatus "$OPERATOR_USERNAME" \
+            > "$TOKEN_STATUS" 2>&1
+          grep -Fq 'Secure token is ENABLED' "$TOKEN_STATUS"
+          OPERATOR_GENERATED_UID="$(
+            /usr/bin/dscl . -read "/Users/$OPERATOR_USERNAME" GeneratedUID \
+              | awk '{print $2}'
+          )"
+          test -n "$OPERATOR_GENERATED_UID"
+          /usr/sbin/diskutil apfs listUsers / > "$VOLUME_OWNERS"
+          if ! scripts/macos-apfs-volume-owner.sh \
+            "$OPERATOR_GENERATED_UID" "$VOLUME_OWNERS"; then
+            echo "distribution E2E runner account is not an APFS volume owner" >&2
+            exit 2
+          fi
+
+          {
+            printf 'account_short_name=%s\n' "$OPERATOR_USERNAME"
+            printf 'account_generated_uid=%s\n' "$OPERATOR_GENERATED_UID"
+            printf 'account_source=namespace-runner-image\n'
+            printf 'account_admin=true\n'
+            printf 'account_secure_token=enabled\n'
+            printf 'account_volume_owner=true\n'
+            printf 'runner_verified_fresh=%s\n' "$STAGE_RUNNER_VERIFIED_FRESH"
+          } > "$SETUP_FACTS"
+          echo "DISTRIBUTION_E2E_OPERATOR_USERNAME=$OPERATOR_USERNAME" >> "$GITHUB_ENV"
+
+      - name: Prepare distribution E2E Gatekeeper credential
+        if: env.STAGE_MACOS_SCENARIO == 'distribution-e2e'
+        env:
+          NAMESPACE_RUNNER_PASSWORD: ${{ secrets.NAMESPACE_MACOS_RUNNER_PASSWORD }}
+        run: |
+          OPERATOR_USERNAME="$DISTRIBUTION_E2E_OPERATOR_USERNAME"
           OPERATOR_PASSWORD_FILE="$RUNNER_TEMP/voiceink-remote-e2e-stage/operator-password"
           OPERATOR_CREDENTIAL_FILE="$HOME/Desktop/Roma Distribution E2E Operator Credentials.txt"
+          OPERATOR_OWNERSHIP_MARKER="$RUNNER_TEMP/voiceink-remote-e2e-stage/operator-credential-owned"
           SETUP_FACTS="$RUNNER_TEMP/voiceink-remote-e2e-stage/evidence/distribution-operator-setup.txt"
-          printf 'account_short_name=%s\n' "$OPERATOR_USERNAME" > "$SETUP_FACTS"
-          cleanup_operator_password_file() {
-            /bin/rm -f "$OPERATOR_PASSWORD_FILE"
+          PASSWORD_TARGET_CREATED=false
+          CREDENTIAL_TARGET_CREATED=false
+          PASSWORD_FILE_IDENTITY=""
+          CREDENTIAL_FILE_IDENTITY=""
+          CREDENTIAL_PASSWORD="${NAMESPACE_RUNNER_PASSWORD:-}"
+          unset NAMESPACE_RUNNER_PASSWORD
+          isolate_created_credential_target() {
+            local target="$1" expected_identity="$2" label="$3"
+            local target_dir quarantine_dir isolated_target
+            if [[ -z "$expected_identity" || (! -e "$target" && ! -L "$target") ]]; then
+              return
+            fi
+            target_dir="$(dirname "$target")"
+            quarantine_dir="$(sudo -n /usr/bin/mktemp -d "$target_dir/.roma-credential-quarantine.XXXXXX")" \
+              || return 2
+            sudo -n /bin/chmod 700 "$quarantine_dir" || return 2
+            isolated_target="$quarantine_dir/$label"
+            sudo -n /bin/mv "$target" "$isolated_target" || return 2
+            if sudo -n /bin/test -L "$isolated_target"; then
+              echo "credential target became a symlink before failure cleanup; preserved at $isolated_target" >&2
+              return 2
+            fi
+            actual_identity="$(sudo -n /usr/bin/stat -f '%d:%i' "$isolated_target")" \
+              || return 2
+            if [ "$actual_identity" != "$expected_identity" ]; then
+              echo "credential target changed before failure cleanup; preserved at $isolated_target" >&2
+              return 2
+            fi
+            sudo -n /bin/rm -f "$isolated_target" || return 2
+            sudo -n /bin/rmdir "$quarantine_dir" || return 2
           }
-          trap cleanup_operator_password_file EXIT
+          cleanup_created_credential_targets() {
+            local cleanup_failed=false
+            if [ "$PASSWORD_TARGET_CREATED" = true ]; then
+              if ! isolate_created_credential_target \
+                "$OPERATOR_PASSWORD_FILE" "$PASSWORD_FILE_IDENTITY" operator-password; then
+                cleanup_failed=true
+              fi
+            fi
+            if [ "$CREDENTIAL_TARGET_CREATED" = true ]; then
+              if ! isolate_created_credential_target \
+                "$OPERATOR_CREDENTIAL_FILE" "$CREDENTIAL_FILE_IDENTITY" operator-credential; then
+                cleanup_failed=true
+              fi
+            fi
+            [ "$cleanup_failed" = false ]
+          }
+          trap cleanup_created_credential_targets EXIT
 
-          if /usr/bin/id "$OPERATOR_USERNAME" >/dev/null 2>&1; then
-            echo "refusing to reuse a distribution E2E operator account" >&2
+          test -n "$CREDENTIAL_PASSWORD"
+          if [[ -e "$OPERATOR_PASSWORD_FILE" || -L "$OPERATOR_PASSWORD_FILE" \
+            || -e "$OPERATOR_CREDENTIAL_FILE" || -L "$OPERATOR_CREDENTIAL_FILE" \
+            || -e "$OPERATOR_OWNERSHIP_MARKER" || -L "$OPERATOR_OWNERSHIP_MARKER" ]]; then
+            echo "refusing to overwrite a Gatekeeper credential target" >&2
             exit 2
           fi
           umask 077
-          printf '%s' "$OPERATOR_PASSWORD" > "$OPERATOR_PASSWORD_FILE"
-          chmod 600 "$OPERATOR_PASSWORD_FILE"
+          set -o noclobber
+          exec 7> "$OPERATOR_PASSWORD_FILE"
+          set +o noclobber
+          PASSWORD_TARGET_CREATED=true
+          PASSWORD_FILE_IDENTITY="$(stat -f '%d:%i' "$OPERATOR_PASSWORD_FILE")"
+          printf '%s' "$CREDENTIAL_PASSWORD" >&7
+          exec 7>&-
+          set -o noclobber
+          exec 8> "$OPERATOR_CREDENTIAL_FILE"
+          set +o noclobber
+          CREDENTIAL_TARGET_CREATED=true
+          CREDENTIAL_FILE_IDENTITY="$(stat -f '%d:%i' "$OPERATOR_CREDENTIAL_FILE")"
+          {
+            printf 'Roma distribution E2E operator credentials\n'
+            printf 'Username: %s\n' "$OPERATOR_USERNAME"
+            printf 'Password: %s\n' "$CREDENTIAL_PASSWORD"
+            printf '\nUse only if macOS requests administrator authentication after Open Anyway.\n'
+            printf 'Do not upload, copy into evidence, or share this file.\n'
+          } >&8
+          exec 8>&-
+          unset CREDENTIAL_PASSWORD
+          set -o noclobber
+          {
+            printf 'password_file_identity=%s\n' "$PASSWORD_FILE_IDENTITY"
+            printf 'credential_file_identity=%s\n' "$CREDENTIAL_FILE_IDENTITY"
+          } > "$OPERATOR_OWNERSHIP_MARKER"
+          set +o noclobber
+          chmod 600 "$OPERATOR_PASSWORD_FILE" "$OPERATOR_CREDENTIAL_FILE"
+
           ROMA_OPERATOR_USERNAME="$OPERATOR_USERNAME" ROMA_OPERATOR_PASSWORD_FILE="$OPERATOR_PASSWORD_FILE" /usr/bin/expect -c '
             log_user 0
             set timeout 30
@@ -325,22 +445,6 @@ jobs:
             set password_channel [open $password_file r]
             set password [read $password_channel]
             close $password_channel
-            file delete -force -- $password_file
-
-            set create_prompt_count 0
-            spawn sudo -n /usr/sbin/sysadminctl -addUser $username -fullName {Roma distribution E2E operator} -password - -admin
-            expect {
-              -re {User password:} {
-                incr create_prompt_count
-                if {$create_prompt_count != 1} { exit 2 }
-                send -- "$password\r"
-                exp_continue
-              }
-              timeout { exit 124 }
-              eof {}
-            }
-            set create_status [lindex [wait] 3]
-            if {$create_prompt_count != 1 || $create_status != 0} { exit 2 }
 
             set auth_prompt_count 0
             spawn /usr/bin/dscl . -authonly $username
@@ -358,36 +462,24 @@ jobs:
             set password ""
             if {$auth_prompt_count != 1 || $auth_status != 0} { exit 2 }
           '
-          cleanup_operator_password_file
-          trap - EXIT
-          if ! sudo -n /usr/sbin/dseditgroup -o checkmember \
-            -m "$OPERATOR_USERNAME" admin | grep -Fq 'yes'; then
-            echo "distribution E2E operator account is not an administrator" >&2
-            exit 2
-          fi
-          {
-            printf 'Roma distribution E2E operator credentials\n'
-            printf 'Username: %s\n' "$OPERATOR_USERNAME"
-            printf 'Password: %s\n' "$OPERATOR_PASSWORD"
-            printf '\nUse only if macOS requests administrator authentication after Open Anyway.\n'
-            printf 'Do not upload, copy into evidence, or share this file.\n'
-          } > "$OPERATOR_CREDENTIAL_FILE"
-          chmod 600 "$OPERATOR_CREDENTIAL_FILE"
+          isolate_created_credential_target \
+            "$OPERATOR_PASSWORD_FILE" "$PASSWORD_FILE_IDENTITY" operator-password
+          PASSWORD_TARGET_CREATED=false
+          test ! -e "$OPERATOR_PASSWORD_FILE" && test ! -L "$OPERATOR_PASSWORD_FILE"
           test "$(stat -f '%Lp' "$OPERATOR_CREDENTIAL_FILE")" = 600
           {
-            printf 'created=true\n'
-            printf 'account_admin=true\n'
             printf 'credential_authentication=passed\n'
             printf 'credential_file=~/Desktop/Roma Distribution E2E Operator Credentials.txt\n'
             printf 'credential_file_mode=600\n'
-            printf 'runner_verified_fresh=%s\n' "$STAGE_RUNNER_VERIFIED_FRESH"
           } >> "$SETUP_FACTS"
-          unset OPERATOR_PASSWORD
           echo "DISTRIBUTION_E2E_OPERATOR_CREDENTIAL_FILE=$OPERATOR_CREDENTIAL_FILE" >> "$GITHUB_ENV"
+          trap - EXIT
 
       - name: Verify distribution E2E tooling
         run: |
           bash scripts/tests/macos-finder-extraction-state.test.sh
+          bash scripts/tests/macos-apfs-volume-owner.test.sh
+          bash scripts/tests/cleanup-macos-gatekeeper-operator.test.sh
           bash scripts/tests/macos-distribution-e2e-contract.test.sh
           bash scripts/tests/macos-distribution-runtime-handoff.test.sh
           bash scripts/tests/verify-macos-distribution-launch.test.sh
@@ -1020,47 +1112,18 @@ jobs:
             "$STAGE_MACOS_EXPECTED_BUILD" \
             "$RUNNER_TEMP/remote-e2e-inputs/macos/runtime-helper/roma.runtime-e2e-harness.macos.zip"
 
-      - name: Remove disposable distribution E2E administrator
+      - name: Remove distribution E2E credential file
         if: always() && env.STAGE_MACOS_SCENARIO == 'distribution-e2e'
         run: |
           EVIDENCE="$RUNNER_TEMP/voiceink-remote-e2e-stage/evidence"
           SETUP_FACTS="$EVIDENCE/distribution-operator-setup.txt"
-          CLEANUP_LOG="$EVIDENCE/distribution-operator-cleanup-command.txt"
           CLEANUP_FACTS="$EVIDENCE/distribution-operator-cleanup.txt"
+          PASSWORD_FILE="$RUNNER_TEMP/voiceink-remote-e2e-stage/operator-password"
           CREDENTIAL_FILE="$HOME/Desktop/Roma Distribution E2E Operator Credentials.txt"
-          test -s "$SETUP_FACTS"
-          OPERATOR_USERNAME="$(sed -n 's/^account_short_name=//p' "$SETUP_FACTS")"
-          if [[ ! "$OPERATOR_USERNAME" =~ ^roma-e2e-[0-9]+-[0-9]+$ ]]; then
-            echo "refusing to clean up an unexpected account name" >&2
-            exit 2
-          fi
-          test "$(grep -c '^account_short_name=' "$SETUP_FACTS")" -eq 1
-          /bin/rm -f "$CREDENTIAL_FILE"
-          test ! -e "$CREDENTIAL_FILE"
-          if ! /usr/bin/id "$OPERATOR_USERNAME" >/dev/null 2>&1; then
-            echo "disposable distribution E2E operator account was not present for cleanup" >&2
-            exit 2
-          fi
-          if ! sudo -n /usr/sbin/sysadminctl \
-            -deleteUser "$OPERATOR_USERNAME" \
-            -secure \
-            > "$CLEANUP_LOG" 2>&1; then
-            echo "could not delete the disposable distribution E2E operator account" >&2
-            exit 2
-          fi
-          if /usr/bin/id "$OPERATOR_USERNAME" >/dev/null 2>&1 \
-            || /usr/bin/dscl . -read "/Users/$OPERATOR_USERNAME" >/dev/null 2>&1 \
-            || [ -e "/Users/$OPERATOR_USERNAME" ]; then
-            echo "disposable distribution E2E operator account cleanup was incomplete" >&2
-            exit 2
-          fi
-          {
-            printf 'account_short_name=%s\n' "$OPERATOR_USERNAME"
-            printf 'credential_file_removed=true\n'
-            printf 'directory_service_record_removed=true\n'
-            printf 'home_directory_removed=true\n'
-            printf 'cleanup=passed\n'
-          } > "$CLEANUP_FACTS"
+          OWNERSHIP_MARKER="$RUNNER_TEMP/voiceink-remote-e2e-stage/operator-credential-owned"
+          scripts/cleanup-macos-gatekeeper-operator.sh \
+            "$SETUP_FACTS" "$PASSWORD_FILE" "$CREDENTIAL_FILE" "$CLEANUP_FACTS" runner \
+            "$OWNERSHIP_MARKER"
 
       - name: Upload stage evidence
         if: always()

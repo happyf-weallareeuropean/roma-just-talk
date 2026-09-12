@@ -1,0 +1,5 @@
+Cryptographic user for disk5s1s1 (1 found)
+|
++-- BBBD8E46-C5B7-41B1-84B0-A5CED03927AE
+    Type: Local Open Directory User
+    Volume Owner: Yes

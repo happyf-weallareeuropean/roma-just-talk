@@ -54,17 +54,22 @@ as `roma.just.talk.ios-simulator.app`, preserving App Group exchange between the
 app and keyboard extension.
 
 For `distribution-e2e`, the workflow also requires the Namespace instance to
-have booted within 15 minutes. It uses passwordless runner sudo to create one
-new per-run disposable administrator account. Its generated credentials are
-written only to `~/Desktop/Roma Distribution E2E Operator Credentials.txt` with
-mode `0600`. The workflow proves that account is an administrator and that its
-credentials authenticate before the desktop handoff. It supplies the generated
-password to `sysadminctl` and `dscl` only through their interactive PTY prompts,
-never through a process argument or environment variable. Evidence records those
-checks but never the password or credential file. Do not upload, copy, or share
-that Desktop file. After the scenario and hold finish, an always-running cleanup
-step removes the credential file and securely deletes the disposable account and
-home directory. The uploaded evidence records those deletion checks.
+have booted within 15 minutes. It uses the Namespace image's existing `runner`
+administrator because that account owns the logged-in desktop, has Secure Token,
+and is an APFS volume owner. Before the desktop handoff, the workflow verifies
+all four properties. A separate credential step then authenticates the image
+account through an interactive Open Directory prompt. Any image-contract drift
+fails before the artifact is launched.
+
+The image password comes from the masked repository secret
+`NAMESPACE_MACOS_RUNNER_PASSWORD`; it is not stored in workflow source. The
+credentials are written to
+`~/Desktop/Roma Distribution E2E Operator Credentials.txt` with mode `0600`.
+Do not upload, copy, or share that Desktop file. After the scenario and hold
+finish, an always-running cleanup step removes only the credential file and
+proves the Namespace-owned `runner` account and home directory remain present.
+The uploaded evidence records those checks but never the password or credential
+file.
 
 Those account checks do not prove that Gatekeeper's administrator dialog can
 authenticate the account. On macOS 26.3.1 build 25D2128, run
@@ -74,12 +79,14 @@ reached that dialog but Open Directory rejected its generated administrator with
 a SEP credential, while the account lacked a SEP credential and Secure Token.
 The built-in `runner` had a Secure Token. The bootstrap-token status query was
 unavailable because the Mac was not supervised in MDM or DEP enrolled.
-This runner/account setup is not a valid framework-crash negative control.
-Before another attempt on this image, obtain a supported Secure Token-enabled
-administrator authentication path from the runner provider. Do not retry the
-same generated-account setup, substitute sudo for the GUI approval, or weaken
-Gatekeeper. Evidence files are `distribution-operator-auth-method-failure.txt`
-and `distribution-operator-secure-token-status.txt`.
+That generated-account setup is not a valid framework-crash negative control.
+The distribution lane instead verifies and uses the image-owned `runner`
+account; a run is not valid unless the same fresh instance proves its password,
+Secure Token, and exact APFS user record before the GUI handoff.
+Do not retry the generated-account setup, reset the runner password, substitute
+sudo for the GUI approval, or weaken Gatekeeper. Evidence files from the failed
+setup are `distribution-operator-auth-method-failure.txt` and
+`distribution-operator-secure-token-status.txt`.
 
 Runtime-only runner profiles may attach the persistent model cache. Runtime-only
 `nscloud-macos-*` image lanes require a previously absent cache path under that
@@ -227,9 +234,9 @@ re-signs the app.
 
 If the **Open Anyway** confirmation asks for administrator authentication, open
 `~/Desktop/Roma Distribution E2E Operator Credentials.txt` in Remote Display
-and enter its generated credentials. This is the single authorized use of that
-file. Never put its contents into GitHub logs, the evidence directory, chat, or
-an artifact.
+and enter its image-account credentials. This is the single authorized use of
+that file. Never put its contents into GitHub logs, the evidence directory,
+chat, or an artifact.
 
 Fixed mode has three Desktop confirmation commands: Finder extraction complete,
 Gatekeeper Not Opened, and Roma first-launch ready. Known-bad framework-signature
