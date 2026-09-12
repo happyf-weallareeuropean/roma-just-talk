@@ -160,13 +160,34 @@ if [[ "$installed_public_key" != "$public_key" ]]; then
 fi
 codesign --verify --deep --strict "$installed_app"
 
+shopt -s nullglob
+xctestrun_files=("$test_derived_data"/Build/Products/*.xctestrun)
+if [[ "${#xctestrun_files[@]}" -ne 1 ]]; then
+  echo "Expected one updater xctestrun file, found ${#xctestrun_files[@]}." >&2
+  exit 1
+fi
+xctestrun_file="${xctestrun_files[0]}"
+test_target='TestConfigurations.0.TestTargets.0'
+if [[ "$(plutil -extract "$test_target.BlueprintName" raw -o - "$xctestrun_file")" != VoiceInkUITests ]]; then
+  echo "Updater xctestrun does not contain the expected UI-test target." >&2
+  exit 1
+fi
+plutil -replace "$test_target.EnvironmentVariables.ROMA_UPDATE_FEED_URL" -string "$feed_url" "$xctestrun_file"
+plutil -replace "$test_target.EnvironmentVariables.ROMA_UPDATE_EXPECTED_BUILD" -string "$candidate_build" "$xctestrun_file"
+plutil -replace "$test_target.EnvironmentVariables.ROMA_UPDATE_EXPECTED_VERSION" -string "$candidate_version" "$xctestrun_file"
+plutil -replace "$test_target.EnvironmentVariables.ROMA_UPDATE_INSTALL_APP_PATH" -string "$installed_app" "$xctestrun_file"
+cp "$xctestrun_file" "$work_dir/UpdaterE2E.xctestrun"
+
 defaults delete com.negentropi.RomaJustTalk 2>/dev/null || true
 defaults write com.negentropi.RomaJustTalk hasCompletedOnboarding -bool true
 defaults write com.negentropi.RomaJustTalk CurrentTranscriptionModel -string roma-updater-e2e-no-model
 defaults write com.negentropi.RomaJustTalk automaticUpdatesEnabled -bool true
 
 test_exit=0
-xcodebuild test-without-building "${build_arguments[@]}" \
+xcodebuild test-without-building \
+  -xctestrun "$xctestrun_file" \
+  -destination 'platform=macOS' -parallel-testing-enabled NO \
+  -only-testing:"$test_selector" \
   -resultBundlePath "$result_bundle" | tee "$test_log" || test_exit=$?
 
 grep -Fq 'GET /appcast.xml' "$server_log"
