@@ -6,9 +6,17 @@
 	<true/>
 	<key>SUFeedURL</key>
 	<string>https://github.com/negentropi/roma-just-talk/releases/latest/download/appcast.xml</string>
+	<key>SUPublicEDKey</key>
+	<string>FTnnhPjiVGePI7qtEba2eMu6tnbkGuDlmiLyP6pni74=</string>
+	<key>SURequireSignedFeed</key>
+	<true/>
+	<key>SUVerifyUpdateBeforeExtraction</key>
+	<true/>
 	<key>LSUIElement</key>
 	<false/>
 	<key>SUEnableAutomaticChecks</key>
+	<true/>
+	<key>SUAutomaticallyUpdate</key>
 	<true/>
 	<key>SUScheduledCheckInterval</key>
 	<integer>14400</integer>

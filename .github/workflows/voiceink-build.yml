@@ -1,6 +1,13 @@
 name: Build roma just talk
 
 on:
+  workflow_call:
+    inputs:
+      force:
+        description: Ignore an existing green exact-SHA build
+        required: false
+        default: false
+        type: boolean
   workflow_dispatch:
     inputs:
       force:

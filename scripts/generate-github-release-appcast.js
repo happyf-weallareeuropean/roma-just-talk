@@ -1,6 +1,7 @@
 #!/usr/bin/env node
 
 const fs = require("node:fs");
+const { buildParts } = require("./assert-newer-sparkle-build");
 
 const repository = "negentropi/roma-just-talk";
 const releasesPage = `https://github.com/${repository}/releases`;
@@ -18,30 +19,25 @@ function escapeXML(value) {
   })[character]);
 }
 
-function releaseVersion(tagName) {
-  const match = /^v?(\d+)\.(\d+)(?:\.(\d+))?$/.exec(tagName || "");
-  if (!match) return null;
-
-  const major = Number(match[1]);
-  const minor = Number(match[2]);
-  const patch = match[3] === undefined ? null : Number(match[3]);
-  if (!Number.isSafeInteger(major) || !Number.isSafeInteger(minor) || minor > 99) return null;
-  if (patch !== null && (!Number.isSafeInteger(patch) || patch > 99)) return null;
-
-  return {
-    // Preserve historical builds: 195 < 195.1 < 196 in Sparkle's numeric comparison.
-    build: `${major * 100 + minor}${patch === null ? "" : `.${patch}`}`,
-    short: `${major}.${minor}${patch === null ? "" : `.${patch}`}`,
-  };
-}
-
-function normalizedRelease(release) {
-  if (!release || release.draft || release.prerelease) {
-    throw new Error("Release must be a published stable release");
+function normalizedRelease(release, { allowPrerelease = false } = {}) {
+  if (!release || release.draft || (release.prerelease && !allowPrerelease)) {
+    throw new Error("Release must be published on the selected update track");
   }
 
-  const version = releaseVersion(release.tag_name);
-  if (!version) throw new Error(`Unsupported release tag: ${release.tag_name || "(missing)"}`);
+  const build = release.sparkle?.build;
+  const short = release.sparkle?.short;
+  const signature = release.sparkle?.signature;
+  try {
+    buildParts(build);
+  } catch {
+    throw new Error("Release is missing a numeric packaged-app build version");
+  }
+  if (typeof short !== "string" || !short.trim() || /[\r\n]/.test(short)) {
+    throw new Error("Release is missing its packaged-app display version");
+  }
+  if (typeof signature !== "string" || !/^[A-Za-z0-9+/]{86}==$/.test(signature)) {
+    throw new Error("Release is missing a valid Sparkle EdDSA signature");
+  }
 
   const releaseURL = typeof release.html_url === "string" ? release.html_url : "";
   if (!releaseURL.startsWith(releaseURLPrefix)) {
@@ -51,21 +47,34 @@ function normalizedRelease(release) {
   const publishedAt = new Date(release.published_at);
   if (Number.isNaN(publishedAt.getTime())) throw new Error("Release published_at is invalid");
 
-  const hasArchive = release.assets?.some((asset) => {
+  const archive = release.assets?.find((asset) => {
     return asset.name === archiveName && (!asset.state || asset.state === "uploaded");
   });
-  if (!hasArchive) throw new Error(`Release is missing ${archiveName}`);
+  if (!archive) throw new Error(`Release is missing ${archiveName}`);
+  if (!Number.isSafeInteger(archive.size) || archive.size <= 0) {
+    throw new Error(`Release ${archiveName} has an invalid size`);
+  }
+  const expectedArchiveURL = `${releasesPage}/download/`;
+  if (typeof archive.browser_download_url !== "string" ||
+      !archive.browser_download_url.startsWith(expectedArchiveURL) ||
+      !archive.browser_download_url.endsWith(`/${archiveName}`)) {
+    throw new Error(`Release archive URL must belong to ${repository}`);
+  }
 
   return {
-    ...version,
+    build,
+    short: short.trim(),
+    signature,
+    archiveURL: archive.browser_download_url,
+    archiveSize: archive.size,
     releaseURL,
     publishedAt: publishedAt.toUTCString(),
     notes: release.body?.trim() || "See the GitHub release page for details.",
   };
 }
 
-function buildAppcast(release) {
-  const item = normalizedRelease(release);
+function buildAppcast(release, options) {
+  const item = normalizedRelease(release, options);
 
   return `<?xml version="1.0" encoding="utf-8"?>
 <rss version="2.0" xmlns:sparkle="http://www.andymatuschak.org/xml-namespaces/sparkle">
@@ -82,6 +91,7 @@ function buildAppcast(release) {
       <sparkle:shortVersionString>${escapeXML(item.short)}</sparkle:shortVersionString>
       <sparkle:minimumSystemVersion>${minimumSystemVersion}</sparkle:minimumSystemVersion>
       <description sparkle:format="markdown">${escapeXML(item.notes)}</description>
+      <enclosure url="${escapeXML(item.archiveURL)}" length="${item.archiveSize}" type="application/octet-stream" sparkle:edSignature="${item.signature}" />
     </item>
   </channel>
 </rss>
@@ -97,7 +107,9 @@ if (require.main === module) {
   try {
     const eventPath = process.argv[2] || process.env.GITHUB_EVENT_PATH;
     if (!eventPath) throw new Error("Pass a GitHub release event JSON file");
-    process.stdout.write(buildAppcast(releaseFromEventFile(eventPath)));
+    process.stdout.write(buildAppcast(releaseFromEventFile(eventPath), {
+      allowPrerelease: process.env.ALLOW_PRERELEASE === "true",
+    }));
   } catch (error) {
     console.error(error.message);
     process.exitCode = 1;
@@ -108,5 +120,4 @@ module.exports = {
   buildAppcast,
   normalizedRelease,
   releaseFromEventFile,
-  releaseVersion,
 };

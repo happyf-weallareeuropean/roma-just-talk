@@ -6,41 +6,220 @@ on:
       - published
 
 permissions:
+  actions: read
   contents: write
 
+concurrency:
+  group: roma-update-feed
+  cancel-in-progress: false
+
 jobs:
+  build:
+    name: Resolve exact release build
+    uses: ./.github/workflows/voiceink-build.yml
+    with:
+      force: false
+
   publish:
     name: Attach Sparkle appcast to release
-    if: ${{ !github.event.release.draft && !github.event.release.prerelease }}
-    runs-on: ubuntu-latest
+    if: ${{ !github.event.release.draft }}
+    needs: build
+    runs-on: namespace-profile-roma-jt
 
     steps:
       - name: Checkout release source
         uses: actions/checkout@v4
 
       - name: Test appcast generator
-        run: node --test scripts/tests/github-release-appcast.test.js
+        run: |
+          node --test scripts/tests/github-release-appcast.test.js
+          bash scripts/tests/publish-update-feed-policy.test.sh
 
-      - name: Read release after app archive upload
+      - name: Download verified exact-SHA app
+        uses: actions/download-artifact@v4
+        with:
+          name: roma.just.talk.app
+          path: ${{ runner.temp }}/release-artifact
+
+      - name: Attach verified app archive to release
         env:
           GH_TOKEN: ${{ github.token }}
           RELEASE_TAG: ${{ github.event.release.tag_name }}
         run: |
-          for attempt in {1..30}; do
-            gh api "repos/$GITHUB_REPOSITORY/releases/tags/$RELEASE_TAG" > "$RUNNER_TEMP/release.json"
-            if node -e 'const release = require(process.argv[1]); process.exit(release.assets?.some((asset) => asset.name === "roma.just.talk.app.zip" && asset.state === "uploaded") ? 0 : 1)' "$RUNNER_TEMP/release.json"; then
-              exit 0
-            fi
-            sleep 10
-          done
-          echo "Timed out waiting for roma.just.talk.app.zip"
-          exit 1
+          test -s "$RUNNER_TEMP/release-artifact/roma.just.talk.app.zip"
+          gh release upload "$RELEASE_TAG" \
+            "$RUNNER_TEMP/release-artifact/roma.just.talk.app.zip" \
+            --repo "$GITHUB_REPOSITORY" \
+            --clobber
 
-      - name: Generate informational appcast
-        run: node scripts/generate-github-release-appcast.js "$RUNNER_TEMP/release.json" > "$RUNNER_TEMP/appcast.xml"
+      - name: Resolve pinned Sparkle signing tool
+        run: |
+          xcodebuild -resolvePackageDependencies \
+            -project VoiceInk.xcodeproj \
+            -scheme VoiceInk \
+            -clonedSourcePackagesDirPath "$RUNNER_TEMP/SourcePackages"
+          test -x "$RUNNER_TEMP/SourcePackages/artifacts/sparkle/Sparkle/bin/sign_update"
 
-      - name: Attach appcast to GitHub release
+      - name: Read release with attached app archive
         env:
           GH_TOKEN: ${{ github.token }}
           RELEASE_TAG: ${{ github.event.release.tag_name }}
-        run: gh release upload "$RELEASE_TAG" "$RUNNER_TEMP/appcast.xml" --repo "$GITHUB_REPOSITORY" --clobber
+        run: |
+          gh api "repos/$GITHUB_REPOSITORY/releases/tags/$RELEASE_TAG" > "$RUNNER_TEMP/release.json"
+          node -e 'const release = require(process.argv[1]); process.exit(release.assets?.some((asset) => asset.name === "roma.just.talk.app.zip" && asset.state === "uploaded") ? 0 : 1)' "$RUNNER_TEMP/release.json"
+
+      - name: Build, sign, and attach update feed
+        env:
+          GH_TOKEN: ${{ github.token }}
+          SPARKLE_ED_PRIVATE_KEY: ${{ secrets.SPARKLE_ED_PRIVATE_KEY }}
+          RELEASE_TAG: ${{ github.event.release.tag_name }}
+        run: |
+          sign_update="$RUNNER_TEMP/SourcePackages/artifacts/sparkle/Sparkle/bin/sign_update"
+          resolve_latest_stable_tag() {
+            gh api "repos/$GITHUB_REPOSITORY/releases/latest" --jq .tag_name
+          }
+          resolve_newest_prerelease_tag() {
+            gh api --paginate --slurp "repos/$GITHUB_REPOSITORY/releases?per_page=100" \
+              --jq '[.[][] | select(.draft == false and .prerelease == true)] | sort_by(.published_at) | last | .tag_name // empty'
+          }
+          stable_baseline_feeds=()
+          prerelease_baseline_feeds=()
+          gh api --paginate --slurp "repos/$GITHUB_REPOSITORY/releases?per_page=100" \
+            > "$RUNNER_TEMP/releases.json"
+          gh api "repos/$GITHUB_REPOSITORY/releases/latest" > "$RUNNER_TEMP/latest-stable.json"
+          for feed_name in appcast.xml appcast-prerelease.xml; do
+            asset_api_url=$(jq -r --arg name "$feed_name" \
+              '[.assets[] | select(.name == $name)] | first | .url // empty' \
+              "$RUNNER_TEMP/latest-stable.json")
+            if [[ -z "$asset_api_url" ]]; then
+              asset_api_url=$(jq -r \
+                --arg current "$RELEASE_TAG" \
+                --arg name "$feed_name" \
+                -f scripts/previous-published-feed-asset.jq \
+                "$RUNNER_TEMP/releases.json")
+            fi
+            if [[ -n "$asset_api_url" ]]; then
+              baseline="$RUNNER_TEMP/served-$feed_name"
+              gh api -H 'Accept: application/octet-stream' "$asset_api_url" > "$baseline"
+              if [[ "$feed_name" == appcast.xml ]]; then
+                stable_baseline_feeds+=("$baseline")
+              else
+                prerelease_baseline_feeds+=("$baseline")
+              fi
+            fi
+          done
+
+          create_signed_feed() {
+            local release_tag="$1"
+            local allow_prerelease="$2"
+            local output="$3"
+            local prefix="$4"
+            local release_json="$RUNNER_TEMP/$prefix-release.json"
+            local archive="$RUNNER_TEMP/$prefix-roma.just.talk.app.zip"
+            local extracted="$RUNNER_TEMP/$prefix-update-app"
+            local signed_release="$RUNNER_TEMP/$prefix-signed-release.json"
+            local signature_output signature info build short
+
+            for _ in {1..30}; do
+              gh release view "$release_tag" --repo "$GITHUB_REPOSITORY" --json assets \
+                --jq '.assets[].name' | grep -Fxq roma.just.talk.app.zip && break
+              sleep 10
+            done
+            gh api "repos/$GITHUB_REPOSITORY/releases/tags/$release_tag" > "$release_json"
+            jq -e '.assets[] | select(.name == "roma.just.talk.app.zip")' "$release_json" >/dev/null
+            gh release download "$release_tag" \
+              --repo "$GITHUB_REPOSITORY" \
+              --pattern roma.just.talk.app.zip \
+              --output "$archive"
+
+            mkdir -p "$extracted"
+            ditto -x -k "$archive" "$extracted"
+            shopt -s nullglob
+            apps=("$extracted"/*.app)
+            test "${#apps[@]}" -eq 1
+            info="${apps[0]}/Contents/Info.plist"
+            build=$(plutil -extract CFBundleVersion raw -o - "$info")
+            short=$(plutil -extract CFBundleShortVersionString raw -o - "$info")
+            signature_output=$(printf '%s' "$SPARKLE_ED_PRIVATE_KEY" | "$sign_update" --ed-key-file - "$archive")
+            signature=$(printf '%s\n' "$signature_output" | sed -n 's/.*sparkle:edSignature="\([^"]*\)".*/\1/p')
+            test -n "$signature"
+
+            jq \
+              --arg build "$build" \
+              --arg short "$short" \
+              --arg signature "$signature" \
+              '. + {sparkle: {build: $build, short: $short, signature: $signature}}' \
+              "$release_json" > "$signed_release"
+            ALLOW_PRERELEASE="$allow_prerelease" \
+              node scripts/generate-github-release-appcast.js "$signed_release" > "$output"
+            printf '%s' "$SPARKLE_ED_PRIVATE_KEY" | "$sign_update" --ed-key-file - "$output" --disable-signing-warning
+            printf '%s' "$SPARKLE_ED_PRIVATE_KEY" | "$sign_update" --verify --ed-key-file - "$output"
+          }
+
+          is_prerelease=$(jq -r '.prerelease' "$RUNNER_TEMP/release.json")
+          if [[ "$is_prerelease" == true ]]; then
+            newest_prerelease=$(resolve_newest_prerelease_tag)
+            if [[ "$newest_prerelease" != "$RELEASE_TAG" ]]; then
+              echo "Skipping stale prerelease $RELEASE_TAG; newest prerelease is $newest_prerelease"
+              exit 0
+            fi
+            feed_tag=$(gh api "repos/$GITHUB_REPOSITORY/releases/latest" --jq .tag_name) || {
+              echo "A published stable release is required to host the prerelease feed endpoint" >&2
+              exit 1
+            }
+            feed="$RUNNER_TEMP/appcast-prerelease.xml"
+            create_signed_feed "$RELEASE_TAG" true "$feed" prerelease
+            node scripts/assert-newer-sparkle-build.js --allow-same-release \
+              "$feed" "${stable_baseline_feeds[@]}" "${prerelease_baseline_feeds[@]}"
+            if [[ "$(resolve_newest_prerelease_tag)" != "$RELEASE_TAG" \
+                  || "$(resolve_latest_stable_tag)" != "$feed_tag" ]]; then
+              echo "Release metadata changed while signing; a newer feed run will publish the result"
+              exit 0
+            fi
+            gh release upload "$feed_tag" "$feed" --repo "$GITHUB_REPOSITORY" --clobber
+          else
+            feed_tag="$RELEASE_TAG"
+            latest_stable=$(gh api "repos/$GITHUB_REPOSITORY/releases/latest" --jq .tag_name)
+            if [[ "$latest_stable" != "$RELEASE_TAG" ]]; then
+              echo "Skipping stale stable release $RELEASE_TAG; latest stable is $latest_stable"
+              exit 0
+            fi
+            feed="$RUNNER_TEMP/appcast.xml"
+            create_signed_feed "$RELEASE_TAG" false "$feed" stable
+            newest_prerelease=$(gh api --paginate --slurp "repos/$GITHUB_REPOSITORY/releases?per_page=100" \
+              --jq '[.[][] | select(.draft == false and .prerelease == true)] | sort_by(.published_at) | last // {}')
+            newest_prerelease_published_at=$(jq -r '.published_at // empty' <<< "$newest_prerelease")
+            stable_published_at=$(jq -r .published_at "$RUNNER_TEMP/release.json")
+            stable_gate_feeds=("${stable_baseline_feeds[@]}")
+            if [[ -z "$newest_prerelease_published_at" || "$newest_prerelease_published_at" < "$stable_published_at" ]]; then
+              stable_gate_feeds+=("${prerelease_baseline_feeds[@]}")
+            fi
+            node scripts/assert-newer-sparkle-build.js --allow-same-release \
+              "$feed" "${stable_gate_feeds[@]}"
+            if [[ "$(resolve_latest_stable_tag)" != "$RELEASE_TAG" ]]; then
+              echo "A newer stable release was published while signing; skipping stale upload"
+              exit 0
+            fi
+            gh release upload "$feed_tag" "$feed" --repo "$GITHUB_REPOSITORY" --clobber
+
+            prerelease_feed="$RUNNER_TEMP/appcast-prerelease.xml"
+            if [[ -z "$newest_prerelease_published_at" || "$newest_prerelease_published_at" < "$stable_published_at" ]]; then
+              cp "$feed" "$prerelease_feed"
+            else
+              newest_prerelease_tag=$(jq -r .tag_name <<< "$newest_prerelease")
+              create_signed_feed "$newest_prerelease_tag" true "$prerelease_feed" prerelease-fallback
+              if ! node scripts/assert-newer-sparkle-build.js --allow-same-release \
+                    "$prerelease_feed" "$feed" \
+                    "${stable_baseline_feeds[@]}" "${prerelease_baseline_feeds[@]}"; then
+                echo "Newest prerelease metadata does not advance the served builds; using stable feed"
+                cp "$feed" "$prerelease_feed"
+              fi
+            fi
+            selected_prerelease_tag=$(jq -r '.tag_name // empty' <<< "$newest_prerelease")
+            if [[ "$(resolve_latest_stable_tag)" != "$RELEASE_TAG" \
+                  || "$(resolve_newest_prerelease_tag)" != "$selected_prerelease_tag" ]]; then
+              echo "Release metadata changed while preparing the prerelease feed; skipping stale upload"
+              exit 0
+            fi
+            gh release upload "$feed_tag" "$prerelease_feed" --repo "$GITHUB_REPOSITORY" --clobber
+          fi

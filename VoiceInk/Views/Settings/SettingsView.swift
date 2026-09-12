@@ -262,10 +262,19 @@ struct SettingsView: View {
                     isOn: $launchAtLoginController.isEnabled
                 )
 
-                Toggle(Self.settingsPresentation.autoCheckUpdatesTitle, isOn: Binding(
-                    get: { updaterViewModel.automaticallyChecksForUpdates },
-                    set: { updaterViewModel.setAutomaticallyChecksForUpdates($0) }
+                Toggle(VoiceInkUpdatePresentation.automaticUpdatesTitle, isOn: Binding(
+                    get: { updaterViewModel.automaticUpdatesEnabled },
+                    set: { updaterViewModel.setAutomaticUpdatesEnabled($0) }
                 ))
+
+                Picker(VoiceInkUpdatePresentation.trackTitle, selection: Binding(
+                    get: { updaterViewModel.track },
+                    set: { updaterViewModel.setTrack($0) }
+                )) {
+                    ForEach(VoiceInkUpdateTrack.allCases) { track in
+                        Text(track.title).tag(track)
+                    }
+                }
 
                 Toggle(Self.settingsPresentation.showAnnouncementsTitle, isOn: $enableAnnouncements)
                     .onChange(of: enableAnnouncements) { _, newValue in
@@ -277,10 +286,15 @@ struct SettingsView: View {
                     }
 
                 HStack {
-                    Button(Self.settingsPresentation.checkForUpdatesButtonTitle) {
+                    Button(VoiceInkUpdatePresentation.checkNowTitle) {
                         updaterViewModel.checkForUpdates()
                     }
                     .disabled(!updaterViewModel.canCheckForUpdates)
+
+                    Link(
+                        VoiceInkUpdatePresentation.releaseHistoryTitle,
+                        destination: VoiceInkUpdatePreference.releaseHistoryURL
+                    )
 
                     Button(Self.resetOnboardingPresentation.buttonTitle) {
                         showResetOnboardingAlert = true

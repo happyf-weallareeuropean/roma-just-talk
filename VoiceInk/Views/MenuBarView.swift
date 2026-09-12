@@ -239,11 +239,21 @@ struct MenuBarView: View {
             )
             
             Divider()
-            
-            Button(VoiceInkMacOSMenuBarPresentation.checkForUpdatesTitle) {
-                updaterViewModel.checkForUpdates()
+
+            if updaterViewModel.status.canRelaunch {
+                Button(updaterViewModel.status.title) {
+                    updaterViewModel.relaunchToUpdate()
+                }
+            } else {
+                Button(VoiceInkMacOSMenuBarPresentation.checkForUpdatesTitle) {
+                    updaterViewModel.checkForUpdates()
+                }
+                .disabled(!updaterViewModel.canCheckForUpdates)
+
+                if updaterViewModel.status.isVisible {
+                    Text(updaterViewModel.status.title)
+                }
             }
-            .disabled(!updaterViewModel.canCheckForUpdates)
             
             Button(VoiceInkMacOSMenuBarPresentation.helpAndSupportTitle) {
                 EmailSupport.openSupportEmail()

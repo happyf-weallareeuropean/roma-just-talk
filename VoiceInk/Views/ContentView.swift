@@ -29,6 +29,7 @@ struct ContentView: View {
     @EnvironmentObject private var whisperModelManager: WhisperModelManager
     @EnvironmentObject private var transcriptionModelManager: TranscriptionModelManager
     @EnvironmentObject private var recordingShortcutManager: RecordingShortcutManager
+    @EnvironmentObject private var updaterViewModel: UpdaterViewModel
     @AppStorage(VoiceInkUserDefaultsKey.powerModeUIFlag) private var powerModeUIFlag = VoiceInkPreferenceDefault.powerModeUIEnabled
     @State private var selectedView: VoiceInkMacOSMainViewItem? = VoiceInkMacOSMainViewItem.defaultSelection
     let appVersion = Bundle.main.infoDictionary?["CFBundleShortVersionString"] as? String ?? "1.0.0"
@@ -97,6 +98,9 @@ struct ContentView: View {
         }
         .navigationSplitViewStyle(.balanced)
         .frame(width: 950)
+        .safeAreaInset(edge: .bottom, spacing: 0) {
+            UpdateStatusBar()
+        }
         .onAppear {
             logger.notice("ContentView appeared")
         }

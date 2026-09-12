@@ -29,6 +29,7 @@ enum AppDefaults {
         platformDefaults.merge(VoiceInkPastePreference.registeredDefaults) { _, sharedValue in sharedValue }
         platformDefaults.merge(VoiceInkPowerModePreference.registeredDefaults) { _, sharedValue in sharedValue }
         platformDefaults.merge(VoiceInkAnnouncementPreference.registeredDefaults) { _, sharedValue in sharedValue }
+        platformDefaults.merge(VoiceInkUpdatePreference.registeredDefaults) { _, sharedValue in sharedValue }
         defaults.merge(platformDefaults, uniquingKeysWith: { _, platformValue in platformValue })
 
         return defaults
