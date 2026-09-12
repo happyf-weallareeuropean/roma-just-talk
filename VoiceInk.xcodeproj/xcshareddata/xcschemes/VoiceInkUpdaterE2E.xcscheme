@@ -42,5 +42,27 @@
             </BuildableReference>
          </TestableReference>
       </Testables>
+      <EnvironmentVariables>
+         <EnvironmentVariable
+            key = "ROMA_UPDATE_FEED_URL"
+            value = "$(ROMA_UPDATE_FEED_URL)"
+            isEnabled = "YES">
+         </EnvironmentVariable>
+         <EnvironmentVariable
+            key = "ROMA_UPDATE_EXPECTED_BUILD"
+            value = "$(ROMA_UPDATE_EXPECTED_BUILD)"
+            isEnabled = "YES">
+         </EnvironmentVariable>
+         <EnvironmentVariable
+            key = "ROMA_UPDATE_EXPECTED_VERSION"
+            value = "$(ROMA_UPDATE_EXPECTED_VERSION)"
+            isEnabled = "YES">
+         </EnvironmentVariable>
+         <EnvironmentVariable
+            key = "ROMA_UPDATE_INSTALL_APP_PATH"
+            value = "$(ROMA_UPDATE_INSTALL_APP_PATH)"
+            isEnabled = "YES">
+         </EnvironmentVariable>
+      </EnvironmentVariables>
    </TestAction>
 </Scheme>

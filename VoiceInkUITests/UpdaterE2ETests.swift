@@ -11,10 +11,22 @@ final class UpdaterE2ETests: XCTestCase {
     @MainActor
     func testSeamlessBackgroundUpdateInstallsAndRelaunches() throws {
         let environment = ProcessInfo.processInfo.environment
-        let feedURL = try XCTUnwrap(environment["ROMA_UPDATE_FEED_URL"])
-        let expectedBuild = try XCTUnwrap(environment["ROMA_UPDATE_EXPECTED_BUILD"])
-        let expectedVersion = try XCTUnwrap(environment["ROMA_UPDATE_EXPECTED_VERSION"])
-        let installedAppPath = try XCTUnwrap(environment["ROMA_UPDATE_INSTALL_APP_PATH"])
+        let feedURL = try XCTUnwrap(
+            environment["ROMA_UPDATE_FEED_URL"],
+            "The updater E2E scheme did not provide ROMA_UPDATE_FEED_URL."
+        )
+        let expectedBuild = try XCTUnwrap(
+            environment["ROMA_UPDATE_EXPECTED_BUILD"],
+            "The updater E2E scheme did not provide ROMA_UPDATE_EXPECTED_BUILD."
+        )
+        let expectedVersion = try XCTUnwrap(
+            environment["ROMA_UPDATE_EXPECTED_VERSION"],
+            "The updater E2E scheme did not provide ROMA_UPDATE_EXPECTED_VERSION."
+        )
+        let installedAppPath = try XCTUnwrap(
+            environment["ROMA_UPDATE_INSTALL_APP_PATH"],
+            "The updater E2E scheme did not provide ROMA_UPDATE_INSTALL_APP_PATH."
+        )
         let expectedBundleURL = normalizedBundleURL(URL(fileURLWithPath: installedAppPath))
 
         XCTAssertEqual(buildVersion(at: installedAppPath), "1")

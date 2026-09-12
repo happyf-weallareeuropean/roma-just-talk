@@ -130,6 +130,10 @@ build_arguments=(
   DEVELOPMENT_TEAM= CODE_SIGN_ENTITLEMENTS="$repo_root/VoiceInk/VoiceInk.local.entitlements"
   CURRENT_PROJECT_VERSION=1 MARKETING_VERSION=0.0.0
   SPARKLE_PUBLIC_ED_KEY="$public_key"
+  ROMA_UPDATE_FEED_URL="$feed_url"
+  ROMA_UPDATE_EXPECTED_BUILD="$candidate_build"
+  ROMA_UPDATE_EXPECTED_VERSION="$candidate_version"
+  ROMA_UPDATE_INSTALL_APP_PATH="$test_derived_data/Build/Products/Release/roma just talk.app"
   'SWIFT_ACTIVE_COMPILATION_CONDITIONS=$(inherited) LOCAL_BUILD UPDATE_E2E'
   -only-testing:"$test_selector"
 )
@@ -161,10 +165,6 @@ defaults write com.negentropi.RomaJustTalk hasCompletedOnboarding -bool true
 defaults write com.negentropi.RomaJustTalk CurrentTranscriptionModel -string roma-updater-e2e-no-model
 defaults write com.negentropi.RomaJustTalk automaticUpdatesEnabled -bool true
 
-export ROMA_UPDATE_FEED_URL="$feed_url"
-export ROMA_UPDATE_EXPECTED_BUILD="$candidate_build"
-export ROMA_UPDATE_EXPECTED_VERSION="$candidate_version"
-export ROMA_UPDATE_INSTALL_APP_PATH="$installed_app"
 test_exit=0
 xcodebuild test-without-building "${build_arguments[@]}" \
   -resultBundlePath "$result_bundle" | tee "$test_log" || test_exit=$?
