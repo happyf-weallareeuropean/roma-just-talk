@@ -129,7 +129,7 @@ build_arguments=(
   CODE_SIGN_IDENTITY=- CODE_SIGNING_REQUIRED=NO CODE_SIGNING_ALLOWED=YES
   DEVELOPMENT_TEAM= CODE_SIGN_ENTITLEMENTS="$repo_root/VoiceInk/VoiceInk.local.entitlements"
   CURRENT_PROJECT_VERSION=1 MARKETING_VERSION=0.0.0
-  INFOPLIST_KEY_SUPublicEDKey="$public_key"
+  SPARKLE_PUBLIC_ED_KEY="$public_key"
   'SWIFT_ACTIVE_COMPILATION_CONDITIONS=$(inherited) LOCAL_BUILD UPDATE_E2E'
   -only-testing:"$test_selector"
 )
@@ -146,7 +146,10 @@ if [[ "$installed_build" != 1 ]]; then
   echo "Updater test app build mismatch: expected 1, got $installed_build" >&2
   exit 1
 fi
-installed_public_key="$(plutil -extract SUPublicEDKey raw -o - "$installed_app/Contents/Info.plist")"
+if ! installed_public_key="$(plutil -extract SUPublicEDKey raw -o - "$installed_app/Contents/Info.plist" 2>/dev/null)"; then
+  echo "Updater test app is missing SUPublicEDKey." >&2
+  exit 1
+fi
 if [[ "$installed_public_key" != "$public_key" ]]; then
   echo "Updater test app did not embed the ephemeral Sparkle public key." >&2
   exit 1

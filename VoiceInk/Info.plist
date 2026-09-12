@@ -6,6 +6,8 @@
 	<true/>
 	<key>SUFeedURL</key>
 	<string>https://github.com/negentropi/roma-just-talk/releases/latest/download/appcast.xml</string>
+	<key>SUPublicEDKey</key>
+	<string>$(SPARKLE_PUBLIC_ED_KEY)</string>
 	<key>SURequireSignedFeed</key>
 	<true/>
 	<key>SUVerifyUpdateBeforeExtraction</key>
