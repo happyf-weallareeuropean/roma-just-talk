@@ -17,7 +17,7 @@
 	<key>SUEnableAutomaticChecks</key>
 	<true/>
 	<key>SUAutomaticallyUpdate</key>
-	<true/>
+	<false/>
 	<key>SUScheduledCheckInterval</key>
 	<integer>14400</integer>
 	<key>NSMicrophoneUsageDescription</key>

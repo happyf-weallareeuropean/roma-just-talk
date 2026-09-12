@@ -25,6 +25,8 @@ on:
       - "scripts/find-reusable-ci-run.sh"
       - "scripts/run-macos-ci-unit-tests.sh"
       - "scripts/verify-macos-release-instrumentation.sh"
+      - "scripts/run-macos-updater-e2e.sh"
+      - "scripts/updater-e2e-server.js"
       - "scripts/test-qwen-package.sh"
       - "scripts/test-fluidaudio-package.sh"
       - "scripts/tests/verify-adhoc-library-validation.test.sh"
@@ -57,6 +59,7 @@ on:
       - "VoiceInkNVIDIA/**"
       - "VoiceInkQwen/**"
       - "VoiceInkTests/**"
+      - "VoiceInkUITests/**"
       - "VoiceInk.xcodeproj/**"
       - "VoiceInk.xcworkspace/**"
   push:
@@ -71,6 +74,8 @@ on:
       - "scripts/find-reusable-ci-run.sh"
       - "scripts/run-macos-ci-unit-tests.sh"
       - "scripts/verify-macos-release-instrumentation.sh"
+      - "scripts/run-macos-updater-e2e.sh"
+      - "scripts/updater-e2e-server.js"
       - "scripts/test-qwen-package.sh"
       - "scripts/test-fluidaudio-package.sh"
       - "scripts/tests/verify-adhoc-library-validation.test.sh"
@@ -103,6 +108,7 @@ on:
       - "VoiceInkNVIDIA/**"
       - "VoiceInkQwen/**"
       - "VoiceInkTests/**"
+      - "VoiceInkUITests/**"
       - "VoiceInk.xcodeproj/**"
       - "VoiceInk.xcworkspace/**"
 
@@ -265,6 +271,19 @@ jobs:
       - name: Build release app
         id: release_app
         run: make local CONFIGURATION=Release
+
+      - name: Verify seamless background update and relaunch
+        id: updater_e2e
+        timeout-minutes: 20
+        run: bash scripts/run-macos-updater-e2e.sh "$HOME/Applications/roma just talk.app"
+
+      - name: Upload updater E2E evidence
+        if: ${{ !cancelled() && (steps.updater_e2e.outcome == 'success' || steps.updater_e2e.outcome == 'failure') }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: roma.updater-e2e-evidence
+          path: .local-build/updater-e2e.*/**
+          if-no-files-found: warn
 
       - name: Verify FluidAudio array reset semantics
         id: fluidaudio_test

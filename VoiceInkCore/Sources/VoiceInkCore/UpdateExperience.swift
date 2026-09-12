@@ -26,13 +26,46 @@ public enum VoiceInkUpdateTrack: String, CaseIterable, Identifiable, Sendable {
 }
 
 public enum VoiceInkUpdatePreference {
+    public static let automaticUpdatesEnabledKey = "automaticUpdatesEnabled"
     public static let trackKey = "updateTrack"
+    public static let defaultAutomaticUpdatesEnabled = true
     public static let defaultTrack = VoiceInkUpdateTrack.stable
     public static let releaseHistoryURL = URL(string: "https://github.com/negentropi/roma-just-talk/releases")!
 
     public static let registeredDefaults: [String: Any] = [
         trackKey: defaultTrack.rawValue
     ]
+
+    private static let legacyAutomaticUpdateKeys = [
+        "SUEnableAutomaticChecks",
+        "SUAutomaticallyUpdate"
+    ]
+
+    public static func automaticUpdatesEnabled(from defaults: UserDefaults = .standard) -> Bool {
+        if defaults.object(forKey: automaticUpdatesEnabledKey) != nil {
+            return defaults.bool(forKey: automaticUpdatesEnabledKey)
+        }
+
+        let hasLegacyOptOut = legacyAutomaticUpdateKeys.contains {
+            defaults.object(forKey: $0) != nil && !defaults.bool(forKey: $0)
+        }
+        return hasLegacyOptOut ? false : defaultAutomaticUpdatesEnabled
+    }
+
+    public static func migrateAutomaticUpdatesEnabled(
+        from defaults: UserDefaults = .standard
+    ) -> Bool {
+        let isEnabled = automaticUpdatesEnabled(from: defaults)
+        saveAutomaticUpdatesEnabled(isEnabled, to: defaults)
+        return isEnabled
+    }
+
+    public static func saveAutomaticUpdatesEnabled(
+        _ isEnabled: Bool,
+        to defaults: UserDefaults = .standard
+    ) {
+        defaults.set(isEnabled, forKey: automaticUpdatesEnabledKey)
+    }
 
     public static func track(from defaults: UserDefaults = .standard) -> VoiceInkUpdateTrack {
         guard let rawValue = defaults.string(forKey: trackKey),
@@ -44,6 +77,15 @@ public enum VoiceInkUpdatePreference {
 
     public static func saveTrack(_ track: VoiceInkUpdateTrack, to defaults: UserDefaults = .standard) {
         defaults.set(track.rawValue, forKey: trackKey)
+    }
+}
+
+public enum VoiceInkUpdatePolicy {
+    public static func shouldHandleFoundUpdate(
+        automaticUpdatesEnabled: Bool,
+        userInitiated: Bool
+    ) -> Bool {
+        automaticUpdatesEnabled || userInitiated
     }
 }
 

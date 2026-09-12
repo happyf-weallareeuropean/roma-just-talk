@@ -21,6 +21,7 @@ final class UpdaterViewModel: NSObject, ObservableObject {
 
     override init() {
         track = VoiceInkUpdatePreference.track()
+        automaticUpdatesEnabled = VoiceInkUpdatePreference.migrateAutomaticUpdatesEnabled()
         super.init()
 
         updater = SPUUpdater(
@@ -29,6 +30,9 @@ final class UpdaterViewModel: NSObject, ObservableObject {
             userDriver: self,
             delegate: self
         )
+        // Sparkle's automatic driver bypasses Roma's embedded progress and relaunch UX.
+        updater.automaticallyDownloadsUpdates = false
+        updater.automaticallyChecksForUpdates = automaticUpdatesEnabled
 
         do {
             try updater.start()
@@ -37,17 +41,9 @@ final class UpdaterViewModel: NSObject, ObservableObject {
         }
 
         canCheckForUpdates = updater.canCheckForUpdates
-        automaticUpdatesEnabled = updater.automaticallyChecksForUpdates
-            && updater.automaticallyDownloadsUpdates
 
         updater.publisher(for: \.canCheckForUpdates)
             .assign(to: &$canCheckForUpdates)
-        Publishers.CombineLatest(
-            updater.publisher(for: \.automaticallyChecksForUpdates),
-            updater.publisher(for: \.automaticallyDownloadsUpdates)
-        )
-            .map { $0 && $1 }
-            .assign(to: &$automaticUpdatesEnabled)
 
         #if UPDATE_E2E
         DispatchQueue.main.async { [weak self] in
@@ -57,7 +53,10 @@ final class UpdaterViewModel: NSObject, ObservableObject {
     }
 
     func setAutomaticUpdatesEnabled(_ value: Bool) {
-        updater.automaticallyDownloadsUpdates = value
+        guard value != automaticUpdatesEnabled else { return }
+        automaticUpdatesEnabled = value
+        VoiceInkUpdatePreference.saveAutomaticUpdatesEnabled(value)
+        updater.automaticallyDownloadsUpdates = false
         updater.automaticallyChecksForUpdates = value
         if !value {
             cancelUpdate()
@@ -139,8 +138,8 @@ extension UpdaterViewModel: SPUUserDriver {
         reply: @escaping (SUUpdatePermissionResponse) -> Void
     ) {
         reply(SUUpdatePermissionResponse(
-            automaticUpdateChecks: true,
-            automaticUpdateDownloading: true,
+            automaticUpdateChecks: automaticUpdatesEnabled,
+            automaticUpdateDownloading: false,
             sendSystemProfile: false
         ))
     }
@@ -157,6 +156,17 @@ extension UpdaterViewModel: SPUUserDriver {
         reply: @escaping (SPUUserUpdateChoice) -> Void
     ) {
         cancellation = nil
+
+        // A scheduled appcast request may finish after the user opts out.
+        guard VoiceInkUpdatePolicy.shouldHandleFoundUpdate(
+            automaticUpdatesEnabled: automaticUpdatesEnabled,
+            userInitiated: userInitiatedCheck
+        ) else {
+            reply(.dismiss)
+            resetVisibleState()
+            return
+        }
+
         currentVersion = appcastItem.displayVersionString
         releaseNotesURL = appcastItem.infoURL as URL?
 

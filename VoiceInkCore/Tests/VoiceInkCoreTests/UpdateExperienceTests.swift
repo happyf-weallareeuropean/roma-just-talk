@@ -21,6 +21,48 @@ final class UpdateExperienceTests: XCTestCase {
         }
     }
 
+    func testAutomaticUpdatesDefaultOnAndPreserveExplicitOptOut() {
+        withTemporaryDefaults { defaults in
+            XCTAssertTrue(VoiceInkUpdatePreference.automaticUpdatesEnabled(from: defaults))
+
+            VoiceInkUpdatePreference.saveAutomaticUpdatesEnabled(false, to: defaults)
+            XCTAssertFalse(VoiceInkUpdatePreference.automaticUpdatesEnabled(from: defaults))
+
+            VoiceInkUpdatePreference.saveAutomaticUpdatesEnabled(true, to: defaults)
+            XCTAssertTrue(VoiceInkUpdatePreference.automaticUpdatesEnabled(from: defaults))
+        }
+    }
+
+    func testAutomaticUpdatesMigrateLegacySparkleOptOut() {
+        withTemporaryDefaults { defaults in
+            defaults.set(false, forKey: "SUAutomaticallyUpdate")
+
+            XCTAssertFalse(VoiceInkUpdatePreference.migrateAutomaticUpdatesEnabled(from: defaults))
+            XCTAssertEqual(
+                defaults.object(forKey: VoiceInkUpdatePreference.automaticUpdatesEnabledKey) as? Bool,
+                false
+            )
+
+            defaults.set(true, forKey: "SUAutomaticallyUpdate")
+            XCTAssertFalse(VoiceInkUpdatePreference.automaticUpdatesEnabled(from: defaults))
+        }
+    }
+
+    func testOptOutBlocksBackgroundUpdateButStillAllowsManualCheck() {
+        XCTAssertFalse(VoiceInkUpdatePolicy.shouldHandleFoundUpdate(
+            automaticUpdatesEnabled: false,
+            userInitiated: false
+        ))
+        XCTAssertTrue(VoiceInkUpdatePolicy.shouldHandleFoundUpdate(
+            automaticUpdatesEnabled: false,
+            userInitiated: true
+        ))
+        XCTAssertTrue(VoiceInkUpdatePolicy.shouldHandleFoundUpdate(
+            automaticUpdatesEnabled: true,
+            userInitiated: false
+        ))
+    }
+
     func testCompactStatusExposesOnlyRelevantActions() {
         let downloading = VoiceInkUpdateStatus(phase: .downloading, version: "0.0.1", progress: 1.7)
         XCTAssertEqual(downloading.title, "Downloading 0.0.1…")
