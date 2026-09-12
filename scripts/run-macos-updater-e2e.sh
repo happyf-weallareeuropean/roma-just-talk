@@ -25,7 +25,7 @@ if [[ ! -x "$sign_update" ]]; then
 fi
 
 work_dir="$(mktemp -d "$derived_data/updater-e2e.XXXXXX")"
-test_derived_data="$work_dir/DerivedData"
+test_derived_data="$(mktemp -d "${RUNNER_TEMP:-/tmp}/roma-updater-e2e-derived.XXXXXX")"
 secret_dir="$(mktemp -d "${RUNNER_TEMP:-/tmp}/roma-updater-e2e-key.XXXXXX")"
 serve_dir="$work_dir/serve"
 server_log="$work_dir/server.log"
@@ -43,6 +43,7 @@ cleanup() {
     kill "$server_pid" 2>/dev/null || true
     wait "$server_pid" 2>/dev/null || true
   fi
+  rm -rf "$test_derived_data"
   rm -f "$private_key_file" "$secret_dir/keys"
   rmdir "$secret_dir" 2>/dev/null || true
 }
@@ -127,12 +128,13 @@ build_arguments=(
   -derivedDataPath "$test_derived_data" -xcconfig LocalBuild.xcconfig
   CODE_SIGN_IDENTITY=- CODE_SIGNING_REQUIRED=NO CODE_SIGNING_ALLOWED=YES
   DEVELOPMENT_TEAM= CODE_SIGN_ENTITLEMENTS="$repo_root/VoiceInk/VoiceInk.local.entitlements"
+  ENABLE_TESTABILITY=YES
   CURRENT_PROJECT_VERSION=1 MARKETING_VERSION=0.0.0
   INFOPLIST_KEY_SUPublicEDKey="$public_key"
   'SWIFT_ACTIVE_COMPILATION_CONDITIONS=$(inherited) LOCAL_BUILD UPDATE_E2E'
   -only-testing:"$test_selector"
 )
-xcodebuild build-for-testing "${build_arguments[@]}" | tee "$build_log"
+xcodebuild build-for-testing -quiet "${build_arguments[@]}" | tee "$build_log"
 
 installed_app="$test_derived_data/Build/Products/Release/roma just talk.app"
 test "$(plutil -extract CFBundleVersion raw -o - "$installed_app/Contents/Info.plist")" = 1
