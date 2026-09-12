@@ -133,7 +133,12 @@ build_arguments=(
   'SWIFT_ACTIVE_COMPILATION_CONDITIONS=$(inherited) LOCAL_BUILD UPDATE_E2E'
   -only-testing:"$test_selector"
 )
-xcodebuild build-for-testing -quiet "${build_arguments[@]}" | tee "$build_log"
+build_exit=0
+xcodebuild build-for-testing "${build_arguments[@]}" > "$build_log" 2>&1 || build_exit=$?
+if [[ "$build_exit" -ne 0 ]]; then
+  tail -n 200 "$build_log" >&2
+  exit "$build_exit"
+fi
 
 installed_app="$test_derived_data/Build/Products/Release/roma just talk.app"
 test "$(plutil -extract CFBundleVersion raw -o - "$installed_app/Contents/Info.plist")" = 1
