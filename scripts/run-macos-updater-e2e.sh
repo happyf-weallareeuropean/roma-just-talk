@@ -123,12 +123,11 @@ EOF
 cd "$repo_root"
 test_selector='VoiceInkUITests/UpdaterE2ETests/testSeamlessBackgroundUpdateInstallsAndRelaunches'
 build_arguments=(
-  -project VoiceInk.xcodeproj -scheme VoiceInk -configuration Release
+  -project VoiceInk.xcodeproj -scheme VoiceInkUpdaterE2E -configuration Release
   -destination 'platform=macOS' -parallel-testing-enabled NO
   -derivedDataPath "$test_derived_data" -xcconfig LocalBuild.xcconfig
   CODE_SIGN_IDENTITY=- CODE_SIGNING_REQUIRED=NO CODE_SIGNING_ALLOWED=YES
   DEVELOPMENT_TEAM= CODE_SIGN_ENTITLEMENTS="$repo_root/VoiceInk/VoiceInk.local.entitlements"
-  ENABLE_TESTABILITY=YES
   CURRENT_PROJECT_VERSION=1 MARKETING_VERSION=0.0.0
   INFOPLIST_KEY_SUPublicEDKey="$public_key"
   'SWIFT_ACTIVE_COMPILATION_CONDITIONS=$(inherited) LOCAL_BUILD UPDATE_E2E'
