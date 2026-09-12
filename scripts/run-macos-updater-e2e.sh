@@ -141,8 +141,16 @@ if [[ "$build_exit" -ne 0 ]]; then
 fi
 
 installed_app="$test_derived_data/Build/Products/Release/roma just talk.app"
-test "$(plutil -extract CFBundleVersion raw -o - "$installed_app/Contents/Info.plist")" = 1
-test "$(plutil -extract SUPublicEDKey raw -o - "$installed_app/Contents/Info.plist")" = "$public_key"
+installed_build="$(plutil -extract CFBundleVersion raw -o - "$installed_app/Contents/Info.plist")"
+if [[ "$installed_build" != 1 ]]; then
+  echo "Updater test app build mismatch: expected 1, got $installed_build" >&2
+  exit 1
+fi
+installed_public_key="$(plutil -extract SUPublicEDKey raw -o - "$installed_app/Contents/Info.plist")"
+if [[ "$installed_public_key" != "$public_key" ]]; then
+  echo "Updater test app did not embed the ephemeral Sparkle public key." >&2
+  exit 1
+fi
 codesign --verify --deep --strict "$installed_app"
 
 defaults delete com.negentropi.RomaJustTalk 2>/dev/null || true
